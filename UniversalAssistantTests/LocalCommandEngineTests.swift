@@ -17,7 +17,7 @@ struct LocalCommandEngineTests {
         let command = engine.parse("Знайди Baldinini 43 розміру до 12000 грн")
         #expect(command.intent == .productSearch); #expect(command.constraints.size == "43")
         #expect(command.constraints.maximumPrice == 12000); #expect(command.constraints.currency == "UAH")
-        #expect(command.constraints.hardConstraintKeys == ["size", "maximumPrice"])
+        #expect(command.constraints.hardConstraintKeys == ["size", "maximumPrice", "brand"])
     }
 
     @Test("Representative deterministic intents", arguments: [

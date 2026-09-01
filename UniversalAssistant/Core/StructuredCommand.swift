@@ -16,6 +16,10 @@ struct CommandConstraints: Equatable, Codable, Sendable {
     var maximumPrice: Decimal?
     var currency: String?
     var size: String?
+    var color: String?
+    var brand: String?
+    var category: String?
+    var season: String?
     var ordinal: Int?
     var hardConstraintKeys: Set<String> = []
 }
@@ -70,6 +74,7 @@ struct LocalCommandEngine: CommandParsing {
         let intent = Self.intentPatterns.first { _, patterns in patterns.contains { normalized.contains($0) } }?.0 ?? contextualIntent(normalized)
         var entities: [String: String] = [:]; var constraints = CommandConstraints()
         extractPrice(from: normalized, into: &constraints); extractSize(from: normalized, into: &constraints)
+        extractFashionFilters(from: text, normalized: normalized, into: &constraints)
         constraints.ordinal = ordinal(in: normalized)
         if intent == .open, let target = target(after: ["відкрий", "открой", "open", "öffne", "ouvre"], in: text) { entities["app"] = target }
         let risk: ActionRisk = intent == .emergency ? .emergency : ([.calendarCreate, .reminderCreate, .cancel, .undo].contains(intent) ? .reversible : .informational)
@@ -111,6 +116,35 @@ struct LocalCommandEngine: CommandParsing {
             let value = String(text[match]).split(separator: " ").first(where: { $0.contains(where: \.isNumber) || $0.allSatisfy { "xsml".contains($0) } })
             if let value { constraints.size = String(value); constraints.hardConstraintKeys.insert("size"); return }
         }
+    }
+    private func extractFashionFilters(from original: String, normalized text: String, into constraints: inout CommandConstraints) {
+        let knownBrands = ["Baldinini", "Nike", "Adidas", "Puma", "Zara", "Mango", "Gucci", "Prada"]
+        if let brand = knownBrands.first(where: { text.contains($0.lowercased()) }) {
+            constraints.brand = brand; constraints.hardConstraintKeys.insert("brand")
+        }
+        let colors: [(String, [String])] = [
+            ("black", ["чорн", "черн", "black", "schwarz", "noir"]),
+            ("white", ["біл", "бел", "white", "weiß", "blanc"]),
+            ("red", ["червон", "красн", "red", "rot", "rouge"]),
+            ("blue", ["син", "blue", "blau", "bleu"])
+        ]
+        if let color = colors.first(where: { entry in entry.1.contains(where: text.contains) })?.0 {
+            constraints.color = color; constraints.hardConstraintKeys.insert("color")
+        }
+        let categories: [(String, [String])] = [
+            ("footwear", ["взут", "обув", "shoes", "footwear", "schuhe", "chaussures"]),
+            ("clothing", ["одяг", "одеж", "clothing", "kleidung", "vêtement"]),
+            ("accessories", ["аксесуар", "accessor", "zubehör", "accessoire"])
+        ]
+        if let category = categories.first(where: { entry in entry.1.contains(where: text.contains) })?.0 {
+            constraints.category = category; constraints.hardConstraintKeys.insert("category")
+        }
+        let seasons = ["spring", "summer", "autumn", "winter"]
+        let localizedSeasons = ["весн": "spring", "літ": "summer", "осін": "autumn", "зим": "winter"]
+        if let season = seasons.first(where: text.contains) ?? localizedSeasons.first(where: { text.contains($0.key) })?.value {
+            constraints.season = season; constraints.hardConstraintKeys.insert("season")
+        }
+        _ = original // Preserve original casing for future open-catalog brand extraction.
     }
     private func ordinal(in text: String) -> Int? {
         if ["другий", "друга", "второй", "second", "zweite", "deuxième"].contains(where: text.contains) { return 2 }
