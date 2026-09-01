@@ -25,6 +25,13 @@ private func offer(id: String, seller: String, price: Decimal = 1000, exact: Boo
         #expect(offer(id: "b", seller: "s").cost.calculableTotal?.amount == 1100)
     }
 
+    @Test func mixedCurrenciesNeverBecomeInventedTotal() {
+        let base = offer(id: "a", seller: "s").cost
+        let usd = CostComponent(value: Money(amount: 2, currency: "USD"), knowledge: .known)
+        let mixed = OfferTotalCost(item: base.item, shipping: usd, tax: base.tax, duties: base.duties, requiredOther: base.requiredOther)
+        #expect(mixed.calculableTotal == nil)
+    }
+
     @Test func rankingIsIndependentOfAffiliateCommissionSignal() {
         let plain = offer(id: "plain", seller: "a", affiliate: false)
         let affiliate = offer(id: "affiliate", seller: "b", affiliate: true)

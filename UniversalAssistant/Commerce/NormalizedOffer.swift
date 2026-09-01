@@ -27,8 +27,9 @@ struct OfferTotalCost: Equatable, Codable, Sendable {
 
     var calculableTotal: Money? {
         let components = [shipping, tax, duties, requiredOther]
-        guard components.allSatisfy({ $0.knowledge != .unknown && $0.value != nil }) else { return nil }
-        return components.compactMap(\.value).reduce(item) { $0.adding($1) ?? $0 }
+        guard components.allSatisfy({ $0.knowledge != .unknown && $0.value?.currency == item.currency }) else { return nil }
+        let amount = components.compactMap(\.value).reduce(item.amount) { $0 + $1.amount }
+        return .init(amount: amount, currency: item.currency)
     }
 }
 
@@ -60,7 +61,8 @@ struct NormalizedOffer: Identifiable, Equatable, Sendable {
     var affiliateAttributionSupported: Bool
 
     func isFresh(now: Date = .now, maximumAge: TimeInterval = 15 * 60) -> Bool {
-        now.timeIntervalSince(sourceTimestamp) >= 0 && now.timeIntervalSince(sourceTimestamp) <= maximumAge
+        let age = now.timeIntervalSince(sourceTimestamp)
+        return age >= -60 && age <= maximumAge
     }
 }
 

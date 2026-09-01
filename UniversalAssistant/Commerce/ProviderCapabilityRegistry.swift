@@ -56,7 +56,7 @@ actor ProviderCapabilityRegistry {
 
 protocol RetailProvider: Sendable {
     var providerID: String { get }
-    func search(_ request: RetailSearchRequest) async throws -> [RetailOffer]
+    func search(_ request: RetailSearchRequest) async throws -> [NormalizedOffer]
 }
 
 struct RetailSearchRequest: Equatable, Sendable {
@@ -69,15 +69,6 @@ struct RetailSearchRequest: Equatable, Sendable {
         guard (1...50).contains(limit), region.count == 2 else { throw RetailProviderError.invalidRequest }
         return self
     }
-}
-
-struct RetailOffer: Identifiable, Equatable, Sendable {
-    let id: String
-    let providerID: String
-    let sellerID: String
-    let identity: ProductIdentity
-    let sourceTimestamp: Date
-    let exactURL: URL
 }
 
 enum RetailProviderError: Error, Equatable, Sendable { case invalidRequest, unavailable }
