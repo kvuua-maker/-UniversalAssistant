@@ -2,3 +2,5 @@ PRODUCT_BUNDLE_IDENTIFIER = com.universalassistant.app.staging
 SWIFT_ACTIVE_COMPILATION_CONDITIONS = STAGING
 CODE_SIGN_STYLE = Automatic
 CODE_SIGNING_ALLOWED = NO
+INFOPLIST_KEY_NSMicrophoneUsageDescription = UniversalAssistant uses the microphone only when you start a voice command.
+INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = UniversalAssistant converts your spoken command into text so it can perform the requested action.

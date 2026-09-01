@@ -3,3 +3,5 @@ SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG DEVELOPMENT
 CODE_SIGN_STYLE = Automatic
 CODE_SIGNING_ALLOWED = NO
 ENABLE_TESTABILITY = YES
+INFOPLIST_KEY_NSMicrophoneUsageDescription = UniversalAssistant uses the microphone only when you start a voice command.
+INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = UniversalAssistant converts your spoken command into text so it can perform the requested action.

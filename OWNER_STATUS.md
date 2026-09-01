@@ -2,15 +2,15 @@
 
 ## DONE AND CODEX-VERIFIED
 
-M0 foundation and the first M1 command core are Codex-verified. Multilingual parser/context tests pass.
+M0, multilingual command core, and the system voice/App Intent code are Codex-verified; all available tests pass.
 
 ## CURRENTLY WORKING ON
 
-Checkpointing the command core, then implementing voice entry. Selected path: STABLE.
+Checkpointing voice entry, then M1 performance/localization. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
-Nothing yet.
+Voice recognition and fast system invocation are ready for a later stable iPhone test build; no test is requested now.
 
 ## BLOCKED AND WHY
 
@@ -22,4 +22,4 @@ No blockers.
 
 ## NEXT
 
-Speech entry and fast iPhone invocation.
+Performance baseline and five-language UI architecture.
