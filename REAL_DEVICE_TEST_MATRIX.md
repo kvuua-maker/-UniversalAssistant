@@ -14,3 +14,6 @@
 | Route/navigation | Live MapKit routes, actual detour and Apple/Google/Waze exact handoff | LIVE_DEVICE_TEST_REQUIRED — NAVIGATION-001 |
 | WeatherKit | Live current/hourly/daily response, entitlement, attribution and destination context | LIVE_DEVICE_TEST_REQUIRED — WEATHER-001 |
 | Location recovery | Poor/suspicious resampling, denied permission Settings route and explicit manual fallback | DEVICE_TEST_REQUIRED — LOCATION-002 |
+| Ride handoff | Provider app/web behavior, exact pickup/dropoff preservation and owner-issued Uber client ID | LIVE_DEVICE_TEST_REQUIRED — RIDE-001 |
+| Public transport | Regional scheduled versus real-time attribution and exact route handoff | LIVE_DEVICE_TEST_REQUIRED — TRANSPORT-001 |
+| Ticket handoff | Exact itinerary/fare/inventory preservation and confirmation before leaving the app | LIVE_DEVICE_TEST_REQUIRED — TICKET-001 |
