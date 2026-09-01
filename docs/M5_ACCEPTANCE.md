@@ -1,4 +1,6 @@
-# M5 Local Acceptance
+# M5 Preliminary Local Acceptance — Superseded
+
+This checkpoint was recorded before the complete canonical Master Spec v13.2 was available in the repository. It remains historical evidence for the service, ride, transport and ticket-engine sub-blocks, but it is not final M5 acceptance.
 
 M5 local E3 scope is accepted for bounded local-service discovery and safe fallback, truthful ride comparison, official ride-provider capability gating, exact credential-gated Uber route handoff, unified transport normalization, public-transport evidence boundaries, and provider-neutral ticket itinerary/fare/inventory handling.
 
@@ -15,4 +17,4 @@ Evidence:
 
 Queued E4/live gates do not block later independent work: physical-device ride/transport/ticket handoffs; Uber owner application/client ID and provider approval; official live public-transport source; official ticket-provider contracts, credentials and schema normalization.
 
-The repository snapshot does not contain the full Master Spec v13.2 or any canonical post-M5 task identifier. A later milestone must not be inferred from dormant intents alone.
+After the complete specification was supplied and read, requirement 814 established additional mandatory M5 scope: travel/hotel flows, authentication boundaries, safe booking/purchase handoff and partial provider degradation. Final M5 acceptance must be reissued only after those missing blocks pass their own evidence gates.

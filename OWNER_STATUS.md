@@ -2,12 +2,11 @@
 
 ## DONE AND CODEX-VERIFIED
 
-M0 and current M1 code are Codex-verified: command core, voice/App Intent, five-language shell and bounded performance measurements; all available tests pass.
-Marketplace Commerce & Affiliate Hub addendum accepted and integrated into the M4 architecture/acceptance plan.
+M0–M4 and the completed M5 services, ride, transport and ticket-engine blocks are Codex-verified. The complete Master Spec v13.2 and Commerce addendum are now stored and verified in the repository.
 
 ## CURRENTLY WORKING ON
 
-Checkpointing performance/localization, then compact result states. Selected path: STABLE.
+M5 hotel search core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -15,7 +14,7 @@ Voice recognition and fast system invocation are ready for a later stable iPhone
 
 ## BLOCKED AND WHY
 
-No blockers.
+No blocker for the current local core. Live hotel providers will require separate verified access.
 
 ## OWNER ACTION NEEDED NOW
 
@@ -23,4 +22,4 @@ No blockers.
 
 ## NEXT
 
-Performance baseline and five-language UI architecture.
+Hotel search core, then travel planning and the remaining M5 acceptance requirements.

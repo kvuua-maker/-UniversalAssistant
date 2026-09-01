@@ -1,0 +1,259 @@
+ОБОВ’ЯЗКОВЕ ДОПОВНЕННЯ ДО MASTER SPEC v13.2 MARKETPLACE COMMERCE &
+AFFILIATE HUB — FINAL COMPLETE ADDENDUM
+
+СТАТУС Це доповнення є невід’ємною обов’язковою частиною Master Spec
+v13.2 UniversalAssistant. Воно не скасовує і не послаблює попередні
+вимоги v13.2. Не починай проєкт заново. Не руйнуй уже перевірені M0/M1.
+Інтегруй Commerce Hub у чинну модульну архітектуру.
+
+1.  PRODUCT GOAL Єдиний красивий і швидкий інтерфейс: user intent →
+    exact product → multi-source search → normalize → compare → premium
+    result → exact purchase handoff → legitimate affiliate attribution.
+
+2.  ONE APP Commerce Hub — модуль UniversalAssistant, не окремий app;
+    reuse command engine, camera/OCR/barcode, location, backend,
+    networking, cache, security, design system, deep links.
+
+3.  BUSINESS MODEL Не продавець, не reseller, не fulfillment, не власний
+    checkout фізичного товару, не markup. Seller/marketplace продає;
+    монетизація — affiliate/referral commission де дозволено.
+
+4.  USER INTEREST FIRST Ranking визначає користь користувачу, не
+    commission: exact variant, estimated final cost, availability,
+    delivery/ETA, seller protections, returns/warranty.
+
+5.  USER-INTENT ONLY Не нав’язувати товари/акції/поради. Попросив —
+    зробити. DO, DON’T NARRATE.
+
+6.  EXTENSIBLE CORE Provider/adapters без architectural limit; core,
+    capability registry, identity/variant resolution, normalization,
+    ranking, affiliate routing, cache/observability — мінімально
+    необхідна modular architecture.
+
+7.  LEGITIMATE SOURCES Official APIs/SDKs/feeds/affiliate networks/deep
+    links/structured catalogues only. No invented API/commission,
+    forbidden scraping, CAPTCHA/security bypass. Current official docs
+    before production.
+
+8.  UKRAINE FIRST Українські магазини/marketplaces/affiliate networks
+    first-class; global sources теж, якщо реально доступні/корисні.
+
+9.  EXACT PRODUCT IDENTITY
+    Brand/model/SKU/GTIN/EAN/UPC/barcode/storage/size/color/generation/region/condition/configuration/quantity.
+    Approximate ≠ exact.
+
+10. CAMERA TO COMMERCE Camera/barcode/OCR/visual search → identity →
+    Commerce. Barcode/SKU higher confidence than visual similarity.
+
+11. BEAUTIFUL NATIVE COMMERCE UI Premium native iOS cards, не raw
+    API/JSON/URL list. Image, exact variant, price/discount,
+    source/seller, availability, delivery, returns/warranty, known
+    taxes/duties, estimated final cost, freshness. Main info first;
+    details on demand.
+
+12. PROVEN LABELS Best total price/fastest/best value/official store
+    labels only when objectively supported.
+
+13. REAL TOTAL COST Item price + shipping + known taxes +
+    known/estimated duties + required known costs where determinable.
+    Unknowns never invented.
+
+14. DELIVERY TO UKRAINE Delivery
+    availability/cost/ETA/restrictions/customs-tax implications where
+    legitimately available.
+
+15. SELLER QUALITY
+    Rating/reviews/protections/returns/warranty/condition/verified
+    official status where available. Lowest price ≠ automatically best.
+
+16. PURCHASE FLOW Search/compare/select in UniversalAssistant. Buy →
+    exact affiliate/deep link → exact variant/offer → official app if
+    possible → exact official page. Avoid homepage.
+
+17. AFFILIATE ATTRIBUTION Allowed tracking/campaign/sub IDs and
+    deep-link attribution; preserve through app handoff where supported;
+    never claim attribution without evidence.
+
+18. POST-PURCHASE Order/tracking/delivery only through official
+    supported data/deep links and only on user request; no invented
+    status.
+
+19. CAPABILITY REGISTRY Per source: regions, search/catalog, exact
+    product, price, availability, shipping, affiliate/network, deep
+    link/app handoff, credentials, owner registration/approval, rate
+    limits, restrictions, implementation/test/fallback, last verified.
+    Reuse verified research.
+
+20. OWNER-ONLY BLOCKERS Registration, agreements, identity/tax/bank,
+    CAPTCHA/2FA, approval, owner-only credentials. Build everything
+    possible first; then report provider/what/where/what to obtain/why.
+    One blocker never stops project.
+
+21. PERFORMANCE IS FIRST-CLASS Commerce must not make UniversalAssistant
+    heavy, slow, battery-hungry or unstable. On-demand only; no
+    all-provider initialization/network calls/catalog loading at launch.
+
+22. FAST STARTUP Commerce must not materially degrade cold/warm start.
+    Lazy initialize only required provider path.
+
+23. NO FULL CATALOG ON DEVICE No full marketplace catalogues/indexes on
+    iPhone; no binary/storage bloat; on-demand/server/provider search.
+
+24. PROGRESSIVE LOADING Show first useful verified result quickly;
+    secondary data later without blocking UI.
+
+25. PARALLEL BOUNDED SEARCH Independent providers in parallel when
+    useful; bounded concurrency, no uncontrolled fan-out; progressive
+    verified results.
+
+26. REQUEST DEDUPLICATION Merge identical simultaneous/in-flight
+    requests; reuse valid in-flight/fresh results; no duplicate provider
+    work.
+
+27. BOUNDED CACHE Bounded size/time; explicit freshness for
+    price/availability/shipping; stale never current; bounded image
+    cache/cleanup.
+
+28. MAIN THREAD PROTECTION
+    Networking/normalization/images/FX/dedup/ranking/parsing off main UI
+    thread.
+
+29. TIMEOUT AND PARTIAL RESULTS Bounded provider timeouts; one slow
+    provider cannot block; show sufficient partial results.
+
+30. CANCELLATION New intent cancels obsolete commerce work where safe.
+
+31. RATE LIMIT RETRY BACKOFF Respect rate limits; bounded transient
+    retry/backoff/jitter; no retry storms.
+
+32. RESOURCE CONTROL Control RAM/CPU/battery/network/disk; no large
+    retained decoded images/payloads; no polling without explicit
+    user-enabled need.
+
+33. IMAGE PERFORMANCE Thumbnails/resized cards, full-res on demand,
+    async/progressive loading, bounded caches.
+
+34. NETWORK EFFICIENCY Only needed fields where possible; avoid
+    oversized payloads; compression/cache/ETag where appropriate.
+
+35. SERVER-SIDE WHERE BETTER Aggregation/normalization/affiliate routing
+    server-side when it improves phone load/security/performance;
+    unrelated local commands remain independent.
+
+36. SECRETS No API/affiliate/private secrets in iOS client, GitHub or
+    logs; appropriate server/keychain/CI secret storage.
+
+37. CONFIG AND KILL SWITCH Server-config provider enable/disable,
+    affiliate IDs, campaign/sub IDs, regions, credential refs, approval,
+    feature flags; kill broken provider without app breakage/new release
+    where feasible.
+
+38. PRIVACY ANALYTICS Where allowed: impression/search → offer selection
+    → outbound affiliate click → provider-confirmed conversion. Data
+    minimization, no hidden cross-service tracking, Apple privacy/ATT
+    where applicable.
+
+39. COMMISSION TRUTH Purchase/conversion/commission only confirmed by
+    real provider reporting.
+
+40. APP STORE LEGAL DISCLOSURE Before production verify current Apple
+    rules, affiliate disclosure, provider terms, consumer/privacy
+    requirements. No misleading advertising.
+
+41. HONEST POSITIONING Promise finding/comparing available offers in
+    connected sources and direct handoff. Never promise all products/all
+    marketplaces/always lowest/guaranteed price without proof.
+
+42. NO PRIMITIVE COMPARISON If comparison requested, use meaningful
+    factors, not merely ‘500 UAH cheaper’; if not requested, don’t
+    narrate it.
+
+43. NON-COMMERCE ISOLATION Commerce dependencies/cache/provider failures
+    cannot slow or break Calendar, Reminders, Contacts, Camera,
+    Navigation, local command parsing.
+
+44. LIGHT DEPENDENCIES Prefer lighter legitimate API/deep-link adapter
+    over heavy SDK when outcome is equal/better.
+
+45. PERFORMANCE BUDGETS Measure baselines/regression thresholds for
+    startup, first useful commerce result, card scrolling, memory,
+    images, cancellation, timeout. Evidence-based targets, not arbitrary
+    marketing numbers.
+
+46. FAILURE ISOLATION Each adapter isolated; malformed/error provider
+    cannot crash core/UI.
+
+47. DATA VALIDATION Validate payloads; track source/timestamp;
+    reject/downgrade anomalous/missing price/currency/availability.
+
+48. CURRENCY NORMALIZATION Current legitimate FX source; retain source
+    currency where useful; don’t hide meaningful conversion
+    uncertainty/fees.
+
+49. OFFER DEDUP Dedup only reliable duplicates; don’t merge different
+    seller/condition/variant.
+
+50. SEARCH QUALITY Prefer fewer exact/relevant offers over noisy weak
+    matches.
+
+51. STABLE UI UPDATES Progressive results should not chaotically reorder
+    while user interacts; stable ranking/update strategy.
+
+52. PURCHASE SAFETY Affiliate click/deep link ≠ purchase. ‘Bought’ only
+    after real confirmation. All financial/irreversible v13.2 safety
+    remains.
+
+53. ACCESSIBILITY LANGUAGES All V1 languages, Dynamic
+    Type/VoiceOver/accessibility; brand/model/SKU preserved.
+
+54. OBSERVABILITY Provider
+    latency/failures/cache/freshness/normalization diagnostics without
+    secrets/unnecessary private content.
+
+55. TEST STRATEGY Tests for exact/variant matching, dedup, FX, final
+    cost, seller differentiation, commission-independent ranking,
+    affiliate routing/fallback, stale price, timeout/partial,
+    cancellation, duplicate requests, malformed payload, cache expiry,
+    Ukraine shipping, exact deep link, secret leakage and performance
+    where practical.
+
+56. MOCK TRUTH Mocks internal only; no production-complete claim without
+    real provider verification.
+
+57. PROVIDER STATUS Accurate statuses: researched, adapter-ready,
+    credential-required, approval-required, device-test-required,
+    fully-implemented/tested, fallback, unsupported etc. Stub ≠
+    integration.
+
+58. INCREMENTAL PROVIDERS Build core/interfaces now; connect available
+    providers progressively; blocked providers don’t block others.
+
+59. NO OVERENGINEERING Use simplest maintainable architecture satisfying
+    isolation, extensibility, performance, testability, security.
+
+60. CODEX LIMIT EFFICIENCY Reuse registry/docs/evidence; no repeated
+    research/reads/builds without reason; batch independent checks; stop
+    block when evidence sufficient.
+
+61. GIT STATUS Store this addendum in repository source-of-truth/docs;
+    update architecture/status/test plans. Do not create another repo or
+    restart M0/M1.
+
+62. INTEGRATION INTO CURRENT WORK Add necessary domain
+    models/protocols/adapters/backend
+    interfaces/UI/routing/tests/security/docs in correct milestones with
+    minimal clean changes and no regressions.
+
+63. ACCEPTANCE Commerce accepted only if app remains lightweight/fast,
+    provider failures isolated, exact identity protected, ranking
+    independent of commission, affiliate routing preserves user outcome,
+    UI premium/native, live claims verified.
+
+64. FINAL DIRECTIVE Read entire addendum, persist it as mandatory v13.2
+    requirement, then confirm in Ukrainian: «Marketplace Commerce &
+    Affiliate Hub addendum прийнято». Continue current implementation
+    autonomously from current checkpoint. No owner approval for ordinary
+    engineering/build/test/Git actions; ask only for true owner-only
+    blockers. Communicate with owner only in Ukrainian.
+
+END OF MARKETPLACE COMMERCE & AFFILIATE HUB — FINAL COMPLETE ADDENDUM
