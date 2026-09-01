@@ -4,7 +4,7 @@
 - Current block/action: checkpoint M1 voice entry
 - Last measurable progress: voice/App Intent production path builds and app tests pass
 - Last successful build/test: 5 M1 tests with 11 parameterized cases, iPhone 17 Simulator iOS 26.5, 2026-09-01
-- Last commit: b0d0fc2 (M0)
+- Last commit: 948e5bd (M1 voice entry)
 - External blocker: none
 - Internal engineering problems: none open
 - STALLED: NO
