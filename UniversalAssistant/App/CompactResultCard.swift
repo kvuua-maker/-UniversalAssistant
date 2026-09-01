@@ -7,8 +7,8 @@ struct CompactResultCard: View {
         switch state {
         case .idle:
             EmptyView()
-        case .completed(let summary):
-            card(summary, title: "result_ready", tint: .green)
+        case .recognized(let summary):
+            card(summary, title: "request_recognized", tint: .blue)
         case .clarification(let summary):
             card(summary, title: "clarification_needed", tint: .orange)
         }

@@ -8,13 +8,14 @@ struct AssistantResultStateTests {
         model.input = "Weather tomorrow"
         model.submit()
 
-        guard case .completed(let summary) = model.resultState else {
-            Issue.record("Expected a completed result")
+        guard case .recognized(let summary) = model.resultState else {
+            Issue.record("Expected a recognized result")
             return
         }
         #expect(summary.request == "Weather tomorrow")
         #expect(summary.intent == .weather)
         #expect(summary.symbolName == "cloud.sun.fill")
+        #expect(model.interactionDecision?.pattern == .compactAcknowledgement)
     }
 
     @Test func unknownCommandRequestsClarificationTruthfully() {

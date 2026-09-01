@@ -2,7 +2,7 @@ import Foundation
 
 enum AssistantResultState: Equatable, Sendable {
     case idle
-    case completed(ResultSummary)
+    case recognized(ResultSummary)
     case clarification(ResultSummary)
 }
 

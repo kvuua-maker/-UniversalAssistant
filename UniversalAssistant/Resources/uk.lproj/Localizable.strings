@@ -16,3 +16,4 @@
 "risk_reversible" = "Зворотна дія";
 "risk_consequential" = "Потребує підтвердження";
 "risk_emergency" = "Екстрена дія";
+"request_recognized" = "Команду розпізнано";
