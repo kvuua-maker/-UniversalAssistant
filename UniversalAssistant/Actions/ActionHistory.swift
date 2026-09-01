@@ -1,7 +1,7 @@
 import Foundation
 
 enum AssistantActionKind: String, Codable, Sendable {
-    case calendarCreate, calendarUpdate, reminderCreate, noteCreate, linkedPlan
+    case calendarCreate, calendarUpdate, reminderCreate, reminderUpdate, noteCreate, linkedPlan
 }
 
 enum ActionRecordStatus: String, Codable, Sendable {
