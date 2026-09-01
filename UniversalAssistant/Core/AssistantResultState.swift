@@ -17,6 +17,7 @@ struct ResultSummary: Equatable, Sendable {
         case .navigation, .routeSearch, .routeAwareSearch: "location.fill"
         case .weather: "cloud.sun.fill"
         case .productSearch, .groceryBasket, .fashionDiscovery: "bag.fill"
+        case .serviceSearch: "wrench.and.screwdriver.fill"
         case .calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete: "calendar"
         case .reminderCreate, .reminderQuery: "checkmark.circle.fill"
         case .unknown: "questionmark.bubble.fill"

@@ -57,6 +57,7 @@ struct LocalCommandEngine: CommandParsing {
         (.audioRecord, ["диктофон", "запиши аудіо", "voice recorder", "sprachmemo", "enregistre audio"]),
         (.ticketSearch, ["квиток", "квитки", "билет", "ticket", "fahrkarte", "billet"]),
         (.hotelSearch, ["готель", "отель", "hotel", "hôtel", "квартиру"]),
+        (.serviceSearch, ["евакуатор", "tow truck", "abschlepp", "dépanneuse", "сантехнік", "сантехник", "plumber", "klempner", "plombier", "слюсар", "locksmith", "schlüsseldienst", "serrurier", "електрик", "электрик", "electrician", "elektriker", "électricien", "клінінг", "cleaning", "reinigung", "nettoyage", "автосервіс", "car service", "шиномонтаж", "tire service", "стоматолог", "dentist", "ветеринар", "veterinarian", "кур'єр", "courier"]),
         (.taxiCompare, ["найдешевше таксі", "дешевое такси", "cheapest taxi", "günstigstes taxi", "taxi le moins cher"]),
         (.groceryBasket, ["кошик", "корзин", "grocery basket", "warenkorb", "panier"]),
         (.fashionDiscovery, ["колекці", "collection", "kollektion"]),
@@ -77,6 +78,7 @@ struct LocalCommandEngine: CommandParsing {
         extractFashionFilters(from: text, normalized: normalized, into: &constraints)
         constraints.ordinal = ordinal(in: normalized)
         if intent == .open, let target = target(after: ["відкрий", "открой", "open", "öffne", "ouvre"], in: text) { entities["app"] = target }
+        if intent == .serviceSearch, let category = serviceCategory(in: normalized) { entities["serviceCategory"] = category }
         let risk: ActionRisk = intent == .emergency ? .emergency : ([.calendarCreate, .reminderCreate, .cancel, .undo].contains(intent) ? .reversible : .informational)
         return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: intent, entities: entities, constraints: constraints, risk: risk, needsClarification: intent == .unknown)
     }
@@ -150,6 +152,21 @@ struct LocalCommandEngine: CommandParsing {
         if ["другий", "друга", "второй", "second", "zweite", "deuxième"].contains(where: text.contains) { return 2 }
         if ["перший", "первая", "first", "erste", "premier"].contains(where: text.contains) { return 1 }
         return nil
+    }
+    private func serviceCategory(in text: String) -> String? {
+        let values: [(String, [String])] = [
+            ("towTruck", ["евакуатор", "tow truck", "abschlepp", "dépanneuse"]),
+            ("plumber", ["сантехнік", "сантехник", "plumber", "klempner", "plombier"]),
+            ("locksmith", ["слюсар", "locksmith", "schlüsseldienst", "serrurier"]),
+            ("electrician", ["електрик", "электрик", "electrician", "elektriker", "électricien"]),
+            ("cleaning", ["клінінг", "cleaning", "reinigung", "nettoyage"]),
+            ("carService", ["автосервіс", "автосервис", "car service", "autoservice"]),
+            ("tireService", ["шиномонтаж", "tire service", "reifenservice"]),
+            ("dentist", ["стоматолог", "dentist", "zahnarzt", "dentiste"]),
+            ("vet", ["ветеринар", "veterinarian", "tierarzt", "vétérinaire"]),
+            ("courier", ["кур'єр", "курьер", "courier", "kurier", "coursier"])
+        ]
+        return values.first(where: { $0.1.contains(where: text.contains) })?.0
     }
     private func target(after prefixes: [String], in original: String) -> String? {
         let trimmed = original.trimmingCharacters(in: .whitespacesAndNewlines)

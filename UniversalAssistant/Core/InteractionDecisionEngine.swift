@@ -42,7 +42,7 @@ struct InteractionDecisionEngine: InteractionDeciding {
 
     private func requiresVisualSelection(_ intent: CommandIntent) -> Bool {
         [
-            .productSearch, .fashionDiscovery, .groceryBasket, .placeSearch, .restaurantSearch,
+            .productSearch, .fashionDiscovery, .groceryBasket, .placeSearch, .serviceSearch, .restaurantSearch,
             .taxiSearch, .taxiCompare, .routeSearch, .routeAwareSearch, .ticketSearch,
             .hotelSearch, .travelPlan
         ].contains(intent)
