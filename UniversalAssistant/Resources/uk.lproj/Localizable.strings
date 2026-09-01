@@ -1,6 +1,7 @@
 "home" = "Головна";
 "my_tasks" = "Мої справи";
 "favorites" = "Обране";
+"commerce_details" = "Деталі пропозиції"; "commerce_buy_at_seller" = "Купити у продавця"; "commerce_buy_hint" = "Відкриває саме цю пропозицію в офіційному застосунку або на сайті продавця"; "commerce_estimated_total_format" = "Орієнтовна загальна вартість: %@"; "commerce_total_unknown" = "Остаточна вартість відома не повністю"; "commerce_shipping" = "Доставка"; "commerce_tax" = "Податки"; "commerce_duties" = "Мито"; "commerce_returns" = "Повернення"; "commerce_warranty" = "Гарантія"; "commerce_protection" = "Захист покупця"; "commerce_freshness" = "Оновлено"; "commerce_unknown" = "Невідомо"; "commerce_in_stock" = "Є в наявності"; "commerce_out_of_stock" = "Немає в наявності"; "commerce_preorder" = "Передзамовлення"; "commerce_availability_unknown" = "Наявність невідома"; "commerce_delivers_ukraine" = "Доставка в Україну"; "commerce_no_ukraine_delivery" = "Без доставки в Україну"; "commerce_best_total" = "Найкраща загальна ціна"; "commerce_fastest" = "Найшвидша доставка"; "commerce_official_store" = "Офіційний магазин"; "commerce_loading_more" = "Завантаження інших перевірених пропозицій";
 "type_command" = "Або напишіть";
 "ready" = "Готовий";
 "listening" = "Слухаю…";

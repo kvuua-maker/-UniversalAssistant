@@ -60,6 +60,8 @@ struct NormalizedOffer: Identifiable, Equatable, Sendable {
     let sourceTimestamp: Date
     let fetchedAt: Date
     var affiliateAttributionSupported: Bool
+    var imageURL: URL? = nil
+    var originalItemPrice: Money? = nil
 
     func isFresh(now: Date = .now, maximumAge: TimeInterval = 15 * 60) -> Bool {
         let age = now.timeIntervalSince(sourceTimestamp)
