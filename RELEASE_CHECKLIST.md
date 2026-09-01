@@ -3,7 +3,7 @@
 - [x] Development/Staging/Production build configurations exist
 - [x] Secrets and generated files ignored
 - [x] Simulator SDK build succeeds
-- [ ] Required permissions and privacy manifest reflect implemented capabilities
+- [x] Required permission usage strings reflect implemented M0–M2 capabilities (privacy manifest remains gated on first required API reason declaration)
 - [ ] Five-language localization QA
 - [ ] Real-device matrix completed
 - [ ] Signing, TestFlight and App Store owner actions
