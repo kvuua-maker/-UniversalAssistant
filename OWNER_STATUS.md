@@ -2,11 +2,11 @@
 
 ## DONE AND CODEX-VERIFIED
 
-M0–M4 and the completed M5 services, ride, transport and ticket-engine blocks are Codex-verified. The complete Master Spec v13.2 and Commerce addendum are now stored and verified in the repository.
+M0–M4 and the completed M5 services, ride, transport, ticket-engine and hotel-search blocks are Codex-verified. The complete Master Spec v13.2 and Commerce addendum are stored and verified in the repository.
 
 ## CURRENTLY WORKING ON
 
-M5 hotel search core. Selected path: STABLE.
+M5 travel plan core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live hotel providers will require separat
 
 ## NEXT
 
-Hotel search core, then travel planning and the remaining M5 acceptance requirements.
+Travel planning, then the remaining M5 acceptance requirements.

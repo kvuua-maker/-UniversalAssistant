@@ -10,3 +10,9 @@
 - Failure cases: invalid itinerary/dates/guests, stale or missing price/availability evidence, mixed price bases/currencies, unavailable offer, unverified booking state, invalid/generic destination, partial provider failure.
 - Privacy: no guest identity, payment credential or provider account data is stored by the core.
 - Stop condition: deterministic core and tests pass; state explicitly avoids any live availability/booking claim; checkpoint committed and pushed.
+
+## Verification
+
+- `xcodebuild ... test`: PASS — 118 tests across 28 suites.
+- `swift test --package-path Backend`: PASS — 5 tests in 1 suite.
+- Live provider/booking capability remains explicitly unclaimed; the only handoff state is `destinationPrepared` for a fresh, exact, verified provider URL.
