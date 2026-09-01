@@ -66,6 +66,35 @@ struct TicketSearchRequest: Equatable, Sendable {
     var requiresVerifiedInventory = false
 }
 
+protocol TicketProvider: Sendable {
+    var providerID: String { get }
+    func search(_ request: TicketSearchRequest) async throws -> [TicketOffer]
+}
+
+struct TicketProviderSearchResponse: Sendable {
+    let offers: [TicketOffer]
+    let failures: [ProviderFailure]
+    let coverage: ProviderFanoutCoverage
+}
+
+struct TicketProviderCoordinator: Sendable {
+    let providers: [any TicketProvider]
+    var timeout: Duration = .seconds(5)
+    var maximumProviders = 8
+
+    func search(_ request: TicketSearchRequest, now: Date = .now) async throws -> TicketProviderSearchResponse {
+        let operations = providers.map { provider in
+            ProviderOperation<TicketOffer>(providerID: provider.providerID) { try await provider.search(request) }
+        }
+        let response = try await ProviderFanoutEngine<TicketOffer>(
+            timeout: timeout, maximumProviders: maximumProviders
+        ).execute(operations)
+        let ranked = (try? TicketEngine().rank(response.values, request: request, now: now)) ?? []
+        let coverage: ProviderFanoutCoverage = response.failures.isEmpty ? .complete : (ranked.isEmpty ? .failed : .partial)
+        return .init(offers: ranked, failures: response.failures, coverage: coverage)
+    }
+}
+
 enum TicketEngineError: Error, Equatable, Sendable {
     case invalidRequest, noSupportedModes, noVerifiedOffers, invalidExactDestination
 }

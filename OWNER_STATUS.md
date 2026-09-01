@@ -2,11 +2,11 @@
 
 ## DONE AND CODEX-VERIFIED
 
-M0–M4 and the completed M5 services, ride, transport, ticket-engine, hotel-search, travel-plan and authentication-boundary blocks are Codex-verified. The complete Master Spec v13.2 and Commerce addendum are stored and verified in the repository.
+M0–M4 and all M5 implementation blocks through bounded provider degradation are Codex-verified. The complete Master Spec v13.2 and Commerce addendum are stored and verified in the repository.
 
 ## CURRENTLY WORKING ON
 
-M5 cross-provider degradation audit. Selected path: STABLE.
+Corrected M5 acceptance. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live hotel providers will require separat
 
 ## NEXT
 
-Cross-provider degradation audit, then corrected M5 acceptance.
+Corrected M5 acceptance, then the first unfinished M6 block.
