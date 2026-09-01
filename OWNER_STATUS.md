@@ -3,6 +3,7 @@
 ## DONE AND CODEX-VERIFIED
 
 M0, multilingual command core, and the system voice/App Intent code are Codex-verified; all available tests pass.
+Marketplace Commerce & Affiliate Hub addendum accepted and integrated into the M4 architecture/acceptance plan.
 
 ## CURRENTLY WORKING ON
 
