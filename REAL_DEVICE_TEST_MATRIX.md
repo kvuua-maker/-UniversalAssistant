@@ -12,3 +12,5 @@
 | Accurate location | When-in-use permission, reduced/full accuracy, stale/poor recovery and physical movement | DEVICE_TEST_REQUIRED — LOCATION-001 |
 | Places | Live regional MapKit queries, place IDs, addresses, categories and ranking | LIVE_TEST_REQUIRED — PLACES-001 |
 | Route/navigation | Live MapKit routes, actual detour and Apple/Google/Waze exact handoff | LIVE_DEVICE_TEST_REQUIRED — NAVIGATION-001 |
+| WeatherKit | Live current/hourly/daily response, entitlement, attribution and destination context | LIVE_DEVICE_TEST_REQUIRED — WEATHER-001 |
+| Location recovery | Poor/suspicious resampling, denied permission Settings route and explicit manual fallback | DEVICE_TEST_REQUIRED — LOCATION-002 |
