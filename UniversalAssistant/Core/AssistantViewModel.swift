@@ -9,6 +9,7 @@ final class AssistantViewModel {
     private(set) var statusText = AppText.value("ready")
     private(set) var resultState: AssistantResultState = .idle
     private(set) var interactionDecision: InteractionDecision?
+    let recorder = AudioRecorderController()
     private let commandEngine: any CommandParsing
     private let interactionEngine: any InteractionDeciding
     private let voiceInput = VoiceInputController()

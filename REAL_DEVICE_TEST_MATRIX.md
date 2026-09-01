@@ -7,4 +7,5 @@
 | Contacts | Real full/limited permission, exact-ID alias and ambiguous-name resolution | DEVICE_TEST_REQUIRED — CONTACTS-001 |
 | Calendar | Full-access permission and real create/read/update/delete/undo | DEVICE_TEST_REQUIRED — CALENDAR-001 |
 | Reminders | Full-access permission and real create/read/update/delete/undo | DEVICE_TEST_REQUIRED — REMINDERS-001 |
+| Audio recorder | Permission, start/pause/resume/stop/play/rename/delete/share, interruptions and routes | DEVICE_TEST_REQUIRED — RECORDER-001 |
 | GPS and navigation handoff | Physical sensors and installed apps | NOT_TESTED — M3 |

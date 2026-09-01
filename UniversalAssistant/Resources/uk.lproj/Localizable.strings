@@ -17,3 +17,5 @@
 "risk_consequential" = "Потребує підтвердження";
 "risk_emergency" = "Екстрена дія";
 "request_recognized" = "Команду розпізнано";
+"recording_active" = "Триває запис";
+"recording_paused" = "Запис призупинено";
