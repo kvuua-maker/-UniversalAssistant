@@ -5,3 +5,4 @@ CODE_SIGNING_ALLOWED = NO
 INFOPLIST_KEY_NSMicrophoneUsageDescription = UniversalAssistant uses the microphone only when you start a voice command.
 INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = UniversalAssistant converts your spoken command into text so it can perform the requested action.
 INFOPLIST_KEY_NSContactsUsageDescription = UniversalAssistant accesses contacts only when you ask it to find or contact a person.
+INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = UniversalAssistant accesses Calendar only to find and manage events you request.
