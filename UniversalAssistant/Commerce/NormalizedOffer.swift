@@ -56,6 +56,7 @@ struct NormalizedOffer: Identifiable, Equatable, Sendable {
     var deliversToUkraine: Bool?
     var deliveryETA: DateInterval?
     let exactPurchaseURL: URL
+    var exactAppURL: URL? = nil
     let sourceTimestamp: Date
     let fetchedAt: Date
     var affiliateAttributionSupported: Bool

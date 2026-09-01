@@ -2,8 +2,8 @@
 
 - Stage: M4 — Retail, Fashion, Grocery + Commerce Hub foundation
 - Completed: M0; M1 local implementation; M2 Apple local actions; M3 AccurateLocationEngine, bounded places, route-aware navigation, WeatherKit context and location recovery at local E3.
-- Verified: Development build passes; iOS Swift Testing 70 tests across 18 suites passes; backend Swift Testing 1/1 passes.
+- Verified: Development build passes; iOS Swift Testing 75 tests across 19 suites passes; backend Swift Testing 1/1 passes.
 - Blockers: none.
 - Mandatory addendum: Marketplace Commerce & Affiliate Hub accepted and persisted; implementation is routed into M4 without reopening M0/M1.
 - Device tests: VOICE-001 and VOICE-002 queued; delivery build not issued yet.
-- Next: M4 exact purchase handoff and legitimate affiliate routing/fallback with attribution truth boundaries.
+- Next: M4 premium native Commerce cards, progressive stable result state, Dynamic Type and VoiceOver.
