@@ -68,6 +68,37 @@ struct GroceryBasketTotal: Equatable, Sendable {
 
 enum GroceryBasketError: Error, Equatable, Sendable {
     case emptyBasket, invalidQuantity, unsupportedUnit, invalidItem, duplicateQuote, mixedCurrencies
+    case invalidOptimizationPolicy, staleQuote, noCompletePlan
+}
+
+struct GroceryStoreCandidate: Equatable, Sendable {
+    let quote: GroceryStoreQuote
+    let detourSeconds: TimeInterval
+    let detourMeters: Double
+    var travelCost: Money?
+}
+
+struct GroceryOptimizationPolicy: Equatable, Sendable {
+    var maximumStores = 2
+    var maximumCandidates = 12
+    var maximumTotalDetourSeconds: TimeInterval
+    var maximumQuoteAge: TimeInterval = 15 * 60
+}
+
+struct GroceryItemAssignment: Equatable, Sendable {
+    let requestedItemID: String
+    let storeID: String
+    let quotedItem: GroceryQuotedItem
+}
+
+struct GroceryPurchasePlan: Equatable, Sendable {
+    let storeIDs: [String]
+    let assignments: [GroceryItemAssignment]
+    let itemSubtotal: Money
+    let travelCost: Money
+    let estimatedTotal: Money
+    let totalDetourSeconds: TimeInterval
+    let totalDetourMeters: Double
 }
 
 struct GroceryListParser: Sendable {
@@ -123,5 +154,86 @@ struct GroceryBasketEngine: Sendable {
                   left.currency == right.currency else { return $0.offset < $1.offset }
             return left.amount == right.amount ? $0.offset < $1.offset : left.amount < right.amount
         }.map(\.element)
+    }
+
+    func optimize(
+        basket: GroceryBasket,
+        candidates: [GroceryStoreCandidate],
+        policy: GroceryOptimizationPolicy,
+        now: Date = .now
+    ) throws -> GroceryPurchasePlan {
+        guard policy.maximumStores == 2, (1...12).contains(policy.maximumCandidates),
+              policy.maximumTotalDetourSeconds >= 0, policy.maximumQuoteAge > 0 else {
+            throw GroceryBasketError.invalidOptimizationPolicy
+        }
+        let bounded = Array(candidates.prefix(policy.maximumCandidates))
+        guard bounded.allSatisfy({ age(of: $0.quote, now: now) <= policy.maximumQuoteAge }) else {
+            throw GroceryBasketError.staleQuote
+        }
+        var groups = bounded.map { [$0] }
+        for left in bounded.indices {
+            for right in bounded.indices where right > left { groups.append([bounded[left], bounded[right]]) }
+        }
+        let plans = try groups.compactMap { try plan(basket: basket, stores: $0, policy: policy) }
+        guard let best = plans.sorted(by: isBetter).first else { throw GroceryBasketError.noCompletePlan }
+        return best
+    }
+
+    private func plan(
+        basket: GroceryBasket,
+        stores: [GroceryStoreCandidate],
+        policy: GroceryOptimizationPolicy
+    ) throws -> GroceryPurchasePlan? {
+        var assignments: [GroceryItemAssignment] = []
+        for item in basket.items {
+            let options = stores.compactMap { store -> GroceryItemAssignment? in
+                guard let quote = store.quote.items.first(where: { $0.requestedItemID == item.id }),
+                      [.exact, .equivalentQuantity].contains(quote.match), quote.linePrice != nil else { return nil }
+                return .init(requestedItemID: item.id, storeID: store.quote.storeID, quotedItem: quote)
+            }
+            guard let selected = options.sorted(by: cheaperAssignment).first else { return nil }
+            assignments.append(selected)
+        }
+        let usedIDs = Set(assignments.map(\.storeID))
+        let used = stores.filter { usedIDs.contains($0.quote.storeID) }
+        let detourSeconds = used.reduce(0) { $0 + max(0, $1.detourSeconds) }
+        guard detourSeconds <= policy.maximumTotalDetourSeconds else { return nil }
+        let prices = assignments.compactMap(\.quotedItem.linePrice)
+        let currencySet = Set(prices.map(\.currency))
+        guard currencySet.count == 1, let currency = currencySet.first else { throw GroceryBasketError.mixedCurrencies }
+        let travel = used.compactMap(\.travelCost)
+        guard travel.allSatisfy({ $0.currency == currency }) else { throw GroceryBasketError.mixedCurrencies }
+        let itemAmount = prices.reduce(0) { $0 + $1.amount }
+        let travelAmount = travel.reduce(0) { $0 + $1.amount }
+        return .init(
+            storeIDs: used.map(\.quote.storeID).sorted(), assignments: assignments,
+            itemSubtotal: .init(amount: itemAmount, currency: currency),
+            travelCost: .init(amount: travelAmount, currency: currency),
+            estimatedTotal: .init(amount: itemAmount + travelAmount, currency: currency),
+            totalDetourSeconds: detourSeconds,
+            totalDetourMeters: used.reduce(0) { $0 + max(0, $1.detourMeters) }
+        )
+    }
+
+    private func cheaperAssignment(_ left: GroceryItemAssignment, _ right: GroceryItemAssignment) -> Bool {
+        guard let a = left.quotedItem.linePrice, let b = right.quotedItem.linePrice,
+              a.currency == b.currency else { return left.storeID < right.storeID }
+        if a.amount != b.amount { return a.amount < b.amount }
+        if left.quotedItem.match != right.quotedItem.match { return left.quotedItem.match > right.quotedItem.match }
+        return left.storeID < right.storeID
+    }
+
+    private func isBetter(_ left: GroceryPurchasePlan, _ right: GroceryPurchasePlan) -> Bool {
+        if left.estimatedTotal.currency == right.estimatedTotal.currency,
+           left.estimatedTotal.amount != right.estimatedTotal.amount {
+            return left.estimatedTotal.amount < right.estimatedTotal.amount
+        }
+        if left.storeIDs.count != right.storeIDs.count { return left.storeIDs.count < right.storeIDs.count }
+        if left.totalDetourSeconds != right.totalDetourSeconds { return left.totalDetourSeconds < right.totalDetourSeconds }
+        return left.storeIDs.lexicographicallyPrecedes(right.storeIDs)
+    }
+
+    private func age(of quote: GroceryStoreQuote, now: Date) -> TimeInterval {
+        max(0, now.timeIntervalSince(quote.sourceTimestamp))
     }
 }
