@@ -1,3 +1,3 @@
 # Integration Status
 
-No external provider is claimed integrated at M0. Apple framework and provider capabilities enter this registry capability-by-capability after feasibility evidence. Current app shell and local parser are E2 build-verified only.
+No external commerce provider is claimed integrated. The provider-neutral M4 registry, RetailProvider contract, GTIN validation and exact variant resolver are locally implemented/tested at E3; provider status must enter the registry capability-by-capability after official feasibility evidence.
