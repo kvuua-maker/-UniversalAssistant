@@ -11,3 +11,4 @@
 | GPS and navigation handoff | Physical sensors and installed apps | NOT_TESTED — M3 |
 | Accurate location | When-in-use permission, reduced/full accuracy, stale/poor recovery and physical movement | DEVICE_TEST_REQUIRED — LOCATION-001 |
 | Places | Live regional MapKit queries, place IDs, addresses, categories and ranking | LIVE_TEST_REQUIRED — PLACES-001 |
+| Route/navigation | Live MapKit routes, actual detour and Apple/Google/Waze exact handoff | LIVE_DEVICE_TEST_REQUIRED — NAVIGATION-001 |
