@@ -14,10 +14,10 @@ struct AssistantHomeView: View {
                             .symbolRenderingMode(.palette)
                             .foregroundStyle(.white, Color.accentColor)
                     }
-                    .accessibilityLabel(model.isListening ? "Stop listening" : "Start listening")
+                    .accessibilityLabel(model.isListening ? Text("stop_listening") : Text("start_listening"))
                     Text(model.statusText).font(.headline).accessibilityIdentifier("assistant.status")
                     Spacer()
-                    TextField("Або напишіть", text: $model.input)
+                    TextField("type_command", text: $model.input)
                         .textFieldStyle(.roundedBorder)
                         .submitLabel(.go)
                         .onSubmit(model.submit)
@@ -26,11 +26,11 @@ struct AssistantHomeView: View {
                 .padding()
                 .navigationTitle("UniversalAssistant")
             }
-            .tabItem { Label("Home", systemImage: "house") }
-            ContentUnavailableView("My Tasks", systemImage: "checklist")
-                .tabItem { Label("My Tasks", systemImage: "checklist") }
-            ContentUnavailableView("Favorites", systemImage: "star")
-                .tabItem { Label("Favorites", systemImage: "star") }
+            .tabItem { Label("home", systemImage: "house") }
+            ContentUnavailableView("my_tasks", systemImage: "checklist")
+                .tabItem { Label("my_tasks", systemImage: "checklist") }
+            ContentUnavailableView("favorites", systemImage: "star")
+                .tabItem { Label("favorites", systemImage: "star") }
         }
     }
 }

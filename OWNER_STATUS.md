@@ -2,12 +2,12 @@
 
 ## DONE AND CODEX-VERIFIED
 
-M0, multilingual command core, and the system voice/App Intent code are Codex-verified; all available tests pass.
+M0 and current M1 code are Codex-verified: command core, voice/App Intent, five-language shell and bounded performance measurements; all available tests pass.
 Marketplace Commerce & Affiliate Hub addendum accepted and integrated into the M4 architecture/acceptance plan.
 
 ## CURRENTLY WORKING ON
 
-Checkpointing voice entry, then M1 performance/localization. Selected path: STABLE.
+Checkpointing performance/localization, then compact result states. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 

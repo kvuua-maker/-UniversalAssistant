@@ -1,0 +1,13 @@
+"home" = "Головна";
+"my_tasks" = "Мої справи";
+"favorites" = "Обране";
+"type_command" = "Або напишіть";
+"ready" = "Готовий";
+"listening" = "Слухаю…";
+"clarification_needed" = "Потрібне уточнення";
+"done" = "✓ Готово";
+"microphone_denied" = "Дозвіл на мікрофон вимкнено";
+"speech_unavailable" = "Розпізнавання недоступне";
+"listening_failed" = "Не вдалося почати слухання";
+"start_listening" = "Почати слухання";
+"stop_listening" = "Зупинити слухання";

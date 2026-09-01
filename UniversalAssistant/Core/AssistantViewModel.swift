@@ -6,7 +6,7 @@ import Observation
 final class AssistantViewModel {
     var input = ""
     var isListening = false
-    private(set) var statusText = "Готовий"
+    private(set) var statusText = AppText.value("ready")
     private let commandEngine: any CommandParsing
     private let voiceInput = VoiceInputController()
 
@@ -14,17 +14,17 @@ final class AssistantViewModel {
 
     func toggleListening() {
         if isListening {
-            voiceInput.stop(); isListening = false; input = voiceInput.transcript; statusText = "Готовий"
+            voiceInput.stop(); isListening = false; input = voiceInput.transcript; statusText = AppText.value("ready")
         } else {
             Task {
                 await voiceInput.start()
                 isListening = voiceInput.state == .listening
                 statusText = switch voiceInput.state {
-                case .listening: "Слухаю…"
-                case .denied: "Дозвіл на мікрофон вимкнено"
-                case .unavailable: "Розпізнавання недоступне"
-                case .failed: "Не вдалося почати слухання"
-                default: "Готовий"
+                case .listening: AppText.value("listening")
+                case .denied: AppText.value("microphone_denied")
+                case .unavailable: AppText.value("speech_unavailable")
+                case .failed: AppText.value("listening_failed")
+                default: AppText.value("ready")
                 }
             }
         }
@@ -33,6 +33,6 @@ final class AssistantViewModel {
     func submit() {
         let command = commandEngine.parse(input)
         input = ""
-        statusText = command.intent == .unknown ? "Потрібне уточнення" : "✓ Готово"
+        statusText = command.intent == .unknown ? AppText.value("clarification_needed") : AppText.value("done")
     }
 }
