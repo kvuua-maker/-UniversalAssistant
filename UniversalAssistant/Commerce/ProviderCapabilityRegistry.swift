@@ -16,6 +16,8 @@ struct CommerceProviderCapabilities: OptionSet, Codable, Sendable {
     static let affiliateAttribution = Self(rawValue: 1 << 6)
     static let exactDeepLink = Self(rawValue: 1 << 7)
     static let appHandoff = Self(rawValue: 1 << 8)
+    static let cart = Self(rawValue: 1 << 9)
+    static let checkoutHandoff = Self(rawValue: 1 << 10)
 }
 
 struct ProviderCapabilityRecord: Identifiable, Equatable, Codable, Sendable {
@@ -33,6 +35,7 @@ struct ProviderCapabilityRecord: Identifiable, Equatable, Codable, Sendable {
     var fallback: String?
     var lastOfficialVerification: Date?
     var enabled: Bool
+    var officialDocumentationURL: URL? = nil
 }
 
 actor ProviderCapabilityRegistry {
@@ -49,7 +52,7 @@ actor ProviderCapabilityRegistry {
         records.values.filter {
             $0.enabled && $0.regions.contains(region.uppercased())
                 && $0.capabilities.contains(capability)
-                && ![.unsupported, .credentialRequired, .approvalRequired].contains($0.status)
+                && [.adapterReady, .implementedTested, .fallback].contains($0.status)
         }.sorted { $0.id < $1.id }
     }
 }

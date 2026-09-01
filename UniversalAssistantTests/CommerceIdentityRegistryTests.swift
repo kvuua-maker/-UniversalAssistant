@@ -43,4 +43,14 @@ private func phone(gtin: String? = "0194253406532", sku: String? = "IP15-128-BLK
         let result = await registry.eligible(region: "ua", requiring: .search)
         #expect(result.map(\.id) == ["ua-ready"])
     }
+
+    @Test func researchedProviderIsNeverExecutableButSilpoOfficialMCPIsAdapterReady() async {
+        let registry = ProviderCapabilityRegistry(records: UkrainianRetailerRegistry.records)
+        let eligible = await registry.eligible(region: "UA", requiring: [.search, .availability])
+        #expect(eligible.map(\.id) == ["ua.silpo.mcp"])
+        #expect(await registry.record(id: "ua.atb.web")?.status == .researched)
+        #expect(await registry.record(id: "ua.atb.web")?.enabled == false)
+        #expect(await registry.record(id: "ua.silpo.mcp")?.officialDocumentationURL?.host == "ai-factory.silpo.ua")
+        #expect(await registry.record(id: "ua.silpo.mcp")?.affiliateNetwork == nil)
+    }
 }
