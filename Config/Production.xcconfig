@@ -7,3 +7,4 @@ INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = UniversalAssistant converts 
 INFOPLIST_KEY_NSContactsUsageDescription = UniversalAssistant accesses contacts only when you ask it to find or contact a person.
 INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = UniversalAssistant accesses Calendar only to find and manage events you request.
 INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = UniversalAssistant accesses Reminders only to find and manage reminders you request.
+INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = UniversalAssistant uses your location only for nearby, route, navigation, weather, or emergency requests.

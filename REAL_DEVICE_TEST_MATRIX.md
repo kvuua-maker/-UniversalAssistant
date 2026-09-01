@@ -9,3 +9,4 @@
 | Reminders | Full-access permission and real create/read/update/delete/undo | DEVICE_TEST_REQUIRED — REMINDERS-001 |
 | Audio recorder | Permission, start/pause/resume/stop/play/rename/delete/share, interruptions and routes | DEVICE_TEST_REQUIRED — RECORDER-001 |
 | GPS and navigation handoff | Physical sensors and installed apps | NOT_TESTED — M3 |
+| Accurate location | When-in-use permission, reduced/full accuracy, stale/poor recovery and physical movement | DEVICE_TEST_REQUIRED — LOCATION-001 |
