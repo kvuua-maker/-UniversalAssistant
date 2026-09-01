@@ -2,11 +2,11 @@
 
 ## DONE AND CODEX-VERIFIED
 
-M0–M4 and all M5 implementation blocks through bounded provider degradation are Codex-verified. The complete Master Spec v13.2 and Commerce addendum are stored and verified in the repository.
+M0–M5 are Codex-verified at local E3. The corrected M5 acceptance includes every canonical services, ride, transport, ticket, hotel, travel, authentication and provider-degradation requirement.
 
 ## CURRENTLY WORKING ON
 
-Corrected M5 acceptance. Selected path: STABLE.
+M6 durable job core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live hotel providers will require separat
 
 ## NEXT
 
-Corrected M5 acceptance, then the first unfinished M6 block.
+Durable proactive job model and queue contract, then the remaining M6 notification blocks.
