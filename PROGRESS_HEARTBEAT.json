@@ -1,1 +1,1 @@
-{"current_block":"M0","current_action":"git_checkpoint","status":"SUCCESS","last_measurable_progress":"2026-09-01T18:14:04+02:00","last_commit":"b1bd2c8","blocker":null,"evidence":{"ios_tests":"3 tests / 7 cases passed","backend_tests":"1 test passed","build":"succeeded"}}
+{"current_block":"M1","current_action":"command_core_checkpoint","status":"SUCCESS","last_measurable_progress":"2026-09-01T18:25:10+02:00","last_commit":"b0d0fc2","blocker":null,"evidence":{"ios_tests":"5 tests with 11 parameterized cases passed","build":"succeeded"}}

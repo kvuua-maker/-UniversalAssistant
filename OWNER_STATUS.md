@@ -2,11 +2,11 @@
 
 ## DONE AND CODEX-VERIFIED
 
-M0 foundation builds successfully. All available tests pass: iPhone Simulator and backend.
+M0 foundation and the first M1 command core are Codex-verified. Multilingual parser/context tests pass.
 
 ## CURRENTLY WORKING ON
 
-Preparing the first repository checkpoint, then M1. Selected path: STABLE.
+Checkpointing the command core, then implementing voice entry. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blockers.
 
 ## NEXT
 
-Voice and typed command core in five languages.
+Speech entry and fast iPhone invocation.

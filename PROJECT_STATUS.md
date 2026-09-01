@@ -1,12 +1,12 @@
 # Project Status
 
-- Overall: M0 Codex-side implementation and tests complete
-- Current block/action: Git checkpoint
-- Last measurable progress: iOS tests 3/3 and backend test 1/1 passed
-- Last successful build/test: iPhone 17 Simulator iOS 26.5 and backend tests, 2026-09-01
-- Last commit: b1bd2c8 (pre-implementation)
+- Overall: M0 complete; M1 command core complete
+- Current block/action: checkpoint M1 command core
+- Last measurable progress: M1 parser tests pass, including five languages and context expiry
+- Last successful build/test: 5 M1 tests with 11 parameterized cases, iPhone 17 Simulator iOS 26.5, 2026-09-01
+- Last commit: b0d0fc2 (M0)
 - External blocker: none
 - Internal engineering problems: none open
 - STALLED: NO
-- Next block: M1 voice and structured command core
+- Next block: M1 speech entry and App Intent
 - OWNER ACTION REQUIRED: none
