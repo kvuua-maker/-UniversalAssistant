@@ -7,6 +7,7 @@ final class AssistantViewModel {
     var input = ""
     var isListening = false
     private(set) var statusText = AppText.value("ready")
+    private(set) var resultState: AssistantResultState = .idle
     private let commandEngine: any CommandParsing
     private let voiceInput = VoiceInputController()
 
@@ -32,7 +33,14 @@ final class AssistantViewModel {
 
     func submit() {
         let command = commandEngine.parse(input)
+        let summary = ResultSummary(request: command.originalText, intent: command.intent, risk: command.risk)
         input = ""
-        statusText = command.intent == .unknown ? AppText.value("clarification_needed") : AppText.value("done")
+        if command.needsClarification {
+            resultState = .clarification(summary)
+            statusText = AppText.value("clarification_needed")
+        } else {
+            resultState = .completed(summary)
+            statusText = AppText.value("done")
+        }
     }
 }

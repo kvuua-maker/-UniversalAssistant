@@ -8,5 +8,6 @@
 - External blocker: none
 - Internal engineering problems: none open
 - STALLED: NO
-- Next block: M1 compact result-state UI
+- Latest block: M1 compact result-state UI verified (9 tests across 3 suites)
+- Next block: remaining M1 interaction and safety acceptance work
 - OWNER ACTION REQUIRED: none

@@ -11,3 +11,8 @@
 "listening_failed" = "Не вдалося почати слухання";
 "start_listening" = "Почати слухання";
 "stop_listening" = "Зупинити слухання";
+"result_ready" = "Результат готовий";
+"risk_informational" = "Інформаційна дія";
+"risk_reversible" = "Зворотна дія";
+"risk_consequential" = "Потребує підтвердження";
+"risk_emergency" = "Екстрена дія";
