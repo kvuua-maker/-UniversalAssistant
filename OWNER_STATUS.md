@@ -6,7 +6,7 @@ M0–M7 are Codex-verified at local E3.
 
 ## CURRENTLY WORKING ON
 
-M8 account deletion and privacy core. Selected path: STABLE.
+M8 acceptance. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Add explicit deletion/export orchestration, account-scoped job/token cleanup and the required privacy manifest.
+Freeze locally verified M8 evidence with exact external gates, then advance to the first allowed unfinished milestone.
