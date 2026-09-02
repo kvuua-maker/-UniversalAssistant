@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 INVENTORY = ROOT / "REQUIREMENT_INVENTORY.json"
 SOURCES = [
+    ROOT / "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
     ROOT / "docs/M10_ZERO_OMISSION_AUDIT.md",
     ROOT / "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
 ]
@@ -65,9 +66,11 @@ def main() -> None:
             record["commit_evidence"] = [verified_commit(commit, source)]
             record["remaining_dependency"] = evidence if status == "READY_FOR_LIVE_VERIFICATION" else None
             imported.add(requirement_id)
-    if imported != {f"MS-{value}" for value in range(737, 851)}:
-        missing = sorted({f"MS-{value}" for value in range(737, 851)} - imported)
-        raise SystemExit(f"expected exact MS-737...850 coverage; missing: {missing}")
+    expected = {f"MS-{value}" for value in range(1, 24)} | {f"MS-{value}" for value in range(737, 851)}
+    if imported != expected:
+        missing = sorted(expected - imported)
+        unexpected = sorted(imported - expected)
+        raise SystemExit(f"expected exact reconciled coverage; missing: {missing}; unexpected: {unexpected}")
     payload["requirements"] = [records[record["id"]] for record in payload["requirements"]]
     INVENTORY.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
     print(f"reconciled {len(imported)} explicit requirements")
