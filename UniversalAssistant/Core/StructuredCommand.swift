@@ -46,6 +46,9 @@ protocol CommandParsing: Sendable { func parse(_ text: String) -> StructuredComm
 
 struct LocalCommandEngine: CommandParsing {
     private static let intentPatterns: [(CommandIntent, [String])] = [
+        (.multiStep, ["коли я кажу", "когда я говорю", "when i say", "wenn ich", "quand je dis"]),
+        (.multiStep, ["коли я кажу", "когда я говорю", "when i say", "wenn ich", "quand je dis"]),
+        (.multiStep, ["коли я кажу", "когда я говорю", "when i say", "wenn ich", "quand je dis"]),
         (.undo, ["відміни останнє", "отмени последнее", "undo last", "rückgängig", "annule la dernière"]),
         (.emergency, ["112", "швидка", "скорая", "ambulance", "polizei", "police", "пожежа", "пожар"]),
         (.calendarCreate, ["запиши", "додай зустріч", "создай встреч", "add event", "termin erstellen", "ajoute un rendez-vous"]),

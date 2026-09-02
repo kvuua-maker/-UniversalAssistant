@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M12 Golden user journeys. Selected path: STABLE.
+M12 Final capability audit. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the next local core. Provider live execution remains separately c
 
 ## NEXT
 
-Build and execute the canonical representative production journey corpus with complete evidence records and metrics.
+Audit MS-1088–1097 end-to-end against production code, behavioral evidence and live queue without documentation-only closure.

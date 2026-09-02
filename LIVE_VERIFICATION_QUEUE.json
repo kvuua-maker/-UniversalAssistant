@@ -310,6 +310,19 @@
       "created_at": "2026-09-02T18:00:00+02:00",
       "last_checked": "2026-09-02T18:00:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-1077-1087-LIVE-GOLDEN-JOURNEYS",
+      "service_provider": "Physical iPhone and the provider accounts already enumerated by capability-specific live queue items",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "A signed physical-device build plus the credentials, entitlements, controlled accounts/objects and lawful disposable-action approval identified in the existing Gmail, Calendar, navigation, commerce, travel, parcel, government, delivery and appointment queue entries.",
+      "dependency_owner": "Owner/device tester and the corresponding provider/account administrators",
+      "local_evidence": ["GOLDEN_USER_JOURNEYS.md", "UniversalAssistant/Core/GoldenUserJourney.swift", "UniversalAssistantTests/GoldenUserJourneyAcceptanceTests.swift"],
+      "required_live_action": "Execute each of the 65 provider/device-classified corpus records on the controlled device/account; record recognized text, parsed intent/entities, real source/result/action, latency, taps/confirmations, PASS/FAIL and exact failure; run only safe read actions or explicitly approved disposable consequential actions.",
+      "expected_result": "Every live journey either reaches the deepest legitimate verified provider/device result with the documented confirmation boundary or reports an honest actionable failure; no mock result is counted as live, and aggregate completion, no-extra-question, Time-to-Action, taps, fallback and real-integration success metrics are retained.",
+      "created_at": "2026-09-02T18:40:00+02:00",
+      "last_checked": "2026-09-02T18:40:00+02:00",
+      "completion_evidence": null
     }
   ]
 }
