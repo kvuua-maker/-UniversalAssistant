@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M12 Final capability audit. Selected path: STABLE.
+M12 Execution/state governance audit. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the next local core. Provider live execution remains separately c
 
 ## NEXT
 
-Audit MS-1088–1097 end-to-end against production code, behavioral evidence and live queue without documentation-only closure.
+Audit MS-1098 onward for sequential execution, current dashboards/heartbeat, resume discipline and remaining canonical governance contracts.

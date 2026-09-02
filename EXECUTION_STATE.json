@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-GOLDEN-USER-JOURNEYS",
-  "requirement_ids": ["1077-1087"],
-  "selected_path": "One hundred multilingual canonical journeys with executable local outcomes, honest live separation and measurable UX baselines.",
+  "current_task_id": "M12-FINAL-CAPABILITY-AUDIT",
+  "requirement_ids": ["1088-1097"],
+  "selected_path": "Requirement-by-requirement production and behavioral audit with exact live-only separation.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 executable 100-record corpus and metrics complete; 65 real provider/device executions remain explicitly queued",
-  "acceptance_contract_ref": "GOLDEN_USER_JOURNEYS.md",
+  "integration_depth": "all locally executable final capability audits complete; physical/provider assertions remain READY_FOR_LIVE_VERIFICATION",
+  "acceptance_contract_ref": "docs/M12_FINAL_CAPABILITY_AUDIT.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Golden acceptance is now executable: 100 distinct records, actual parser/typed-plan outcomes, latency/tap metrics, baselines and evidence links; live records cannot pass locally.",
-  "frozen_baseline_commit": "2737995",
-  "dependency": "Physical-device and provider credentials/accounts only for the 65 explicitly classified live journeys.",
-  "unresolved_verification_steps": ["MS-1077-1087-LIVE-GOLDEN-JOURNEYS"],
-  "next_task_id": "M12-FINAL-CAPABILITY-AUDIT"
+  "material_change": "MS-1088-1097 now have explicit production/test/live evidence; local gaps are zero and V1 remains truthfully not live-ready.",
+  "frozen_baseline_commit": "aabe915",
+  "dependency": "Capability-specific physical device/provider evidence listed in the persistent live queue.",
+  "unresolved_verification_steps": ["MS-1005-1022-LIVE-SHARE-SCANNERS", "MS-1030-1037-LIVE-PARCEL-PROVIDERS", "MS-1039-LIVE-DIIA-PARTNER-INTEGRATION", "MS-1043-1049-LIVE-FOOD-DELIVERY", "MS-1050-1056-LIVE-APPOINTMENTS", "MS-1077-1087-LIVE-GOLDEN-JOURNEYS"],
+  "next_task_id": "M12-EXECUTION-STATE-GOVERNANCE-AUDIT"
 }
