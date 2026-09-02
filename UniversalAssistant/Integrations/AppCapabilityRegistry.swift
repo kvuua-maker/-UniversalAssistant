@@ -10,7 +10,10 @@ struct AppCapabilities: OptionSet, Codable, Sendable {
     static let book = Self(rawValue: 1 << 10), order = Self(rawValue: 1 << 11)
     static let paymentHandoff = Self(rawValue: 1 << 12)
 }
-enum AppIntegrationMechanism: String, Codable, Sendable { case appIntent, shortcut, urlScheme, universalLink, sdk, api, openOnly }
+enum AppIntegrationMechanism: String, Codable, Sendable {
+    case api, sdk, oauthPartnerAPI, appIntent, shortcut, universalLink, urlScheme
+    case structuredFeed, officialWeb, phone, navigation, instruction, openOnly
+}
 enum AppCapabilityTestStatus: String, Codable, Sendable { case documented, implemented, simulatorVerified, deviceTestRequired, credentialRequired, unavailable }
 
 struct AppCapabilityRecord: Identifiable, Codable, Equatable, Sendable {
@@ -39,7 +42,10 @@ actor AppCapabilityRegistry {
     }
     func deepestRoute(appID: String, capability: AppCapabilities) throws -> (AppIntegrationMechanism, AppCapabilityTestStatus) {
         guard let record = records[appID], record.capabilities.contains(capability) else { throw AppCapabilityRegistryError.unsupportedCapability }
-        let order: [AppIntegrationMechanism] = [.api, .sdk, .appIntent, .shortcut, .universalLink, .urlScheme, .openOnly]
+        let order: [AppIntegrationMechanism] = [
+            .api, .sdk, .oauthPartnerAPI, .appIntent, .shortcut, .universalLink, .urlScheme,
+            .structuredFeed, .officialWeb, .phone, .navigation, .instruction, .openOnly
+        ]
         guard let mechanism = order.first(where: record.mechanisms.contains) else { throw AppCapabilityRegistryError.unsupportedCapability }
         return (mechanism, record.testStatus)
     }

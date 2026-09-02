@@ -16,6 +16,16 @@ private func appRecord(id: String = "maps", capabilities: AppCapabilities = [.op
         let route = try await registry.deepestRoute(appID: "maps", capability: .navigate)
         #expect(route.0 == .api)
     }
+
+    @Test func canonicalPriorityIncludesEveryLegitimateFallbackDepth() async throws {
+        let mechanisms: Set<AppIntegrationMechanism> = [.instruction, .navigation, .phone, .officialWeb,
+            .structuredFeed, .urlScheme, .universalLink, .shortcut, .appIntent, .oauthPartnerAPI, .sdk, .api]
+        let registry = try AppCapabilityRegistry(records: [appRecord(mechanisms: mechanisms)])
+        #expect(try await registry.deepestRoute(appID: "maps", capability: .navigate).0 == .api)
+
+        let fallback = try AppCapabilityRegistry(records: [appRecord(mechanisms: [.instruction, .phone, .officialWeb])])
+        #expect(try await fallback.deepestRoute(appID: "maps", capability: .navigate).0 == .officialWeb)
+    }
     @Test func openOnlyCannotPretendToDeeperAutomation() async {
         #expect(throws: AppCapabilityRegistryError.invalidRecord) { _ = try AppCapabilityRegistry(records: [appRecord(capabilities: [.openApp, .send], mechanisms: [.openOnly])]) }
     }
