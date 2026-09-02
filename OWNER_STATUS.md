@@ -6,7 +6,7 @@ M0–M8 and the deterministic coordination addendum are Codex-verified at local 
 
 ## CURRENTLY WORKING ON
 
-M9 fraud and abuse controls core. Selected path: STABLE.
+M9 Remote Config, Feature Flags and Cost/Quota core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Add auditable duplicate, self-referral, replay and refund/commission manipulation signals before acceptance.
+Add validated versioned runtime policy flags and bounded partner/provider cost and quota decisions.
