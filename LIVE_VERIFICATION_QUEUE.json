@@ -271,6 +271,19 @@
       "created_at": "2026-09-02T17:32:00+02:00",
       "last_checked": "2026-09-02T17:32:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-1039-LIVE-DIIA-PARTNER-INTEGRATION",
+      "service_provider": "Diia official partner integration",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner-approved legitimate organizational use case, Diia partner approval, issued test credentials and controlled consenting test identity/document appropriate to that approved scenario.",
+      "dependency_owner": "Owner/legal decision maker and Diia integration team",
+      "local_evidence": ["UniversalAssistant/Government/GovernmentLocalServicesEngine.swift", "UniversalAssistantTests/GovernmentLocalServicesEngineTests.swift", "docs/M12_GOVERNMENT_LOCAL_SERVICES_CORE.md"],
+      "required_live_action": "After owner selects a lawful required scenario and Diia approves it, configure the exact official partner contract, initiate one controlled user-confirmed validation/sharing/signature flow, validate signed/encrypted callback evidence server-side, test denial/cancellation, and confirm deletion/retention policy.",
+      "expected_result": "Only the approved data and action are requested, Diia shows the requesting organization and explicit consent, denial yields no data, verified callback evidence matches the controlled transaction, and UniversalAssistant never exposes general private-document access.",
+      "created_at": "2026-09-02T17:42:00+02:00",
+      "last_checked": "2026-09-02T17:42:00+02:00",
+      "completion_evidence": null
     }
   ]
 }
