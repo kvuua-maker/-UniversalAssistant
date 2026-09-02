@@ -1,6 +1,17 @@
 import Foundation
 
-enum PerformanceMetric: String, Codable, Sendable { case localParse, firstUsefulResult, coldLaunch, warmLaunch }
+enum PerformanceMetric: String, Codable, Sendable {
+    case localParse
+    case intentResolution
+    case coordinationPlanning
+    case provider
+    case parallelCriticalPath
+    case firstUsefulResult
+    case totalCompletion
+    case aiFallback
+    case coldLaunch
+    case warmLaunch
+}
 
 struct PerformanceSample: Codable, Equatable, Sendable {
     let metric: PerformanceMetric
@@ -23,4 +34,111 @@ actor PerformanceRecorder {
         if samples.count > capacity { samples.removeFirst(samples.count - capacity) }
     }
     func snapshot() -> [PerformanceSample] { samples }
+}
+
+enum AIFallbackReason: String, Codable, Equatable, Sendable {
+    case unresolvedSemanticAmbiguity
+    case complexNaturalLanguageInterpretation
+    case complexVerifiedResultSynthesis
+}
+
+struct AICostMetadata: Codable, Equatable, Sendable {
+    let amount: Decimal
+    let currencyCode: String
+
+    init?(amount: Decimal, currencyCode: String) {
+        let normalizedCurrency = currencyCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard amount >= 0,
+              normalizedCurrency.count == 3,
+              normalizedCurrency.unicodeScalars.allSatisfy(CharacterSet.uppercaseLetters.contains)
+        else { return nil }
+        self.amount = amount
+        self.currencyCode = normalizedCurrency
+    }
+}
+
+/// Aggregate measurements for one coordination run. Deliberately excludes raw
+/// commands, provider payloads, URLs, account identifiers and other user data.
+struct CoordinationObservation: Codable, Equatable, Sendable {
+    let intentResolution: Duration
+    let planning: Duration
+    let providerLatency: Duration
+    let parallelCriticalPath: Duration
+    let timeToFirstUsefulResult: Duration
+    let totalCompletion: Duration
+    let providerCallCount: Int
+    let cancelledProviderCallCount: Int
+    let aiInvocationCount: Int
+    let aiLatency: Duration?
+    let aiInputTokenCount: Int?
+    let aiOutputTokenCount: Int?
+    let aiCost: AICostMetadata?
+    let aiFallbackReason: AIFallbackReason?
+    let recordedAt: Date
+
+    init?(
+        intentResolution: Duration,
+        planning: Duration,
+        providerLatency: Duration,
+        parallelCriticalPath: Duration,
+        timeToFirstUsefulResult: Duration,
+        totalCompletion: Duration,
+        providerCallCount: Int,
+        cancelledProviderCallCount: Int,
+        aiInvocationCount: Int,
+        aiLatency: Duration? = nil,
+        aiInputTokenCount: Int? = nil,
+        aiOutputTokenCount: Int? = nil,
+        aiCost: AICostMetadata? = nil,
+        aiFallbackReason: AIFallbackReason? = nil,
+        recordedAt: Date = .now
+    ) {
+        let durations = [intentResolution, planning, providerLatency, parallelCriticalPath,
+                         timeToFirstUsefulResult, totalCompletion]
+        guard durations.allSatisfy({ $0 >= .zero }),
+              providerCallCount >= 0,
+              cancelledProviderCallCount >= 0,
+              cancelledProviderCallCount <= providerCallCount,
+              (0...1).contains(aiInvocationCount),
+              aiInputTokenCount.map({ $0 >= 0 }) ?? true,
+              aiOutputTokenCount.map({ $0 >= 0 }) ?? true
+        else { return nil }
+
+        let hasAIMetadata = aiLatency != nil || aiInputTokenCount != nil || aiOutputTokenCount != nil || aiCost != nil || aiFallbackReason != nil
+        guard aiInvocationCount == 1 || !hasAIMetadata,
+              aiLatency.map({ $0 >= .zero }) ?? true
+        else { return nil }
+
+        self.intentResolution = intentResolution
+        self.planning = planning
+        self.providerLatency = providerLatency
+        self.parallelCriticalPath = parallelCriticalPath
+        self.timeToFirstUsefulResult = timeToFirstUsefulResult
+        self.totalCompletion = totalCompletion
+        self.providerCallCount = providerCallCount
+        self.cancelledProviderCallCount = cancelledProviderCallCount
+        self.aiInvocationCount = aiInvocationCount
+        self.aiLatency = aiLatency
+        self.aiInputTokenCount = aiInputTokenCount
+        self.aiOutputTokenCount = aiOutputTokenCount
+        self.aiCost = aiCost
+        self.aiFallbackReason = aiFallbackReason
+        self.recordedAt = recordedAt
+    }
+}
+
+actor CoordinationObservabilityRecorder {
+    private let capacity: Int
+    private var observations: [CoordinationObservation] = []
+
+    init(capacity: Int = 100) { self.capacity = max(1, capacity) }
+
+    func record(_ observation: CoordinationObservation) {
+        observations.append(observation)
+        if observations.count > capacity {
+            observations.removeFirst(observations.count - capacity)
+        }
+    }
+
+    func snapshot() -> [CoordinationObservation] { observations }
 }

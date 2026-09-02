@@ -6,7 +6,7 @@ M0–M8 are Codex-verified at local E3.
 
 ## CURRENTLY WORKING ON
 
-Coordination observability. Selected path: STABLE.
+Coordination acceptance. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Record privacy-safe command/planning/provider/critical-path/AI latency, counts and fallback reasons.
+Verify every mandatory deterministic coordination and bounded-AI acceptance case together.
