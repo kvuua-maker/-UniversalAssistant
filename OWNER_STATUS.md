@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M12 Bills, receipts and documents core. Selected path: STABLE.
+M12 Parcel delivery core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Implement typed bills/receipts/documents extraction, cross-source search and safe reminder/payment handoff.
+Implement modular truthful carrier tracking, saved/contextual parcel lookup, watches, branch search and navigation handoff.

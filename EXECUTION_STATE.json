@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-SHARE-CLIPBOARD-SCANNER-CORE",
-  "requirement_ids": ["1005-1022"],
-  "selected_path": "Embedded lightweight Share Extension, explicit clipboard access, public scanners/OCR and typed safe action routing.",
+  "current_task_id": "M12-BILLS-RECEIPTS-DOCUMENTS-CORE",
+  "requirement_ids": ["1023-1029"],
+  "selected_path": "Typed verified document facts, cross-source personal search, safe reminders and confirmed official payment handoff.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 host/extension/routing implementation complete; exact E5 device checks queued",
-  "acceptance_contract_ref": "docs/M12_SHARE_CLIPBOARD_SCANNER_CORE.md",
+  "integration_depth": "local E3 document behavior complete; no external dependency is required for this core",
+  "acceptance_contract_ref": "docs/M12_BILLS_RECEIPTS_DOCUMENTS_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Share Sheet content reaches the existing command path once; clipboard/scanner/vCard actions are public, typed and fail closed.",
-  "frozen_baseline_commit": "6ec7080",
+  "material_change": "Document facts cannot drive reminders or warranty claims unless verified; payment remains a confirmed official handoff.",
+  "frozen_baseline_commit": "b837945",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M12-BILLS-RECEIPTS-DOCUMENTS-CORE"
+  "next_task_id": "M12-PARCEL-DELIVERY-CORE"
 }

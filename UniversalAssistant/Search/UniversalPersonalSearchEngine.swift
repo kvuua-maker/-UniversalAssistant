@@ -54,7 +54,10 @@ struct PersonalSearchSourceRouter: Sendable {
         if contains(value, ["догов", "document", "file", "файл"]) {
             local([.files, .notes]); desired.formUnion(remoteEmail(in: available))
         }
-        if contains(value, ["лист", "email", "mail", "квиток", "ticket", "рахунок", "invoice"]) { desired.formUnion(remoteEmail(in: available)) }
+        if contains(value, ["лист", "email", "mail", "квиток", "ticket", "рахунок", "invoice", "bill", "receipt", "чек"]) {
+            local([.files, .notes])
+            desired.formUnion(remoteEmail(in: available))
+        }
         if contains(value, ["запис", "appointment", "зустріч", "стоматолог", "dentist"]) { local([.calendar, .reminders, .notes, .actionHistory]) }
         return desired.isEmpty ? available : desired
     }
