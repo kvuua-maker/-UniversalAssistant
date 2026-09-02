@@ -35,6 +35,13 @@ struct AssistantHomeView: View {
                 }
                 .padding()
                 .navigationTitle("UniversalAssistant")
+                .toolbar {
+                    NavigationLink(destination: QuickLaunchView(capabilities: .init(
+                        actionButton: .unavailable, backTap: .available, appShortcut: .available,
+                        homeScreenShortcut: .available, assistiveTouch: .available))) {
+                        Image(systemName: "bolt.circle")
+                    }.accessibilityLabel("Швидкий запуск")
+                }
             }
             .tabItem { Label("home", systemImage: "house") }
             ContentUnavailableView("my_tasks", systemImage: "checklist")

@@ -52,6 +52,12 @@ final class AssistantViewModel {
         }
     }
 
+    func handleQuickLaunch() {
+        guard QuickLaunchRequestStore().consumeVoiceLaunch() else { return }
+        guard voiceInputEnabled else { statusText = AppText.value("voice_disabled"); return }
+        toggleListening()
+    }
+
     func setVoiceInputEnabled(_ enabled: Bool) {
         voiceInputEnabled = enabled
         if !enabled { voiceInput.stop(); isListening = false; statusText = AppText.value("voice_disabled") }

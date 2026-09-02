@@ -352,6 +352,19 @@
       "created_at": "2026-09-02T20:55:00+02:00",
       "last_checked": "2026-09-02T20:55:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "QUICK-LAUNCH-LIVE-PHYSICAL-ACCESS",
+      "service_provider": "iOS Action Button, Back Tap, Siri/App Shortcuts and Home Screen Shortcut",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Signed builds on owner-accessible supported iPhones with and without Action Button plus permission to configure their system accessibility and Shortcuts settings.",
+      "dependency_owner": "Owner/device tester",
+      "local_evidence": ["UniversalAssistant/Core/QuickLaunchPolicy.swift", "UniversalAssistant/AppIntents/StartAssistantIntent.swift", "UniversalAssistant/App/QuickLaunchView.swift", "UniversalAssistantTests/QuickLaunchPolicyTests.swift", "4 quick-launch behavioral tests passed on 2026-09-02"],
+      "required_live_action": "On each device configure every actually supported path shown by the app; launch through Action Button where present, Back Tap, Siri/App Shortcut and Home Screen Shortcut; verify granted permissions enter listening without another tap, missing permissions show only the permission flow, and unavailable voice leaves usable text input.",
+      "expected_result": "Only device-supported official mechanisms are offered; each configured launch opens UniversalAssistant directly into truthful listening or the minimum required permission/text fallback without narration or private API behavior.",
+      "created_at": "2026-09-02T21:10:00+02:00",
+      "last_checked": "2026-09-02T21:10:00+02:00",
+      "completion_evidence": null
     }
   ]
 }

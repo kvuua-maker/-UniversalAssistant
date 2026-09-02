@@ -12,6 +12,8 @@ struct UniversalAssistantApp: App {
                     model.handleSceneBecameInactive()
                 } else if let shared = SharedInboxStore().consume() {
                     model.ingestShared(shared)
+                } else {
+                    model.handleQuickLaunch()
                 }
             }
     }

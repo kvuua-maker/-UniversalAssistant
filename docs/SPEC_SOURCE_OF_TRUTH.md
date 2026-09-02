@@ -26,6 +26,10 @@ The project source of truth is the complete, indivisible combination of:
    - SHA-256: `d69ab80ed56c01a54c7a5bbf64e669cfdc222c1200c4270c2d44a86dc5c8fa28`
    - 59 lines / 9,794 bytes; owner-supplied final visual/UI/UX canon accepted on 2026-09-02.
    - Governs visual-source priority, native presentation, voice orb, themes, accessibility, golden visual flows and physical owner review without changing verified domain behavior.
+8. `docs/QUICK_LAUNCH_PHYSICAL_ACCESS_ADDENDUM.md`
+   - SHA-256: `c8a6d5392340b61a6716fb5239445faf108ed5eebcdfc414462e135afdff9ba4`
+   - 17 lines / 2,182 bytes; owner-supplied canonical quick-launch and physical-access policy accepted on 2026-09-02.
+   - Requires device-capability-aware official Apple launch paths into voice listening, permission-only interruption, truthful text fallback and no private button interception.
 
 All accepted addenda augment the Master Spec and do not remove or weaken it. Every requirement retains an evidence-backed zero-omission status; documentation, interfaces, mocks and external dependencies alone never establish completion. Later explicit supersession rules inside the Master Spec take precedence over earlier conflicting wording, subject to safety, law, current platform/provider truth, privacy and security.
 
