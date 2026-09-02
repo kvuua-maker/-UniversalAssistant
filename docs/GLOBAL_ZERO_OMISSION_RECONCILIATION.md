@@ -152,3 +152,30 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-112 | VERIFIED_LOCAL | MULTI_STEP_COMMAND compiles typed dependency plans and executes independent work concurrently with bounded failure/cancellation; CoordinationAcceptanceTests and RoutineMacroEngineTests | 27ad853 |
 | MS-113 | VERIFIED_LOCAL | SETTINGS_ACTION is locally recognized and routed as a typed non-consequential action; remainingCanonicalIntentRecognition and InteractionDecisionEngineTests | 27ad853 |
 | MS-114 | VERIFIED_LOCAL | GENERAL_HELP is deterministic, local and compact rather than AI chat; remainingCanonicalIntentRecognition and AssistantResultStateTests | 27ad853 |
+
+## Slice 6 — MS-115–136
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-115 | VERIFIED_LOCAL | ConsequentialCommandGate accepts only ValidatedStructuredCommand after deterministic parsing and confirmation; StructuredCommandValidationTests | 15a3114 |
+| MS-116 | VERIFIED_LOCAL | StructuredCommandValidator checks intent, ambiguity, target, date/time, location, permission and risk before execution; StructuredCommandValidationTests | 15a3114 |
+| MS-117 | VERIFIED_LOCAL | LocalContactResolver queries the on-device Contacts store by name/exact ID using minimum required keys; ContactAliasTests and LocalActionRouterTests | ddbccca |
+| MS-118 | VERIFIED_LOCAL | LocalContactResolver returns typed ambiguous candidates rather than selecting one; contact ambiguity behavior and interaction clarification tests | ddbccca |
+| MS-119 | VERIFIED_LOCAL | ContactAliasDirectory accepts user-confirmed arbitrary relationship/work aliases with normalized multilingual text; ContactAliasTests | ddbccca |
+| MS-120 | VERIFIED_LOCAL | confirmed alias maps persistently to exact CNContact identifier and restores across launch; ContactAliasTests | ddbccca |
+| MS-121 | VERIFIED_LOCAL | Contacts remain device-local and resolver fetches only identifier/name/organization/phone fields for the requested predicate; privacy and contact tests | ddbccca |
+| MS-122 | VERIFIED_LOCAL | bounded persistent ActionHistory records assistant-created/modified reversible actions and crash-recovers undoing state; ActionHistoryTests | ddbccca |
+| MS-123 | VERIFIED_LOCAL | undoLast selects only latest completed action, persists transitions and invokes exact domain undo handler; ActionHistoryTests, CalendarServiceTests, ReminderServiceTests | ddbccca |
+| MS-124 | VERIFIED_LOCAL | LinkedPlanMutationCoordinator cancels one exact query/day match after confirmation and returns ambiguous/notFound otherwise; LinkedPlanMutationCoordinatorTests | ddbccca |
+| MS-125 | VERIFIED_LOCAL | reschedule mutates and verifies the same external plan ID/start rather than creating a duplicate; LinkedPlanMutationCoordinatorTests | ddbccca |
+| MS-126 | VERIFIED_LOCAL | confirmed cancellation removes only linked departure reminder/route watch/proactive rule; reschedule updates those exact linked IDs; LinkedPlanMutationCoordinatorTests | ddbccca |
+| MS-127 | VERIFIED_LOCAL | one AccurateLocationEngine owns Core Location acquisition and LocationValidator for location-dependent consumers; LocationValidatorTests and PlaceSearchEngineTests | ddbccca |
+| MS-128 | VERIFIED_LOCAL | AccurateLocationEngine uses public CLLocationManager authorization/requestLocation APIs only; location and permission tests | ddbccca |
+| MS-129 | VERIFIED_LOCAL | LocationValidator evaluates horizontalAccuracy and reduced-accuracy authorization; qualityUsesRealAccuracyAndReducedAuthorization | ddbccca |
+| MS-130 | VERIFIED_LOCAL | sample timestamp drives poor/unavailable downgrade with future-skew rejection; staleAndInvalidSamplesAreDowngraded | ddbccca |
+| MS-131 | VERIFIED_LOCAL | validator compares prior coordinates and elapsed time against maximum plausible speed; impossibleJumpIsSuspiciousAndUnsafe | ddbccca |
+| MS-132 | VERIFIED_LOCAL | typed LocationQuality defines precise/good/approximate/poor/suspicious/unavailable and behavioral tests exercise every safety class | ddbccca |
+| MS-133 | VERIFIED_LOCAL | precise is emitted only from actual device measurement at or below ten metres; manual location is explicitly approximate; LocationValidatorTests | ddbccca |
+| MS-134 | VERIFIED_LOCAL | Haversine elapsed-speed filter marks Kyiv-scale impossible jumps suspicious and unsafe; impossibleJumpIsSuspiciousAndUnsafe | ddbccca |
+| MS-135 | VERIFIED_LOCAL | suspicious/unavailable locations set isSafeForLocationActions false and place/weather engines reject unsafe use; LocationValidatorTests and WeatherContextTests | ddbccca |
+| MS-136 | VERIFIED_LOCAL | AccurateLocationEngine retries poor/suspicious readings with bounded fresh samples then resolves available/unavailable truthfully; location recovery implementation and WeatherContextTests | ddbccca |

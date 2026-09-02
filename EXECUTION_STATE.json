@@ -1,16 +1,16 @@
 {
   "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
-  "requirement_ids": ["MS-79...MS-114"],
+  "requirement_ids": ["MS-115...MS-136"],
   "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "36 canonical intents individually reconciled from deterministic recognition into local/provider/handoff/safety execution and behavioral evidence",
+  "integration_depth": "22 command validation, contacts, reversible-plan mutation and location-truth requirements reconciled against production and behavioral evidence",
   "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "MS-79 through MS-114 now carry per-ID production/test/commit evidence; missing intent recognition, precedence, inflection and controlled web fallback gaps were fixed; 360 iOS Swift Testing plus 5 Routine XCTest tests pass.",
-  "frozen_baseline_commit": "27ad853",
+  "material_change": "MS-115 through MS-136 now carry per-ID production/test/commit evidence; structured pre-execution validation and exact linked-plan cancel/reschedule cascade gaps were fixed; 369 iOS Swift Testing plus 5 Routine XCTest tests pass.",
+  "frozen_baseline_commit": "ddbccca",
   "dependency": "None for the next local reconciliation slice.",
-  "unresolved_verification_steps": ["1446 canonical requirements remain unreconciled"],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-115-PLUS"
+  "unresolved_verification_steps": ["1424 canonical requirements remain unreconciled"],
+  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-137-PLUS"
 }
