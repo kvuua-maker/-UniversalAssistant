@@ -6,6 +6,19 @@
   ],
   "items": [
     {
+      "requirement_id": "MS-253-MS-255-MS-256-MS-259-MS-260-MS-261-MS-262-MS-263-MS-264-MS-265-MS-268-MS-269-MS-274-MS-275-MS-276-LIVE-SYSTEM-ACTIONS",
+      "service_provider": "Physical iPhone system frameworks and representative installed applications",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner-accessible signed physical iPhone with controlled contacts/messages/calendar/reminders/location/navigation/camera/microphone/media data, permissions, MusicKit entitlement/account and representative installed apps.",
+      "dependency_owner": "Owner/device tester and Apple Developer account owner",
+      "local_evidence": ["UniversalAssistant/Actions/UkraineEmergencyPlanner.swift", "UniversalAssistant/Recorder/AudioRecorderController.swift", "UniversalAssistant/Integrations/AppleSystemDomainIntegration.swift", "UniversalAssistant/Integrations/MessagingIntegration.swift", "UniversalAssistant/Integrations/MediaIntegrationEngine.swift", "UniversalAssistant/Integrations/AppCapabilityRegistry.swift"],
+      "required_live_action": "On a signed device, cancel an emergency dialer handoff without calling; display/share a controlled fresh location; capture/cancel camera; compose/cancel controlled call/message/calendar/reminder/navigation actions; test MusicKit authorization/playback and recorder controls/share with grants and denials; verify installed-app capabilities and fallbacks.",
+      "expected_result": "Only public user-visible mechanisms execute, final consequential system actions remain user-controlled, exact identifiers/results are read back where supported, denial/absence is truthful, and no private or automatic completion is claimed.",
+      "created_at": "2026-09-02T23:42:00+02:00",
+      "last_checked": "2026-09-02T23:42:00+02:00",
+      "completion_evidence": null
+    },
+    {
       "requirement_id": "MS-237-MS-239-MS-240-MS-241-MS-242-MS-243-MS-245-LIVE-PROACTIVE",
       "service_provider": "Apple EventKit/MapKit/WeatherKit and owner-approved product/ticket/place providers",
       "current_status": "READY_FOR_LIVE_VERIFICATION",

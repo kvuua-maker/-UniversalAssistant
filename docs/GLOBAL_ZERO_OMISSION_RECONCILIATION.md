@@ -327,3 +327,36 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-247 | VERIFIED_LOCAL | LocalActionRouter uses EventKit Reminders and system share/open mechanisms instead of assuming private Apple Notes access; LocalActionRouterTests | d518ea9 |
 | MS-248 | NOT_APPLICABLE_VERIFIED | no assistant-owned Notes database exists or is required by a proven capability; system-owned Notes/Reminders data is not duplicated for sync; repository search and AppleSystemDomainIntegration contract | d518ea9 |
 | MS-249 | VERIFIED_LOCAL | ordinary shoppingList deterministically routes to EventKit Reminders and creates no parallel assistant list store; LocalActionRouterTests | d518ea9 |
+
+## Slice 14 — MS-250–277
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-250 | VERIFIED_LOCAL | UkraineEmergencyPlanner is country-bound and fails closed outside UA; UkraineEmergencyPlannerTests | 234a162 |
+| MS-251 | VERIFIED_LOCAL | exact tel:112 user-visible system handoff is emitted for UA without dispatch claim | 234a162 |
+| MS-252 | VERIFIED_LOCAL | LocalCommandEngine recognizes 112/ambulance/fire/police emergency language and assigns emergency risk; parser tests | 234a162 |
+| MS-253 | READY_FOR_LIVE_VERIFICATION | InteractionDecisionEngine requires confirmation and planner only prepares a tel handoff; no automated test places a call; physical dialer test queued | 234a162 |
+| MS-254 | VERIFIED_LOCAL | EmergencyHandoffPlan always keeps claimsDispatch false and state readyForUserCall, never completed | 234a162 |
+| MS-255 | READY_FOR_LIVE_VERIFICATION | EmergencyLocationPresenter accepts only fresh validated coordinates/accuracy/address and rejects stale state; physical CoreLocation display queued | 7f24613 |
+| MS-256 | READY_FOR_LIVE_VERIFICATION | presenter creates explicit share text and Apple Maps URL with claimsAutomaticTransmission false; physical share sheet queued | 7f24613 |
+| MS-257 | VERIFIED_LOCAL | UniversalDeviceCommandRouter centrally selects local, verified app or external capability routes and returns truthful unsupported state; router tests | 6627cff |
+| MS-258 | VERIFIED_LOCAL | five-language parser produces typed start/pause/resume/stop recorder actions which drive AudioRecorderController state machine; parser/controller tests | d79542a |
+| MS-259 | READY_FOR_LIVE_VERIFICATION | SystemCameraCapture uses public user-visible UIImagePickerController camera and simulator refuses availability; physical capture queued | 762c336 |
+| MS-260 | READY_FOR_LIVE_VERIFICATION | LocalContactResolver resolves exact authorized contacts and call path is confirmation-gated tel handoff; physical dialer remains queued | 6627cff |
+| MS-261 | READY_FOR_LIVE_VERIFICATION | MessageUI composer and verified messenger handoffs preserve user-controlled send; physical composer/apps remain queued | 19248bb |
+| MS-262 | READY_FOR_LIVE_VERIFICATION | EventKitCalendarService provides native permitted CRUD/query/read-back; signed-device EventKit action remains queued | f14e4b6 |
+| MS-263 | READY_FOR_LIVE_VERIFICATION | EventKitReminderService provides native permitted CRUD/query/completion/location alarms; signed-device action queued | 155d2ab |
+| MS-264 | READY_FOR_LIVE_VERIFICATION | RouteEngine uses MapKit routes and exact public map handoff with sourced duration; physical navigation launch queued | 6627cff |
+| MS-265 | READY_FOR_LIVE_VERIFICATION | MediaIntegrationEngine uses MusicKit authorization/catalog/managed playback and truthful unavailable states; entitlement/device queued | 1be2c61 |
+| MS-266 | VERIFIED_LOCAL | AppCapabilityRegistry validates and indexes typed third-party app capability records; registry tests | 91a9f4d |
+| MS-267 | VERIFIED_LOCAL | AppCapabilityRecord carries identifier, capabilities, mechanisms, actions, auth, limitations, fallback, evidence status and official documentation timestamp | 91a9f4d |
+| MS-268 | READY_FOR_LIVE_VERIFICATION | LaunchMarketAppMatrix covers relevant messaging/maps/transport/retail/delivery/taxi/media targets with explicit evidence states; installed-device verification queued | 762c336 |
+| MS-269 | READY_FOR_LIVE_VERIFICATION | registry rejects missing official HTTPS documentation/date and unsupported capability claims; current installed versions remain live-queued | 91a9f4d |
+| MS-270 | VERIFIED_LOCAL | openOnly records may expose only openApp and router returns open/unsupported rather than invented deeper action; registry tests | 91a9f4d |
+| MS-271 | VERIFIED_LOCAL | FindMyFallbackPlanner exposes no location read capability and documents the public API restriction; tests | 538a51b |
+| MS-272 | VERIFIED_LOCAL | child-location request resolves only to compliant Find My open/instruction without fabricated location | 538a51b |
+| MS-273 | VERIFIED_LOCAL | no private Find My API/bypass exists; fallback planner tests assert zero direct-location claim | 538a51b |
+| MS-274 | READY_FOR_LIVE_VERIFICATION | AppleAudioRecordingBackend uses AVAudioSession/AVAudioRecorder and protected app storage; physical microphone path queued | cc58971 |
+| MS-275 | READY_FOR_LIVE_VERIFICATION | controller supports start/pause/resume/stop/save/play/rename/delete/share with behavioral state-machine evidence; physical audio/share queued | d79542a |
+| MS-276 | READY_FOR_LIVE_VERIFICATION | permission gate and visible RecordingStatusPill prevent secret recording; interruptions pause; physical permission/UI review queued | c34533b |
+| MS-277 | VERIFIED_LOCAL | UniversalDeviceCommandRouter plus AppCapabilityRegistry choose deepest validated mechanism without duplicating domain adapters; integration tests | 6627cff |
