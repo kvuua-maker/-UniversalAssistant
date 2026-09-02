@@ -2,11 +2,11 @@
 
 ## DONE AND CODEX-VERIFIED
 
-M0–M5 plus M6 durable-job and APNs device-token cores are Codex-verified at local E3.
+M0–M5 plus M6 durable-job, APNs token and notification-policy cores are Codex-verified at local E3.
 
 ## CURRENTLY WORKING ON
 
-M6 notification policy core. Selected path: STABLE.
+M6 APNs delivery core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live hotel providers will require separat
 
 ## NEXT
 
-Notification preferences/deduplication/TTL/collapse/routing, then remaining M6 delivery blocks.
+APNs delivery contract and observability, then remaining M6 proactive-watch blocks.
