@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M11 acceptance. Selected path: STABLE.
+M12 device and system actions core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Run complete M11 zero-omission acceptance and full regression before selecting the next canonical requirement.
+Implement the first post-M11 canonical device/system action requirements with public iOS APIs and truthful fallbacks.

@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M11-FINAL-PRODUCTION-ENGINEERING-AUDIT",
-  "requirement_ids": ["850"],
-  "selected_path": "Repository-executable audit of every production-engineering surface named by MS-850.",
+  "current_task_id": "M11-ACCEPTANCE",
+  "requirement_ids": ["801-850"],
+  "selected_path": "Requirement-by-requirement M11 zero-omission acceptance with final full regression and persistent live-only queue.",
   "feasibility_state": "VERIFIED_LOCAL",
   "integration_depth": "local E3 complete; provider-specific live revocation covered by existing queue",
-  "acceptance_contract_ref": "docs/M11_FINAL_PRODUCTION_ENGINEERING_AUDIT.md",
+  "acceptance_contract_ref": "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "All MS-850 production surfaces are tied to actual implementation and executable repository evidence; stale topology text is corrected.",
-  "frozen_baseline_commit": "c38d23d",
+  "material_change": "Every MS-801–850 requirement has an allowed evidence status with implementation, test and commit traceability.",
+  "frozen_baseline_commit": "c45a641",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M11-ACCEPTANCE"
+  "next_task_id": "M12-DEVICE-SYSTEM-ACTIONS-CORE"
 }
