@@ -6,7 +6,7 @@ M0–M7 are Codex-verified at local E3.
 
 ## CURRENTLY WORKING ON
 
-M8 guest allowance core. Selected path: STABLE.
+M8 local persistence migration core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Implement deterministic one-task allowance accounting without device fingerprinting or sub-operation charging.
+Add versioned local-schema migration and corruption recovery around the existing local-first store.
