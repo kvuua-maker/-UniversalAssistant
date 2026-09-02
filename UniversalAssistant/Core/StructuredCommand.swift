@@ -57,6 +57,7 @@ struct LocalCommandEngine: CommandParsing {
         (.messageCompose, ["напиши ", "отправь сообщение", "message ", "schreib ", "écris "]),
         (.navigation, ["веди ", "маршрут до", "navigate", "route to", "navigiere", "itinéraire"]),
         (.placeSearch, ["хочу кави", "хочу кофе", "want coffee", "kaffee", "envie de café"]),
+        (.placeSearch, ["кави хочеться", "кофе хочется", "coffee please", "lust auf kaffee", "envie d'un café"]),
         (.weather, ["погод", "weather", "wetter", "météo"]),
         (.audioRecord, ["диктофон", "запиши аудіо", "voice recorder", "sprachmemo", "enregistre audio"]),
         (.ticketSearch, ["квиток", "квитки", "билет", "ticket", "fahrkarte", "billet"]),
@@ -68,6 +69,7 @@ struct LocalCommandEngine: CommandParsing {
         (.productSearch, ["знайди ", "найди ", "find ", "finde ", "trouve "]),
         (.show, ["покажи", "show ", "zeige", "montre"]),
         (.open, ["відкрий", "открой", "open ", "öffne", "ouvre"]),
+        (.open, ["telegram відкрий", "telegram открой", "telegram open"]),
         (.cancel, ["скасуй", "отмени", "cancel", "storniere", "annule"]),
         (.settings, ["налаштування", "настройки", "settings", "einstellungen", "réglages"]),
         (.help, ["допомога", "помощь", "help", "hilfe", "aide"])
