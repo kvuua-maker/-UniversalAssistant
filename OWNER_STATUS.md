@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M12 Share, clipboard and scanner core. Selected path: STABLE.
+M12 Bills, receipts and documents core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Implement the public Share Extension/structured shared-content route, user-initiated clipboard actions and QR/barcode flow.
+Implement typed bills/receipts/documents extraction, cross-source search and safe reminder/payment handoff.

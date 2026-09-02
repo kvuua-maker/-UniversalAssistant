@@ -245,6 +245,19 @@
       "created_at": "2026-09-02T16:24:00+02:00",
       "last_checked": "2026-09-02T16:24:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-1005-1022-LIVE-SHARE-SCANNERS",
+      "service_provider": "Physical iPhone Share Sheet, pasteboard, camera, VisionKit and Contacts UI",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "A signed build whose App Group is enabled in both provisioning profiles, installed on a physical camera-capable iPhone with controlled Safari, clipboard, QR/barcode, vCard and paper-document inputs.",
+      "dependency_owner": "Owner/device tester and Apple Developer account holder",
+      "local_evidence": ["ShareExtension/ShareViewController.swift", "UniversalAssistant/Integrations/SharedInboxStore.swift", "UniversalAssistant/Integrations/SharedContentActionRouter.swift", "UniversalAssistant/Integrations/AppleScannerIntegration.swift", "UniversalAssistantTests/SharedContentActionRouterTests.swift"],
+      "required_live_action": "Share controlled URL/text/image/file/vCard items and verify one-time exact host ingestion; invoke clipboard only by explicit command; scan controlled QR, valid/unknown retail barcodes and a paper document; verify contact confirmation, local OCR and cancel/denied paths.",
+      "expected_result": "ShareExtension appears and remains bounded, exact structured context is consumed once, clipboard is never read silently, unknown/payment codes do not fabricate or execute actions, and scanner/contact/document results require the appropriate user confirmation.",
+      "created_at": "2026-09-02T17:02:00+02:00",
+      "last_checked": "2026-09-02T17:02:00+02:00",
+      "completion_evidence": null
     }
   ]
 }

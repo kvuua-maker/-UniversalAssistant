@@ -67,6 +67,22 @@ final class AssistantViewModel {
         }
     }
 
+    func ingestShared(_ envelope: SharedInboxEnvelope) {
+        switch envelope.kind {
+        case "url", "text":
+            input = envelope.value
+        case "vcard":
+            input = "Використай переданий контакт"
+        case "image":
+            input = "Опрацюй передане зображення"
+        case "document":
+            input = "Опрацюй переданий документ"
+        default:
+            return
+        }
+        submit()
+    }
+
     @discardableResult
     func reportWrongResult() async -> UserFeedbackRecord? {
         guard resultState != .idle else { return nil }

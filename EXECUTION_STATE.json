@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-REAL-EXECUTION-VERIFICATION-POLICY",
-  "requirement_ids": ["982-1004"],
-  "selected_path": "Executable evidence-level enforcement plus capability-by-capability integration and no-simulation audit.",
+  "current_task_id": "M12-SHARE-CLIPBOARD-SCANNER-CORE",
+  "requirement_ids": ["1005-1022"],
+  "selected_path": "Embedded lightweight Share Extension, explicit clipboard access, public scanners/OCR and typed safe action routing.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 evidence enforcement complete; exact E4/E5 actions persist in the live verification queue",
-  "acceptance_contract_ref": "docs/M12_REAL_EXECUTION_VERIFICATION_POLICY.md",
+  "integration_depth": "local E3 host/extension/routing implementation complete; exact E5 device checks queued",
+  "acceptance_contract_ref": "docs/M12_SHARE_CLIPBOARD_SCANNER_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "External and device integrations cannot be promoted from mocks or internal tests; live handoffs require complete specific evidence.",
-  "frozen_baseline_commit": "cafba35",
+  "material_change": "Share Sheet content reaches the existing command path once; clipboard/scanner/vCard actions are public, typed and fail closed.",
+  "frozen_baseline_commit": "6ec7080",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M12-SHARE-CLIPBOARD-SCANNER-CORE"
+  "next_task_id": "M12-BILLS-RECEIPTS-DOCUMENTS-CORE"
 }
