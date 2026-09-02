@@ -22,4 +22,4 @@ No blocker for the next local core. Provider live execution remains separately c
 
 ## NEXT
 
-Continue the remaining V12/V13 requirements, then run the complete requirement-by-requirement audit and fix every local gap.
+Continue evidence reconciliation from MS-79 through the remaining V12/V13 requirements, implementing and testing every local gap.

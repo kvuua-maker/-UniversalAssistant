@@ -84,3 +84,28 @@ Every row maps the canonical behavior to a production path and a behavioral test
 | MS-58 | VERIFIED_LOCAL | superseded Task cancellation prevents stale aggregate and new submit cancels prior result timer; cancellingOldCommandDoesNotReturnAStaleAggregate/AssistantResultStateTests | ffd98a9 |
 | MS-59 | VERIFIED_LOCAL | ProviderFanoutEngine isolates simultaneous backend/network failures and returns verified local result; simultaneousBackendAndNetworkFailuresRemainIsolated | ffd98a9 |
 | MS-60 | VERIFIED_LOCAL | CommerceSearchEngine handleMemoryPressure cancels in-flight work and purges cache; memoryPressureCancelsWorkAndPurgesCachedResults | 5d369bf |
+
+## Slice 4 — MS-61–78
+
+Each status below is grounded in a production path and behavior-level test; optional AI remains outside deterministic and factual authority paths.
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-61 | VERIFIED_LOCAL | UILanguage defines Ukrainian, Russian, English, German and French; five localized resource sets and LocalizationAccessibilityTests verify coverage | 6c06260 |
+| MS-62 | VERIFIED_LOCAL | LanguageConfiguration maps all five UI/command languages to explicit speech locales; localized UI, settings, onboarding and error resources are exercised by LocalizationAccessibilityTests | 6c06260 |
+| MS-63 | VERIFIED_LOCAL | LanguageConfiguration independently stores uiLanguage and commandLanguage through LanguageConfigurationStore; uiAndCommandLanguagesAreIndependentAndPersistent | 6c06260 |
+| MS-64 | VERIFIED_LOCAL | automatic command-language mode plus LocalCommandEngine script detection selects the actual input language; allFiveLanguagesHaveExplicitVoiceLocalesAndAutomaticMode and multilingual parser tests | 6c06260 |
+| MS-65 | VERIFIED_LOCAL | LocalCommandEngine preserves English brand tokens inside Ukrainian/Russian context; mixedNaturalCommands and surroundingLanguageDoesNotCorruptBrandOrAppName | 26243b5 |
+| MS-66 | VERIFIED_LOCAL | parser accepts polite and colloquial forms without AI; tolerantCommandGrammar | 26243b5 |
+| MS-67 | VERIFIED_LOCAL | tolerant deterministic substring grammar handles imperfect/transcribed app input while retaining the requested entity; tolerantCommandGrammar | 26243b5 |
+| MS-68 | VERIFIED_LOCAL | prefix and postfix command word order resolve to the same typed intent; mixedNaturalCommands | 26243b5 |
+| MS-69 | VERIFIED_LOCAL | multilingual reminder infinitives/synonyms and inflected fashion/coffee forms map deterministically; tolerantCommandGrammar and mixedNaturalCommands | 26243b5 |
+| MS-70 | VERIFIED_LOCAL | entity extraction preserves original capitalization and complete app/brand names after surrounding natural language; surroundingLanguageDoesNotCorruptBrandOrAppName | 26243b5 |
+| MS-71 | VERIFIED_LOCAL | DeterministicExecutionPlan and LocalCommandEngine execute known commands with zero mandatory AI calls; CoordinationAcceptanceTests simple and multi-module zero-AI cases | ca92a6f |
+| MS-72 | VERIFIED_LOCAL | LocalCommandEngine uses deterministic grammar/entity/date rules and VoiceInputController uses Apple's on-device speech boundary; LocalCommandEngineTests and LanguageAndAIConfigurationTests | 6c06260 |
+| MS-73 | VERIFIED_LOCAL | UserConnectedAIConfiguration defaults disabled with no provider or credential; optionalUserConnectedAIDefaultsOffAndStoresOnlySecretReference | 6c06260 |
+| MS-74 | VERIFIED_LOCAL | typed UserAIProvider supports OpenAI, Anthropic, Gemini and compatible future endpoints without routing them into the fast path; provider enumeration test | 6c06260 |
+| MS-75 | VERIFIED_LOCAL | optional AI configuration retains only a user-controlled secure credential reference, never a credential value; optionalUserConnectedAIDefaultsOffAndStoresOnlySecretReference | 6c06260 |
+| MS-76 | VERIFIED_LOCAL | BoundedAIInterpretationCoordinator invokes one schema-bound fallback only after explicit unresolved semantics; exactlyOneBoundedInterpretationResumesDeterministicExecution | ca92a6f |
+| MS-77 | VERIFIED_LOCAL | AI interpretation schema allowlist rejects live fact fields and execution scripts; schemaRejectsLiveFacts and verified-facts-only coordination tests | ca92a6f |
+| MS-78 | VERIFIED_LOCAL | AI timeout/unavailability returns deterministic unresolved/partial outcome without hanging or disabling core capabilities; timeoutFallsBackWithoutBlockingDeterministicCapabilities | ca92a6f |
