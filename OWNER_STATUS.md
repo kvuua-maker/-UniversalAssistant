@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M12 Definition/evidence governance audit. Selected path: STABLE.
+M12 remaining canonical roadmap audit. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the next local core. Provider live execution remains separately c
 
 ## NEXT
 
-Audit the next canonical definitions, evidence levels and integration-depth truth rules.
+Continue the remaining V12/V13 requirements, then run the complete requirement-by-requirement audit and fix every local gap.

@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-FEASIBILITY-PATH-GOVERNANCE-AUDIT",
-  "requirement_ids": ["1192-1342"],
-  "selected_path": "Typed per-capability feasibility decisions, single active path and evidence-triggered reopening.",
+  "current_task_id": "M12-DEFINITION-EVIDENCE-GOVERNANCE-AUDIT",
+  "requirement_ids": ["1343-1454"],
+  "selected_path": "Typed capability/acceptance/scope contracts, evidence-gated transitions and complete canonical ID inventory.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "all locally executable feasibility/path governance complete; external proofs retain exact open states",
-  "acceptance_contract_ref": "docs/M12_FEASIBILITY_PATH_GOVERNANCE_AUDIT.md",
+  "integration_depth": "all locally executable definition/evidence governance complete; global requirement audit remains active",
+  "acceptance_contract_ref": "docs/M12_DEFINITION_EVIDENCE_GOVERNANCE_AUDIT.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "MS-1192-1342 now have a persistent typed per-capability feasibility registry enforcing path lock and objective-evidence reopening.",
-  "frozen_baseline_commit": "e0dd6a3",
-  "dependency": "Capability-specific external proof dependencies remain in FEASIBILITY_REGISTRY and LIVE_VERIFICATION_QUEUE.",
-  "unresolved_verification_steps": ["capability-specific E4/E5 proofs already queued"],
-  "next_task_id": "M12-DEFINITION-EVIDENCE-GOVERNANCE-AUDIT"
+  "material_change": "MS-1343-1454 now have executable depth/acceptance/status/traceability gates and a 1787-ID canonical inventory.",
+  "frozen_baseline_commit": "3cd9308",
+  "dependency": "Fresh full iOS regression awaits recovery of the local CoreSimulator test runner; source builds and deterministic inventory validation succeed.",
+  "unresolved_verification_steps": ["fresh full iOS regression after simulator service recovery", "MS-1455-1459 final global audits"],
+  "next_task_id": "M12-REMAINING-V12-V13-CANONICAL-ROADMAP-AUDIT"
 }

@@ -10,6 +10,8 @@ The project source of truth is the complete, indivisible combination of:
    - 259 lines / 11,837 bytes
 3. `docs/DETERMINISTIC_MULTI_STEP_COORDINATION_BOUNDED_AI_FALLBACK_ADDENDUM.md`
    - Owner-supplied canonical additive coordination and bounded-AI contract, accepted 2026-09-02.
+   - SHA-256: `7bff9bbd535f1d5e2de52c154d8726552771412ee2160247749e5b739ef9a0ef`
+   - 31 lines / 4,278 bytes.
 4. `docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt`
    - SHA-256: `9cc1b9eba8641f9858bb3e599a48787f50180d6fc68e76165bcaf70ad17022b7`
    - 277 lines / 14,984 bytes; copied byte-for-byte from the owner-provided attachment on 2026-09-02.
