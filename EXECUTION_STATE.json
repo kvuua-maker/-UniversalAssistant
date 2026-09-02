@@ -1,16 +1,16 @@
 {
   "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
-  "requirement_ids": ["MS-137...MS-154"],
+  "requirement_ids": ["MS-155...MS-182"],
   "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "18 manual/offline location, place aggregation/ranking, coffee scenario, route-aware search and navigation requirements reconciled against production and behavioral evidence",
+  "integration_depth": "28 retail provider, fashion discovery, official handoff and truthful route-aware grocery requirements reconciled against production and behavioral evidence",
   "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Mandatory Business Platform competitive audit completed without duplicate CRM/lifecycle architecture: one normalized customer/inbox/catalog/operational transaction/connector layer reuses M9 finance, webhook, feed-health and appointment components; 374 iOS Swift Testing plus 5 Routine XCTest and 83 backend tests pass.",
-  "frozen_baseline_commit": "f88596e",
+  "material_change": "MS-155–182 reconciled per ID: 27 VERIFIED_LOCAL and MS-174 READY_FOR_LIVE_VERIFICATION after production Silpo adapter contract tests; 29 targeted iOS tests and 4 backend Silpo tests pass.",
+  "frozen_baseline_commit": "e1f5df0",
   "dependency": "None for the next local reconciliation slice.",
-  "unresolved_verification_steps": ["1406 canonical requirements remain unreconciled"],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-155-PLUS"
+  "unresolved_verification_steps": ["1378 canonical requirements remain unreconciled", "MS-174 awaits only owner/provider-authorized Silpo OAuth live verification"],
+  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-183-PLUS"
 }

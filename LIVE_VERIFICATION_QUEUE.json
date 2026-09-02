@@ -367,6 +367,19 @@
       "completion_evidence": null
     },
     {
+      "requirement_id": "MS-174-LIVE-SILPO-CURRENT-SOURCE",
+      "service_provider": "Silpo official MCP",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "A current owner/provider-authorized Silpo guest OAuth token and reachable official production MCP session; no credential is available in the repository and none may be invented.",
+      "dependency_owner": "Owner and Silpo provider",
+      "local_evidence": ["Backend/Sources/UniversalAssistantServer/SilpoMCPClient.swift", "Backend/Tests/UniversalAssistantServerTests/SilpoMCPClientTests.swift", "docs/M4_SILPO_MCP_READ_ADAPTER_SCOPE.md", "docs/M4_UA_RETAILER_SOURCE_MATRIX.md"],
+      "required_live_action": "Inject the OAuth token only through the server-side runtime secret boundary, initialize the official https://mcp.silpo.ua/mcp session, discover the advertised read tools, execute a non-consequential current product search for a selected branch/cart context, and compare parsed price/availability/source timestamp with the authoritative response without persisting or logging the token.",
+      "expected_result": "The production adapter authenticates, validates and parses the authoritative current Silpo result; price and availability are presented only with provider evidence/freshness, and auth/schema/rate-limit failures return truthful unavailable state without fabricated data.",
+      "created_at": "2026-09-02T22:30:00+02:00",
+      "last_checked": "2026-09-02T22:30:00+02:00",
+      "completion_evidence": null
+    },
+    {
       "requirement_id": "BUSINESS-OPERATIONS-LIVE-PARTNER-CONNECTORS",
       "service_provider": "Owner-approved partner CRM/ERP/marketplace/booking connectors",
       "current_status": "READY_FOR_LIVE_VERIFICATION",

@@ -202,3 +202,36 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-152 | VERIFIED_LOCAL | NavigationPreferences persists and restores the selected default provider through LocalStore for silent reuse; defaultMapPersistsAndRestores | 64be768 |
 | MS-153 | VERIFIED_LOCAL | clear navigation commands use the deterministic direct-action route and NavigationHandoff produces a launch URL without an extra clarification step; navigation parser/validation and RouteNavigationTests | 64be768 |
 | MS-154 | VERIFIED_LOCAL | InitialWalkingGuidanceComposer emits only the concise first nonempty step from a verified walking RouteResult and emits nothing for other modes/missing route facts; RouteNavigationTests | 64be768 |
+
+## Slice 8 — MS-155–182
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-155 | VERIFIED_LOCAL | RetailProvider is the typed async commerce source boundary registered through ProviderCapabilityRegistry; CommerceIdentityRegistryTests | c44565e |
+| MS-156 | VERIFIED_LOCAL | RetailSearchRequest carries brand/model/type/variant/size/color/quantity, validated price range, pickup/delivery preference and validated coordinate/radius; retailRequestCarriesAndValidatesAllCanonicalSearchConstraints | 94e56d9 |
+| MS-157 | VERIFIED_LOCAL | NormalizedOffer exposes exact availability only with source timestamp/verification and CommerceSearchEngine rejects stale offers rather than inventing stock; NormalizedOfferTests and CommerceSearchEngineTests | d3fd2a2 |
+| MS-158 | VERIFIED_LOCAL | ProviderCapabilityRegistry plus the Ukrainian retailer source matrix records only researched official API/MCP, partner, affiliate, feed and permitted official-web paths with explicit capability state; CommerceIdentityRegistryTests | 29b2e3d |
+| MS-159 | VERIFIED_LOCAL | UkrainianRetailerRegistry models Silpo, ATB, Fora and Fozzy as first-class normalized sources without false live claims; UkrainianRetailerRegistryTests | 29b2e3d |
+| MS-160 | VERIFIED_LOCAL | RetailProvider and actor-isolated ProviderCapabilityRegistry permit modular providers without scattering source-specific logic through domain/UI; CommerceIdentityRegistryTests | c44565e |
+| MS-161 | VERIFIED_LOCAL | FashionDiscoveryRequest and FashionOfficialSourceRouter provide the production typed fashion discovery path; FashionDiscoveryTests | 6a2bac5 |
+| MS-162 | VERIFIED_LOCAL | FashionDiscoveryRequest deterministically parses audience/category/brand/size/color/season/max-price/channel constraints; multilingualFashionFiltersRemainHardConstraints | 6a2bac5 |
+| MS-163 | VERIFIED_LOCAL | latest-collection claims require an explicit verified source claim before official routing; latestAndDiscountAreNeverInvented | 6a2bac5 |
+| MS-164 | VERIFIED_LOCAL | new-arrival claims share the explicit current source-claim contract and cannot be inferred from copy or route alone; FashionDiscoveryTests | 6a2bac5 |
+| MS-165 | VERIFIED_LOCAL | discounts require the verified discount source claim and unverified discount requests fail closed; latestAndDiscountAreNeverInvented | 6a2bac5 |
+| MS-166 | VERIFIED_LOCAL | the multilingual Baldinini request resolves hard filters and OfficialFashionSourceRouter silently selects an exact official app route before the exact allowed official page; FashionDiscoveryTests | 6a2bac5 |
+| MS-167 | VERIFIED_LOCAL | universal SHOW maps to typed informational presentation with no side effect and supports commerce result rendering; LocalCommandEngineTests and AssistantResultStateTests | 27ad853 |
+| MS-168 | VERIFIED_LOCAL | universal OPEN preserves the requested target and resolves only a registered exact app/deep-link/official destination; UniversalDeviceCommandRouterTests and FashionDiscoveryTests | 27ad853 |
+| MS-169 | VERIFIED_LOCAL | official source routing orders exact official app before deep link/page and rejects homepage or unapproved hosts; officialAppPrecedesExactOfficialWebPage and homepageAndUnapprovedHostAreRejected | 6a2bac5 |
+| MS-170 | VERIFIED_LOCAL | commerce keeps normalized searchable facts locally but hands off consequential catalog/action ownership to the exact official provider destination; FashionDiscoveryTests and AffiliatePurchaseHandoffTests | 0d2020e |
+| MS-171 | VERIFIED_LOCAL | GroceryBasketEngine implements truthful normalized basket totals, comparisons and route-aware plans; GroceryBasketEngineTests | 2e9452e |
+| MS-172 | VERIFIED_LOCAL | UkrainianRetailerRegistry represents Silpo adapter readiness plus researched-disabled ATB/Fora/Fozzy and permits future adapters through the same registry contract; UkrainianRetailerRegistryTests | 29b2e3d |
+| MS-173 | VERIFIED_LOCAL | GroceryListParser parses natural-language grocery items and quantities into typed basket lines; naturalLanguageQuantitiesNormalizeToBaseUnits | 2e9452e |
+| MS-174 | READY_FOR_LIVE_VERIFICATION | SilpoMCPClient implements the real fixed official Streamable HTTP MCP transport, runtime OAuth boundary, schema/error handling and local request/response tests; owner/provider OAuth is required solely for an authoritative live product query; LIVE_VERIFICATION_QUEUE MS-174-LIVE-SILPO-CURRENT-SOURCE | b7d8fa8 |
+| MS-175 | VERIFIED_LOCAL | GroceryQuotedItem models exact/equivalent/substitute/unavailable/unverified and completeness distinguishes every non-exact result; GroceryBasketEngineTests | 2e9452e |
+| MS-176 | VERIFIED_LOCAL | GroceryQuantity normalizes litre/millilitre and kilogram/gram quantities into base units and unit-price arithmetic uses Decimal; naturalLanguageQuantitiesNormalizeToBaseUnits and unitPriceUsesNormalizedPackQuantity | 2e9452e |
+| MS-177 | VERIFIED_LOCAL | unavailable or substitute lines make a basket explicitly incomplete and expose their IDs; missingAndSubstituteItemsNeverProduceCompleteClaim | 2e9452e |
+| MS-178 | VERIFIED_LOCAL | total reports store, truthful completeness, unavailable/substitute sets and Decimal subtotal without treating missing lines as zero-price available items; GroceryBasketEngineTests | 2e9452e |
+| MS-179 | VERIFIED_LOCAL | compare deterministically ranks complete baskets ahead of cheaper incomplete baskets and then exact totals; completeBasketsRankBeforeCheaperIncompleteOnes | 2e9452e |
+| MS-180 | VERIFIED_LOCAL | optimizer enumerates only one- or two-store plans and proves complete coverage before emitting a plan; optimizerUsesAtMostTwoStoresForCompleteCoverage | 8b04a53 |
+| MS-181 | VERIFIED_LOCAL | route detour duration/distance and Decimal travel cost participate in plan feasibility and estimated total; travelCostPreventsTrivialSavingsFromWinning | 8b04a53 |
+| MS-182 | VERIFIED_LOCAL | GroceryBasketEngine consumes route-derived detour constraints, rejects stale/incomplete candidates and selects a truthful route-aware basket plan; GroceryBasketEngineTests | 8b04a53 |
