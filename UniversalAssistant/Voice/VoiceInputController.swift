@@ -13,6 +13,13 @@ final class VoiceInputController {
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private var recognizer: SFSpeechRecognizer?
+    @ObservationIgnored private var audioEvents: AudioSessionEventMonitor?
+
+    init() {
+        audioEvents = AudioSessionEventMonitor(
+            onInterruption: { [weak self] in self?.handleAudioInterruptionBegan() },
+            onRouteChange: { [weak self] in self?.handleAudioRouteChanged() })
+    }
 
     func start(locale: Locale = .current) async {
         stop()
@@ -46,6 +53,9 @@ final class VoiceInputController {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         if state == .listening || state == .requestingPermission { state = .idle }
     }
+
+    func handleAudioInterruptionBegan() { stop() }
+    func handleAudioRouteChanged() { if state == .listening { stop() } }
 
     private func authorizationGranted() async -> Bool {
         let speech = await withCheckedContinuation { continuation in SFSpeechRecognizer.requestAuthorization { continuation.resume(returning: $0) } }

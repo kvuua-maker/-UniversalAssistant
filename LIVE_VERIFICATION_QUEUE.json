@@ -138,6 +138,25 @@
       "created_at": "2026-09-02T13:40:00+02:00",
       "last_checked": "2026-09-02T13:40:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-841-842-LIVE-AUDIO-ROUTING",
+      "service_provider": "Physical iPhone AVAudioSession with call/Siri/alarm and Bluetooth HFP devices",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "A physical supported iPhone, signed test build, Bluetooth headset/car HFP route, and ability to generate real call/Siri/alarm interruptions.",
+      "dependency_owner": "Owner/device tester",
+      "local_evidence": [
+        "UniversalAssistant/Voice/AudioSessionEventMonitor.swift",
+        "UniversalAssistant/Voice/VoiceInputController.swift",
+        "UniversalAssistant/Recorder/AudioRecorderController.swift",
+        "UniversalAssistantTests/AccessibilityAudioPermissionTests.swift",
+        "230 iOS tests passed locally on 2026-09-02"
+      ],
+      "required_live_action": "Start voice listening and recording over built-in and Bluetooth HFP routes; trigger a call, Siri, alarm and route connect/disconnect; verify microphone deactivates or recording pauses, no stale listening state remains, and unrelated typed interaction continues.",
+      "expected_result": "Every interruption/route change reaches the production notification bridge, releases or pauses audio safely, reflects truthful UI state and permits deliberate recovery without crash or stuck microphone.",
+      "created_at": "2026-09-02T14:40:00+02:00",
+      "last_checked": "2026-09-02T14:40:00+02:00",
+      "completion_evidence": null
     }
   ]
 }

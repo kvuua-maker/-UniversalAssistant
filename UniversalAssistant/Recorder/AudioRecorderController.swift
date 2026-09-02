@@ -64,6 +64,7 @@ final class AudioRecorderController {
     private let backend: any AudioRecordingBackend
     private let directory: URL
     private let permission: () async -> Bool
+    @ObservationIgnored private var audioEvents: AudioSessionEventMonitor?
 
     init(
         backend: any AudioRecordingBackend = AppleAudioRecordingBackend(),
@@ -73,6 +74,9 @@ final class AudioRecorderController {
         self.backend = backend
         self.directory = directory ?? Self.defaultDirectory()
         self.permission = permission
+        audioEvents = AudioSessionEventMonitor(
+            onInterruption: { [weak self] in self?.handleAudioInterruptionBegan() },
+            onRouteChange: { [weak self] in self?.handleAudioRouteChanged() })
     }
 
     func start() async {
@@ -109,6 +113,13 @@ final class AudioRecorderController {
     func stopPlayback() {
         guard state == .playing else { return }
         backend.stopPlayback(); state = .stopped
+    }
+    func handleAudioInterruptionBegan() {
+        if state == .recording { backend.pause(); state = .paused }
+        else if state == .playing { backend.stopPlayback(); state = .stopped }
+    }
+    func handleAudioRouteChanged() {
+        if state == .recording { backend.pause(); state = .paused }
     }
     func rename(to name: String) throws {
         guard state == .stopped, let source = recordingURL else { throw AudioRecorderError.invalidState }

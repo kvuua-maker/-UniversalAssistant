@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M11-TIME-LOCALE-SAFETY-CORE",
-  "requirement_ids": ["833", "834", "835", "836", "837"],
-  "selected_path": "Explicit zoned instants, bounded authoritative clock skew, runtime presentation context and typed money/unit comparisons.",
-  "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 plus ready-for-live deployed-store verification",
-  "acceptance_contract_ref": "docs/M11_TIME_LOCALE_SAFETY_CORE.md",
+  "current_task_id": "M11-ACCESSIBILITY-AUDIO-PERMISSIONS-CORE",
+  "requirement_ids": ["838", "839", "840", "841", "842", "843", "844", "845"],
+  "selected_path": "Always-visible typed alternative, user-controlled voice privacy, real AVAudioSession event bridge and contextual permissions.",
+  "feasibility_state": "READY_FOR_LIVE_VERIFICATION",
+  "integration_depth": "local E3 complete; physical audio route/interruption E4 queued",
+  "acceptance_contract_ref": "docs/M11_ACCESSIBILITY_AUDIO_PERMISSIONS_CORE.md",
   "required_evidence_level": "E3",
-  "current_exit_state": "VERIFIED_LOCAL",
+  "current_exit_state": "READY_FOR_LIVE_VERIFICATION",
   "last_failure_signature": null,
-  "material_change": "Time, locale, currency and unit semantics are explicit and reject silent unsafe comparisons.",
-  "frozen_baseline_commit": "8737a1a",
-  "dependency": null,
-  "unresolved_verification_steps": [],
-  "next_task_id": "M11-ACCESSIBILITY-AUDIO-PERMISSIONS-CORE"
+  "material_change": "Voice has a disableable accessible typed fallback; interruptions and Bluetooth route changes reach deterministic controller recovery.",
+  "frozen_baseline_commit": "8438dcc",
+  "dependency": "Physical iPhone plus call/Siri/alarm and Bluetooth HFP devices solely for E4 audio verification.",
+  "unresolved_verification_steps": ["MS-841-842 physical audio interruption and Bluetooth route verification"],
+  "next_task_id": "M11-ACCOUNT-DELETION-INTEGRATION-CORE"
 }

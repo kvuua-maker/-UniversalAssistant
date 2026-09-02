@@ -14,7 +14,12 @@ struct AssistantHomeView: View {
                             .symbolRenderingMode(.palette)
                             .foregroundStyle(.white, Color.accentColor)
                     }
+                    .disabled(!model.voiceInputEnabled)
                     .accessibilityLabel(model.isListening ? Text("stop_listening") : Text("start_listening"))
+                    Toggle("voice_input_enabled", isOn: Binding(
+                        get: { model.voiceInputEnabled }, set: { model.setVoiceInputEnabled($0) }
+                    ))
+                    .accessibilityIdentifier("assistant.voice-input-toggle")
                     Text(model.statusText).font(.headline).accessibilityIdentifier("assistant.status")
                     RecordingStatusPill(state: model.recorder.state)
                     CompactResultCard(state: model.resultState, onReportIssue: {

@@ -3,7 +3,7 @@ import Testing
 @testable import UniversalAssistant
 
 @MainActor
-private final class RecorderBackendSpy: AudioRecordingBackend {
+final class RecorderBackendSpy: AudioRecordingBackend {
     var isRecording = false
     var events: [String] = []
     func start(at url: URL) throws -> Bool { events.append("start"); isRecording = true; try Data("audio".utf8).write(to: url); return true }

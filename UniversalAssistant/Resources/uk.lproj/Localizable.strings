@@ -20,3 +20,5 @@
 "request_recognized" = "Команду розпізнано";
 "recording_active" = "Триває запис";
 "recording_paused" = "Запис призупинено";
+"voice_input_enabled" = "Голосове введення";
+"voice_disabled" = "Голосове введення вимкнено — напишіть команду";

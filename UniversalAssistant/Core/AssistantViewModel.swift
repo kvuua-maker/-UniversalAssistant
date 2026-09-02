@@ -6,6 +6,7 @@ import Observation
 final class AssistantViewModel {
     var input = ""
     var isListening = false
+    var voiceInputEnabled = true
     private(set) var statusText = AppText.value("ready")
     private(set) var resultState: AssistantResultState = .idle
     private(set) var interactionDecision: InteractionDecision?
@@ -26,6 +27,10 @@ final class AssistantViewModel {
     }
 
     func toggleListening() {
+        guard voiceInputEnabled else {
+            voiceInput.stop(); isListening = false; statusText = AppText.value("voice_disabled")
+            return
+        }
         if isListening {
             voiceInput.stop(); isListening = false; input = voiceInput.transcript; statusText = AppText.value("ready")
         } else {
@@ -41,6 +46,11 @@ final class AssistantViewModel {
                 }
             }
         }
+    }
+
+    func setVoiceInputEnabled(_ enabled: Bool) {
+        voiceInputEnabled = enabled
+        if !enabled { voiceInput.stop(); isListening = false; statusText = AppText.value("voice_disabled") }
     }
 
     func submit() {
