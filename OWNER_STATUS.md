@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M11 admin configuration audit trail. Selected path: STABLE.
+M11 time, locale and accessibility core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Implement persistent audit evidence for critical operational configuration changes without repeating accepted milestones.
+Implement timezone/clock-skew, locale/currency/unit and accessibility requirements without repeating accepted milestones.
