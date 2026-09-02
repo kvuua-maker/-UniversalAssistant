@@ -7,6 +7,13 @@ enum CoordinationStepFailure: String, Codable, Equatable, Sendable {
     case timeout
     case cancelled
     case operationUnavailable
+    case permissionDenied
+    case confirmationRequired
+}
+
+enum CoordinationOperationError: Error, Equatable, Sendable {
+    case permissionDenied
+    case confirmationRequired
 }
 
 enum CoordinationStepOutcome: Equatable, Sendable {
@@ -110,6 +117,10 @@ actor DeterministicPlanExecutor {
             return .unavailable(.cancelled)
         } catch StepError.timeout {
             return .unavailable(.timeout)
+        } catch CoordinationOperationError.permissionDenied {
+            return .unavailable(.permissionDenied)
+        } catch CoordinationOperationError.confirmationRequired {
+            return .unavailable(.confirmationRequired)
         } catch {
             return .unavailable(.providerFailure)
         }

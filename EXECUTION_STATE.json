@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-APPOINTMENT-ENGINE-CORE",
-  "requirement_ids": ["1050-1056"],
-  "selected_path": "Verified live slots, authoritative booking mutations, official fallback and confirmed Calendar/departure linkage.",
+  "current_task_id": "M12-ROUTINE-MACRO-CORE",
+  "requirement_ids": ["1057-1063"],
+  "selected_path": "Typed persistent routines over existing capabilities with safe bounded deterministic execution.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 production HTTP and end-to-end appointment behavior complete; named-provider execution remains credential gated",
-  "acceptance_contract_ref": "docs/M12_APPOINTMENT_ENGINE_CORE.md",
+  "integration_depth": "local E3 end-to-end natural creation, persistence, dependency execution, authorization, cancellation and idempotency complete",
+  "acceptance_contract_ref": "docs/M12_ROUTINE_MACRO_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Only verified fresh slots can be booked; every booking mutation requires matching authoritative provider state before local linkage.",
-  "frozen_baseline_commit": "03d8803",
-  "dependency": "Authorized appointment provider credentials and controlled provider account only for live verification.",
-  "unresolved_verification_steps": ["MS-1050-1056-LIVE-APPOINTMENTS"],
-  "next_task_id": "M12-ROUTINE-MACRO-CORE"
+  "material_change": "Routines are structured and durable, reuse the deterministic executor, isolate partial failures and cannot silently perform unconfirmed consequential actions.",
+  "frozen_baseline_commit": "075d649",
+  "dependency": null,
+  "unresolved_verification_steps": [],
+  "next_task_id": "M12-STRONG-CONTEXT-CORE"
 }

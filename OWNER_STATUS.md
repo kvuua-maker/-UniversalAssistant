@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M12 Routine macro core. Selected path: STABLE.
+M12 Strong context core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -14,7 +14,7 @@ Voice recognition and fast system invocation are ready for a later stable iPhone
 
 ## BLOCKED AND WHY
 
-No blocker for the next local core. Appointment provider live execution remains separately credential/account gated in the live queue.
+No blocker for the next local core. Provider live execution remains separately credential/account gated in the live queue.
 
 ## OWNER ACTION NEEDED NOW
 
@@ -22,4 +22,4 @@ No blocker for the next local core. Appointment provider live execution remains 
 
 ## NEXT
 
-Implement structured natural-language routines with safe edit/delete/enable, loop/deduplication protection and offline partial execution.
+Implement expiring provenance-aware CurrentContext and deterministic follow-up resolution with privacy reset.
