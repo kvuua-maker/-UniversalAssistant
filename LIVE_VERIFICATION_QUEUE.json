@@ -406,7 +406,7 @@
       "completion_evidence": null
     },
     {
-      "requirement_id": "QUICK-LAUNCH-LIVE-PHYSICAL-ACCESS",
+      "requirement_id": "MS-327-MS-328-MS-329-MS-330-QUICK-LAUNCH-LIVE-PHYSICAL-ACCESS",
       "service_provider": "iOS Action Button, Back Tap, Siri/App Shortcuts and Home Screen Shortcut",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
       "missing_dependency": "Signed builds on owner-accessible supported iPhones with and without Action Button plus permission to configure their system accessibility and Shortcuts settings.",

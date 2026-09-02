@@ -411,3 +411,24 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-316 | VERIFIED_LOCAL | AssistantOwnedDataStore.upsert replaces the exact stable ID and persists the edit atomically; userCanViewEditDeleteClearAndExportDurableOwnedRecords | 242dfda |
 | MS-317 | VERIFIED_LOCAL | exact delete and clear persist tombstones so cloud records cannot silently reappear; userCanViewEditDeleteClearAndExportDurableOwnedRecords | 242dfda |
 | MS-318 | VERIFIED_LOCAL | AssistantOwnedDataExport emits portable versioned sorted JSON from the durable store; export behavioral tests | 242dfda |
+
+## Slice 17 — MS-319–334
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-319 | VERIFIED_LOCAL | AssistantHomeView is a compact voice-first action surface with one central microphone, status, native result and secondary text input rather than a transcript; AssistantResultStateTests | 58447af |
+| MS-320 | VERIFIED_LOCAL | listening state drives a large waveform microphone symbol, concise localized status and accessible stop/start label; AccessibilityAudioPermissionTests | 58447af |
+| MS-321 | VERIFIED_LOCAL | AssistantResultState.processing and beginProcessing expose a concise progress state only for perceptible asynchronous work; perceptibleProcessingActionFailureAndExpandedResultsAreTyped | 55c824e |
+| MS-322 | VERIFIED_LOCAL | recognized requests render a native CompactResultCard and compact acknowledgements auto-dismiss; successfulCommandProducesCompactResult | 55c824e |
+| MS-323 | VERIFIED_LOCAL | actionRequired carries exactly one typed prompt with bounded choices and renders without unrelated controls; typed presentation-state test | 55c824e |
+| MS-324 | VERIFIED_LOCAL | failure carries only human-facing message and optional recovery action; CompactResultCard has no raw error/API field; typed presentation-state test | 55c824e |
+| MS-325 | VERIFIED_LOCAL | compact acknowledgement timer dismisses while a new result cancels the prior timer; compactConfirmationDismissesAndNewSubmissionCancelsOldTimer | 58447af |
+| MS-326 | VERIFIED_LOCAL | expanded is a separate explicit result state while ordinary results remain compact; perceptibleProcessingActionFailureAndExpandedResultsAreTyped | 55c824e |
+| MS-327 | READY_FOR_LIVE_VERIFICATION | StartAssistantIntent/AppShortcutsProvider and typed Action Button capability ordering are complete locally; signed device assignment remains owner-controlled; LIVE_VERIFICATION_QUEUE MS-327...330 | 58447af |
+| MS-328 | READY_FOR_LIVE_VERIFICATION | QuickLaunchRequestStore consumes the persisted launch once and permitted voice routes directly to listening without narration/tap; physical Action Button latency/path remains queued | 58447af |
+| MS-329 | READY_FOR_LIVE_VERIFICATION | policy omits unavailable Action Button and preserves Back Tap/App Shortcut/Home Screen/AssistiveTouch alternatives; physical non-Action-Button device remains queued | 58447af |
+| MS-330 | READY_FOR_LIVE_VERIFICATION | official App Intent/App Shortcut plus typed supported alternatives and permission/text fallbacks are implemented and tested; physical system configuration remains queued | 58447af |
+| MS-331 | NOT_APPLICABLE_VERIFIED | V1 explicitly excludes Apple Watch and the Xcode project has only app, Share Extension and test targets; project target audit | b837945 |
+| MS-332 | NOT_APPLICABLE_VERIFIED | no watchOS product/target/SDK dependency exists in project.pbxproj; project target audit | b837945 |
+| MS-333 | NOT_APPLICABLE_VERIFIED | no WatchConnectivity import or runtime path exists; repository integration audit | b837945 |
+| MS-334 | VERIFIED_LOCAL | command parsing, action graph, capability registry and service actors are platform-neutral typed cores separable from SwiftUI, preserving future client extensibility without adding watch scope; architecture tests | 6627cff |

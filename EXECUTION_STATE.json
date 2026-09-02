@@ -1,16 +1,16 @@
 {
   "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
-  "requirement_ids": ["MS-305...MS-318"],
+  "requirement_ids": ["MS-319...MS-334"],
   "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "14 CloudKit sync and assistant-owned data lifecycle requirements reconciled against production transport and durable store",
+  "integration_depth": "16 compact voice UI, quick-launch and explicit watchOS exclusion requirements reconciled",
   "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "MS-305–318 reconciliation replaced the protocol-only CloudKit claim with a real private-database transport, entitlement boundary, typed assistant-owned scope and persistent user view/edit/delete/export path.",
-  "frozen_baseline_commit": "242dfda",
-  "dependency": "Owner CloudKit container provisioning and two signed devices are required only for queued live sync verification; no dependency blocks the next local slice.",
-  "unresolved_verification_steps": ["1242 canonical requirements remain unreconciled", "MS-305/306/307/310/311/313 await only the exact LIVE_VERIFICATION_QUEUE CloudKit procedure"],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-319-PLUS"
+  "material_change": "MS-319–334 reconciliation completed typed processing, action-required, failure and expanded presentation states while retaining the official quick-launch path and explicit no-watch V1 boundary.",
+  "frozen_baseline_commit": "55c824e",
+  "dependency": "Owner physical devices are required only for queued Action Button and alternative entry-point verification; no dependency blocks the next local slice.",
+  "unresolved_verification_steps": ["1226 canonical requirements remain unreconciled", "MS-327–330 await only their exact LIVE_VERIFICATION_QUEUE physical quick-launch procedure"],
+  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-335-PLUS-BUSINESS"
 }
