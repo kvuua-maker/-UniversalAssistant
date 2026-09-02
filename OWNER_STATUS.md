@@ -6,7 +6,7 @@ M0–M8 are Codex-verified at local E3.
 
 ## CURRENTLY WORKING ON
 
-Deterministic execution plan core. Selected path: STABLE.
+Deterministic result composer. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Implement typed dependencies, bounded parallel groups and completion criteria by reusing existing routers and providers. M9 Business Partner Platform remains deferred.
+Compose verified facts, unknowns, explanations and actions without AI; Business Partner Platform remains scheduled for M9.
