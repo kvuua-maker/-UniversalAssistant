@@ -1,6 +1,7 @@
 import Foundation
 import PDFKit
 import UIKit
+import CoreImage
 
 enum PDFProcessingError: Error, Equatable {
     case invalidPDF, emptyDocument, invalidPageSelection, duplicatePageSelection, invalidOverlay
@@ -82,6 +83,62 @@ struct OnDevicePDFProcessor {
                 )
             }
         }
+    }
+
+    func cropped(_ image: UIImage, normalizedRect: CGRect) throws -> UIImage {
+        guard normalizedRect.minX >= 0, normalizedRect.minY >= 0,
+              normalizedRect.maxX <= 1, normalizedRect.maxY <= 1,
+              normalizedRect.width > 0, normalizedRect.height > 0,
+              let cgImage = image.cgImage else { throw PDFProcessingError.invalidPageSelection }
+        let pixels = CGRect(x: normalizedRect.minX * CGFloat(cgImage.width),
+                            y: normalizedRect.minY * CGFloat(cgImage.height),
+                            width: normalizedRect.width * CGFloat(cgImage.width),
+                            height: normalizedRect.height * CGFloat(cgImage.height)).integral
+        guard let cropped = cgImage.cropping(to: pixels) else { throw PDFProcessingError.invalidPageSelection }
+        return UIImage(cgImage: cropped, scale: image.scale, orientation: image.imageOrientation)
+    }
+
+    func contrastEnhanced(_ image: UIImage, amount: CGFloat = 1.15) throws -> UIImage {
+        guard (1...1.5).contains(amount), let input = CIImage(image: image) else { throw PDFProcessingError.invalidPageSelection }
+        let filter = CIFilter(name: "CIColorControls")
+        filter?.setValue(input, forKey: kCIInputImageKey)
+        filter?.setValue(amount, forKey: kCIInputContrastKey)
+        guard let output = filter?.outputImage,
+              let cgImage = CIContext(options: [.useSoftwareRenderer: false]).createCGImage(output, from: output.extent) else {
+            throw PDFProcessingError.invalidPDF
+        }
+        return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
+    }
+
+    func images(from data: Data, maximumDimension: CGFloat = 2_048) throws -> [UIImage] {
+        let source = try document(data)
+        guard maximumDimension >= 320 else { throw PDFProcessingError.invalidPageSelection }
+        return try (0..<source.pageCount).map { index in
+            guard let page = source.page(at: index) else { throw PDFProcessingError.invalidPDF }
+            let box = page.bounds(for: .mediaBox)
+            let scale = min(1, maximumDimension / max(box.width, box.height))
+            return UIGraphicsImageRenderer(size: CGSize(width: box.width * scale, height: box.height * scale)).image { context in
+                UIColor.white.setFill(); context.fill(CGRect(origin: .zero, size: context.format.bounds.size))
+                context.cgContext.scaleBy(x: scale, y: scale)
+                page.draw(with: .mediaBox, to: context.cgContext)
+            }
+        }
+    }
+
+    func highlighting(_ text: String, in data: Data) throws -> Data {
+        let output = try document(data)
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw PDFProcessingError.invalidPageSelection }
+        let selections = output.findString(text, withOptions: [.caseInsensitive])
+        guard !selections.isEmpty else { throw PDFProcessingError.invalidPageSelection }
+        for selection in selections {
+            for page in selection.pages {
+                let bounds = selection.bounds(for: page)
+                let annotation = PDFAnnotation(bounds: bounds, forType: .highlight, withProperties: nil)
+                annotation.color = UIColor.systemYellow.withAlphaComponent(0.35)
+                page.addAnnotation(annotation)
+            }
+        }
+        return try representation(of: output)
     }
 
     func compressed(_ data: Data, maximumDimension: CGFloat = 1_600, jpegQuality: CGFloat = 0.72) throws -> Data {

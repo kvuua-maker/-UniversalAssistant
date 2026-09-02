@@ -16889,7 +16889,7 @@
       "id": "MS-1474",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "DOCUMENT IMAGE PROCESSING",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "VERIFIED_LOCAL",
       "implementation_evidence": [
         "AppleScannerIntegration.swift; OnDevicePDFProcessor.swift"
       ],

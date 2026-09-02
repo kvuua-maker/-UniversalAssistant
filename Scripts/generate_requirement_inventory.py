@@ -33,7 +33,7 @@ def main():
             prior = existing.get(requirement_id, {})
             audited_definition_rule = prefix == "MS" and 1343 <= int(match.group(1)) <= 1454
             document_processing_increment = prefix == "MS" and int(match.group(1)) == 1474
-            status = "VERIFIED_LOCAL" if audited_definition_rule else ("IMPLEMENTED_UNVERIFIED" if document_processing_increment else prior.get("status", "NOT_IMPLEMENTED"))
+            status = "VERIFIED_LOCAL" if audited_definition_rule or document_processing_increment else prior.get("status", "NOT_IMPLEMENTED")
             if status not in ALLOWED:
                 raise SystemExit(f"invalid status for {requirement_id}: {status}")
             records.append({

@@ -3,14 +3,14 @@
   "requirement_ids": ["1474"],
   "selected_path": "On-device VisionKit/Vision/PDFKit production path with real PDF-byte transformations.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "merge/split/reorder/delete/rotate verified locally; remaining MS-1474 operations active",
+  "integration_depth": "complete locally: VisionKit/Vision capture+OCR boundary and PDFKit/UIKit transformations",
   "acceptance_contract_ref": "docs/M12_ON_DEVICE_PDF_PROCESSING_CORE.md",
   "required_evidence_level": "E3",
-  "current_exit_state": "IMPLEMENTED_UNVERIFIED",
+  "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Actual PDF bytes now support safe merge, split, reorder, delete and rotation with fail-closed validation.",
-  "frozen_baseline_commit": "2e0300c",
-  "dependency": "None for remaining on-device implementation.",
-  "unresolved_verification_steps": ["remaining MS-1474 processing operations", "physical VisionKit capture verification remains in live queue"],
-  "next_task_id": "M12-MS-1474-REMAINING-DOCUMENT-PROCESSING"
+  "material_change": "Actual images/PDF bytes now support crop, bounded contrast, PDF-to-image, searchable PDF, highlight, compression and flattened redaction/signature in addition to page transformations.",
+  "frozen_baseline_commit": "05bd51f",
+  "dependency": "Physical VisionKit camera execution only; tracked in LIVE_VERIFICATION_QUEUE.json.",
+  "unresolved_verification_steps": ["physical VisionKit capture verification remains in live queue"],
+  "next_task_id": "GLOBAL-ZERO-OMISSION-FIRST-UNVERIFIED"
 }

@@ -78,4 +78,24 @@ struct OnDevicePDFProcessorTests {
             try processor.flattened(pdf(["A"]), overlays: [PDFPageOverlay(pageIndex: 2, normalizedRect: CGRect(x: 0, y: 0, width: 1, height: 1), kind: .redaction)])
         }
     }
+
+    @Test func cropEnhancePDFImageAndHighlightOperateOnRealContent() throws {
+        let processor = OnDevicePDFProcessor()
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 400, height: 200)).image { context in
+            UIColor.white.setFill(); context.fill(CGRect(x: 0, y: 0, width: 400, height: 200))
+            UIColor.gray.setFill(); context.fill(CGRect(x: 0, y: 0, width: 200, height: 200))
+        }
+        let cropped = try processor.cropped(image, normalizedRect: CGRect(x: 0, y: 0, width: 0.5, height: 1))
+        #expect(cropped.size.width == image.size.width / 2)
+        #expect(try processor.contrastEnhanced(cropped).size == cropped.size)
+        let pageImages = try processor.images(from: pdf(["Pay by Monday"]))
+        #expect(pageImages.count == 1)
+        #expect(pageImages[0].size.width > 0)
+        let highlighted = try processor.highlighting("Monday", in: pdf(["Pay by Monday"]))
+        let document = try #require(PDFDocument(data: highlighted))
+        #expect(document.page(at: 0)?.annotations.contains(where: { $0.type == "Highlight" }) == true)
+        #expect(throws: PDFProcessingError.invalidPageSelection) {
+            try processor.highlighting("not present", in: pdf(["Pay by Monday"]))
+        }
+    }
 }
