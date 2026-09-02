@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-APPLE-SYSTEM-DOMAINS-CORE",
-  "requirement_ids": ["949-955"],
-  "selected_path": "Complete public system-domain audit plus real camera, MusicKit and podcast adapters while preserving truthful Clock/private API limits.",
+  "current_task_id": "M12-UNIVERSAL-PERSONAL-SEARCH-CORE",
+  "requirement_ids": ["956-976"],
+  "selected_path": "Privacy-first concurrent routing across plausible authorized local and remote sources with provenance, freshness, exact-open and partial coverage.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 complete; physical camera/MusicKit/catalog behavior queued",
-  "acceptance_contract_ref": "docs/M12_APPLE_SYSTEM_DOMAINS_CORE.md",
+  "integration_depth": "local E3 coordinator complete; source-specific live verification remains queued",
+  "acceptance_contract_ref": "docs/M12_UNIVERSAL_PERSONAL_SEARCH_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "All Apple system domains now have explicit implemented depth, with real camera capture, MusicKit catalog/playback and podcast search production adapters.",
-  "frozen_baseline_commit": "19248bb",
+  "material_change": "Personal search now selects only plausible authorized sources, runs them concurrently and preserves exact provenance/freshness with truthful partial results.",
+  "frozen_baseline_commit": "762c336",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M12-UNIVERSAL-PERSONAL-SEARCH-CORE"
+  "next_task_id": "M12-CARPLAY-SENSITIVE-DATA-POLICY"
 }
