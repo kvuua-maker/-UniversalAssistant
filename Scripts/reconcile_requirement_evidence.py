@@ -66,7 +66,7 @@ def main() -> None:
             record["commit_evidence"] = [verified_commit(commit, source)]
             record["remaining_dependency"] = evidence if status == "READY_FOR_LIVE_VERIFICATION" else None
             imported.add(requirement_id)
-    expected = {f"MS-{value}" for value in range(1, 79)} | {f"MS-{value}" for value in range(737, 851)}
+    expected = {f"MS-{value}" for value in range(1, 115)} | {f"MS-{value}" for value in range(737, 851)}
     if imported != expected:
         missing = sorted(expected - imported)
         unexpected = sorted(imported - expected)

@@ -109,3 +109,46 @@ Each status below is grounded in a production path and behavior-level test; opti
 | MS-76 | VERIFIED_LOCAL | BoundedAIInterpretationCoordinator invokes one schema-bound fallback only after explicit unresolved semantics; exactlyOneBoundedInterpretationResumesDeterministicExecution | ca92a6f |
 | MS-77 | VERIFIED_LOCAL | AI interpretation schema allowlist rejects live fact fields and execution scripts; schemaRejectsLiveFacts and verified-facts-only coordination tests | ca92a6f |
 | MS-78 | VERIFIED_LOCAL | AI timeout/unavailability returns deterministic unresolved/partial outcome without hanging or disabling core capabilities; timeoutFallsBackWithoutBlockingDeterministicCapabilities | ca92a6f |
+
+## Slice 5 — MS-79–114
+
+The complete canonical intent surface was traced from deterministic recognition into its real local, provider, handoff or safety path. The tests named below verify behavior rather than enum existence.
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-79 | VERIFIED_LOCAL | LocalCommandEngine PLACE_SEARCH → PlaceSearchEngine/MapKitPlaceProvider; canonical intent matrix and PlaceSearchEngineTests | 27ad853 |
+| MS-80 | VERIFIED_LOCAL | PRODUCT_SEARCH → CommerceSearchEngine normalized verified offers; parser constraint test and CommerceSearchEngineTests | 27ad853 |
+| MS-81 | VERIFIED_LOCAL | FASHION_DISCOVERY → FashionDiscovery and official-source router; FashionDiscoveryTests | 27ad853 |
+| MS-82 | VERIFIED_LOCAL | GROCERY_BASKET → GroceryBasketEngine with exact Decimal totals; GroceryBasketEngineTests | 27ad853 |
+| MS-83 | VERIFIED_LOCAL | SERVICE_SEARCH → typed LocalServiceDomain categories/providers; LocalServiceDomainTests and parser category coverage | 27ad853 |
+| MS-84 | VERIFIED_LOCAL | RESTAURANT_SEARCH recognized and routed to external place/food capability; canonical intent matrix, PlaceSearchEngineTests and FoodDeliveryComparisonEngineTests | 27ad853 |
+| MS-85 | VERIFIED_LOCAL | RESERVATION uses verified AppointmentEngine availability/book/reschedule/cancel boundary with confirmation; AppointmentEngineTests | 27ad853 |
+| MS-86 | VERIFIED_LOCAL | TAXI_SEARCH recognized and isolated behind verified provider registry/handoff; canonical intent matrix and RideProviderRegistryTests | 27ad853 |
+| MS-87 | VERIFIED_LOCAL | TAXI_COMPARE ranks truthful quotes without fabricated values; RideComparisonEngineTests | 27ad853 |
+| MS-88 | VERIFIED_LOCAL | NAVIGATION uses validated RouteEngine and exact map handoff; RouteNavigationTests | 27ad853 |
+| MS-89 | VERIFIED_LOCAL | ROUTE_SEARCH deterministic intent routes to navigation capability; canonical intent matrix and RouteNavigationTests | 27ad853 |
+| MS-90 | VERIFIED_LOCAL | ROUTE_AWARE_SEARCH computes bounded detours from route provider facts; canonical intent matrix and RouteNavigationTests | 27ad853 |
+| MS-91 | VERIFIED_LOCAL | CalendarService implements EventKit create/query/update/delete with authoritative IDs and undo; CalendarServiceTests plus four-intent parser matrix | 27ad853 |
+| MS-92 | VERIFIED_LOCAL | ReminderService implements EventKit operations and undo/update snapshots; ReminderServiceTests and reminder parser matrix | 27ad853 |
+| MS-93 | VERIFIED_LOCAL | NOTE_CREATE/QUERY use truthful system share handoff because unrestricted Notes API is unavailable; LocalActionRouterTests and parser matrix | 27ad853 |
+| MS-94 | VERIFIED_LOCAL | SHOPPING_LIST routes directly to EventKit reminders without duplicate storage; LocalActionRouterTests and parser matrix | 27ad853 |
+| MS-95 | VERIFIED_LOCAL | CONTACT_LOOKUP/CALL use Contacts resolver, aliases and exact system call route; ContactAliasTests, LocalActionRouterTests and parser tests | 27ad853 |
+| MS-96 | VERIFIED_LOCAL | MESSAGE_COMPOSE uses MessageUI system composer with recipient validation and truthful completion; MessagingIntegrationTests | 27ad853 |
+| MS-97 | VERIFIED_LOCAL | WEATHER uses WeatherKit provider facts and contextual resolver; WeatherContextTests and parser tests | 27ad853 |
+| MS-98 | VERIFIED_LOCAL | PUBLIC_TRANSPORT uses normalized TransportEngine provider boundary; TransportEngineTests and parser matrix | 27ad853 |
+| MS-99 | VERIFIED_LOCAL | TRANSPORT_ROUTE uses verified itinerary segments and validation; TransportEngineTests and parser matrix | 27ad853 |
+| MS-100 | VERIFIED_LOCAL | TICKET_SEARCH/PURCHASE_HANDOFF separate verified search from consequential handoff; TicketEngineTests and precedence parser test | 27ad853 |
+| MS-101 | VERIFIED_LOCAL | HOTEL_SEARCH uses bounded truthful HotelSearchEngine; HotelSearchEngineTests and parser matrix | 27ad853 |
+| MS-102 | VERIFIED_LOCAL | TRAVEL_PLAN deterministically coordinates Calendar/location/weather/transport/hotel with zero AI; TravelPlanEngineTests and CoordinationAcceptanceTests | 27ad853 |
+| MS-103 | VERIFIED_LOCAL | EMERGENCY resolves Ukrainian emergency scenario to legitimate 112/capability handoff; UkraineEmergencyPlannerTests and inflection parser test | 27ad853 |
+| MS-104 | VERIFIED_LOCAL | ControlledWebSearchHandoff permits validated HTTPS fallback only when no structured capability is available; ControlledWebSearchHandoffTests | 27ad853 |
+| MS-105 | VERIFIED_LOCAL | DEVICE_ACTION recognized then governed by SystemQuickActionPlanner public-API feasibility outcomes; SystemQuickActionPlannerTests | 27ad853 |
+| MS-106 | VERIFIED_LOCAL | APP_ACTION resolves exact verified app descriptors/deep links and fails closed on ambiguity/unsupported targets; UniversalDeviceCommandRouterTests | 27ad853 |
+| MS-107 | VERIFIED_LOCAL | AUDIO_RECORD routes to real AVAudioRecorder controller with permission/state/file lifecycle; AudioRecorderControllerTests and precedence parser test | 27ad853 |
+| MS-108 | VERIFIED_LOCAL | universal SHOW produces typed informational presentation without side effects; parser matrix and AssistantResultStateTests | 27ad853 |
+| MS-109 | VERIFIED_LOCAL | universal OPEN preserves exact app name and resolves only registered public destinations silently; UniversalDeviceCommandRouterTests and multilingual parser tests | 27ad853 |
+| MS-110 | VERIFIED_LOCAL | CANCEL_ACTION is consequential in InteractionDecisionEngine and maps only exact cancellable objects in UniversalActionGraph; safety/action graph tests | 27ad853 |
+| MS-111 | VERIFIED_LOCAL | UNDO_ACTION uses persistent ActionHistory latest-completed state machine and exact domain undo handlers; ActionHistoryTests, CalendarServiceTests and ReminderServiceTests | 27ad853 |
+| MS-112 | VERIFIED_LOCAL | MULTI_STEP_COMMAND compiles typed dependency plans and executes independent work concurrently with bounded failure/cancellation; CoordinationAcceptanceTests and RoutineMacroEngineTests | 27ad853 |
+| MS-113 | VERIFIED_LOCAL | SETTINGS_ACTION is locally recognized and routed as a typed non-consequential action; remainingCanonicalIntentRecognition and InteractionDecisionEngineTests | 27ad853 |
+| MS-114 | VERIFIED_LOCAL | GENERAL_HELP is deterministic, local and compact rather than AI chat; remainingCanonicalIntentRecognition and AssistantResultStateTests | 27ad853 |
