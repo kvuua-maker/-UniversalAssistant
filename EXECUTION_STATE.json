@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-FOOD-DELIVERY-COMPARISON-CORE",
-  "requirement_ids": ["1043-1049"],
-  "selected_path": "Modular bounded provider comparison using verified complete delivered price, ETA hard constraints and confirmed handoff only.",
+  "current_task_id": "M12-APPOINTMENT-ENGINE-CORE",
+  "requirement_ids": ["1050-1056"],
+  "selected_path": "Verified live slots, authoritative booking mutations, official fallback and confirmed Calendar/departure linkage.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 comparison behavior complete; live Glovo/Bolt consumer data and ordering remain partner-access gated",
-  "acceptance_contract_ref": "docs/M12_FOOD_DELIVERY_COMPARISON_CORE.md",
+  "integration_depth": "local E3 production HTTP and end-to-end appointment behavior complete; named-provider execution remains credential gated",
+  "acceptance_contract_ref": "docs/M12_APPOINTMENT_ENGINE_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Food results are comparable only with verified total fees and ETA; ordering is never claimed beyond a confirmed exact handoff.",
-  "frozen_baseline_commit": "79c093a",
-  "dependency": "Glovo/Bolt partner authorization, credentials, test stores and controlled transactions only for live verification.",
-  "unresolved_verification_steps": ["MS-1043-1049-LIVE-FOOD-DELIVERY"],
-  "next_task_id": "M12-APPOINTMENT-ENGINE-CORE"
+  "material_change": "Only verified fresh slots can be booked; every booking mutation requires matching authoritative provider state before local linkage.",
+  "frozen_baseline_commit": "03d8803",
+  "dependency": "Authorized appointment provider credentials and controlled provider account only for live verification.",
+  "unresolved_verification_steps": ["MS-1050-1056-LIVE-APPOINTMENTS"],
+  "next_task_id": "M12-ROUTINE-MACRO-CORE"
 }

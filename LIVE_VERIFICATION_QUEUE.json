@@ -297,6 +297,19 @@
       "created_at": "2026-09-02T17:49:00+02:00",
       "last_checked": "2026-09-02T17:49:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-1050-1056-LIVE-APPOINTMENTS",
+      "service_provider": "Authorized appointment/booking provider",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner-selected lawful provider, approved API access, bearer credentials, sandbox or controlled service account and permission for disposable booking/reschedule/cancel operations.",
+      "dependency_owner": "Owner/business development and provider administrator",
+      "local_evidence": ["UniversalAssistant/Appointments/AppointmentEngine.swift", "UniversalAssistant/Appointments/OfficialAppointmentHTTPProvider.swift", "UniversalAssistantTests/AppointmentEngineTests.swift", "docs/M12_APPOINTMENT_ENGINE_CORE.md"],
+      "required_live_action": "Configure the provider-issued endpoints/credential; search a controlled real slot with time/price constraints; explicitly confirm booking and read it back; reschedule and read back; cancel and read back; verify linked Calendar/departure artifacts follow only confirmed provider states.",
+      "expected_result": "Slots match current provider availability, no stale/unknown slot is offered, each mutation matches authoritative provider IDs/state, fallback is never called booked, and no credential appears in persistence/logs/repository.",
+      "created_at": "2026-09-02T18:00:00+02:00",
+      "last_checked": "2026-09-02T18:00:00+02:00",
+      "completion_evidence": null
     }
   ]
 }
