@@ -2,11 +2,11 @@
 
 ## DONE AND CODEX-VERIFIED
 
-M0–M8 and the deterministic coordination addendum are Codex-verified at local E3.
+M0–M9 and the deterministic coordination addendum are Codex-verified at local E3.
 
 ## CURRENTLY WORKING ON
 
-M9 Business Partner Platform acceptance. Selected path: STABLE.
+M10 performance budgets core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Verify all Business Partner Platform acceptance cases A–P and the complete M9 build/test gate.
+Define measurable deterministic fast-path/provider/coordination performance budgets and regression gates.

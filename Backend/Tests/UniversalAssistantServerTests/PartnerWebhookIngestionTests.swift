@@ -53,4 +53,16 @@ struct PartnerWebhookIngestionTests {
             body: body, signatureHex: PartnerWebhookSignature.sign(timestamp: now, body: body, secret: new))
         #expect(try await ingestion.ingest(fresh, now: now) != .duplicate)
     }
+
+    @Test func auditSurfaceContainsNoSecretSignatureOrPayload() async throws {
+        let vault = PartnerWebhookCredentialVault(), partner = UUID(), now = Date(), body = try webhookBody()
+        let secret = Data(repeating: 9, count: 32)
+        try await vault.install(partnerID: partner, keyID: "key", secret: secret)
+        let ingestion = PartnerWebhookIngestion(vault: vault)
+        _ = try await ingestion.ingest(.init(partnerID: partner, keyID: "key", eventID: "event",
+            timestamp: now, body: body,
+            signatureHex: PartnerWebhookSignature.sign(timestamp: now, body: body, secret: secret)), now: now)
+        let labels = Set(Mirror(reflecting: try #require(await ingestion.auditTrail().first)).children.compactMap(\.label))
+        #expect(labels.isDisjoint(with: ["secret", "signature", "signatureHex", "body", "payload"]))
+    }
 }
