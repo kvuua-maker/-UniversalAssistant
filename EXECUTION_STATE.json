@@ -8,7 +8,7 @@
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Generic retail web targeted audit closed the missing unknown-retailer path by reusing RetailProvider/NormalizedOffer/native cards: configured discovery, bounded retrieval, JSON-LD/microdata/RDFa/OpenGraph extraction, truth/freshness/confidence, variant-safe dedup, partner preference and exact non-affiliate handoff; 17 targeted tests and the full 390-test iOS plus 83-test backend regressions pass.",
+  "material_change": "Loyalty/personal-price/attribution audit reused existing OAuth, affiliate handoff and finance ledger while adding only missing persisted loyalty cards, verified effective-price resolution and versioned attribution strategy evaluation; full iOS regression passes 400 tests across 94 suites plus 5 Routine XCTest, backend passes 83 tests across 23 suites.",
   "frozen_baseline_commit": "e1f5df0",
   "dependency": "None for the next local reconciliation slice.",
   "unresolved_verification_steps": ["1378 canonical requirements remain unreconciled", "MS-174 awaits only owner/provider-authorized Silpo OAuth live verification"],

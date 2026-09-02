@@ -70,4 +70,14 @@ private func offer(id: String, seller: String, price: Decimal = 1000, exact: Boo
         let result = OfferDeduplicator().deduplicate([generic, partner, otherVariant])
         #expect(result.map(\.providerID) == ["partner-api", "generic-retail-web"])
     }
+
+    @Test func verifiedPersonalEffectivePriceCanImproveUserRankingWithoutCommissionSignal() {
+        var personal = offer(id: "personal", seller: "a", price: 1_200)
+        personal.personalPrice = .init(publicPrice: .init(amount: 1_200, currency: "UAH"),
+            effectivePrice: .init(amount: 800, currency: "UAH"), appliedBenefitIDs: ["loyalty"],
+            deliveryEffect: nil, sourceReference: "merchant:quote", verifiedAt: .now,
+            confidence: .verifiedPartner)
+        let publicOnly = offer(id: "public", seller: "b", price: 900)
+        #expect(OfferRanker().rank([publicOnly, personal]).first?.id == "personal")
+    }
 }

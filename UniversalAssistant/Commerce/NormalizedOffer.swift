@@ -66,6 +66,7 @@ struct NormalizedOffer: Identifiable, Equatable, Sendable {
     var deliveryInformation: String? = nil
     var sourceConfidence: RetailExtractionConfidence? = nil
     var sourceProvenance: [String] = []
+    var personalPrice: VerifiedPersonalPrice? = nil
 
     func isFresh(now: Date = .now, maximumAge: TimeInterval = 15 * 60) -> Bool {
         let age = now.timeIntervalSince(sourceTimestamp)
@@ -128,7 +129,8 @@ struct OfferRanker: Sendable {
         if offer.seller.returns != nil { score += 20 }
         if offer.seller.warranty != nil { score += 20 }
         if let rating = offer.seller.rating { score += Decimal(rating * 10) }
-        if let total = offer.cost.calculableTotal { score -= total.amount / 10_000 }
+        if let personal = offer.personalPrice?.effectivePrice { score -= personal.amount / 10_000 }
+        else if let total = offer.cost.calculableTotal { score -= total.amount / 10_000 }
         return score
     }
 }
