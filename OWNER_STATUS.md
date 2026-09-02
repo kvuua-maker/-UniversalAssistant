@@ -2,11 +2,11 @@
 
 ## DONE AND CODEX-VERIFIED
 
-M0–M6 and the completed M7 capability-registry, launch-market matrix, Find My fallback and media cores are Codex-verified at local E3.
+M0–M7 are Codex-verified at local E3.
 
 ## CURRENTLY WORKING ON
 
-M7 acceptance. Selected path: STABLE.
+M8 account/auth decision. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Freeze the locally verified M7 evidence and advance to the first unfinished M8 block.
+Decide the minimal account boundary required for sync and monetization, then implement the selected M8 path.
