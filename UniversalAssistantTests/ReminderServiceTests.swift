@@ -19,6 +19,17 @@ struct ReminderServiceTests {
         #expect(throws: Never.self) { try ReminderDraft(title: "Call", priority: 1).validated() }
     }
 
+    @Test func locationReminderRequiresValidTypedGeofence() throws {
+        let valid = ReminderLocationTrigger(title: "Store", latitude: 50.45, longitude: 30.52,
+                                            radius: 100, proximity: .enter)
+        #expect(try ReminderDraft(title: "Buy milk", locationTrigger: valid).validated().locationTrigger == valid)
+        let invalid = ReminderLocationTrigger(title: "", latitude: 100, longitude: 30.52,
+                                              radius: 0, proximity: .leave)
+        #expect(throws: ReminderServiceError.invalidLocation) {
+            try ReminderDraft(title: "Buy milk", locationTrigger: invalid).validated()
+        }
+    }
+
     @Test func undoCreatedReminderDeletesExactIdentifier() async throws {
         let spy = ReminderSpy()
         try await ReminderActionUndoHandler(reminders: spy).undo(

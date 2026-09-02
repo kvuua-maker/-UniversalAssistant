@@ -1,5 +1,20 @@
 @preconcurrency import EventKit
+import CoreLocation
 import Foundation
+
+struct ReminderLocationTrigger: Equatable, Codable, Sendable {
+    enum Proximity: String, Codable, Sendable { case enter, leave }
+    let title: String
+    let latitude: Double
+    let longitude: Double
+    let radius: Double
+    let proximity: Proximity
+
+    var isValid: Bool {
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        (-90...90).contains(latitude) && (-180...180).contains(longitude) && radius > 0
+    }
+}
 
 struct ReminderDraft: Equatable, Codable, Sendable {
     let title: String
@@ -7,12 +22,14 @@ struct ReminderDraft: Equatable, Codable, Sendable {
     var notes: String?
     var priority: Int = 0
     var timeZoneIdentifier: String?
+    var locationTrigger: ReminderLocationTrigger?
 
     func validated() throws -> Self {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw ReminderServiceError.invalidTitle
         }
         guard (0...9).contains(priority) else { throw ReminderServiceError.invalidPriority }
+        guard locationTrigger?.isValid ?? true else { throw ReminderServiceError.invalidLocation }
         return self
     }
 }
@@ -28,6 +45,7 @@ enum ReminderServiceError: Error, Equatable {
     case permissionDenied
     case invalidTitle
     case invalidPriority
+    case invalidLocation
     case noWritableList
     case reminderNotFound
     case authoritativeReadBackFailed
@@ -128,6 +146,17 @@ actor EventKitReminderService: ReminderMutating {
             calendar.timeZone = zone
             return calendar.dateComponents(in: zone, from: $0)
         }
+        if let trigger = draft.locationTrigger {
+            let location = EKStructuredLocation(title: trigger.title)
+            location.geoLocation = CLLocation(latitude: trigger.latitude, longitude: trigger.longitude)
+            location.radius = trigger.radius
+            let alarm = EKAlarm()
+            alarm.structuredLocation = location
+            alarm.proximity = trigger.proximity == .enter ? .enter : .leave
+            reminder.alarms = [alarm]
+        } else {
+            reminder.alarms = nil
+        }
     }
 
     private func snapshot(_ reminder: EKReminder) -> ReminderSnapshot { Self.snapshotValue(reminder) }
@@ -144,7 +173,15 @@ actor EventKitReminderService: ReminderMutating {
                 },
                 notes: reminder.notes,
                 priority: reminder.priority,
-                timeZoneIdentifier: reminder.dueDateComponents?.timeZone?.identifier
+                timeZoneIdentifier: reminder.dueDateComponents?.timeZone?.identifier,
+                locationTrigger: reminder.alarms?.compactMap { alarm -> ReminderLocationTrigger? in
+                    guard let location = alarm.structuredLocation, let title = location.title,
+                          !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                          let coordinate = location.geoLocation?.coordinate,
+                          alarm.proximity == .enter || alarm.proximity == .leave else { return nil }
+                    return .init(title: title, latitude: coordinate.latitude, longitude: coordinate.longitude,
+                                 radius: location.radius, proximity: alarm.proximity == .enter ? .enter : .leave)
+                }.first
             ),
             isCompleted: reminder.isCompleted
         )
