@@ -6,7 +6,7 @@ M0–M8 and the deterministic coordination addendum are Codex-verified at local 
 
 ## CURRENTLY WORKING ON
 
-M9 reconciliation and settlement-state core. Selected path: STABLE.
+M9 tenant authorization and isolation core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Detect settlement report mismatches and track payable/paid references without building payment processing.
+Enforce backend tenant scope for partner dashboard data and privileged audited admin actions.
