@@ -432,6 +432,39 @@
       "completion_evidence": null
     },
     {
+      "requirement_id": "MS-217-LIVE-AUTHENTICATED-AVAILABILITY",
+      "service_provider": "Owner-approved OAuth provider with protected availability",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Documented OAuth client registration, approved minimum scopes and a controlled provider account whose protected availability API is supported.",
+      "dependency_owner": "Owner and selected provider",
+      "local_evidence": ["UniversalAssistant/Services/ProviderAuthenticationBoundary.swift", "UniversalAssistant/Services/ConnectedAccountsHub.swift", "UniversalAssistantTests/ProviderAuthenticationBoundaryTests.swift", "UniversalAssistantTests/ConnectedAccountsHubTests.swift"],
+      "required_live_action": "Configure the official OAuth client without committing secrets, authorize only required availability scopes, retrieve one protected authoritative availability result through its production adapter, revoke/disconnect and verify subsequent access requires reauthorization.",
+      "expected_result": "No password is collected; only granted scopes are used; protected facts match the provider; expiry/revocation fails closed and exact official authentication remains available.",
+      "created_at": "2026-09-02T23:05:00+02:00", "last_checked": "2026-09-02T23:05:00+02:00", "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-222-LIVE-HOTEL-PRICE-AVAILABILITY",
+      "service_provider": "Owner-approved hotel inventory provider",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Approved hotel provider contract/account, documented HTTPS search endpoint, runtime bearer/OAuth credential and controlled stay query.",
+      "dependency_owner": "Owner and approved hotel provider",
+      "local_evidence": ["UniversalAssistant/Services/HotelSearchEngine.swift", "UniversalAssistant/Services/OfficialHotelHTTPProvider.swift", "UniversalAssistantTests/HotelSearchEngineTests.swift"],
+      "required_live_action": "Inject the credential securely; query a controlled location/stay/guest/room combination; compare mandatory-fee total, currency, availability and exact booking URL with the authoritative provider, then exercise auth/rate-limit/unavailable behavior.",
+      "expected_result": "Only matching current provider rows appear; unknown/stale price or availability remains unknown; exact handoff is prepared only for fresh verified availability and never claims a booking.",
+      "created_at": "2026-09-02T23:05:00+02:00", "last_checked": "2026-09-02T23:05:00+02:00", "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-223-225-LIVE-WEATHERKIT",
+      "service_provider": "Apple WeatherKit on signed physical device",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner signing team, WeatherKit entitlement/network access and an owner-accessible physical iPhone.",
+      "dependency_owner": "Owner/device tester and Apple Developer account owner",
+      "local_evidence": ["UniversalAssistant/Weather/WeatherModels.swift", "UniversalAssistant/Weather/WeatherKitProvider.swift", "UniversalAssistant/Weather/WeatherContextEngine.swift", "UniversalAssistantTests/WeatherContextTests.swift"],
+      "required_live_action": "Run the signed app with WeatherKit entitlement; request current, hourly and daily weather for device and manual destinations; compare source/time/location context with WeatherKit output and verify denied/offline/timeout recovery.",
+      "expected_result": "Current/hourly/daily values come only from WeatherKit, retain correct location/context provenance and bounds, and unavailable service returns truthful recovery without fabricated weather.",
+      "created_at": "2026-09-02T23:05:00+02:00", "last_checked": "2026-09-02T23:05:00+02:00", "completion_evidence": null
+    },
+    {
       "requirement_id": "BUSINESS-OPERATIONS-LIVE-PARTNER-CONNECTORS",
       "service_provider": "Owner-approved partner CRM/ERP/marketplace/booking connectors",
       "current_status": "READY_FOR_LIVE_VERIFICATION",

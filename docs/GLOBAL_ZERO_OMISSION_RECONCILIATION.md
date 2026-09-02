@@ -275,3 +275,22 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-210 | READY_FOR_LIVE_VERIFICATION | TicketEngine accepts fare only as Decimal with current fareObservedAt evidence and hard currency-aware budget filtering; provider adapter parses authoritative values; current live fare requires approved access; LIVE_VERIFICATION_QUEUE MS-208-211 | 8f78ab4 |
 | MS-211 | READY_FOR_LIVE_VERIFICATION | TicketEngine emits only an exact fresh official HTTPS destinationPrepared handoff and never claims purchase; any direct transaction requires a selected provider contract/live test; LIVE_VERIFICATION_QUEUE MS-208-211 | 8f78ab4 |
 | MS-212 | VERIFIED_LOCAL | TicketSearchRequest and TicketEngine enforce mode, origin, destination, departure/arrival bounds, duration, Decimal price, verified availability, transfers and provider as typed hard parameters; originDestinationDurationAndProviderAreHardParameters | b4310d3 |
+
+## Slice 11 — MS-213–226
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-213 | VERIFIED_LOCAL | ConnectedAccountsHub provides persisted provider-neutral connection metadata over ProviderAuthenticationBoundary and Keychain credentials with connect/status/disconnect behavior; ConnectedAccountsHubTests | e015ba8 |
+| MS-214 | VERIFIED_LOCAL | ProviderAuthorizationMethod.oauth and connect enforce official scoped unexpired token credentials through the shared boundary; oauthRequiresValidScopedUnexpiredToken | c38d23d |
+| MS-215 | VERIFIED_LOCAL | ProviderOAuthCredential contains token/scopes/expiry only and no third-party password field or password collection path; ProviderAuthenticationBoundaryTests | c38d23d |
+| MS-216 | VERIFIED_LOCAL | unsupported/authenticated providers resolve only to unavailable or exact official sign-in handoff; homepage/security bypass destinations are rejected; homepageIsNotAcceptedAsAuthenticationDestination | c38d23d |
+| MS-217 | READY_FOR_LIVE_VERIFICATION | authenticated availability can execute only after a valid minimum-scope OAuth credential and production provider adapter; local authorization/error tests pass; a provider-authorized account is required solely for live protected inventory verification; LIVE_VERIFICATION_QUEUE MS-217 | c38d23d |
+| MS-218 | VERIFIED_LOCAL | missing legitimate integration yields publicAccess, exact officialSignInRequired or unavailable without credential fabrication; ProviderAuthenticationBoundaryTests | c38d23d |
+| MS-219 | VERIFIED_LOCAL | TravelPlanRequest supports exact origin/destination/deadline and TravelPlanEngine enforces arrival deadline against fresh journeys; arrivalDeadlineAndModesAreHardConstraints | ab0447c |
+| MS-220 | VERIFIED_LOCAL | TravelPlanEngine compares only allowed sensible car/rail/coach/flight/ferry journeys with real evidence instead of blindly returning every mode; TravelPlanEngineTests | ab0447c |
+| MS-221 | VERIFIED_LOCAL | TravelPlan returns departure/arrival/duration/price/availability/transfers, station access TransportOptions, hotel and weather when verified and explicitly lists missing context; missingSupportingContextIsTruthfulPartialCoverage | ab0447c |
+| MS-222 | READY_FOR_LIVE_VERIFICATION | HotelProvider, bounded HotelSearchEngine and authenticated OfficialHotelHTTPProvider implement location/stay/guest/room, verified price/availability and exact booking handoff with local HTTP tests; live provider facts require approved credentials; LIVE_VERIFICATION_QUEUE MS-222 | 75e56dc |
+| MS-223 | READY_FOR_LIVE_VERIFICATION | AppleWeatherKitProvider is the production WeatherProvider and maps native current/hourly/daily data with location provenance; a signed entitlement/device response is required solely for live verification; LIVE_VERIFICATION_QUEUE MS-223-225 | 957271a |
+| MS-224 | READY_FOR_LIVE_VERIFICATION | WeatherSnapshot models current observed weather from WeatherKit and WeatherContextEngine bounds failures/timeouts; live current response remains queued; LIVE_VERIFICATION_QUEUE MS-223-225 | 957271a |
+| MS-225 | READY_FOR_LIVE_VERIFICATION | AppleWeatherKitProvider maps bounded hourly and daily forecasts from native WeatherKit without fabricated values; physical entitlement/live response remains queued; LIVE_VERIFICATION_QUEUE MS-223-225 | 957271a |
+| MS-226 | VERIFIED_LOCAL | WeatherRequest and WeatherSnapshot preserve current-location/manual/destination/event/travel context and source provenance; preservesManualLocationProvenanceAndContext | 957271a |
