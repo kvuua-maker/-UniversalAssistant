@@ -6,7 +6,7 @@ M0–M8 and the deterministic coordination addendum are Codex-verified at local 
 
 ## CURRENTLY WORKING ON
 
-M9 Business Partner Platform acceptance. Selected path: STABLE.
+M9 fraud and abuse controls core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Verify all canonical Business Partner Platform acceptance cases A–P together.
+Add auditable duplicate, self-referral, replay and refund/commission manipulation signals before acceptance.

@@ -12,6 +12,8 @@ Future M9 blocks, after the active coordination-addendum sequence:
 6. Tenant authorization/isolation for partner dashboard and internal admin.
 7. Sponsored/organic separation and disclosure enforcement.
 8. Feed freshness, health, bounded query/failure isolation and offboarding.
-9. M9 acceptance cases A–P.
+9. Fraud/abuse controls required by the addendum and Master Spec M9.
+10. Remote Config/Feature Flags and Cost/Quota management required by Master Spec M9.
+11. M9 acceptance cases A–P.
 
 Owner-controlled production policy (categories, countries, commercial values, legal templates, settlement/tax providers, sponsored policy and Business Pro pricing) remains an explicit external decision and is not invented.
