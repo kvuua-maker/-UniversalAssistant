@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M11-SERVER-DATA-MIGRATION-CORE",
-  "requirement_ids": ["804"],
-  "selected_path": "File-backed staging migration runner with contiguous versions, validation, atomic backup and exact rollback.",
+  "current_task_id": "M11-ADR-COVERAGE-AUDIT",
+  "requirement_ids": ["805", "806", "807"],
+  "selected_path": "Versioned ADR catalog with required content and automated consequential-decision coverage.",
   "feasibility_state": "VERIFIED_LOCAL",
   "integration_depth": "local E3 plus ready-for-live deployed-store verification",
-  "acceptance_contract_ref": "docs/M11_SERVER_DATA_MIGRATION_CORE.md",
+  "acceptance_contract_ref": "docs/M11_ADR_COVERAGE_AUDIT.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Server schema migrations execute only in staging and restore exact pre-migration state on any failure.",
-  "frozen_baseline_commit": "7917983",
+  "material_change": "Every consequential architecture category has a complete, versioned ADR and automated coverage validation.",
+  "frozen_baseline_commit": "132eab5",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M11-ADR-COVERAGE-AUDIT"
+  "next_task_id": "M11-DEPENDENCY-LICENSE-CONTENT-AUDIT"
 }
