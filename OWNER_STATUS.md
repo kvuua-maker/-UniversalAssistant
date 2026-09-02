@@ -6,7 +6,7 @@ M0–M5 plus M6 durable-job, APNs token and notification-policy cores are Codex-
 
 ## CURRENTLY WORKING ON
 
-M7 Find My compliant fallback. Selected path: STABLE.
+M7 media integration core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
