@@ -2,8 +2,22 @@ import Foundation
 
 enum AssistantResultState: Equatable, Sendable {
     case idle
+    case processing
     case recognized(ResultSummary)
     case clarification(ResultSummary)
+    case actionRequired(ActionRequiredSummary)
+    case failure(UserFacingFailure)
+    case expanded(ResultSummary)
+}
+
+struct ActionRequiredSummary: Equatable, Sendable {
+    let prompt: String
+    let choices: [String]
+}
+
+struct UserFacingFailure: Equatable, Sendable {
+    let message: String
+    let recoveryAction: String?
 }
 
 struct ResultSummary: Equatable, Sendable {

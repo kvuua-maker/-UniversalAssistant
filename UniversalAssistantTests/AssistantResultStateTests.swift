@@ -54,4 +54,17 @@ struct AssistantResultStateTests {
         model.handleSceneBecameInactive()
         #expect(!model.isListening)
     }
+
+    @Test func perceptibleProcessingActionFailureAndExpandedResultsAreTyped() {
+        let model = AssistantViewModel()
+        model.beginProcessing()
+        #expect(model.resultState == .processing)
+        model.requireAction(prompt: "Оберіть один варіант", choices: ["A", "B"])
+        #expect(model.resultState == .actionRequired(.init(prompt: "Оберіть один варіант", choices: ["A", "B"])))
+        model.presentFailure(message: "Сервіс недоступний", recoveryAction: "Спробувати пізніше")
+        #expect(model.resultState == .failure(.init(message: "Сервіс недоступний", recoveryAction: "Спробувати пізніше")))
+        let summary = ResultSummary(request: "Trip options", intent: .travelPlan, risk: .informational)
+        model.presentExpanded(summary)
+        #expect(model.resultState == .expanded(summary))
+    }
 }

@@ -93,6 +93,27 @@ final class AssistantViewModel {
         }
     }
 
+    func beginProcessing() {
+        resultDismissTask?.cancel()
+        resultState = .processing
+        statusText = AppText.value("processing")
+    }
+
+    func requireAction(prompt: String, choices: [String]) {
+        resultDismissTask?.cancel()
+        resultState = .actionRequired(.init(prompt: prompt, choices: choices))
+    }
+
+    func presentFailure(message: String, recoveryAction: String? = nil) {
+        resultDismissTask?.cancel()
+        resultState = .failure(.init(message: message, recoveryAction: recoveryAction))
+    }
+
+    func presentExpanded(_ summary: ResultSummary) {
+        resultDismissTask?.cancel()
+        resultState = .expanded(summary)
+    }
+
     func ingestShared(_ envelope: SharedInboxEnvelope) {
         switch envelope.kind {
         case "url", "text":

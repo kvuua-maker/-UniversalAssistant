@@ -8,10 +8,35 @@ struct CompactResultCard: View {
         switch state {
         case .idle:
             EmptyView()
+        case .processing:
+            HStack(spacing: 12) {
+                ProgressView()
+                Text("processing").font(.headline)
+            }
+            .padding(16)
+            .accessibilityIdentifier("assistant.processing")
         case .recognized(let summary):
             card(summary, title: "request_recognized", tint: .blue)
         case .clarification(let summary):
             card(summary, title: "clarification_needed", tint: .orange)
+        case .actionRequired(let value):
+            VStack(alignment: .leading, spacing: 10) {
+                Text(value.prompt).font(.headline)
+                ForEach(value.choices, id: \.self) { Text($0).font(.subheadline) }
+            }
+            .padding(16)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .accessibilityIdentifier("assistant.action-required")
+        case .failure(let value):
+            VStack(alignment: .leading, spacing: 6) {
+                Text(value.message).font(.headline)
+                if let recovery = value.recoveryAction { Text(recovery).font(.subheadline) }
+            }
+            .padding(16)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .accessibilityIdentifier("assistant.failure")
+        case .expanded(let summary):
+            card(summary, title: "request_recognized", tint: .blue)
         }
     }
 
