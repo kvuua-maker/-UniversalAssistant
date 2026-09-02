@@ -7,6 +7,22 @@ private struct CurrentPreference: Codable, Equatable, Sendable { let locale: Str
 
 @Suite("Versioned local persistence")
 struct LocalStoreMigrationTests {
+    @Test func localRecordsUseCompleteFileProtection() async throws {
+        let directory = directory(), store = LocalStore(baseDirectory: directory)
+        try await store.save(["private"], as: "protected.json")
+        let attributes = try FileManager.default.attributesOfItem(
+            atPath: directory.appendingPathComponent("protected.json").path
+        )
+        if let protection = attributes[.protectionKey] as? FileProtectionType {
+            #expect(protection == .complete)
+        } else {
+            // Simulator filesystems do not expose the Data Protection class.
+            #if !targetEnvironment(simulator)
+            Issue.record("The device filesystem did not expose a protection class")
+            #endif
+        }
+    }
+
     private func directory() -> URL {
         FileManager.default.temporaryDirectory.appending(path: "ua-store-\(UUID().uuidString)", directoryHint: .isDirectory)
     }

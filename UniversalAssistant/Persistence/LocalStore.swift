@@ -11,7 +11,7 @@ actor LocalStore {
     }
 
     func save<T: Encodable>(_ value: T, as name: String) throws {
-        try encoder.encode(value).write(to: try url(for: name), options: .atomic)
+        try encoder.encode(value).write(to: try url(for: name), options: [.atomic, .completeFileProtection])
     }
 
     func load<T: Decodable>(_ type: T.Type, from name: String) throws -> T? {
@@ -23,7 +23,7 @@ actor LocalStore {
     func saveVersioned<T: Encodable>(_ value: T, schemaVersion: Int, as name: String) throws {
         guard schemaVersion > 0 else { throw LocalStoreVersionError.invalidVersion }
         let envelope = VersionedLocalRecord(schemaVersion: schemaVersion, payload: try encoder.encode(value))
-        try encoder.encode(envelope).write(to: try url(for: name), options: .atomic)
+        try encoder.encode(envelope).write(to: try url(for: name), options: [.atomic, .completeFileProtection])
     }
 
     func loadVersioned<T: Codable & Sendable>(
