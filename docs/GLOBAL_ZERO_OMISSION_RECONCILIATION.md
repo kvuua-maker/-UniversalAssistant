@@ -392,3 +392,22 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-302 | VERIFIED_LOCAL | ticket chain is direct API → authenticated provider → deep link → official app; testCanonicalDomainChains | eb698bd |
 | MS-303 | VERIFIED_LOCAL | service chain is direct API → official web → phone; testCanonicalDomainChains | eb698bd |
 | MS-304 | VERIFIED_LOCAL | app-action chain is direct API → App Intent → Shortcut → deep link → official app; testCanonicalDomainChains | eb698bd |
+
+## Slice 16 — MS-305–318
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-305 | READY_FOR_LIVE_VERIFICATION | CloudKitSyncTransport uses CKContainer.default privateCloudDatabase with bounded pagination, typed codec, account gate, durable tombstones and iCloud entitlement; 9 local sync/lifecycle tests pass; owner CloudKit container and two signed devices are required solely for live sync; LIVE_VERIFICATION_QUEUE MS-305...313 | 242dfda |
+| MS-306 | READY_FOR_LIVE_VERIFICATION | SyncRecordKind.preference is permitted by AssistantOwnedSyncScope and round-trips through the production CloudKit codec; live cross-device propagation remains queued | 242dfda |
+| MS-307 | READY_FOR_LIVE_VERIFICATION | confirmed assistant-owned contactAlias is a typed permitted sync kind with opaque CloudKit record ID; live two-device propagation remains queued | 242dfda |
+| MS-308 | NOT_APPLICABLE_VERIFIED | no assistant-owned Notes feature exists; scope rejects assistantNote unless a future explicit feature is enabled and system Notes are never duplicated; scopeSynchronizesOwnedDomainsAndExcludesDisabledOptionalStores | 242dfda |
+| MS-309 | NOT_APPLICABLE_VERIFIED | ordinary shopping lists use EventKit Reminders and no assistant-owned shopping-list store exists; scope rejects the optional kind by default; scope test and LocalActionRouterTests | 242dfda |
+| MS-310 | READY_FOR_LIVE_VERIFICATION | savedPlace is a typed permitted sync kind with persistent local record and CloudKit mapping; live two-device propagation remains queued | 242dfda |
+| MS-311 | READY_FOR_LIVE_VERIFICATION | proactiveRule is a typed permitted sync kind and sync never executes/replays its action; live two-device propagation remains queued | 242dfda |
+| MS-312 | NOT_APPLICABLE_VERIFIED | SyncRecordKind contains no Calendar/Reminder system record; EventKit remains source of truth and its native iCloud sync is not duplicated; sync scope test | 242dfda |
+| MS-313 | READY_FOR_LIVE_VERIFICATION | CloudKit private database fetch plus AssistantOwnedDataStore provides restoration input after reinstall while local failure remains nonblocking; signed uninstall/reinstall verification remains queued | 242dfda |
+| MS-314 | VERIFIED_LOCAL | SyncReconciler deterministically uses modified time, deletion-wins tie and device-ID final tie-break with one stable record and conflict count; SyncReconcilerTests | 242dfda |
+| MS-315 | VERIFIED_LOCAL | AssistantOwnedDataStore.records exposes only its durable typed assistant-owned records; userCanViewEditDeleteClearAndExportDurableOwnedRecords | 242dfda |
+| MS-316 | VERIFIED_LOCAL | AssistantOwnedDataStore.upsert replaces the exact stable ID and persists the edit atomically; userCanViewEditDeleteClearAndExportDurableOwnedRecords | 242dfda |
+| MS-317 | VERIFIED_LOCAL | exact delete and clear persist tombstones so cloud records cannot silently reappear; userCanViewEditDeleteClearAndExportDurableOwnedRecords | 242dfda |
+| MS-318 | VERIFIED_LOCAL | AssistantOwnedDataExport emits portable versioned sorted JSON from the durable store; export behavioral tests | 242dfda |

@@ -6,6 +6,19 @@
   ],
   "items": [
     {
+      "requirement_id": "MS-305-MS-306-MS-307-MS-310-MS-311-MS-313-LIVE-CLOUDKIT",
+      "service_provider": "Apple iCloud CloudKit private database",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner Apple Developer team must enable the iCloud.$(PRODUCT_BUNDLE_IDENTIFIER) CloudKit container for the production App ID and provide two signed physical devices on the same controlled iCloud account.",
+      "dependency_owner": "Owner/device tester and Apple Developer account owner",
+      "local_evidence": ["UniversalAssistant/Persistence/CloudKitSyncTransport.swift", "UniversalAssistant/Persistence/SyncReconciler.swift", "UniversalAssistant/Persistence/AccountDataLifecycle.swift", "UniversalAssistantTests/SyncReconcilerTests.swift", "UniversalAssistantTests/AccountDataLifecycleTests.swift", "commit 242dfda"],
+      "required_live_action": "Enable the derived CloudKit container, install signed builds on two devices, create/edit/delete controlled preference, contact-alias, saved-place and proactive-rule records, verify private-database propagation, deterministic conflict/tombstone behavior, offline local operation, and restoration after reinstall.",
+      "expected_result": "Only assistant-owned permitted record kinds synchronize through the private database; newest deterministic value or deletion tombstone wins without replaying actions, offline data remains usable, and reinstall restores the exact controlled data after iCloud availability returns.",
+      "created_at": "2026-09-03T00:12:00+02:00",
+      "last_checked": "2026-09-03T00:12:00+02:00",
+      "completion_evidence": null
+    },
+    {
       "requirement_id": "MS-253-MS-255-MS-256-MS-259-MS-260-MS-261-MS-262-MS-263-MS-264-MS-265-MS-268-MS-269-MS-274-MS-275-MS-276-LIVE-SYSTEM-ACTIONS",
       "service_provider": "Physical iPhone system frameworks and representative installed applications",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
