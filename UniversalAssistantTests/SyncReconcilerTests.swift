@@ -30,6 +30,27 @@ struct SyncReconcilerTests {
         let outcome = await LocalPrimarySyncCoordinator(transport: SyncTransportFixture(remote: [], fails: true)).reconcile(local: local)
         #expect(outcome == .localOnly(records: local, reason: "cloud_temporarily_unavailable"))
     }
+
+    @Test func scopeSynchronizesOwnedDomainsAndExcludesDisabledOptionalStores() async {
+        let values = [
+            SyncRecord(stableID: "preference", kind: .preference, modifiedAt: .distantPast, payload: Data(), isDeleted: false, deviceID: "a"),
+            SyncRecord(stableID: "alias", kind: .contactAlias, modifiedAt: .distantPast, payload: Data(), isDeleted: false, deviceID: "a"),
+            SyncRecord(stableID: "place", kind: .savedPlace, modifiedAt: .distantPast, payload: Data(), isDeleted: false, deviceID: "a"),
+            SyncRecord(stableID: "rule", kind: .proactiveRule, modifiedAt: .distantPast, payload: Data(), isDeleted: false, deviceID: "a"),
+            SyncRecord(stableID: "note", kind: .assistantNote, modifiedAt: .distantPast, payload: Data(), isDeleted: false, deviceID: "a")
+        ]
+        let outcome = await LocalPrimarySyncCoordinator(transport: SyncTransportFixture(remote: [], fails: false)).reconcile(local: values)
+        guard case let .synchronized(result) = outcome else { Issue.record("expected synchronized"); return }
+        #expect(result.records.map(\.stableID) == ["alias", "place", "preference", "rule"])
+    }
+
+    @Test func cloudKitCodecRoundTripsTypedRecordAndUsesOpaqueStableRecordName() throws {
+        let value = SyncRecord(stableID: "alias/user@example.com", kind: .contactAlias, modifiedAt: Date(timeIntervalSince1970: 42), payload: Data("safe".utf8), isDeleted: false, deviceID: "device-a")
+        let codec = CloudKitSyncRecordCodec()
+        let encoded = codec.encode(value)
+        #expect(encoded.recordID.recordName != value.stableID)
+        #expect(try codec.decode(encoded) == value)
+    }
 }
 
 private extension Array { var single: Element? { count == 1 ? first : nil } }

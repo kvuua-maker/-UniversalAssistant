@@ -41,3 +41,40 @@ struct AssistantOwnedDataExport: Codable, Equatable, Sendable {
         return try encoder.encode(self)
     }
 }
+
+actor AssistantOwnedDataStore {
+    private let store: LocalStore
+    private let fileName: String
+
+    init(store: LocalStore = .shared, fileName: String = "assistant-owned-sync-records.json") {
+        self.store = store
+        self.fileName = fileName
+    }
+
+    func records() async throws -> [SyncRecord] {
+        try await store.load([SyncRecord].self, from: fileName) ?? []
+    }
+
+    func upsert(_ record: SyncRecord) async throws {
+        guard !record.stableID.isEmpty, !record.deviceID.isEmpty else { throw CloudKitSyncError.malformedRecord }
+        var current = try await records()
+        current.removeAll { $0.stableID == record.stableID }
+        current.append(record)
+        try await store.save(current.sorted { $0.stableID < $1.stableID }, as: fileName)
+    }
+
+    func delete(stableID: String, at date: Date, deviceID: String) async throws {
+        guard let existing = try await records().first(where: { $0.stableID == stableID }) else { return }
+        try await upsert(.init(stableID: stableID, kind: existing.kind, modifiedAt: date, payload: nil, isDeleted: true, deviceID: deviceID))
+    }
+
+    func clear(at date: Date, deviceID: String) async throws {
+        for record in try await records() where !record.isDeleted {
+            try await delete(stableID: record.stableID, at: date, deviceID: deviceID)
+        }
+    }
+
+    func export(at date: Date) async throws -> Data {
+        try AssistantOwnedDataExport(exportedAt: date, schemaVersion: 1, records: try await records()).json()
+    }
+}

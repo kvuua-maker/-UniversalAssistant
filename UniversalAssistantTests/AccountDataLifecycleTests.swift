@@ -30,4 +30,24 @@ struct AccountDataLifecycleTests {
         let data = try AssistantOwnedDataExport(exportedAt: .distantPast, schemaVersion: 1, records: [record]).json()
         #expect(String(decoding: data, as: UTF8.self).contains("alias-1"))
     }
+
+    @Test func userCanViewEditDeleteClearAndExportDurableOwnedRecords() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        let dataStore = AssistantOwnedDataStore(store: LocalStore(baseDirectory: directory), fileName: "owned.json")
+        let first = SyncRecord(stableID: "place-home", kind: .savedPlace, modifiedAt: .distantPast, payload: Data("home".utf8), isDeleted: false, deviceID: "device")
+        try await dataStore.upsert(first)
+        #expect(try await dataStore.records() == [first])
+
+        let edited = SyncRecord(stableID: first.stableID, kind: first.kind, modifiedAt: Date(timeIntervalSince1970: 1), payload: Data("new-home".utf8), isDeleted: false, deviceID: "device")
+        try await dataStore.upsert(edited)
+        #expect(try await dataStore.records() == [edited])
+        #expect(String(decoding: try await dataStore.export(at: .distantPast), as: UTF8.self).contains("place-home"))
+
+        try await dataStore.delete(stableID: first.stableID, at: Date(timeIntervalSince1970: 2), deviceID: "device")
+        let deleted = try await dataStore.records()
+        #expect(deleted.count == 1 && deleted.first?.isDeleted == true)
+        try await dataStore.clear(at: Date(timeIntervalSince1970: 3), deviceID: "device")
+        let cleared = try await dataStore.records()
+        #expect(cleared.count == 1 && cleared.first?.isDeleted == true)
+    }
 }
