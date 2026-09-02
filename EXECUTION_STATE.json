@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-CARPLAY-SENSITIVE-DATA-POLICY",
-  "requirement_ids": ["977-981"],
-  "selected_path": "Fail-closed exact CarPlay managed-entitlement/category gates and explicit exclusion of unapproved sensitive data scope.",
+  "current_task_id": "M12-REAL-EXECUTION-VERIFICATION-POLICY",
+  "requirement_ids": ["982-1004"],
+  "selected_path": "Executable evidence-level enforcement plus capability-by-capability integration and no-simulation audit.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 policy complete; CarPlay implementation awaits exact owner/Apple managed entitlement",
-  "acceptance_contract_ref": "docs/M12_CARPLAY_SENSITIVE_DATA_POLICY.md",
+  "integration_depth": "local E3 evidence enforcement complete; exact E4/E5 actions persist in the live verification queue",
+  "acceptance_contract_ref": "docs/M12_REAL_EXECUTION_VERIFICATION_POLICY.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "CarPlay and sensitive data now fail closed unless exact owner scope and managed entitlement/feature requirements are present.",
-  "frozen_baseline_commit": "59e1cee",
+  "material_change": "External and device integrations cannot be promoted from mocks or internal tests; live handoffs require complete specific evidence.",
+  "frozen_baseline_commit": "cafba35",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M12-REAL-EXECUTION-VERIFICATION-POLICY"
+  "next_task_id": "M12-SHARE-CLIPBOARD-SCANNER-CORE"
 }

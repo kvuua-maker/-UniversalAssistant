@@ -22,3 +22,8 @@
 | Files local search | Document picker/provider, security-scoped lifetime, controlled filename result and exact open | DEVICE_TEST_REQUIRED — LOCAL-FILE-001 |
 | Core Spotlight | Assistant-owned item indexing/removal and system search visibility; no foreign-index claim | DEVICE_TEST_REQUIRED — LOCAL-SPOTLIGHT-001 |
 | Local search offline/latency | Contacts/Calendar/Reminders/Photos/Files search offline and realistic latency measurement | DEVICE_TEST_REQUIRED — LOCAL-SEARCH-PERF-001 |
+| Gmail connected account | OAuth grant plus controlled real search/raw/attachment/draft/send/label round trip and revocation | LIVE_DEVICE_TEST_REQUIRED — queue MS-927-940-LIVE-GMAIL |
+| Messages and messengers | System composer plus installed WhatsApp/Telegram/Viber/Signal supported handoff and absent-app paths | DEVICE_TEST_REQUIRED — queue MS-941-948-LIVE-MESSAGING |
+| Camera / Music / Podcasts | Physical capture, MusicKit account playback and regional podcast catalog/handoff | LIVE_DEVICE_TEST_REQUIRED — queue MS-949-955-LIVE-APPLE-SYSTEM-DOMAINS |
+| Universal Personal Search | One query over controlled authorized sources, exact-source disclosure/open and partial failure | DEVICE_TEST_REQUIRED — source-specific M12 queue items |
+| CarPlay | Exact approved category/template in a supported CarPlay environment | DEVICE_TEST_REQUIRED — queue MS-977-979-LIVE-CARPLAY |
