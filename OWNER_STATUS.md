@@ -6,7 +6,7 @@ M0–M8 and the deterministic coordination addendum are Codex-verified at local 
 
 ## CURRENTLY WORKING ON
 
-M9 sponsored/organic separation core. Selected path: STABLE.
+M9 feed freshness, health and offboarding core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Keep commission out of organic ranking and require explicit sponsored disclosure.
+Classify partner data freshness/health and stop new handoffs after suspension without deleting history.
