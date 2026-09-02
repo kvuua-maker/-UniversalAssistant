@@ -6,7 +6,7 @@ M0–M8 and the deterministic coordination addendum are Codex-verified at local 
 
 ## CURRENTLY WORKING ON
 
-M9 attribution, conversion and commission ledger core. Selected path: STABLE.
+M9 signed webhook ingestion core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Implement pseudonymous attribution, conversion states and auditable Decimal ledger/refund adjustments.
+Implement authenticated schema-validated callbacks with replay defense, idempotency and server-side secret rotation.
