@@ -40,3 +40,47 @@ Each row was checked against the named production/repository path, current passi
 | MS-21 | VERIFIED_LOCAL | verified-fact models reject unknown/stale values; domain behavioral tests |
 | MS-22 | VERIFIED_LOCAL | evidence-level policy requires E4/E5 for external/device live claims |
 | MS-23 | VERIFIED_LOCAL | offer/feed/search fact models retain source timestamp/freshness/status; behavioral expiry tests |
+
+## Slice 3 — MS-24–60
+
+Every row maps the canonical behavior to a production path and a behavioral test; the commit column identifies the implementation tree containing that evidence.
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-24 | VERIFIED_LOCAL | InteractionDecisionEngine direct-action path plus SpeechOutputPolicy; clear commands execute without processing narration; InteractionDecisionEngineTests and RuntimeExperiencePolicyTests | ffd98a9 |
+| MS-25 | VERIFIED_LOCAL | SpeechOutputPolicy rejects obvious-processing and direct-action narration; speechNeverNarratesObviousWorkButAllowsNecessaryContent | ffd98a9 |
+| MS-26 | VERIFIED_LOCAL | FashionOfficialSourceRouter opens an exact approved official destination without narration; FashionDiscoveryTests officialAppPrecedesExactOfficialWebPage/homepage rejection | ffd98a9 |
+| MS-27 | VERIFIED_LOCAL | CurrentContext savedPlace plus NavigationHandoff exact destination/default provider flow; confirmedHomeAndWorkAreReusedOnlyWhileFresh and RouteNavigationTests | ffd98a9 |
+| MS-28 | VERIFIED_LOCAL | UniversalDeviceCommandRouter and LaunchMarketAppMatrix exact Ukrzaliznytsia handoff; UniversalDeviceCommandRouterTests/LaunchMarketAppMatrixTests | ffd98a9 |
+| MS-29 | VERIFIED_LOCAL | LocalCommandEngine calendarCreate direct-action decision and CalendarService validated mutation/undo; LocalCommandEngineTests, InteractionDecisionEngineTests, CalendarServiceTests | ffd98a9 |
+| MS-30 | VERIFIED_LOCAL | AssistantViewModel cancellable compact-result auto-dismiss task; compactConfirmationDismissesAndNewSubmissionCancelsOldTimer | 3d9aaef |
+| MS-31 | VERIFIED_LOCAL | SpeechOutputPolicy allowlists facts, ambiguity, warnings, inability, decisions and safety only; speechNeverNarratesObviousWorkButAllowsNecessaryContent | ffd98a9 |
+| MS-32 | VERIFIED_LOCAL | CurrentContext confirmedPreference/savedPlace and persistent alias/map preference stores; StrongCurrentContextTests, RuntimeExperiencePolicyTests, ContactAliasTests, RouteNavigationTests | ffd98a9 |
+| MS-33 | VERIFIED_LOCAL | CurrentContext savedPlace reuses owner-confirmed fresh Home/Work IDs; confirmedHomeAndWorkAreReusedOnlyWhileFresh | ffd98a9 |
+| MS-34 | VERIFIED_LOCAL | ContactAliasDirectory persists normalized confirmed aliases to exact identifiers; ContactAliasTests | ffd98a9 |
+| MS-35 | VERIFIED_LOCAL | NavigationPreferences persists/restores default provider and exact handoff uses the selected provider; defaultMapPersistsAndRestores | ffd98a9 |
+| MS-36 | VERIFIED_LOCAL | TaxiPreference and KnownPreferenceResolver deterministically preserve cheapest/max-wait rule; explicitTaxiRuleBecomesDeterministicRequestWithoutClarification plus RideComparisonEngineTests | ffd98a9 |
+| MS-37 | VERIFIED_LOCAL | LocalCommandEngine marks only unknown input unresolved and InteractionDecisionEngine emits one clarify pattern; unknownIsTruthful/ambiguityRequiresOneClarificationPattern | ffd98a9 |
+| MS-38 | VERIFIED_LOCAL | DeterministicPlanExecutor and ProviderFanoutEngine bound stalled work; providerThatNeverRespondsIsBoundedByTimeout and timeout coordination tests | ffd98a9 |
+| MS-39 | VERIFIED_LOCAL | async provider protocols, actors and task groups keep external operations outside synchronous UI work; ProviderFanoutEngineTests and CoordinationAcceptanceTests | ffd98a9 |
+| MS-40 | VERIFIED_LOCAL | DeterministicPlanExecutor, CommerceSearchEngine and ProviderFanoutEngine race external work against configured timeout; timeout behavioral tests | ffd98a9 |
+| MS-41 | VERIFIED_LOCAL | executor/fanout/search tasks propagate cancellation and cancel child work; lateProviderIsCancelledAndCannotLeakAResult and sufficientResultCancelsObsoleteParallelWork | ffd98a9 |
+| MS-42 | VERIFIED_LOCAL | provider failures become typed partial outcomes without disabling successful providers; ticketProviderFailureReturnsRankedPartialResults | ffd98a9 |
+| MS-43 | VERIFIED_LOCAL | all potentially stalled fanout paths terminate via timeout/partial result and AssistantResultState exits compact transient state; ProviderFanoutEngineTests/AssistantResultStateTests | ffd98a9 |
+| MS-44 | VERIFIED_LOCAL | DeterministicExecutionPlanBuilder activationPath selects only intent-required capability modules; coffeeActivatesOnlyCanonicalMinimalPath/unrelatedProviderModulesStayOutOfSimplePaths | ffd98a9 |
+| MS-45 | VERIFIED_LOCAL | CommerceSearchEngine and DeterministicPlanExecutor use task groups for independent calls; providerFanoutIsBounded and multi-module concurrency acceptance | ffd98a9 |
+| MS-46 | VERIFIED_LOCAL | CommerceSearchEngine inFlight key shares equivalent simultaneous searches; identicalConcurrentRequestsShareOneProviderCall | ffd98a9 |
+| MS-47 | VERIFIED_LOCAL | CommerceSearchEngine TTL plus LRU entry cap and PerformanceRecorder bounded ring; freshCacheIsReusedAndExpiresTruthfully/boundedSamplesDiscardOldest | ffd98a9 |
+| MS-48 | VERIFIED_LOCAL | UI model retains only presentation state while async actors/task groups own provider, persistence and parsing work; concurrency behavioral suite and Swift 6 isolation build | ffd98a9 |
+| MS-49 | VERIFIED_LOCAL | app launch constructs no provider engines; activationPath expresses on-demand intent modules; unrelatedProviderModulesStayOutOfSimplePaths and production app composition | ffd98a9 |
+| MS-50 | VERIFIED_LOCAL | LocalCommandEngine recognizes “Хочу кави”; activationPath is exactly Voice→Command→Location→Places→Route; coffeeActivatesOnlyCanonicalMinimalPath | ffd98a9 |
+| MS-51 | VERIFIED_LOCAL | RuntimeResourcePolicy tightens provider concurrency/cache/GPS under pressure; CommerceSearchEngine memory purge and AccurateLocationEngine purpose accuracy/timeout; resource policy/memory tests | ffd98a9 |
+| MS-52 | VERIFIED_LOCAL | PerformanceRecorder/CoordinationObservation records timeToFirstUsefulResult and total completion from command coordination; PerformanceRecorderTests | ffd98a9 |
+| MS-53 | VERIFIED_LOCAL | LocalCommandEngine and direct InteractionDecisionEngine path require no network/AI; localParserBaseline and clearOpenUsesDirectPattern | ffd98a9 |
+| MS-54 | VERIFIED_LOCAL | progressive CommerceSearchEngine yields each verified provider aggregate and executor cancels obsolete work once sufficient; progressiveSearchFinishesWithStableAggregate/sufficientResultCancelsObsoleteParallelWork | ffd98a9 |
+| MS-55 | VERIFIED_LOCAL | bounded timeouts, partial results, truthful failures, cache freshness and cancellation cover slow/offline/outage/interruption paths; ProviderFanoutEngineTests/CommerceSearchEngineTests | ffd98a9 |
+| MS-56 | VERIFIED_LOCAL | UniversalAssistantApp scenePhase hook calls AssistantViewModel handleSceneBecameInactive to stop transient voice/timers; leavingActiveSceneStopsTransientListeningState | 5d369bf |
+| MS-57 | VERIFIED_LOCAL | AccountPolicy keeps local features network-independent and fanout preserves local results through backend/network errors; simultaneousBackendAndNetworkFailuresRemainIsolated/AccountPolicyTests | ffd98a9 |
+| MS-58 | VERIFIED_LOCAL | superseded Task cancellation prevents stale aggregate and new submit cancels prior result timer; cancellingOldCommandDoesNotReturnAStaleAggregate/AssistantResultStateTests | ffd98a9 |
+| MS-59 | VERIFIED_LOCAL | ProviderFanoutEngine isolates simultaneous backend/network failures and returns verified local result; simultaneousBackendAndNetworkFailuresRemainIsolated | ffd98a9 |
+| MS-60 | VERIFIED_LOCAL | CommerceSearchEngine handleMemoryPressure cancels in-flight work and purges cache; memoryPressureCancelsWorkAndPurgesCachedResults | 5d369bf |
