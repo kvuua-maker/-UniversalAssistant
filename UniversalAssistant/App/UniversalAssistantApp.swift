@@ -8,8 +8,11 @@ struct UniversalAssistantApp: App {
     var body: some Scene {
         WindowGroup { AssistantHomeView(model: model) }
             .onChange(of: scenePhase) { _, phase in
-                guard phase == .active, let shared = SharedInboxStore().consume() else { return }
-                model.ingestShared(shared)
+                if phase != .active {
+                    model.handleSceneBecameInactive()
+                } else if let shared = SharedInboxStore().consume() {
+                    model.ingestShared(shared)
+                }
             }
     }
 }

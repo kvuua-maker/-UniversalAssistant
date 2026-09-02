@@ -57,6 +57,12 @@ final class AssistantViewModel {
         if !enabled { voiceInput.stop(); isListening = false; statusText = AppText.value("voice_disabled") }
     }
 
+    func handleSceneBecameInactive() {
+        voiceInput.stop()
+        isListening = false
+        resultDismissTask?.cancel()
+    }
+
     func submit() {
         resultDismissTask?.cancel()
         let command = commandEngine.parse(input)

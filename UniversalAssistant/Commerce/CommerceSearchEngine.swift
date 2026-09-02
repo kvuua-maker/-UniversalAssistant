@@ -94,6 +94,11 @@ actor CommerceSearchEngine {
         inFlight.removeAll()
     }
 
+    func handleMemoryPressure() {
+        cancelAll()
+        cache.removeAll(keepingCapacity: false)
+    }
+
     private func trimCache() {
         while cache.count > maximumCacheEntries, let oldest = cache.min(by: { $0.value.lastAccess < $1.value.lastAccess })?.key {
             cache[oldest] = nil

@@ -58,6 +58,17 @@ private func searchOffer(provider: String, sourceTimestamp: Date = .now) -> Norm
         #expect(await probe.calls == 2)
     }
 
+    @Test func memoryPressureCancelsWorkAndPurgesCachedResults() async throws {
+        let probe = ProviderProbe()
+        let engine = CommerceSearchEngine(providers: [SearchProviderStub(providerID: "one", probe: probe)], cacheTTL: 60)
+        let now = Date()
+        _ = try await engine.search(searchRequest(), now: now)
+        await engine.handleMemoryPressure()
+        let refreshed = try await engine.search(searchRequest(), now: now.addingTimeInterval(1))
+        #expect(!refreshed.isFromCache)
+        #expect(await probe.calls == 2)
+    }
+
     @Test func providerFanoutIsBounded() async throws {
         let probes = (0..<8).map { _ in ProviderProbe() }
         let providers = probes.enumerated().map { SearchProviderStub(providerID: "p\($0.offset)", probe: $0.element) }
