@@ -42,6 +42,19 @@ struct LocalCommandEngineTests {
         #expect(!command.needsClarification)
     }
 
+    @Test("Remaining canonical intent recognition", arguments: [
+        ("Готель у Львові", CommandIntent.hotelSearch), ("Сплануй подорож", .travelPlan),
+        ("Виклич швидку", .emergency), ("Пошукай в інтернеті", .webSearch),
+        ("Увімкни ліхтарик", .deviceAction), ("Дія в застосунку", .appAction),
+        ("Запиши аудіо", .audioRecord), ("Покажи результат", .show),
+        ("Відкрий Telegram", .open), ("Скасуй дію", .cancel),
+        ("Відміни останнє", .undo), ("Коли я кажу ранок", .multiStep),
+        ("Налаштування", .settings), ("Допомога", .help)
+    ])
+    func remainingCanonicalIntentRecognition(_ phrase: String, _ intent: CommandIntent) {
+        #expect(engine.parse(phrase).intent == intent)
+    }
+
     @Test func contextResolvesAndExpires() {
         let now = Date(timeIntervalSince1970: 1_000); var context = CurrentContext()
         context.store(results: ["A", "B", "C"], now: now, lifetime: 30)
