@@ -3,6 +3,7 @@ import Foundation
 enum ProviderImplementationStatus: String, Codable, Sendable {
     case researched, adapterReady, credentialRequired, approvalRequired
     case deviceTestRequired, implementedTested, fallback, unsupported
+    case fullyImplemented, fullyTested, partnerApprovalRequired, fallbackActive, temporarilyBroken
 }
 
 struct CommerceProviderCapabilities: OptionSet, Codable, Sendable {
@@ -52,7 +53,7 @@ actor ProviderCapabilityRegistry {
         records.values.filter {
             $0.enabled && $0.regions.contains(region.uppercased())
                 && $0.capabilities.contains(capability)
-                && [.adapterReady, .implementedTested, .fallback].contains($0.status)
+                && [.adapterReady, .implementedTested, .fullyImplemented, .fullyTested, .fallback, .fallbackActive].contains($0.status)
         }.sorted { $0.id < $1.id }
     }
 }

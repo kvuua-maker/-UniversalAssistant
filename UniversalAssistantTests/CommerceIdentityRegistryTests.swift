@@ -69,4 +69,17 @@ private func phone(gtin: String? = "0194253406532", sku: String? = "IP15-128-BLK
         #expect(await registry.record(id: "ua.silpo.mcp")?.officialDocumentationURL?.host == "ai-factory.silpo.ua")
         #expect(await registry.record(id: "ua.silpo.mcp")?.affiliateNetwork == nil)
     }
+
+    @Test func canonicalStatusesFailClosedExceptImplementationAndTestEvidence() async {
+        func record(_ id: String, _ status: ProviderImplementationStatus) -> ProviderCapabilityRecord {
+            .init(id: id, displayName: id, regions: ["UA"], capabilities: [.search],
+                  requiresCredentials: false, requiresOwnerRegistration: false, requiresApproval: false,
+                  restrictions: [], status: status, enabled: true)
+        }
+        let registry = ProviderCapabilityRegistry(records: [
+            record("broken", .temporarilyBroken), record("approval", .partnerApprovalRequired),
+            record("implemented", .fullyImplemented), record("tested", .fullyTested)
+        ])
+        #expect(await registry.eligible(region: "UA", requiring: .search).map(\.id) == ["implemented", "tested"])
+    }
 }
