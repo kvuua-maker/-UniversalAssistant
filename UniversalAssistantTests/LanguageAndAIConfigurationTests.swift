@@ -41,4 +41,20 @@ struct LanguageAndAIConfigurationTests {
     func mixedNaturalCommands(_ phrase: String, _ expected: CommandIntent) {
         #expect(LocalCommandEngine().parse(phrase).intent == expected)
     }
+
+    @Test("Colloquial, imperfect and inflected commands", arguments: [
+        ("Будь ласка відкрий телеграмм", CommandIntent.open),
+        ("Можеш нагадати мені завтра", CommandIntent.reminderCreate),
+        ("Покажи колекції Baldinini", CommandIntent.fashionDiscovery)
+    ])
+    func tolerantCommandGrammar(_ phrase: String, _ expected: CommandIntent) {
+        #expect(LocalCommandEngine().parse(phrase).intent == expected)
+    }
+
+    @Test func surroundingLanguageDoesNotCorruptBrandOrAppName() {
+        let fashion = LocalCommandEngine().parse("Покажи new collection Baldinini")
+        let app = LocalCommandEngine().parse("Будь ласка відкрий Telegram Business")
+        #expect(fashion.constraints.brand == "Baldinini")
+        #expect(app.entities["app"] == "Telegram Business")
+    }
 }

@@ -52,7 +52,7 @@ struct LocalCommandEngine: CommandParsing {
         (.undo, ["відміни останнє", "отмени последнее", "undo last", "rückgängig", "annule la dernière"]),
         (.emergency, ["112", "швидка", "скорая", "ambulance", "polizei", "police", "пожежа", "пожар"]),
         (.calendarCreate, ["запиши", "додай зустріч", "создай встреч", "add event", "termin erstellen", "ajoute un rendez-vous"]),
-        (.reminderCreate, ["нагадай", "напомни", "remind", "erinnere", "rappelle"]),
+        (.reminderCreate, ["нагадай", "нагадати", "напомни", "напомнить", "remind", "erinnere", "rappelle"]),
         (.contactCall, ["подзвони", "позвони", "call ", "ruf ", "appelle"]),
         (.messageCompose, ["напиши ", "отправь сообщение", "message ", "schreib ", "écris "]),
         (.navigation, ["веди ", "маршрут до", "navigate", "route to", "navigiere", "itinéraire"]),
@@ -176,8 +176,9 @@ struct LocalCommandEngine: CommandParsing {
     }
     private func target(after prefixes: [String], in original: String) -> String? {
         let trimmed = original.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let prefix = prefixes.first(where: { trimmed.lowercased().hasPrefix($0) }) else { return nil }
-        let target = trimmed.dropFirst(prefix.count).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let range = prefixes.compactMap({ trimmed.range(of: $0, options: [.caseInsensitive, .diacriticInsensitive]) })
+            .min(by: { $0.lowerBound < $1.lowerBound }) else { return nil }
+        let target = trimmed[range.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
         return target.isEmpty ? nil : target
     }
     private func unknown(_ original: String, _ normalized: String, _ language: CommandLanguage) -> StructuredCommand {
