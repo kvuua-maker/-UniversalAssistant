@@ -419,6 +419,19 @@
       "completion_evidence": null
     },
     {
+      "requirement_id": "MS-208-211-LIVE-TICKET-SCHEDULE-INVENTORY-FARE-ACTION",
+      "service_provider": "Owner-approved rail, coach or airline ticket provider",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "A selected provider contract/account, documented schedule and inventory API, runtime OAuth/bearer credential and controlled purchasable itinerary; no provider or commercial transaction may be invented.",
+      "dependency_owner": "Owner and approved ticket provider",
+      "local_evidence": ["UniversalAssistant/Services/TicketEngine.swift", "UniversalAssistant/Services/OfficialTicketHTTPProvider.swift", "UniversalAssistantTests/TicketEngineTests.swift", "UniversalAssistantTests/ProviderFanoutEngineTests.swift", "15 combined Transport/Ticket tests passed on 2026-09-02"],
+      "required_live_action": "Inject the credential through the secure runtime boundary; search a controlled origin/destination/date; compare schedule, current fare and inventory source/time against the authoritative provider; open the returned exact action and, only if owner-authorized and officially supported, execute a controlled transaction and verify its provider reference.",
+      "expected_result": "Schedules/fare/inventory exactly match authoritative provider evidence; stale, unknown, cross-provider, authentication and rate-limit responses fail closed; the handoff preserves the exact itinerary and never reports purchase until the provider confirms it.",
+      "created_at": "2026-09-02T23:00:00+02:00",
+      "last_checked": "2026-09-02T23:00:00+02:00",
+      "completion_evidence": null
+    },
+    {
       "requirement_id": "BUSINESS-OPERATIONS-LIVE-PARTNER-CONNECTORS",
       "service_provider": "Owner-approved partner CRM/ERP/marketplace/booking connectors",
       "current_status": "READY_FOR_LIVE_VERIFICATION",

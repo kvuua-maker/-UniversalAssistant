@@ -261,3 +261,17 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-201 | VERIFIED_LOCAL | comparison rejects unknown/stale price, ETA and availability rather than inventing values; RideComparisonEngineTests | 226be8c |
 | MS-202 | VERIFIED_LOCAL | UberRideHandoffBuilder creates only an exact official route-prefilled HTTPS handoff with runtime client ID and validated locations; RideProviderRegistryTests | a35d297 |
 | MS-203 | VERIFIED_LOCAL | ComparableServiceOffer is the shared provider-neutral comparison foundation and RideComparisonEngine consumes its normalized truth fields without provider-specific ranking branches; RideComparisonEngineTests | 226be8c |
+
+## Slice 10 — MS-204–212
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-204 | VERIFIED_LOCAL | TransportEngine now normalizes walking, driving, urban transit, train, intercity bus, air, taxi and multimodal options through one evidence-aware ranking contract; supportsEveryCanonicalModeAndTruthfulPublicTransportDetails | b4310d3 |
+| MS-205 | VERIFIED_LOCAL | TransportOption carries sourced departure, arrival, duration, transfer/fare plus validated walking/transit route and stop segments; malformed transit detail fails closed; TransportEngineTests | b4310d3 |
+| MS-206 | VERIFIED_LOCAL | TransportEngine keeps fare/action source-neutral and never claims a uniform city ticket mechanism; exact city/provider purchase semantics remain in TicketProvider/TicketEngine handoff; TransportEngineTests and TicketEngineTests | b4310d3 |
+| MS-207 | VERIFIED_LOCAL | TicketProvider is an async provider-neutral abstraction with bounded concurrent TicketProviderCoordinator and production OfficialTicketHTTPProvider; provider fanout and HTTP adapter tests | 8f78ab4 |
+| MS-208 | READY_FOR_LIVE_VERIFICATION | OfficialTicketHTTPProvider implements authenticated HTTPS schedule search, typed parsing, timeout and fail-closed errors; local request/response tests pass; an approved provider credential is required solely for live authoritative schedule verification; LIVE_VERIFICATION_QUEUE MS-208-211 | 8f78ab4 |
+| MS-209 | READY_FOR_LIVE_VERIFICATION | TicketInventoryEvidence distinguishes verified available/unavailable/unknown with source/time and TicketEngine rejects stale/unknown inventory for a verified request or handoff; live provider inventory comparison remains queued; LIVE_VERIFICATION_QUEUE MS-208-211 | 8f78ab4 |
+| MS-210 | READY_FOR_LIVE_VERIFICATION | TicketEngine accepts fare only as Decimal with current fareObservedAt evidence and hard currency-aware budget filtering; provider adapter parses authoritative values; current live fare requires approved access; LIVE_VERIFICATION_QUEUE MS-208-211 | 8f78ab4 |
+| MS-211 | READY_FOR_LIVE_VERIFICATION | TicketEngine emits only an exact fresh official HTTPS destinationPrepared handoff and never claims purchase; any direct transaction requires a selected provider contract/live test; LIVE_VERIFICATION_QUEUE MS-208-211 | 8f78ab4 |
+| MS-212 | VERIFIED_LOCAL | TicketSearchRequest and TicketEngine enforce mode, origin, destination, departure/arrival bounds, duration, Decimal price, verified availability, transfers and provider as typed hard parameters; originDestinationDurationAndProviderAreHardParameters | b4310d3 |
