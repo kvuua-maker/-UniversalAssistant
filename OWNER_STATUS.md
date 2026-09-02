@@ -6,7 +6,7 @@ M0–M9 and the deterministic coordination addendum are Codex-verified at local 
 
 ## CURRENTLY WORKING ON
 
-M10 incident response and operational alerting. Selected path: STABLE.
+M10 data retention and residency. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Implement privacy-safe diagnostics, selective dependency health alerts, user-safe degradation communication and an incident runbook.
+Define and enforce bounded retention classes, deletion behavior and explicit deployment residency metadata.

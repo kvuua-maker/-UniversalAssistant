@@ -60,6 +60,26 @@
       "created_at": "2026-09-02T13:04:00+02:00",
       "last_checked": "2026-09-02T13:04:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-773-780-LIVE-OPERATIONS",
+      "service_provider": "Owner-selected paging, support and public status services",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner-selected operational paging destination, on-call schedule, legitimate support contact and public status channel accounts.",
+      "dependency_owner": "Owner and operations",
+      "local_evidence": [
+        "Backend/Sources/UniversalAssistantServer/OperationalIncidentMonitor.swift",
+        "Backend/Tests/UniversalAssistantServerTests/OperationalIncidentMonitorTests.swift",
+        "UniversalAssistant/Persistence/UserFeedbackStore.swift",
+        "UniversalAssistantTests/UserFeedbackStoreTests.swift",
+        "INCIDENT_RESPONSE.md",
+        "215 iOS tests and 65 backend tests passed locally on 2026-09-02"
+      ],
+      "required_live_action": "Inject approved channel destinations, trigger one synthetic critical and one threshold incident, verify one page/status update per incident and one recovery, then submit feedback and correlate its diagnostic ID without raw command content.",
+      "expected_result": "Authorized operators receive deduplicated actionable alerts; users see concise status/support paths; diagnostic correlation works without secrets, raw commands or provider payloads.",
+      "created_at": "2026-09-02T13:10:00+02:00",
+      "last_checked": "2026-09-02T13:10:00+02:00",
+      "completion_evidence": null
     }
   ]
 }

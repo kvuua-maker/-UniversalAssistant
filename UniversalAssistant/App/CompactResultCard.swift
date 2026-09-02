@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CompactResultCard: View {
     let state: AssistantResultState
+    var onReportIssue: () -> Void = {}
 
     var body: some View {
         switch state {
@@ -31,6 +32,9 @@ struct CompactResultCard: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(tint)
                 }
+                Button("clarification_needed", action: onReportIssue)
+                    .font(.caption)
+                    .accessibilityHint(Text("risk_informational"))
             }
             Spacer(minLength: 0)
         }

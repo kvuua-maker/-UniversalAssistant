@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M10-CI-CD-ROLLBACK",
-  "requirement_ids": ["737", "738", "739", "740", "741", "742", "743", "744", "745", "746", "747"],
-  "selected_path": "Fail-closed CI tests, immutable artifact identity, controlled staging artifact and known-version config rollback.",
+  "current_task_id": "M10-INCIDENT-RESPONSE-OPERATIONAL-ALERTING",
+  "requirement_ids": ["773", "774", "775", "776", "777", "778", "779", "780"],
+  "selected_path": "Selective health alerts, privacy-safe diagnostics, minimized feedback and concrete incident playbooks.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 plus ready-for-live deployment drill",
-  "acceptance_contract_ref": "ROLLBACK.md",
+  "integration_depth": "local E3 plus ready-for-live operational channels",
+  "acceptance_contract_ref": "INCIDENT_RESPONSE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "CI now runs static, backend and iOS test gates with artifacts; runtime config has tested known-version rollback.",
-  "frozen_baseline_commit": "ef5e5fd",
-  "dependency": "Protected GitHub deployment environments and a selected backend host remain in LIVE_VERIFICATION_QUEUE.json.",
+  "material_change": "Critical and threshold alerts, incident deduplication/recovery, user degradation status, diagnostic IDs and bounded feedback persistence are tested.",
+  "frozen_baseline_commit": "0b6d4df",
+  "dependency": "Only owner-selected live paging/support/status delivery remains in LIVE_VERIFICATION_QUEUE.json.",
   "unresolved_verification_steps": [
     {
       "requirement_id": "M10-THREAT-PRIVACY",
@@ -18,5 +18,5 @@
       "step": "Complete repository-wide security scan 507d18d3-2af0-47b7-9c7d-135bb49e29d1 after workbench handoff ownership is available."
     }
   ],
-  "next_task_id": "M10-INCIDENT-RESPONSE-OPERATIONAL-ALERTING"
+  "next_task_id": "M10-DATA-RETENTION-RESIDENCY"
 }

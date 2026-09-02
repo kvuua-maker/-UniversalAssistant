@@ -13,13 +13,16 @@ final class AssistantViewModel {
     private let commandEngine: any CommandParsing
     private let interactionEngine: any InteractionDeciding
     private let voiceInput = VoiceInputController()
+    private let feedbackStore: UserFeedbackStore
 
     init(
         commandEngine: any CommandParsing = LocalCommandEngine(),
-        interactionEngine: any InteractionDeciding = InteractionDecisionEngine()
+        interactionEngine: any InteractionDeciding = InteractionDecisionEngine(),
+        feedbackStore: UserFeedbackStore = .shared
     ) {
         self.commandEngine = commandEngine
         self.interactionEngine = interactionEngine
+        self.feedbackStore = feedbackStore
     }
 
     func toggleListening() {
@@ -51,6 +54,15 @@ final class AssistantViewModel {
         } else {
             resultState = .recognized(summary)
             statusText = AppText.value("request_recognized")
+        }
+    }
+
+    func reportWrongResult() {
+        guard resultState != .idle else { return }
+        Task {
+            if let record = try? await feedbackStore.record(.wrongResult) {
+                statusText = "\(AppText.value("result_ready")): \(record.diagnosticID)"
+            }
         }
     }
 }
