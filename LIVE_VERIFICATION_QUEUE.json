@@ -80,6 +80,24 @@
       "created_at": "2026-09-02T13:10:00+02:00",
       "last_checked": "2026-09-02T13:10:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-769-772-LIVE-RETENTION",
+      "service_provider": "Production databases, storage, logs and analytics",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Selected production regions, subprocessors, deployed data stores and owner-approved jurisdiction-specific retention overrides.",
+      "dependency_owner": "Owner, deployment operator and legal/privacy owner",
+      "local_evidence": [
+        "Backend/Sources/UniversalAssistantServer/DataRetentionPolicy.swift",
+        "Backend/Tests/UniversalAssistantServerTests/DataRetentionPolicyTests.swift",
+        "DATA_RETENTION.md",
+        "215 iOS tests and 67 backend tests passed locally on 2026-09-02"
+      ],
+      "required_live_action": "Record actual regions and subprocessors, apply retention rules to every deployed store, expire test records, delete a test account and verify propagation through primary stores, logs, analytics and backups.",
+      "expected_result": "Expired and deleted-account data is removed within policy, permitted financial/legal records remain auditable, and actual residency/cross-border facts match approved disclosure.",
+      "created_at": "2026-09-02T13:14:00+02:00",
+      "last_checked": "2026-09-02T13:14:00+02:00",
+      "completion_evidence": null
     }
   ]
 }
