@@ -30,6 +30,10 @@ The project source of truth is the complete, indivisible combination of:
    - SHA-256: `c8a6d5392340b61a6716fb5239445faf108ed5eebcdfc414462e135afdff9ba4`
    - 17 lines / 2,182 bytes; owner-supplied canonical quick-launch and physical-access policy accepted on 2026-09-02.
    - Requires device-capability-aware official Apple launch paths into voice listening, permission-only interruption, truthful text fallback and no private button interception.
+9. `docs/BUSINESS_PLATFORM_COMPETITIVE_GAP_AUDIT.md`
+   - SHA-256: `9e90bffe15f8f008bb71185449df579120b0fe94b89bc2f34ee3f73243dc8e7d`
+   - Owner-mandated evidence-first targeted audit accepted on 2026-09-02.
+   - Requires minimal partner customer/inbox/catalog/transaction/connector completion by reuse of M9/commerce/appointment infrastructure; explicitly excludes a second CRM, ERP, accounting, POS, warehouse, marketing or AI call-centre platform.
 
 All accepted addenda augment the Master Spec and do not remove or weaken it. Every requirement retains an evidence-backed zero-omission status; documentation, interfaces, mocks and external dependencies alone never establish completion. Later explicit supersession rules inside the Master Spec take precedence over earlier conflicting wording, subject to safety, law, current platform/provider truth, privacy and security.
 

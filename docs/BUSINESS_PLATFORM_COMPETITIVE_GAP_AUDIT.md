@@ -22,3 +22,15 @@ Evidence-first audit and minimal completion of: compact partner customer/interac
 ## Completion contract
 
 Only the rows marked MISSING/PARTIAL may receive minimal implementation. Required behavioral evidence includes customer dedupe, interaction attribution/idempotency, connector partial failure/capability mismatch, SKU mapping, price/stock/stale/deletion behavior, lifecycle transition/cancel/refund/dispute/booking references, existing attribution and commission adjustments, and restart persistence. Production connector/account/device executions remain `READY_FOR_LIVE_VERIFICATION` in `LIVE_VERIFICATION_QUEUE.json` after all local work is complete.
+
+## Post-implementation evidence matrix
+
+| Capability | Status | Production and behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| A. Business mini-CRM | ALREADY_IMPLEMENTED | BusinessOperationsStore tenant-scoped PartnerCustomer dedupe, permitted contacts, interactions and linked transaction/attribution/conversion history; restart test plus existing ConversionLedger tests | f88596e |
+| B. Unified business inbox | ALREADY_IMPLEMENTED | provider-neutral BusinessInteraction source/reference/status/assignment model, tenant query and duplicate event idempotency; customerDeduplicationInboxAttributionAndDuplicateEventPersistAcrossRestart | f88596e |
+| C. Catalog/price/inventory sync | ALREADY_IMPLEMENTED | PartnerCatalogItem/Variant carries SKU/external IDs, verified field provenance, Decimal price/stock, availability, variants, action URL, timestamp and deletion; deterministic stale rejection/idempotent update and catalog behavioral test | f88596e |
+| D. Unified order/booking lifecycle | ALREADY_IMPLEMENTED | BusinessTransaction shared operational foundation validates domain-aware transitions and links existing attribution/conversion IDs without duplicating ConversionLedger; order/booking/cancel/dispute/idempotency tests plus existing refund/commission tests | f88596e |
+| E. Partner connector layer | ALREADY_IMPLEMENTED | PartnerBusinessConnector advertises explicit per-operation capabilities and health; capability mismatch and isolated failure behavior test, reusing signed webhook/feed-health infrastructure | f88596e |
+
+Local verification: 83 backend tests across 23 suites and 374 iOS Swift Testing tests across 91 suites plus 5 Routine XCTest tests passed on 2026-09-02. Real partner connector executions remain live-only and are queued explicitly.

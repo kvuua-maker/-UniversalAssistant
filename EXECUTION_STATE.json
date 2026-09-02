@@ -8,8 +8,8 @@
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "MS-137 through MS-154 now carry per-ID production/test/commit evidence; named manual geocoding, place confidence/freshness, verified walking guidance and the end-to-end coffee provider/route/action path were completed; 373 iOS Swift Testing plus 5 Routine XCTest and 79 backend tests pass.",
-  "frozen_baseline_commit": "5cfcf45",
+  "material_change": "Mandatory Business Platform competitive audit completed without duplicate CRM/lifecycle architecture: one normalized customer/inbox/catalog/operational transaction/connector layer reuses M9 finance, webhook, feed-health and appointment components; 374 iOS Swift Testing plus 5 Routine XCTest and 83 backend tests pass.",
+  "frozen_baseline_commit": "f88596e",
   "dependency": "None for the next local reconciliation slice.",
   "unresolved_verification_steps": ["1406 canonical requirements remain unreconciled"],
   "next_task_id": "GLOBAL-ZERO-OMISSION-MS-155-PLUS"

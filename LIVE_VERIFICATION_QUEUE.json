@@ -365,6 +365,19 @@
       "created_at": "2026-09-02T21:10:00+02:00",
       "last_checked": "2026-09-02T21:10:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "BUSINESS-OPERATIONS-LIVE-PARTNER-CONNECTORS",
+      "service_provider": "Owner-approved partner CRM/ERP/marketplace/booking connectors",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "At least one approved partner contract, sandbox or production account, connector credentials and documented endpoints/webhook keys for each selected capability; no provider may be invented or selected by Codex.",
+      "dependency_owner": "Owner, approved partner and legal/commercial operator",
+      "local_evidence": ["Backend/Sources/UniversalAssistantServer/BusinessOperations.swift", "Backend/Tests/UniversalAssistantServerTests/BusinessOperationsTests.swift", "docs/BUSINESS_PLATFORM_COMPETITIVE_GAP_AUDIT.md", "83 backend tests passed on 2026-09-02"],
+      "required_live_action": "Inject approved secrets server-side; execute supported catalog price/stock/deletion sync, inquiry ingest, order or booking status/cancel/refund event and health failure/recovery; verify tenant isolation, provider IDs, idempotency, field evidence, lifecycle audit and existing commission/reconciliation adjustments against authoritative partner records.",
+      "expected_result": "Only advertised connector capabilities execute; authoritative changes persist once with correct provenance and tenant scope, stale/duplicate/unsupported events fail closed, partial failure preserves other verified data, and refund/cancellation produces the existing auditable commission/reconciliation effect where the agreement requires it.",
+      "created_at": "2026-09-02T21:46:00+02:00",
+      "last_checked": "2026-09-02T21:46:00+02:00",
+      "completion_evidence": null
     }
   ]
 }
