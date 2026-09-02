@@ -1,1 +1,28 @@
-{"schema_version":1,"allowed_statuses":["READY_FOR_LIVE_VERIFICATION","VERIFIED_LIVE"],"items":[]}
+{
+  "schema_version": 1,
+  "allowed_statuses": [
+    "READY_FOR_LIVE_VERIFICATION",
+    "VERIFIED_LIVE"
+  ],
+  "items": [
+    {
+      "requirement_id": "MS-748-754-LIVE-DRILL",
+      "service_provider": "Production backup storage and KMS",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner-approved production storage, service identity, KMS key, deployed durable database snapshot mechanism and isolated restore environment.",
+      "dependency_owner": "Owner and deployment operator",
+      "local_evidence": [
+        "Backend/Sources/UniversalAssistantServer/EncryptedBackupService.swift",
+        "Backend/Tests/UniversalAssistantServerTests/EncryptedBackupServiceTests.swift",
+        "DISASTER_RECOVERY.md",
+        "61 backend tests across 17 suites passed on 2026-09-02",
+        "211 iOS tests across 51 suites passed on 2026-09-02"
+      ],
+      "required_live_action": "Run a scheduled encrypted production snapshot, restore it into an isolated environment with the recovery key, execute integrity, tenant-isolation, monetary-reconciliation and queue-idempotency checks, and measure actual RPO/RTO.",
+      "expected_result": "Authenticated restore reproduces the selected durable state without cross-tenant or monetary drift; observed recovery point is at most one hour and recovery time at most four hours.",
+      "created_at": "2026-09-02T12:54:00+02:00",
+      "last_checked": "2026-09-02T12:54:00+02:00",
+      "completion_evidence": null
+    }
+  ]
+}
