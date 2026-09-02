@@ -2,11 +2,11 @@
 
 ## DONE AND CODEX-VERIFIED
 
-M0–M7 are Codex-verified at local E3.
+M0–M8 are Codex-verified at local E3.
 
 ## CURRENTLY WORKING ON
 
-M8 acceptance. Selected path: STABLE.
+Deterministic execution plan core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Freeze locally verified M8 evidence with exact external gates, then advance to the first allowed unfinished milestone.
+Implement typed dependencies, bounded parallel groups and completion criteria by reusing existing routers and providers. M9 Business Partner Platform remains deferred.
