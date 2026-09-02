@@ -10,6 +10,17 @@ private struct RestaurantProviderFake: ReservationProvider {
     func book(slotID: String) async throws -> RestaurantReservation { booking }
 }
 
+private actor RestaurantHTTPRecorder: RestaurantHTTPTransport {
+    var responses: [(Data, Int)]
+    private(set) var requests: [URLRequest] = []
+    init(_ responses: [(Data, Int)]) { self.responses = responses }
+    func data(for request: URLRequest) throws -> (Data, Int) {
+        requests.append(request)
+        return responses.removeFirst()
+    }
+    func recorded() -> [URLRequest] { requests }
+}
+
 @Suite("Truthful restaurant discovery and reservation") struct RestaurantDiscoveryEngineTests {
     private func place(open: Bool = true) -> Place {
         Place(id: "r1", providerID: "maps", name: "Bistro", category: .restaurant,
@@ -60,5 +71,47 @@ private struct RestaurantProviderFake: ReservationProvider {
             evidenceTimestamp: .now, sourceReference: "maps:r1",
             officialBookingURL: URL(string: "https://bistro.example/table/2"))
         guard case .officialHandoff = try engine.fallback(for: offer) else { Issue.record("Expected official handoff"); return }
+    }
+
+    @Test func officialHTTPAdapterInjectsCredentialAndParsesAvailabilityAndBooking() async throws {
+        let interval = DateInterval(start: .now.addingTimeInterval(600), duration: 1_800)
+        let slot = RestaurantReservationSlot(id: "slot-1", providerID: "official", restaurantID: "r1",
+            interval: interval, partySize: 2, availabilityVerified: true, observedAt: .now,
+            sourceReference: "official:slot-1")
+        let booking = RestaurantReservation(id: "booking-1", providerID: "official", slotID: slot.id,
+            state: .confirmed, providerReference: "official:booking-1", observedAt: .now)
+        let transport = RestaurantHTTPRecorder([(try JSONEncoder().encode([slot]), 200),
+                                                 (try JSONEncoder().encode(booking), 200)])
+        let provider = try OfficialRestaurantHTTPProvider(configuration: .init(providerID: "official",
+            availabilityURL: URL(string: "https://booking.example/availability")!,
+            bookingURL: URL(string: "https://booking.example/bookings")!),
+            bearerToken: "secret", transport: transport)
+        #expect(try await provider.availability(restaurantID: "r1", partySize: 2, interval: interval) == [slot])
+        #expect(try await provider.book(slotID: slot.id) == booking)
+        let requests = await transport.recorded()
+        #expect(requests.count == 2)
+        #expect(requests.allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == "Bearer secret" })
+        let availabilityBody = try #require(requests[0].httpBody)
+        let availabilityJSON = try #require(JSONSerialization.jsonObject(with: availabilityBody) as? [String: Any])
+        #expect(availabilityJSON["restaurantID"] as? String == "r1")
+        #expect(availabilityJSON["partySize"] as? Int == 2)
+        let bookingBody = try #require(requests[1].httpBody)
+        let bookingJSON = try #require(JSONSerialization.jsonObject(with: bookingBody) as? [String: String])
+        #expect(bookingJSON["slotID"] == slot.id)
+    }
+
+    @Test func officialHTTPAdapterRejectsMissingCredentialAndMapsProviderErrors() async throws {
+        let config = RestaurantProviderConfiguration(providerID: "official",
+            availabilityURL: URL(string: "https://booking.example/availability")!,
+            bookingURL: URL(string: "https://booking.example/bookings")!)
+        #expect(throws: RestaurantHTTPError.missingCredential) {
+            try OfficialRestaurantHTTPProvider(configuration: config, bearerToken: " ")
+        }
+        let provider = try OfficialRestaurantHTTPProvider(configuration: config, bearerToken: "token",
+            transport: RestaurantHTTPRecorder([(Data("{}".utf8), 429)]))
+        await #expect(throws: RestaurantHTTPError.rateLimited) {
+            try await provider.availability(restaurantID: "r1", partySize: 2,
+                interval: .init(start: .now, duration: 3_600))
+        }
     }
 }

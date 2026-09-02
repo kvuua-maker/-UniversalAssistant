@@ -45,7 +45,7 @@ struct RestaurantOffer: Identifiable, Equatable, Sendable {
     }
 }
 
-struct RestaurantReservationSlot: Identifiable, Equatable, Sendable {
+struct RestaurantReservationSlot: Identifiable, Equatable, Codable, Sendable {
     let id: String
     let providerID: String
     let restaurantID: String
@@ -56,7 +56,7 @@ struct RestaurantReservationSlot: Identifiable, Equatable, Sendable {
     let sourceReference: String
 }
 
-struct RestaurantReservation: Equatable, Sendable {
+struct RestaurantReservation: Equatable, Codable, Sendable {
     let id: String
     let providerID: String
     let slotID: String
