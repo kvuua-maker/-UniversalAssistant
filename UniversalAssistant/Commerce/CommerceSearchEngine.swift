@@ -151,7 +151,11 @@ actor CommerceSearchEngine {
 
     private static func key(for request: RetailSearchRequest) -> String {
         let identity = request.identity
-        return [request.region.uppercased(), String(request.limit), identity.gtin, identity.sku, identity.brand,
+        let location = request.location.map { "\($0.latitude),\($0.longitude),\($0.radiusMeters)" }
+        return [request.region.uppercased(), String(request.limit), request.fulfillment.rawValue,
+                request.priceRange?.minimum.map { "\($0.amount):\($0.currency)" },
+                request.priceRange?.maximum.map { "\($0.amount):\($0.currency)" }, location,
+                identity.gtin, identity.sku, identity.brand,
                 identity.model, identity.productType, identity.variant.storage, identity.variant.size,
                 identity.variant.color, identity.variant.configuration].map { $0 ?? "" }.joined(separator: "|").lowercased()
     }

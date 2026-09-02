@@ -9,6 +9,22 @@ private func phone(gtin: String? = "0194253406532", sku: String? = "IP15-128-BLK
 }
 
 @Suite("Commerce identity and registry") struct CommerceIdentityRegistryTests {
+    @Test func retailRequestCarriesAndValidatesAllCanonicalSearchConstraints() throws {
+        let identity = ProductIdentity(brand: "Baldinini", model: nil, productType: "shoe", sku: nil, gtin: nil,
+                                       variant: .init(size: "43", color: "black", quantity: 1))
+        let request = RetailSearchRequest(
+            identity: identity, region: "UA", limit: 10,
+            priceRange: .init(minimum: .init(amount: 100, currency: "EUR"),
+                              maximum: .init(amount: 500, currency: "EUR")),
+            fulfillment: .pickup,
+            location: .init(latitude: 50.45, longitude: 30.52, radiusMeters: 5_000)
+        )
+        #expect(try request.validated() == request)
+        var invalid = request
+        invalid.location = .init(latitude: 50.45, longitude: 30.52, radiusMeters: 1)
+        #expect(throws: RetailProviderError.invalidRequest) { try invalid.validated() }
+    }
+
     @Test func validatesRealGTINChecksumAndRejectsInventedCode() throws {
         #expect(GTINValidator().isValid("0194253406532"))
         #expect(!GTINValidator().isValid("0194253406533"))

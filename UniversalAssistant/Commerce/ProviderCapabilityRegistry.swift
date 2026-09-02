@@ -62,14 +62,50 @@ protocol RetailProvider: Sendable {
     func search(_ request: RetailSearchRequest) async throws -> [NormalizedOffer]
 }
 
+enum RetailFulfillmentPreference: String, Equatable, Codable, Sendable {
+    case pickup, delivery, either
+}
+
+struct RetailSearchLocation: Equatable, Codable, Sendable {
+    let latitude: Double
+    let longitude: Double
+    var radiusMeters: Double
+
+    func validated() throws -> Self {
+        guard (-90...90).contains(latitude), (-180...180).contains(longitude),
+              (100...100_000).contains(radiusMeters) else { throw RetailProviderError.invalidRequest }
+        return self
+    }
+}
+
+struct RetailPriceRange: Equatable, Codable, Sendable {
+    var minimum: Money?
+    var maximum: Money?
+
+    func validated() throws -> Self {
+        guard minimum?.amount ?? 0 >= 0, maximum?.amount ?? 0 >= 0 else { throw RetailProviderError.invalidRequest }
+        if let minimum, let maximum {
+            guard minimum.currency == maximum.currency, minimum.amount <= maximum.amount else {
+                throw RetailProviderError.invalidRequest
+            }
+        }
+        return self
+    }
+}
+
 struct RetailSearchRequest: Equatable, Sendable {
     let identity: ProductIdentity
     var region: String = "UA"
     var limit: Int = 20
+    var priceRange: RetailPriceRange? = nil
+    var fulfillment: RetailFulfillmentPreference = .either
+    var location: RetailSearchLocation? = nil
 
     func validated() throws -> Self {
         _ = try identity.validated()
         guard (1...50).contains(limit), region.count == 2 else { throw RetailProviderError.invalidRequest }
+        if let priceRange { _ = try priceRange.validated() }
+        if let location { _ = try location.validated() }
         return self
     }
 }
