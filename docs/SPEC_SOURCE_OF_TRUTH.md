@@ -13,8 +13,12 @@ The project source of truth is the complete, indivisible combination of:
 4. `docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt`
    - SHA-256: `9cc1b9eba8641f9858bb3e599a48787f50180d6fc68e76165bcaf70ad17022b7`
    - 277 lines / 14,984 bytes; copied byte-for-byte from the owner-provided attachment on 2026-09-02.
+5. `docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md`
+   - SHA-256: `bb12b460bc75ae32d7404e33fe000b9f1ce7e5af13386c4997ee5430aadf7d21`
+   - 381 lines / 12,702 bytes; owner-supplied canonical policy accepted on 2026-09-02.
+   - Persistent live-verification state: `LIVE_VERIFICATION_QUEUE.json`.
 
-All accepted addenda augment the Master Spec and do not remove or weaken it. Later explicit supersession rules inside the Master Spec take precedence over earlier conflicting wording, subject to safety, law, current platform/provider truth, privacy and security.
+All accepted addenda augment the Master Spec and do not remove or weaken it. Every requirement retains an evidence-backed zero-omission status; documentation, interfaces, mocks and external dependencies alone never establish completion. Later explicit supersession rules inside the Master Spec take precedence over earlier conflicting wording, subject to safety, law, current platform/provider truth, privacy and security.
 
 Both canonical files were read completely and copied byte-for-byte from the owner-provided attachments on 2026-09-01. Their hashes were verified after persistence.
 
