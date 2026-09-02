@@ -307,3 +307,23 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-232 | VERIFIED_LOCAL | NaturalDateTimeResolver deterministically resolves today/tomorrow/day-after-tomorrow and explicit clock time across uk/ru/en/de/fr while preserving caller locale and IANA timezone; ambiguity stays unresolved; NaturalDateTimeResolverTests | c781956 |
 | MS-233 | VERIFIED_LOCAL | InteractionDecisionEngine executes resolved reversible calendar create/update through directAction and reserves confirmation for ambiguous/consequential delete; InteractionDecisionEngineTests | 006eb8a |
 | MS-234 | READY_FOR_LIVE_VERIFICATION | EventKitReminderService implements permission-gated create/query/update/completion/date-timezone/delete/restore through native EventKit; ReminderServiceTests cover validation and exact undo; device execution queued | a031a90 |
+
+## Slice 13 — MS-235–249
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-235 | VERIFIED_LOCAL | SmartDepartureEngine requires typed origin/destination/deadline, fresh sourced TransportOption and separate traffic/parking/walking/safety buffers; SmartDepartureEngineTests | 48f8a09 |
+| MS-236 | VERIFIED_LOCAL | DepartureRecommendation deterministically returns the exact departure time and compact factual fields without AI/narration; calculatesEveryCanonicalBufferFromVerifiedRoute | 48f8a09 |
+| MS-237 | READY_FOR_LIVE_VERIFICATION | meaningfulUpdate suppresses sub-threshold changes and recalculates from fresh route evidence; live future-event MapKit/provider refresh remains queued | 48f8a09 |
+| MS-238 | VERIFIED_LOCAL | persistent rule-based ProactiveWatchEngine schedules bounded deduplicable jobs with no AI dependency; ProactiveWatchEngineTests | cfe78c0 |
+| MS-239 | READY_FOR_LIVE_VERIFICATION | traffic watch threshold and NotificationPolicy replacement/deduplication are tested locally; authoritative live traffic observation remains queued | cfe78c0 |
+| MS-240 | READY_FOR_LIVE_VERIFICATION | weather watch uses the same fresh-evidence meaningful-change contract and category policy; live WeatherKit event impact remains queued | cfe78c0 |
+| MS-241 | READY_FOR_LIVE_VERIFICATION | businessHours watch supports sourced state changes and truthful notification routing; approved live place-hours/alternative provider remains queued | cfe78c0 |
+| MS-242 | READY_FOR_LIVE_VERIFICATION | explicitly added enabled product rules persist, expire/cancel, threshold state/price changes and deduplicate; live authorized offer/variant feed remains queued | cfe78c0 |
+| MS-243 | READY_FOR_LIVE_VERIFICATION | ticket watch has provider-neutral durable scheduling and meaningful availability/state change triggers; live provider permission/feed remains queued | cfe78c0 |
+| MS-244 | VERIFIED_LOCAL | CalendarConflictDetector detects overlap and impossible travel only from fresh sourced route duration; missing/stale route never invents a conflict; CalendarConflictDetectorTests | bd0a237 |
+| MS-245 | READY_FOR_LIVE_VERIFICATION | ReminderLocationTrigger validates a typed geofence/proximity and EventKitReminderService writes/reads EKStructuredLocation alarms; signed-device trigger remains queued | 155d2ab |
+| MS-246 | VERIFIED_LOCAL | NotificationPolicyEngine enforces global/category toggles, expiry, duplicate suppression and same-event replacement; NotificationPolicyTests | 7c47df7 |
+| MS-247 | VERIFIED_LOCAL | LocalActionRouter uses EventKit Reminders and system share/open mechanisms instead of assuming private Apple Notes access; LocalActionRouterTests | d518ea9 |
+| MS-248 | NOT_APPLICABLE_VERIFIED | no assistant-owned Notes database exists or is required by a proven capability; system-owned Notes/Reminders data is not duplicated for sync; repository search and AppleSystemDomainIntegration contract | d518ea9 |
+| MS-249 | VERIFIED_LOCAL | ordinary shoppingList deterministically routes to EventKit Reminders and creates no parallel assistant list store; LocalActionRouterTests | d518ea9 |

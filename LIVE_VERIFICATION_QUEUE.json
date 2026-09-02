@@ -6,6 +6,19 @@
   ],
   "items": [
     {
+      "requirement_id": "MS-237-MS-239-MS-240-MS-241-MS-242-MS-243-MS-245-LIVE-PROACTIVE",
+      "service_provider": "Apple EventKit/MapKit/WeatherKit and owner-approved product/ticket/place providers",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Signed physical-device build with Calendar/Reminders/location/notification permissions plus approved live traffic, weather, place-hours, product and ticket provider access.",
+      "dependency_owner": "Owner/device tester and selected provider account owners",
+      "local_evidence": ["UniversalAssistant/Services/SmartDepartureEngine.swift", "UniversalAssistant/Calendar/CalendarConflictDetector.swift", "UniversalAssistant/Reminders/ReminderService.swift", "Backend/Sources/UniversalAssistantServer/ProactiveWatchEngine.swift", "Backend/Sources/UniversalAssistantServer/NotificationPolicy.swift"],
+      "required_live_action": "Create controlled future events and explicit watches; obtain authoritative route/weather/hours/product/ticket changes; verify only meaningful fresh changes notify, location geofence triggers through EventKit, category disable suppresses delivery, and stale/unavailable providers never fabricate a change.",
+      "expected_result": "Departure and proactive notifications reflect authoritative changes once, preserve source/category, suppress duplicates and disabled categories, and unavailable facts remain unavailable.",
+      "created_at": "2026-09-02T23:27:00+02:00",
+      "last_checked": "2026-09-02T23:27:00+02:00",
+      "completion_evidence": null
+    },
+    {
       "requirement_id": "MS-227-MS-228-MS-229-MS-230-MS-231-MS-234-LIVE-EVENTKIT",
       "service_provider": "Apple EventKit Calendar and Reminders on signed physical device",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
