@@ -6,7 +6,7 @@ M0–M6 and the completed M7 capability-registry, launch-market matrix, Find My 
 
 ## CURRENTLY WORKING ON
 
-M7 camera intelligence core. Selected path: STABLE.
+M7 Ukraine emergency core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Local OCR/translation, QR/barcode safety and evidence-calibrated visual product identification, followed by the remaining M7 audit and acceptance work.
+Ukraine-scoped emergency connection planning, followed by the remaining M7 integration-depth audit and acceptance work.
