@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M12 Gmail and email integration core. Selected path: STABLE.
+M12 messaging and Apple system domains core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Implement the official Gmail REST production client and provider-neutral email contracts with bounded verified operations and no fake success.
+Complete public Messages/messenger and Apple system-domain capability depth with truthful platform limits.

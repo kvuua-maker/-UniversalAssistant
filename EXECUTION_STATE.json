@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-CONNECTED-ACCOUNTS-HUB-CORE",
-  "requirement_ids": ["921-926"],
-  "selected_path": "Reuse ProviderAuthenticationBoundary and Keychain for minimum-scope connection, persistent non-secret health, revocation and isolation.",
+  "current_task_id": "M12-GMAIL-EMAIL-INTEGRATION-CORE",
+  "requirement_ids": ["927-940"],
+  "selected_path": "Official Gmail REST provider behind existing OAuth/Keychain boundary with real content, attachment, draft and confirmed mutation contracts.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 complete; each live provider remains separately verifiable",
-  "acceptance_contract_ref": "docs/M12_CONNECTED_ACCOUNTS_HUB_CORE.md",
+  "integration_depth": "local E3 complete; controlled authorized Gmail execution queued",
+  "acceptance_contract_ref": "docs/M12_GMAIL_EMAIL_INTEGRATION_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "External accounts now share one minimum-scope, Keychain-backed, persistently health-tracked connection and disconnect surface.",
-  "frozen_baseline_commit": "d814576",
+  "material_change": "Connected Gmail now has a real official API client for search, MIME content, attachments, drafts and confirmed mutations rather than an app-launch placeholder.",
+  "frozen_baseline_commit": "e015ba8",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M12-GMAIL-EMAIL-INTEGRATION-CORE"
+  "next_task_id": "M12-MESSAGING-SYSTEM-DOMAINS-CORE"
 }

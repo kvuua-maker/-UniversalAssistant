@@ -193,6 +193,19 @@
       "created_at": "2026-09-02T15:27:00+02:00",
       "last_checked": "2026-09-02T15:27:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-927-940-LIVE-GMAIL",
+      "service_provider": "Google OAuth and Gmail API authorized test account",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner-provided Google OAuth client configuration, consent-screen/test-user approval and a controlled Gmail test account with safe fixture messages and attachments.",
+      "dependency_owner": "Owner/Google Cloud administrator",
+      "local_evidence": ["UniversalAssistant/Email/GmailEmailProvider.swift", "UniversalAssistantTests/GmailEmailProviderTests.swift", "UniversalAssistant/Services/ProviderAuthenticationBoundary.swift"],
+      "required_live_action": "Authorize only the scopes required for the selected capability; search controlled messages, retrieve raw content and attachment, create/read back a draft, confirm and send a reply, modify labels/archive/trash a disposable message, then disconnect and verify token revocation/deletion.",
+      "expected_result": "Every operation changes or returns the actual controlled Gmail account state, IDs/content match read-back, unconfirmed side effects do not execute, expiry requires reauthorization, and no token/message content appears in logs or repository.",
+      "created_at": "2026-09-02T15:39:00+02:00",
+      "last_checked": "2026-09-02T15:39:00+02:00",
+      "completion_evidence": null
     }
   ]
 }
