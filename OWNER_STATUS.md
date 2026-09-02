@@ -6,7 +6,7 @@ M0–M8 are Codex-verified at local E3.
 
 ## CURRENTLY WORKING ON
 
-Deterministic result composer. Selected path: STABLE.
+Bounded AI interpretation fallback. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Compose verified facts, unknowns, explanations and actions without AI; Business Partner Platform remains scheduled for M9.
+Allow exactly one schema-valid interpretation call only after explicit deterministic unresolved state, with timeout and deterministic fallback.
