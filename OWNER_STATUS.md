@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M12 CarPlay and sensitive-data policy. Selected path: STABLE.
+M12 real-execution verification policy. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Record the exact CarPlay eligibility/entitlement boundary and enforce the canonical exclusion of unapproved sensitive HealthKit/financial/identity scope.
+Enforce real-execution evidence levels and reconcile every external M12 capability with the persistent live verification queue.

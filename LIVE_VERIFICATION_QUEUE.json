@@ -232,6 +232,19 @@
       "created_at": "2026-09-02T16:05:00+02:00",
       "last_checked": "2026-09-02T16:05:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-977-979-LIVE-CARPLAY",
+      "service_provider": "Apple Developer managed CarPlay capability and physical CarPlay environment",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner selection of an eligible category, Apple approval/CarPlay Entitlement Addendum, matching managed entitlement and provisioning profile, then a supported vehicle or CarPlay test environment.",
+      "dependency_owner": "Owner and Apple Developer account holder",
+      "local_evidence": ["UniversalAssistant/Policy/PlatformEligibilityPolicy.swift", "UniversalAssistantTests/PlatformEligibilityPolicyTests.swift", "docs/M12_CARPLAY_SENSITIVE_DATA_POLICY.md", "UniversalAssistant/UniversalAssistant.entitlements"],
+      "required_live_action": "After explicit owner category approval and Apple granting the exact managed entitlement, configure only that entitlement, implement the matching minimal template scene, test with the simulator and physical CarPlay while driving-safe interaction checks are observed.",
+      "expected_result": "Only the approved category appears, uses CarPlay templates with minimal driver interaction, exposes no general phone UI or unapproved data/action, and the signed profile contains exactly the granted entitlement.",
+      "created_at": "2026-09-02T16:24:00+02:00",
+      "last_checked": "2026-09-02T16:24:00+02:00",
+      "completion_evidence": null
     }
   ]
 }

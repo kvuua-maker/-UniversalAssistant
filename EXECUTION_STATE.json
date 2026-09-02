@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-UNIVERSAL-PERSONAL-SEARCH-CORE",
-  "requirement_ids": ["956-976"],
-  "selected_path": "Privacy-first concurrent routing across plausible authorized local and remote sources with provenance, freshness, exact-open and partial coverage.",
+  "current_task_id": "M12-CARPLAY-SENSITIVE-DATA-POLICY",
+  "requirement_ids": ["977-981"],
+  "selected_path": "Fail-closed exact CarPlay managed-entitlement/category gates and explicit exclusion of unapproved sensitive data scope.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 coordinator complete; source-specific live verification remains queued",
-  "acceptance_contract_ref": "docs/M12_UNIVERSAL_PERSONAL_SEARCH_CORE.md",
+  "integration_depth": "local E3 policy complete; CarPlay implementation awaits exact owner/Apple managed entitlement",
+  "acceptance_contract_ref": "docs/M12_CARPLAY_SENSITIVE_DATA_POLICY.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Personal search now selects only plausible authorized sources, runs them concurrently and preserves exact provenance/freshness with truthful partial results.",
-  "frozen_baseline_commit": "762c336",
+  "material_change": "CarPlay and sensitive data now fail closed unless exact owner scope and managed entitlement/feature requirements are present.",
+  "frozen_baseline_commit": "59e1cee",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M12-CARPLAY-SENSITIVE-DATA-POLICY"
+  "next_task_id": "M12-REAL-EXECUTION-VERIFICATION-POLICY"
 }
