@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-EXECUTION-STATE-GOVERNANCE-AUDIT",
-  "requirement_ids": ["1098-1191"],
-  "selected_path": "Persistent state governance, anti-repeat watchdog, and distribution-neutral immutable owner-test delivery.",
+  "current_task_id": "M12-FEASIBILITY-PATH-GOVERNANCE-AUDIT",
+  "requirement_ids": ["1192-1342"],
+  "selected_path": "Typed per-capability feasibility decisions, single active path and evidence-triggered reopening.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "all locally executable governance contracts complete; final owner-device reconciliation remains READY_FOR_LIVE_VERIFICATION",
-  "acceptance_contract_ref": "docs/M12_EXECUTION_STATE_GOVERNANCE_AUDIT.md",
+  "integration_depth": "all locally executable feasibility/path governance complete; external proofs retain exact open states",
+  "acceptance_contract_ref": "docs/M12_FEASIBILITY_PATH_GOVERNANCE_AUDIT.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "MS-1098-1191 now have current machine/human state, structured failed-path memory, a diagnostic watchdog, and persistent immutable distribution-neutral owner-test build governance.",
-  "frozen_baseline_commit": "dfb6111",
-  "dependency": "An actual owner-device delivery requires verified current signing/account/device constraints; independent roadmap work continues.",
-  "unresolved_verification_steps": ["MS-1191-FINAL-OWNER-TEST-RECONCILIATION"],
-  "next_task_id": "M12-FEASIBILITY-PATH-GOVERNANCE-AUDIT"
+  "material_change": "MS-1192-1342 now have a persistent typed per-capability feasibility registry enforcing path lock and objective-evidence reopening.",
+  "frozen_baseline_commit": "e0dd6a3",
+  "dependency": "Capability-specific external proof dependencies remain in FEASIBILITY_REGISTRY and LIVE_VERIFICATION_QUEUE.",
+  "unresolved_verification_steps": ["capability-specific E4/E5 proofs already queued"],
+  "next_task_id": "M12-DEFINITION-EVIDENCE-GOVERNANCE-AUDIT"
 }
