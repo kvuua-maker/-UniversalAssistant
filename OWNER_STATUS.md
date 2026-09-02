@@ -6,7 +6,7 @@ M0–M8 are Codex-verified at local E3.
 
 ## CURRENTLY WORKING ON
 
-Bounded AI interpretation fallback. Selected path: STABLE.
+Coordination observability. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Allow exactly one schema-valid interpretation call only after explicit deterministic unresolved state, with timeout and deterministic fallback.
+Record privacy-safe command/planning/provider/critical-path/AI latency, counts and fallback reasons.
