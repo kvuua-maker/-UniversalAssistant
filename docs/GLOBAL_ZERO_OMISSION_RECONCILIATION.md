@@ -360,3 +360,35 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-275 | READY_FOR_LIVE_VERIFICATION | controller supports start/pause/resume/stop/save/play/rename/delete/share with behavioral state-machine evidence; physical audio/share queued | d79542a |
 | MS-276 | READY_FOR_LIVE_VERIFICATION | permission gate and visible RecordingStatusPill prevent secret recording; interruptions pause; physical permission/UI review queued | c34533b |
 | MS-277 | VERIFIED_LOCAL | UniversalDeviceCommandRouter plus AppCapabilityRegistry choose deepest validated mechanism without duplicating domain adapters; integration tests | 6627cff |
+
+## Slice 15 — MS-278–304
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-278 | VERIFIED_LOCAL | AppCapabilityRegistry orders official direct API first and rejects records without declared mechanisms; integrationHierarchyIsCanonical | e7e5c43 |
+| MS-279 | VERIFIED_LOCAL | AppCapabilityRegistry ranks official SDK after direct API; integrationHierarchyIsCanonical | e7e5c43 |
+| MS-280 | VERIFIED_LOCAL | typed oauthPartnerAPI follows SDK and retains explicit authentication semantics; integrationHierarchyIsCanonical | e7e5c43 |
+| MS-281 | VERIFIED_LOCAL | typed appIntent mechanism precedes shortcuts and links; integrationHierarchyIsCanonical | e7e5c43 |
+| MS-282 | VERIFIED_LOCAL | official shortcut is a distinct ranked mechanism; integrationHierarchyIsCanonical | e7e5c43 |
+| MS-283 | VERIFIED_LOCAL | universal/deep-link mechanisms are typed and ranked after native intent/shortcut paths; integrationHierarchyIsCanonical | e7e5c43 |
+| MS-284 | VERIFIED_LOCAL | structuredFeed is explicit after native links and before web fallback; integrationHierarchyIsCanonical | e7e5c43 |
+| MS-285 | VERIFIED_LOCAL | officialWeb requires verified HTTPS destination evidence and ranks after structured data; registry tests | e7e5c43 |
+| MS-286 | VERIFIED_LOCAL | phone is a distinct lower-depth user-controlled handoff; IntegrationFallbackPolicyTests | eb698bd |
+| MS-287 | VERIFIED_LOCAL | navigation/instruction/open-only are terminal truthful paths, never fabricated direct integrations; registry/router tests | e7e5c43 |
+| MS-288 | VERIFIED_LOCAL | IntegrationFallbackPolicy selects the deepest available step; weaker override requires explicit equivalentUserOutcome evidence; testVerifiedEquivalentOverrideRequiresExplicitReason | eb698bd |
+| MS-289 | VERIFIED_LOCAL | IntegrationFallbackReason covers unavailable, unsupported, restricted, credential, approval, prohibited and inaccessible conditions and is preserved; testFallbackReasonIsPreservedForTruthfulPresentation | eb698bd |
+| MS-290 | VERIFIED_LOCAL | AppCapabilityRecord and provider matrices preserve target, mechanism, actions, auth, limitations, fallback, evidence status and date; registry tests | 91a9f4d |
+| MS-291 | VERIFIED_LOCAL | ProviderImplementationStatus has exact fullyImplemented state and fail-closed eligibility; canonicalStatusesFailClosedExceptImplementationAndTestEvidence | 56b0e42 |
+| MS-292 | VERIFIED_LOCAL | ProviderImplementationStatus has exact fullyTested state and fail-closed eligibility; canonicalStatusesFailClosedExceptImplementationAndTestEvidence | 56b0e42 |
+| MS-293 | VERIFIED_LOCAL | deviceTestRequired is explicit and ineligible for an unqualified production-depth claim; status tests | 56b0e42 |
+| MS-294 | VERIFIED_LOCAL | credentialRequired is explicit and ineligible without the external credential; status tests | 56b0e42 |
+| MS-295 | VERIFIED_LOCAL | partnerApprovalRequired is explicit and ineligible without approval; status tests | 56b0e42 |
+| MS-296 | VERIFIED_LOCAL | fallbackActive is explicit and eligible only as declared truthful fallback; status tests | 56b0e42 |
+| MS-297 | VERIFIED_LOCAL | temporarilyBroken is explicit and fails closed; status tests | 56b0e42 |
+| MS-298 | VERIFIED_LOCAL | unsupported is explicit and fails closed; status tests | 56b0e42 |
+| MS-299 | VERIFIED_LOCAL | typed fallback reasons feed structured selection and no API/HTTP payload becomes a user-facing contract; policy/composer tests | eb698bd |
+| MS-300 | VERIFIED_LOCAL | product chain is direct API → structured feed → official web → phone → navigation; testCanonicalDomainChains | eb698bd |
+| MS-301 | VERIFIED_LOCAL | restaurant chain is direct booking API → official web → phone → navigation; testCanonicalDomainChains | eb698bd |
+| MS-302 | VERIFIED_LOCAL | ticket chain is direct API → authenticated provider → deep link → official app; testCanonicalDomainChains | eb698bd |
+| MS-303 | VERIFIED_LOCAL | service chain is direct API → official web → phone; testCanonicalDomainChains | eb698bd |
+| MS-304 | VERIFIED_LOCAL | app-action chain is direct API → App Intent → Shortcut → deep link → official app; testCanonicalDomainChains | eb698bd |

@@ -1,16 +1,16 @@
 {
   "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
-  "requirement_ids": ["MS-250...MS-277"],
+  "requirement_ids": ["MS-278...MS-304"],
   "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "28 Emergency and System Interaction requirements reconciled against public iOS production paths",
+  "integration_depth": "27 integration-priority, fallback and status requirements reconciled against typed production policy",
   "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "MS-250–277 reconciliation added truthful validated emergency location presentation/share and typed natural recorder controls over the real AVAudioRecorder controller.",
-  "frozen_baseline_commit": "e1f5df0",
+  "material_change": "MS-278–304 reconciliation completed the canonical typed integration status vocabulary and domain fallback policy without duplicating domain engines.",
+  "frozen_baseline_commit": "eb698bd",
   "dependency": "None for the next local reconciliation slice.",
-  "unresolved_verification_steps": ["1283 canonical requirements remain unreconciled", "Physical system actions listed for MS-250–277 await only their exact LIVE_VERIFICATION_QUEUE procedure"],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-278-PLUS"
+  "unresolved_verification_steps": ["1256 canonical requirements remain unreconciled", "Provider-specific physical/live operations remain governed by their existing LIVE_VERIFICATION_QUEUE procedures"],
+  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-305-PLUS-CLOUDKIT"
 }
