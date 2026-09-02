@@ -38,10 +38,23 @@ struct LocalizationAccessibilityTests {
         }
     }
 
-    private func strings(_ locale: String) throws -> [String: String] {
+    @Test func privacySafeFeedbackActionIsLocalizedInEveryShippedLocale() throws {
+        let canonicalKeys: Set<String> = [
+            "feedback_wrong_result", "feedback_privacy_hint", "feedback_recorded_format"
+        ]
+        for locale in locales {
+            let table = try strings(locale, table: "Feedback")
+            #expect(Set(table.keys) == canonicalKeys)
+            #expect(table.values.allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+            #expect(table["feedback_recorded_format"]?.contains("%@") == true)
+        }
+        #expect(try strings("uk", table: "Feedback")["feedback_wrong_result"] == "Не те")
+    }
+
+    private func strings(_ locale: String, table: String = "Localizable") throws -> [String: String] {
         let testFile = URL(fileURLWithPath: #filePath)
         let root = testFile.deletingLastPathComponent().deletingLastPathComponent()
-        let url = root.appendingPathComponent("UniversalAssistant/Resources/\(locale).lproj/Localizable.strings")
+        let url = root.appendingPathComponent("UniversalAssistant/Resources/\(locale).lproj/\(table).strings")
         let content = try String(contentsOf: url, encoding: .utf8)
         let regex = try NSRegularExpression(pattern: #""([^"]+)"\s*=\s*"([^"]*)";"#)
         return Dictionary(uniqueKeysWithValues: regex.matches(

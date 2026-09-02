@@ -1,22 +1,16 @@
 {
-  "current_task_id": "M10-DATA-RETENTION-RESIDENCY",
-  "requirement_ids": ["769", "770", "771", "772"],
-  "selected_path": "Validated retention classes, deterministic expiry/deletion decisions and explicit residency deployment contract.",
+  "current_task_id": "M10-ACCEPTANCE",
+  "requirement_ids": ["737-800"],
+  "selected_path": "Zero-omission M10 acceptance with threat model, privacy/legal inventory, repository security scan and end-to-end feedback evidence.",
   "feasibility_state": "VERIFIED_LOCAL",
   "integration_depth": "local E3 plus ready-for-live deployed-store verification",
-  "acceptance_contract_ref": "DATA_RETENTION.md",
+  "acceptance_contract_ref": "docs/M10_ACCEPTANCE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "All retention classes have enforceable rules; expiry, deletion age and legal-hold constraints are behaviorally tested.",
-  "frozen_baseline_commit": "d9d7522",
-  "dependency": "Only deployed region/subprocessor and deletion-propagation verification remains in LIVE_VERIFICATION_QUEUE.json.",
-  "unresolved_verification_steps": [
-    {
-      "requirement_id": "M10-THREAT-PRIVACY",
-      "status": "IMPLEMENTED_UNVERIFIED",
-      "step": "Complete THREAT_MODEL.md and repository-wide security scan 507d18d3-2af0-47b7-9c7d-135bb49e29d1."
-    }
-  ],
-  "next_task_id": "M10-THREAT-PRIVACY-AUDIT"
+  "material_change": "M10 local work has zero NOT_IMPLEMENTED/IMPLEMENTED_UNVERIFIED requirements; 779 and webhook replay gaps were fixed and fully tested.",
+  "frozen_baseline_commit": "966c857",
+  "dependency": "Only exact live-only items listed in LIVE_VERIFICATION_QUEUE.json remain.",
+  "unresolved_verification_steps": [],
+  "next_task_id": "M11-APP-VERSION-SUPPORT-POLICY"
 }

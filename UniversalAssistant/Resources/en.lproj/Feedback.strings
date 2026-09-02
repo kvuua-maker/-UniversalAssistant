@@ -1,0 +1,3 @@
+"feedback_wrong_result" = "Not right";
+"feedback_privacy_hint" = "Stores only a diagnostic identifier, category, and time";
+"feedback_recorded_format" = "Feedback saved: %@";

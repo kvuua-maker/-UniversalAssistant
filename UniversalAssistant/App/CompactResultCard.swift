@@ -32,9 +32,12 @@ struct CompactResultCard: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(tint)
                 }
-                Button("clarification_needed", action: onReportIssue)
+                Button(action: onReportIssue) {
+                    Text("feedback_wrong_result", tableName: "Feedback")
+                }
                     .font(.caption)
-                    .accessibilityHint(Text("risk_informational"))
+                    .accessibilityHint(Text("feedback_privacy_hint", tableName: "Feedback"))
+                    .accessibilityIdentifier("assistant.feedback.wrong-result")
             }
             Spacer(minLength: 0)
         }

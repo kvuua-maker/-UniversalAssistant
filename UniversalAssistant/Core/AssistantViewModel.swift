@@ -57,12 +57,11 @@ final class AssistantViewModel {
         }
     }
 
-    func reportWrongResult() {
-        guard resultState != .idle else { return }
-        Task {
-            if let record = try? await feedbackStore.record(.wrongResult) {
-                statusText = "\(AppText.value("result_ready")): \(record.diagnosticID)"
-            }
-        }
+    @discardableResult
+    func reportWrongResult() async -> UserFeedbackRecord? {
+        guard resultState != .idle else { return nil }
+        guard let record = try? await feedbackStore.record(.wrongResult) else { return nil }
+        statusText = String(format: AppText.feedback("feedback_recorded_format"), record.diagnosticID)
+        return record
     }
 }

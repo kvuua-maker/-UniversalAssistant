@@ -7,6 +7,11 @@ private func webhookBody() throws -> Data {
                                                      externalTransactionID: "tx-1"))
 }
 
+private func webhookStateURL() -> URL {
+    FileManager.default.temporaryDirectory
+        .appendingPathComponent("ua-webhook-\(UUID().uuidString)/processed.json")
+}
+
 @Suite("Signed partner webhook ingestion")
 struct PartnerWebhookIngestionTests {
     @Test func validSignedEventIsAcceptedOnce() async throws {
@@ -15,7 +20,7 @@ struct PartnerWebhookIngestionTests {
         try await vault.install(partnerID: partner, keyID: "key-1", secret: secret)
         let request = PartnerWebhookRequest(partnerID: partner, keyID: "key-1", eventID: "event-1",
             timestamp: now, body: body, signatureHex: PartnerWebhookSignature.sign(timestamp: now, body: body, secret: secret))
-        let ingestion = try PartnerWebhookIngestion(vault: vault)
+        let ingestion = try PartnerWebhookIngestion(vault: vault, processedEventURL: webhookStateURL())
         #expect(try await ingestion.ingest(request, now: now) == .accepted(
             .init(schemaVersion: 1, eventType: "conversion.confirmed", externalTransactionID: "tx-1")))
         #expect(try await ingestion.ingest(request, now: now) == .duplicate)
@@ -26,7 +31,9 @@ struct PartnerWebhookIngestionTests {
         let vault = PartnerWebhookCredentialVault(), partner = UUID(), now = Date()
         let secret = Data(repeating: 8, count: 32), body = try webhookBody()
         try await vault.install(partnerID: partner, keyID: "key", secret: secret)
-        let ingestion = try PartnerWebhookIngestion(vault: vault, replayWindow: 60)
+        let ingestion = try PartnerWebhookIngestion(
+            vault: vault, replayWindow: 60, processedEventURL: webhookStateURL()
+        )
         let signature = PartnerWebhookSignature.sign(timestamp: now, body: body, secret: secret)
         await #expect(throws: PartnerWebhookError.invalidSignature) {
             try await ingestion.ingest(.init(partnerID: partner, keyID: "key", eventID: "bad",
@@ -44,7 +51,7 @@ struct PartnerWebhookIngestionTests {
         try await vault.install(partnerID: partner, keyID: "old", secret: old)
         try await vault.install(partnerID: partner, keyID: "new", secret: new)
         await vault.revoke(partnerID: partner, keyID: "old")
-        let ingestion = try PartnerWebhookIngestion(vault: vault)
+        let ingestion = try PartnerWebhookIngestion(vault: vault, processedEventURL: webhookStateURL())
         await #expect(throws: PartnerWebhookError.credentialUnavailable) {
             try await ingestion.ingest(.init(partnerID: partner, keyID: "old", eventID: "old-event",
                 timestamp: now, body: body, signatureHex: PartnerWebhookSignature.sign(timestamp: now, body: body, secret: old)), now: now)
@@ -58,7 +65,7 @@ struct PartnerWebhookIngestionTests {
         let vault = PartnerWebhookCredentialVault(), partner = UUID(), now = Date(), body = try webhookBody()
         let secret = Data(repeating: 9, count: 32)
         try await vault.install(partnerID: partner, keyID: "key", secret: secret)
-        let ingestion = try PartnerWebhookIngestion(vault: vault)
+        let ingestion = try PartnerWebhookIngestion(vault: vault, processedEventURL: webhookStateURL())
         _ = try await ingestion.ingest(.init(partnerID: partner, keyID: "key", eventID: "event",
             timestamp: now, body: body,
             signatureHex: PartnerWebhookSignature.sign(timestamp: now, body: body, secret: secret)), now: now)
@@ -81,5 +88,18 @@ struct PartnerWebhookIngestionTests {
         #expect(try await first.ingest(request, now: now) != .duplicate)
         let restarted = try PartnerWebhookIngestion(vault: vault, processedEventURL: url)
         #expect(try await restarted.ingest(request, now: now) == .duplicate)
+    }
+
+    @Test func rejectsOversizedPayloadBeforeSignatureOrDecodingWork() async throws {
+        let vault = PartnerWebhookCredentialVault(), partner = UUID(), now = Date()
+        let ingestion = try PartnerWebhookIngestion(
+            vault: vault, processedEventURL: webhookStateURL(), maximumBodyBytes: 4
+        )
+        await #expect(throws: PartnerWebhookError.requestTooLarge) {
+            try await ingestion.ingest(.init(
+                partnerID: partner, keyID: "key", eventID: "event", timestamp: now,
+                body: Data(repeating: 1, count: 5), signatureHex: ""
+            ), now: now)
+        }
     }
 }

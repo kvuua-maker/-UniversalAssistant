@@ -1,0 +1,3 @@
+"feedback_wrong_result" = "Ce n’est pas ça";
+"feedback_privacy_hint" = "Enregistre uniquement un identifiant de diagnostic, la catégorie et l’heure";
+"feedback_recorded_format" = "Avis enregistré : %@";

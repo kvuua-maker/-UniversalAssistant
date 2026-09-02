@@ -98,6 +98,46 @@
       "created_at": "2026-09-02T13:14:00+02:00",
       "last_checked": "2026-09-02T13:14:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-764-768-781-782-LIVE-PRIVACY-LEGAL",
+      "service_provider": "Apple App Store Connect and owner-approved public legal host",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner/legal approval, final support/privacy identity, public HTTPS policy/terms URLs, App Store Connect app record and an archived distribution build.",
+      "dependency_owner": "Owner, legal/privacy owner and App Store operator",
+      "local_evidence": [
+        "UniversalAssistant/PrivacyInfo.xcprivacy",
+        "PRIVACY_DATA_MAP.md",
+        "DATA_PROCESSOR_INVENTORY.md",
+        "PRIVACY_POLICY.md",
+        "TERMS_OF_USE.md",
+        "BUSINESS_ADVERTISING_TERMS.md",
+        "UniversalAssistantTests/PrivacyComplianceTests.swift"
+      ],
+      "required_live_action": "Approve and publish the implementation-aligned documents, configure their HTTPS URLs in App Store Connect, archive the release build, generate/review the Xcode privacy report, and publish App Privacy answers matching all app and processor flows.",
+      "expected_result": "Public policy/terms and App Store privacy answers match the archived binary, manifest and processor inventory with no undeclared tracking, data collection, SDK or Required Reason API.",
+      "created_at": "2026-09-02T13:40:00+02:00",
+      "last_checked": "2026-09-02T13:40:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-783-786-LIVE-PROVIDER-CONTRACTS",
+      "service_provider": "Provider-specific sandbox/test environments",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Approved provider sandbox accounts, test credentials and current reachable sandbox endpoints for providers that offer them.",
+      "dependency_owner": "Owner and provider partner",
+      "local_evidence": [
+        "Config/Staging.xcconfig",
+        "UniversalAssistant/Services/ProviderAuthenticationBoundary.swift",
+        "Backend/Sources/UniversalAssistantServer/SilpoMCPClient.swift",
+        "UniversalAssistantTests/ProviderAuthenticationBoundaryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/SilpoMCPClientTests.swift"
+      ],
+      "required_live_action": "Inject test-only credentials through Staging secret boundaries, run each non-destructive provider contract suite against its sandbox, verify schema/capability/auth expiry/rate-limit behavior, and remove or rotate credentials after the run.",
+      "expected_result": "Sandbox responses match validated schemas and capability contracts; tests perform no real purchase/booking/destructive operation and no credential appears in logs or source.",
+      "created_at": "2026-09-02T13:40:00+02:00",
+      "last_checked": "2026-09-02T13:40:00+02:00",
+      "completion_evidence": null
     }
   ]
 }

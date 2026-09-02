@@ -1,9 +1,9 @@
 # Progress
 
-- Stage: M7 — Universal Integrations
-- Completed: M0; M1 local implementation; M2 Apple local actions; M3 location/places/navigation/weather; M4 retail/fashion/grocery and Commerce Hub foundation; M5 services/rides/transport/tickets/hotels/travel/auth/degradation at local E3.
-- Verified: Development build passes; iOS Swift Testing 143 tests across 34 suites passes; backend Swift Testing 29 tests across 7 suites passes.
-- Blockers: live hotel/provider access remains capability-specific; no blocker for the provider-neutral hotel core.
+- Stage: M11 — Real Device Release Readiness
+- Completed: M0–M10, Marketplace/Business Partner addenda and deterministic coordination/bounded-AI local implementation.
+- Verified: Development iOS build and 216 tests across 53 suites pass; backend build and 69 tests across 19 suites pass; M10 repository security scan completed with zero reportable findings.
+- Blockers: only exact live-only dependencies persist in `LIVE_VERIFICATION_QUEUE.json`; none blocks the next local M11 block.
 - Mandatory addendum: Marketplace Commerce & Affiliate Hub accepted and persisted; implementation is routed into M4 without reopening M0/M1.
 - Device tests: VOICE-001 and VOICE-002 queued; delivery build not issued yet.
 - M5 completed blocks: bounded local-service request/fallback; truthful RideComparisonEngine; official ride-provider registry and credential-gated exact Uber route handoff; unified TransportEngine domain; ticket engine; hotel search core; travel-plan composition; local-first provider authentication boundary with scoped OAuth/Keychain semantics and exact official fallback.
@@ -15,4 +15,4 @@
 - M7 completed blocks: evidence-gated AppCapabilityRegistry core.
 - M7 completed blocks: evidence-gated AppCapabilityRegistry core; official launch-market integration matrix.
 - M7 completed blocks now also include Find My compliant fallback.
-- Current: M7 media integration core.
+- Current: M11 app-version support policy (MS-801–MS-802).

@@ -2,11 +2,11 @@
 
 ## DONE AND CODEX-VERIFIED
 
-M0–M9 and the deterministic coordination addendum are Codex-verified at local E3.
+M0–M10 and the deterministic coordination addendum are Codex-verified at local E3.
 
 ## CURRENTLY WORKING ON
 
-M10 threat/privacy audit completion. Selected path: STABLE.
+M11 app-version support policy. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Complete the source-backed threat model and recover or accurately disposition the unfinished repository security scan.
+Implement the first M11 release-readiness block without repeating accepted milestones.

@@ -18,7 +18,7 @@ struct PartnerWebhookEnvelope: Codable, Equatable, Sendable {
 
 enum PartnerWebhookOutcome: Equatable, Sendable { case accepted(PartnerWebhookEnvelope), duplicate }
 enum PartnerWebhookError: Error, Equatable, Sendable {
-    case credentialUnavailable, invalidSignature, outsideReplayWindow, invalidSchema, invalidEventID
+    case credentialUnavailable, invalidSignature, outsideReplayWindow, invalidSchema, invalidEventID, requestTooLarge
 }
 
 struct PartnerWebhookAuditEvent: Equatable, Sendable {
@@ -77,18 +77,21 @@ actor PartnerWebhookIngestion {
     private struct ProcessedSnapshot: Codable { let keys: Set<String> }
     private let vault: PartnerWebhookCredentialVault
     private let replayWindow: TimeInterval
-    private let processedEventURL: URL?
+    private let processedEventURL: URL
+    private let maximumBodyBytes: Int
     private var processed: Set<String>
     private var audit: [PartnerWebhookAuditEvent] = []
 
     init(vault: PartnerWebhookCredentialVault, replayWindow: TimeInterval = 300,
-         processedEventURL: URL? = nil) throws {
+         processedEventURL: URL, maximumBodyBytes: Int = 1_048_576) throws {
+        guard replayWindow > 0, maximumBodyBytes > 0 else { throw PartnerWebhookError.invalidSchema }
         self.vault = vault
         self.replayWindow = replayWindow
         self.processedEventURL = processedEventURL
-        if let url = processedEventURL, FileManager.default.fileExists(atPath: url.path) {
+        self.maximumBodyBytes = maximumBodyBytes
+        if FileManager.default.fileExists(atPath: processedEventURL.path) {
             processed = try JSONDecoder().decode(
-                ProcessedSnapshot.self, from: Data(contentsOf: url)
+                ProcessedSnapshot.self, from: Data(contentsOf: processedEventURL)
             ).keys
         } else {
             processed = []
@@ -96,9 +99,11 @@ actor PartnerWebhookIngestion {
     }
 
     func ingest(_ request: PartnerWebhookRequest, now: Date = .now) async throws -> PartnerWebhookOutcome {
-        guard !request.eventID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        guard !request.eventID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              request.eventID.count <= 256, !request.keyID.isEmpty, request.keyID.count <= 256 else {
             throw PartnerWebhookError.invalidEventID
         }
+        guard request.body.count <= maximumBodyBytes else { throw PartnerWebhookError.requestTooLarge }
         guard abs(now.timeIntervalSince(request.timestamp)) <= replayWindow else {
             throw PartnerWebhookError.outsideReplayWindow
         }
@@ -126,12 +131,11 @@ actor PartnerWebhookIngestion {
     func auditTrail() -> [PartnerWebhookAuditEvent] { audit }
 
     private func persistProcessed() throws {
-        guard let url = processedEventURL else { return }
         try FileManager.default.createDirectory(
-            at: url.deletingLastPathComponent(), withIntermediateDirectories: true
+            at: processedEventURL.deletingLastPathComponent(), withIntermediateDirectories: true
         )
         try JSONEncoder().encode(ProcessedSnapshot(keys: processed)).write(
-            to: url, options: [.atomic, .completeFileProtection]
+            to: processedEventURL, options: [.atomic, .completeFileProtection]
         )
     }
 }

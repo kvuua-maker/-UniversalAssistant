@@ -17,7 +17,9 @@ struct AssistantHomeView: View {
                     .accessibilityLabel(model.isListening ? Text("stop_listening") : Text("start_listening"))
                     Text(model.statusText).font(.headline).accessibilityIdentifier("assistant.status")
                     RecordingStatusPill(state: model.recorder.state)
-                    CompactResultCard(state: model.resultState, onReportIssue: model.reportWrongResult)
+                    CompactResultCard(state: model.resultState, onReportIssue: {
+                        Task { await model.reportWrongResult() }
+                    })
                         .frame(maxWidth: 520)
                     Spacer()
                     TextField("type_command", text: $model.input)
