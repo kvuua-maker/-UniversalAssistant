@@ -179,3 +179,26 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-134 | VERIFIED_LOCAL | Haversine elapsed-speed filter marks Kyiv-scale impossible jumps suspicious and unsafe; impossibleJumpIsSuspiciousAndUnsafe | ddbccca |
 | MS-135 | VERIFIED_LOCAL | suspicious/unavailable locations set isSafeForLocationActions false and place/weather engines reject unsafe use; LocationValidatorTests and WeatherContextTests | ddbccca |
 | MS-136 | VERIFIED_LOCAL | AccurateLocationEngine retries poor/suspicious readings with bounded fresh samples then resolves available/unavailable truthfully; location recovery implementation and WeatherContextTests | ddbccca |
+
+## Slice 7 — MS-137–154
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-137 | VERIFIED_LOCAL | ManualLocationContextResolver uses the production Apple geocoder boundary, validates the resolved coordinate and preserves a trimmed manual label/source distinct from device location; LocationValidatorTests named manual context test | 64be768 |
+| MS-138 | VERIFIED_LOCAL | LocationValidator and AccurateLocationEngine have no network dependency and accept current Core Location GPS samples and explicit manual coordinates offline; manualOverrideIsExplicitAndUsableOffline | 64be768 |
+| MS-139 | VERIFIED_LOCAL | AccurateLocationEngine selects hundred-metre accuracy for general use, nearest-ten-metres for nearby search and best only for navigation/emergency; RuntimeExperiencePolicyTests resource limits plus location implementation | 64be768 |
+| MS-140 | VERIFIED_LOCAL | PlaceProvider is a Sendable typed search contract consumed by PlaceSearchEngine and production MapKitPlaceProvider; PlaceSearchEngineTests | 5cfcf45 |
+| MS-141 | VERIFIED_LOCAL | MapKitPlaceProvider is the legitimate credential-free production adapter and PlaceProvider permits Google/Foursquare/future adapters without hardcoding or falsely claiming unavailable integrations; provider query and engine tests | 5cfcf45 |
+| MS-142 | VERIFIED_LOCAL | PlaceSearchEngine fans out across a bounded provider set concurrently and truthfully retains partial results/failures; PlaceSearchEngineTests | 5cfcf45 |
+| MS-143 | VERIFIED_LOCAL | PlaceDeduplicator merges exact same-source IDs or cross-source same normalized name/category within 30 metres; PlaceCoreTests | 64be768 |
+| MS-144 | VERIFIED_LOCAL | Place carries source, timestamp, verification and bounded optional confidence, with deterministic recent/stale/unknown classification; freshnessConfidenceAndVerifiedTravelTimeAreBehavioralRankingInputs | 64be768 |
+| MS-145 | VERIFIED_LOCAL | PlaceCategory enumerates all canonical cafe, retail, health, vehicle, public-service and other POI classes; MapKit category mapping and PlaceCoreTests compile the exhaustive production model | 64be768 |
+| MS-146 | VERIFIED_LOCAL | Place production model contains canonical ID/provider ID, name, category, coordinates, address, distance, travel time, phone, official URL, rating/count, hours/open state, price level, source, timestamp and verification | 64be768 |
+| MS-147 | VERIFIED_LOCAL | CoffeeScenarioCoordinator executes validated location through real PlaceProvider aggregation, verified walking RouteProvider facts, ranking and exact navigation action; coffeeScenarioRunsValidatedProviderRouteRankingAndExactActionEndToEnd | 5cfcf45 |
+| MS-148 | VERIFIED_LOCAL | PlaceRanker deterministically combines text/category relevance, verified travel time or distance, open state, rating volume, verification and confidence; PlaceCoreTests | 64be768 |
+| MS-149 | VERIFIED_LOCAL | ROUTE_AWARE_SEARCH is recognized deterministically and RouteAwareSearchEngine evaluates bounded candidate stops between actual origin/destination; LocalCommandEngineTests and RouteNavigationTests | 64be768 |
+| MS-150 | VERIFIED_LOCAL | RouteAwareSearchEngine calculates detour from provider route legs against provider baseline rather than straight-line distance; routeAwareSearchUsesActualRouteDurationsForDetour | 64be768 |
+| MS-151 | VERIFIED_LOCAL | NavigationHandoff builds validated exact Apple Maps, Google Maps and Waze navigation URLs; parameterized exactHandoff tests all providers | 64be768 |
+| MS-152 | VERIFIED_LOCAL | NavigationPreferences persists and restores the selected default provider through LocalStore for silent reuse; defaultMapPersistsAndRestores | 64be768 |
+| MS-153 | VERIFIED_LOCAL | clear navigation commands use the deterministic direct-action route and NavigationHandoff produces a launch URL without an extra clarification step; navigation parser/validation and RouteNavigationTests | 64be768 |
+| MS-154 | VERIFIED_LOCAL | InitialWalkingGuidanceComposer emits only the concise first nonempty step from a verified walking RouteResult and emits nothing for other modes/missing route facts; RouteNavigationTests | 64be768 |
