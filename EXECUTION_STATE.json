@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M11-ACCESSIBILITY-AUDIO-PERMISSIONS-CORE",
-  "requirement_ids": ["838", "839", "840", "841", "842", "843", "844", "845"],
-  "selected_path": "Always-visible typed alternative, user-controlled voice privacy, real AVAudioSession event bridge and contextual permissions.",
-  "feasibility_state": "READY_FOR_LIVE_VERIFICATION",
-  "integration_depth": "local E3 complete; physical audio route/interruption E4 queued",
-  "acceptance_contract_ref": "docs/M11_ACCESSIBILITY_AUDIO_PERMISSIONS_CORE.md",
+  "current_task_id": "M11-ACCOUNT-DELETION-INTEGRATION-CORE",
+  "requirement_ids": ["846", "847", "848", "849"],
+  "selected_path": "Portable assistant-owned export plus concurrent durable-job, APNs and provider-connection cleanup with OAuth revocation.",
+  "feasibility_state": "VERIFIED_LOCAL",
+  "integration_depth": "local E3 complete; provider-specific live revocation covered by existing queue",
+  "acceptance_contract_ref": "docs/M11_ACCOUNT_DELETION_INTEGRATION_CORE.md",
   "required_evidence_level": "E3",
-  "current_exit_state": "READY_FOR_LIVE_VERIFICATION",
+  "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Voice has a disableable accessible typed fallback; interruptions and Bluetooth route changes reach deterministic controller recovery.",
-  "frozen_baseline_commit": "8438dcc",
-  "dependency": "Physical iPhone plus call/Siri/alarm and Bluetooth HFP devices solely for E4 audio verification.",
-  "unresolved_verification_steps": ["MS-841-842 physical audio interruption and Bluetooth route verification"],
-  "next_task_id": "M11-ACCOUNT-DELETION-INTEGRATION-CORE"
+  "material_change": "Account deletion now reaches durable jobs, APNs tokens and OAuth-aware provider cleanup and reports partial failure truthfully.",
+  "frozen_baseline_commit": "c34533b",
+  "dependency": null,
+  "unresolved_verification_steps": [],
+  "next_task_id": "M11-FINAL-PRODUCTION-ENGINEERING-AUDIT"
 }

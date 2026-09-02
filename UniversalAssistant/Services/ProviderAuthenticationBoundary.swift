@@ -28,6 +28,10 @@ protocol ProviderCredentialStore: Sendable {
     func delete(providerID: String) async throws
 }
 
+protocol ProviderOAuthRevoking: Sendable {
+    func revoke(accessToken: String, contract: ProviderAuthorizationContract) async throws
+}
+
 enum ProviderAuthenticationError: Error, Equatable, Sendable {
     case invalidContract
     case oauthRequired
@@ -46,9 +50,11 @@ enum ProviderAccessState: Equatable, Sendable {
 
 actor ProviderAuthenticationBoundary {
     private let store: any ProviderCredentialStore
+    private let revoker: (any ProviderOAuthRevoking)?
 
-    init(store: any ProviderCredentialStore) {
+    init(store: any ProviderCredentialStore, revoker: (any ProviderOAuthRevoking)? = nil) {
         self.store = store
+        self.revoker = revoker
     }
 
     func connect(
@@ -94,6 +100,15 @@ actor ProviderAuthenticationBoundary {
     func disconnect(providerID: String) async throws {
         guard validProviderID(providerID) else { throw ProviderAuthenticationError.invalidContract }
         try await store.delete(providerID: providerID)
+    }
+
+    func disconnect(_ contract: ProviderAuthorizationContract) async throws {
+        try validate(contract)
+        if contract.method == .oauth, let credential = try await store.load(providerID: contract.providerID),
+           let revoker {
+            try await revoker.revoke(accessToken: credential.accessToken, contract: contract)
+        }
+        try await store.delete(providerID: contract.providerID)
     }
 
     private func validate(_ contract: ProviderAuthorizationContract) throws {

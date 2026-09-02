@@ -9,6 +9,14 @@ private actor CredentialMemoryStore: ProviderCredentialStore {
     func delete(providerID: String) { credentials[providerID] = nil }
 }
 
+private actor OAuthRevokerSpy: ProviderOAuthRevoking {
+    private(set) var providers: [String] = []
+    func revoke(accessToken: String, contract: ProviderAuthorizationContract) throws {
+        #expect(!accessToken.isEmpty)
+        providers.append(contract.providerID)
+    }
+}
+
 @Suite("Provider authentication boundary") struct ProviderAuthenticationBoundaryTests {
     @Test func localFirstPublicCapabilityRequiresNoAccount() async throws {
         let boundary = ProviderAuthenticationBoundary(store: CredentialMemoryStore())
@@ -55,5 +63,17 @@ private actor CredentialMemoryStore: ProviderCredentialStore {
             try await boundary.accessState(for: .init(providerID: "bad", method: .officialAuthenticatedHandoff,
                                                        officialSignInURL: URL(string: "https://example.com/")))
         }
+    }
+
+    @Test func disconnectRevokesProviderBeforeDeletingLocalCredential() async throws {
+        let now = Date(), store = CredentialMemoryStore(), revoker = OAuthRevokerSpy()
+        let contract = ProviderAuthorizationContract(providerID: "calendar-provider", method: .oauth,
+            officialSignInURL: URL(string: "https://provider.example/oauth/revoke"), requiredScopes: ["calendar"])
+        try await store.save(.init(accessToken: "secret-token", grantedScopes: ["calendar"],
+                                   expiresAt: now.addingTimeInterval(600)), providerID: contract.providerID)
+        let boundary = ProviderAuthenticationBoundary(store: store, revoker: revoker)
+        try await boundary.disconnect(contract)
+        #expect(await revoker.providers == [contract.providerID])
+        #expect(try await store.load(providerID: contract.providerID) == nil)
     }
 }

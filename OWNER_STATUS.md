@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M11 account deletion integration core. Selected path: STABLE.
+M11 final production engineering audit. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Complete account deletion cleanup and provider OAuth revocation across real local/backend boundaries.
+Audit every MS-850 production-engineering surface against implementation and evidence before M11 acceptance.
