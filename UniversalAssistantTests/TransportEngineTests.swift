@@ -63,9 +63,34 @@ private func transport(
                              availability: .available, evidenceTimestamp: now,
                              exactHandoffURL: URL(string: "https://m.uber.com/looking")!)
         let option = try #require(TransportEngine().option(from: ride, source: "provider-api"))
-        #expect(option.mode == .ride)
+        #expect(option.mode == .taxi)
         #expect(option.evidence.kind == .realTime)
         #expect(option.departure == now.addingTimeInterval(120))
         #expect(TransportEngine().option(from: ride, source: "  ") == nil)
+    }
+
+    @Test func supportsEveryCanonicalModeAndTruthfulPublicTransportDetails() throws {
+        let now = Date()
+        #expect(Set(TransportMode.allCases) == [.walking, .driving, .publicTransit, .train, .intercityBus, .air, .taxi, .multimodal])
+        var option = transport("metro", observedAt: now, departure: now.addingTimeInterval(60),
+                               arrival: now.addingTimeInterval(900), duration: 840, price: 8,
+                               transfers: 1, availability: .unknown)
+        option.segments = [
+            .init(kind: .walking, durationSeconds: 180),
+            .init(kind: .transit, routeName: "M2", originStop: "Maidan", destinationStop: "Pochaina",
+                  departure: now.addingTimeInterval(240), arrival: now.addingTimeInterval(780), durationSeconds: 540)
+        ]
+        let result = try TransportEngine().rank([option], request: .init(), now: now)
+        #expect(result.first?.segments.last?.routeName == "M2")
+        #expect(result.first?.price == Money(amount: 8, currency: "UAH"))
+    }
+
+    @Test func malformedTransitSegmentCannotBecomeAResult() {
+        let now = Date()
+        var option = transport("bad", observedAt: now, duration: 600)
+        option.segments = [.init(kind: .transit, routeName: nil, originStop: "A", destinationStop: "B")]
+        #expect(throws: TransportEngineError.noVerifiedOptions) {
+            try TransportEngine().rank([option], request: .init(), now: now)
+        }
     }
 }

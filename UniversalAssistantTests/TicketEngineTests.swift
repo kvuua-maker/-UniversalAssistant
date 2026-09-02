@@ -60,4 +60,18 @@ private func ticket(_ id: String, now: Date, fare: Decimal? = 500,
         #expect(handoff.state == .destinationPrepared)
         #expect(handoff.destination.path == "/offers/live")
     }
+
+    @Test func originDestinationDurationAndProviderAreHardParameters() throws {
+        let now = Date()
+        let request = TicketSearchRequest(allowedModes: [.rail], departureNotBefore: now,
+            arrivalNotAfter: now.addingTimeInterval(20_000), maximumPrice: nil, maximumTransfers: 0,
+            requiresVerifiedInventory: false, origin: "Kyiv", destination: "Lviv",
+            maximumDurationSeconds: 8_000, providerIDs: ["provider"])
+        #expect(try TicketEngine().rank([ticket("valid", now: now)], request: request, now: now).map(\.id) == ["valid"])
+        var rejected = request
+        rejected.destination = "Odesa"
+        #expect(throws: TicketEngineError.noVerifiedOffers) {
+            try TicketEngine().rank([ticket("wrong", now: now)], request: rejected, now: now)
+        }
+    }
 }

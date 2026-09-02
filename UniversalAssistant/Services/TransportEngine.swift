@@ -1,7 +1,30 @@
 import Foundation
 
 enum TransportMode: String, Codable, CaseIterable, Sendable {
-    case ride, publicTransit, walking, driving
+    case taxi, publicTransit, walking, driving, train, intercityBus, air, multimodal
+}
+
+enum TransportSegmentKind: String, Codable, Sendable { case walking, transit, transfer }
+
+struct TransportSegment: Equatable, Codable, Sendable {
+    let kind: TransportSegmentKind
+    var routeName: String?
+    var originStop: String?
+    var destinationStop: String?
+    var departure: Date?
+    var arrival: Date?
+    var durationSeconds: TimeInterval?
+
+    var isValid: Bool {
+        guard durationSeconds.map({ $0 >= 0 }) ?? true else { return false }
+        if let departure, let arrival, arrival < departure { return false }
+        if kind == .transit {
+            return routeName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false &&
+                originStop?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false &&
+                destinationStop?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        }
+        return true
+    }
 }
 
 enum TransportEvidenceKind: String, Codable, Sendable {
@@ -28,6 +51,7 @@ struct TransportOption: Identifiable, Equatable, Sendable {
     var availability: VerifiedServiceAvailability
     let evidence: TransportEvidence
     var exactHandoffURL: URL?
+    var segments: [TransportSegment] = []
 
     func isFresh(now: Date, maximumAge: TimeInterval) -> Bool {
         let age = now.timeIntervalSince(evidence.observedAt)
@@ -38,7 +62,7 @@ struct TransportOption: Identifiable, Equatable, Sendable {
         guard durationSeconds.map({ $0 >= 0 }) ?? true,
               transfers.map({ $0 >= 0 }) ?? true else { return false }
         if let departure, let arrival { return arrival >= departure }
-        return true
+        return segments.allSatisfy(\.isValid)
     }
 }
 
@@ -103,7 +127,7 @@ struct TransportEngine: Sendable {
         guard let timestamp = ride.evidenceTimestamp,
               !source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
         return .init(
-            id: ride.id, providerID: ride.providerID, mode: .ride,
+            id: ride.id, providerID: ride.providerID, mode: .taxi,
             departure: timestamp.addingTimeInterval(ride.pickupWaitSeconds ?? 0),
             arrival: ride.estimatedArrival,
             durationSeconds: ride.estimatedArrival.map { $0.timeIntervalSince(timestamp) },

@@ -64,6 +64,10 @@ struct TicketSearchRequest: Equatable, Sendable {
     var maximumPrice: Money?
     var maximumTransfers: Int?
     var requiresVerifiedInventory = false
+    var origin: String?
+    var destination: String?
+    var maximumDurationSeconds: TimeInterval?
+    var providerIDs: Set<String> = []
 }
 
 protocol TicketProvider: Sendable {
@@ -105,12 +109,20 @@ struct TicketEngine: Sendable {
     func rank(_ offers: [TicketOffer], request: TicketSearchRequest, now: Date = .now) throws -> [TicketOffer] {
         guard maximumEvidenceAge > 0,
               request.maximumPrice.map({ $0.amount >= 0 }) ?? true,
-              request.maximumTransfers.map({ $0 >= 0 }) ?? true else { throw TicketEngineError.invalidRequest }
+              request.maximumTransfers.map({ $0 >= 0 }) ?? true,
+              request.maximumDurationSeconds.map({ $0 >= 0 }) ?? true else { throw TicketEngineError.invalidRequest }
         guard !request.allowedModes.isEmpty else { throw TicketEngineError.noSupportedModes }
 
         let candidates = offers.enumerated().filter { _, offer in
             guard request.allowedModes.contains(offer.mode), offer.hasValidItinerary,
                   offer.inventory.availability != .unavailable else { return false }
+            if let origin = request.origin?.trimmingCharacters(in: .whitespacesAndNewlines), !origin.isEmpty {
+                guard offer.segments.first?.origin.localizedCaseInsensitiveCompare(origin) == .orderedSame else { return false }
+            }
+            if let destination = request.destination?.trimmingCharacters(in: .whitespacesAndNewlines), !destination.isEmpty {
+                guard offer.segments.last?.destination.localizedCaseInsensitiveCompare(destination) == .orderedSame else { return false }
+            }
+            if !request.providerIDs.isEmpty, !request.providerIDs.contains(offer.providerID) { return false }
             if request.requiresVerifiedInventory {
                 guard offer.inventory.availability == .available,
                       let observation = offer.inventory.observation,
@@ -128,6 +140,9 @@ struct TicketEngine: Sendable {
                       let observed = offer.fareObservedAt, isFresh(observed, now: now) else { return false }
             }
             if let maximum = request.maximumTransfers, offer.transferCount > maximum { return false }
+            if let maximum = request.maximumDurationSeconds,
+               let departure = offer.departure, let arrival = offer.arrival,
+               arrival.timeIntervalSince(departure) > maximum { return false }
             return true
         }
         guard !candidates.isEmpty else { throw TicketEngineError.noVerifiedOffers }
