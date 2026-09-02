@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-LOCAL-IPHONE-SEARCH-CORE",
-  "requirement_ids": ["871-878", "895-905"],
-  "selected_path": "Typed concurrent privacy-first local search with deterministic ranking, bounded results and incremental permission-aware index.",
+  "current_task_id": "M12-PHOTOS-FILES-SPOTLIGHT-CORE",
+  "requirement_ids": ["879-894", "905", "911-917"],
+  "selected_path": "Public PhotoKit metadata search, explicitly authorized Files URLs and assistant-owned Core Spotlight indexing with truthful platform limits.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 core complete; Apple framework adapters continue in dedicated blocks",
-  "acceptance_contract_ref": "docs/M12_LOCAL_IPHONE_SEARCH_CORE.md",
+  "integration_depth": "local E3 complete; physical Apple permission/provider/Spotlight behavior queued",
+  "acceptance_contract_ref": "docs/M12_PHOTOS_FILES_SPOTLIGHT_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Permitted local sources now search concurrently and return deterministic privacy-safe bounded results without AI or backend dependency.",
-  "frozen_baseline_commit": "6627cff",
+  "material_change": "Real PhotoKit metadata, authorized document-provider URLs and assistant-owned Spotlight records now have production boundaries without global/private index claims.",
+  "frozen_baseline_commit": "68862b5",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M12-PHOTOS-FILES-SPOTLIGHT-CORE"
+  "next_task_id": "M12-CONNECTED-ACCOUNTS-HUB-CORE"
 }

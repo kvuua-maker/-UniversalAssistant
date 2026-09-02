@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M12 Photos, Files and Core Spotlight integration. Selected path: STABLE.
+M12 Connected Accounts Hub core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Connect permitted Photos metadata, user-authorized Files and assistant-owned Core Spotlight indexing to the verified local search core.
+Unify existing provider authentication connections into a truthful tenant-safe Connected Accounts Hub without duplicating OAuth implementations.

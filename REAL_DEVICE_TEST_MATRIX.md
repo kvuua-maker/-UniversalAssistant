@@ -17,3 +17,8 @@
 | Ride handoff | Provider app/web behavior, exact pickup/dropoff preservation and owner-issued Uber client ID | LIVE_DEVICE_TEST_REQUIRED — RIDE-001 |
 | Public transport | Regional scheduled versus real-time attribution and exact route handoff | LIVE_DEVICE_TEST_REQUIRED — TRANSPORT-001 |
 | Ticket handoff | Exact itinerary/fare/inventory preservation and confirmation before leaving the app | LIVE_DEVICE_TEST_REQUIRED — TICKET-001 |
+| Installed app actions | Actual schemes, Universal Links, App Intents/App Shortcuts and absent-app fallback | DEVICE_TEST_REQUIRED — DEVICE-APP-001 |
+| Photos local search | Full/limited/denied permission plus controlled date/location/album assets and exact open | DEVICE_TEST_REQUIRED — LOCAL-PHOTO-001 |
+| Files local search | Document picker/provider, security-scoped lifetime, controlled filename result and exact open | DEVICE_TEST_REQUIRED — LOCAL-FILE-001 |
+| Core Spotlight | Assistant-owned item indexing/removal and system search visibility; no foreign-index claim | DEVICE_TEST_REQUIRED — LOCAL-SPOTLIGHT-001 |
+| Local search offline/latency | Contacts/Calendar/Reminders/Photos/Files search offline and realistic latency measurement | DEVICE_TEST_REQUIRED — LOCAL-SEARCH-PERF-001 |
