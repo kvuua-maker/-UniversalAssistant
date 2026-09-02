@@ -23,5 +23,14 @@ import Testing
             $0["implementation_evidence"] is [Any] && $0["test_evidence"] is [Any] &&
             $0["commit_evidence"] is [Any] && $0["live_evidence"] is [Any]
         })
+        let finalStatuses = allowed.subtracting(["NOT_IMPLEMENTED", "IMPLEMENTED_UNVERIFIED"])
+        #expect(requirements.filter { finalStatuses.contains($0["status"] as? String ?? "") }.allSatisfy {
+            !($0["implementation_evidence"] as? [Any] ?? []).isEmpty &&
+            !($0["test_evidence"] as? [Any] ?? []).isEmpty &&
+            !($0["commit_evidence"] as? [Any] ?? []).isEmpty
+        })
+        #expect(requirements.filter { ($0["status"] as? String) == "READY_FOR_LIVE_VERIFICATION" }.allSatisfy {
+            !($0["remaining_dependency"] is NSNull) && ($0["remaining_dependency"] as? String)?.isEmpty == false
+        })
     }
 }

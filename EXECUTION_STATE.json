@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-ON-DEVICE-PDF-PROCESSING-CORE",
-  "requirement_ids": ["1474"],
-  "selected_path": "On-device VisionKit/Vision/PDFKit production path with real PDF-byte transformations.",
+  "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
+  "requirement_ids": ["MS-737...MS-850"],
+  "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "complete locally: VisionKit/Vision capture+OCR boundary and PDFKit/UIKit transformations",
-  "acceptance_contract_ref": "docs/M12_ON_DEVICE_PDF_PROCESSING_CORE.md",
+  "integration_depth": "114 explicit canonical requirements reconciled without range-based blanket closure",
+  "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Actual images/PDF bytes now support crop, bounded contrast, PDF-to-image, searchable PDF, highlight, compression and flattened redaction/signature in addition to page transformations.",
-  "frozen_baseline_commit": "05bd51f",
-  "dependency": "Physical VisionKit camera execution only; tracked in LIVE_VERIFICATION_QUEUE.json.",
-  "unresolved_verification_steps": ["physical VisionKit capture verification remains in live queue"],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-FIRST-UNVERIFIED"
+  "material_change": "Inventory now imports only validated explicit evidence and enforces evidence/dependency invariants.",
+  "frozen_baseline_commit": "0a88e2b",
+  "dependency": "None for the next local reconciliation slice.",
+  "unresolved_verification_steps": ["1560 canonical requirements remain unreconciled"],
+  "next_task_id": "GLOBAL-ZERO-OMISSION-NEXT-EVIDENCE-SLICE"
 }

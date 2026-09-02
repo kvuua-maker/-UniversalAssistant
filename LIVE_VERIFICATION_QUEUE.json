@@ -43,7 +43,7 @@
       "completion_evidence": null
     },
     {
-      "requirement_id": "MS-741-745-747-LIVE-DEPLOY",
+      "requirement_id": "MS-741-742-745-747-LIVE-DEPLOY",
       "service_provider": "GitHub Actions and production backend host",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
       "missing_dependency": "Owner-configured protected staging/production GitHub Environments, deployment identity and selected backend hosting target.",
@@ -322,6 +322,19 @@
       "expected_result": "Every live journey either reaches the deepest legitimate verified provider/device result with the documented confirmation boundary or reports an honest actionable failure; no mock result is counted as live, and aggregate completion, no-extra-question, Time-to-Action, taps, fallback and real-integration success metrics are retained.",
       "created_at": "2026-09-02T18:40:00+02:00",
       "last_checked": "2026-09-02T18:40:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-820-LIVE-RELEASE",
+      "service_provider": "Apple Developer signing, physical iPhone, TestFlight and App Store Connect",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner Apple Developer team access, distribution certificate/profile, registered physical iPhone, App Store Connect app record and TestFlight build access.",
+      "dependency_owner": "Owner and App Store operator",
+      "local_evidence": ["RELEASE_CHECKLIST.md", "REAL_DEVICE_TEST_MATRIX.md", "docs/M11_ZERO_OMISSION_ACCEPTANCE.md", "passing simulator and backend regressions"],
+      "required_live_action": "Inject the owner-selected signing team without committing credentials, archive and validate the release app, install/run it on the registered iPhone, upload the immutable build to TestFlight, complete the documented smoke/device matrix and record App Store Connect processing results.",
+      "expected_result": "The signed immutable build installs and launches on the physical device, TestFlight processes it without signing/privacy validation errors, and every device-only result is recorded against that exact build.",
+      "created_at": "2026-09-02T19:50:00+02:00",
+      "last_checked": "2026-09-02T19:50:00+02:00",
       "completion_evidence": null
     }
   ]

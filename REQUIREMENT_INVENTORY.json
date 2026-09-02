@@ -8110,10 +8110,18 @@
       "id": "MS-737",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "CI PIPELINE Create an automated CI pipeline for relevant repository",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "`.github/workflows/ci.yml` dependency, checks, backend/iOS test/build jobs"
+      ],
+      "test_evidence": [
+        "`.github/workflows/ci.yml` dependency, checks, backend/iOS test/build jobs",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8121,10 +8129,18 @@
       "id": "MS-738",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "CI IOS BUILD CI must perform a real iOS build for the intended",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "CI runs real Development simulator build/test"
+      ],
+      "test_evidence": [
+        "CI runs real Development simulator build/test",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8132,10 +8148,18 @@
       "id": "MS-739",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "CI TEST REPORTING CI should produce clear pass/fail results and",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "CI logs/artifacts are bounded and secret values are not printed"
+      ],
+      "test_evidence": [
+        "CI logs/artifacts are bounded and secret values are not printed",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8143,10 +8167,18 @@
       "id": "MS-740",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "CI FAILS ON CRITICAL REGRESSION A failing critical build/test",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "required jobs fail the workflow/release gate"
+      ],
+      "test_evidence": [
+        "required jobs fail the workflow/release gate",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8154,32 +8186,56 @@
       "id": "MS-741",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "CD STAGING DEPLOY Create a controlled deployment path for backend",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "staging workflow/contract local; host/environment absent; queue item MS-741-745-747-LIVE-DEPLOY"
+      ],
+      "test_evidence": [
+        "staging workflow/contract local; host/environment absent; queue item MS-741-745-747-LIVE-DEPLOY",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
-      "remaining_dependency": null
+      "remaining_dependency": "staging workflow/contract local; host/environment absent; queue item MS-741-745-747-LIVE-DEPLOY"
     },
     {
       "id": "MS-742",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "CD PRODUCTION DEPLOY Create a controlled production deployment",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "reviewed production/rollback path local; production host absent; same queue item"
+      ],
+      "test_evidence": [
+        "reviewed production/rollback path local; production host absent; same queue item",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
-      "remaining_dependency": null
+      "remaining_dependency": "reviewed production/rollback path local; production host absent; same queue item"
     },
     {
       "id": "MS-743",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "NO AUTOMATIC UNSAFE PRODUCTION RELEASE Do not automatically promote",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "protected production environment and explicit approval contract"
+      ],
+      "test_evidence": [
+        "protected production environment and explicit approval contract",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8187,10 +8243,18 @@
       "id": "MS-744",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "ROLLBACK STRATEGY Every production backend deployment must have a",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "`ROLLBACK.md` last-known-good procedure"
+      ],
+      "test_evidence": [
+        "`ROLLBACK.md` last-known-good procedure",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8198,10 +8262,18 @@
       "id": "MS-745",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "ROLLBACK DATABASE COMPATIBILITY Database migrations must consider",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "rollback/forward migration rules in `ROLLBACK.md`"
+      ],
+      "test_evidence": [
+        "rollback/forward migration rules in `ROLLBACK.md`",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8209,10 +8281,18 @@
       "id": "MS-746",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "REMOTE CONFIG ROLLBACK Version Remote Config/feature-flag changes",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "versioned remote-config snapshots/rollback in `PartnerRuntimePolicy` tests"
+      ],
+      "test_evidence": [
+        "versioned remote-config snapshots/rollback in `PartnerRuntimePolicy` tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8220,21 +8300,37 @@
       "id": "MS-747",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "RELEASE ARTIFACT IDENTIFICATION Every backend/app release candidate",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "immutable metadata contract local; deployed artifact evidence queued"
+      ],
+      "test_evidence": [
+        "immutable metadata contract local; deployed artifact evidence queued",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
-      "remaining_dependency": null
+      "remaining_dependency": "immutable metadata contract local; deployed artifact evidence queued"
     },
     {
       "id": "MS-748",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "BACKUP POLICY Define automated backup policy for server-side",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "encrypted snapshot implementation + `DISASTER_RECOVERY.md`"
+      ],
+      "test_evidence": [
+        "encrypted snapshot implementation + `DISASTER_RECOVERY.md`",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8242,10 +8338,18 @@
       "id": "MS-749",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "BACKUP RETENTION Define backup retention appropriate to data",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "sensitivity-based backup retention policy"
+      ],
+      "test_evidence": [
+        "sensitivity-based backup retention policy",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8253,10 +8357,18 @@
       "id": "MS-750",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "BACKUP ENCRYPTION Protect backups with appropriate",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "authenticated encryption, key IDs and access boundary tests"
+      ],
+      "test_evidence": [
+        "authenticated encryption, key IDs and access boundary tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8264,21 +8376,37 @@
       "id": "MS-751",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "RESTORE TEST Periodically test restoration from backups; a backup",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "local round-trip/corruption tests pass; production restore drill queued"
+      ],
+      "test_evidence": [
+        "local round-trip/corruption tests pass; production restore drill queued",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
-      "remaining_dependency": null
+      "remaining_dependency": "local round-trip/corruption tests pass; production restore drill queued"
     },
     {
       "id": "MS-752",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "DISASTER RECOVERY DOCUMENT Maintain DISASTER_RECOVERY.md with",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "`DISASTER_RECOVERY.md`"
+      ],
+      "test_evidence": [
+        "`DISASTER_RECOVERY.md`",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8286,10 +8414,18 @@
       "id": "MS-753",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "RECOVERY POINT OBJECTIVE Define a reasonable Recovery Point",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "explicit initial RPO with measurement/revision rule"
+      ],
+      "test_evidence": [
+        "explicit initial RPO with measurement/revision rule",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8297,10 +8433,18 @@
       "id": "MS-754",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "RECOVERY TIME OBJECTIVE Define a reasonable Recovery Time Objective",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "explicit initial RTO with measurement/revision rule"
+      ],
+      "test_evidence": [
+        "explicit initial RTO with measurement/revision rule",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8308,10 +8452,18 @@
       "id": "MS-755",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "THREAT MODEL Maintain THREAT_MODEL.md covering mobile app, backend,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "`THREAT_MODEL.md` covers mobile/backend/OAuth/business/APNs/sync/AI/abuse"
+      ],
+      "test_evidence": [
+        "`THREAT_MODEL.md` covers mobile/backend/OAuth/business/APNs/sync/AI/abuse",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8319,10 +8471,18 @@
       "id": "MS-756",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "TLS TRANSPORT SECURITY All network communication involving",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "authenticated destinations validate/use HTTPS; no arbitrary transport exception"
+      ],
+      "test_evidence": [
+        "authenticated destinations validate/use HTTPS; no arbitrary transport exception",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8330,10 +8490,18 @@
       "id": "MS-757",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "KEYCHAIN STORAGE Use Keychain or current appropriate secure Apple",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "`KeychainProviderCredentialStore` this-device-only protection + tests"
+      ],
+      "test_evidence": [
+        "`KeychainProviderCredentialStore` this-device-only protection + tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8341,10 +8509,18 @@
       "id": "MS-758",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "TOKEN ROTATION Support token/key rotation and expiration rather",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "OAuth expiry/reconnect, webhook key revoke/rotate, APNs token rotation"
+      ],
+      "test_evidence": [
+        "OAuth expiry/reconnect, webhook key revoke/rotate, APNs token rotation",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8352,10 +8528,18 @@
       "id": "MS-759",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "REFRESH TOKEN SAFETY Protect refresh tokens and handle",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "expired/revoked Apple/provider credentials deterministically require reauthorization"
+      ],
+      "test_evidence": [
+        "expired/revoked Apple/provider credentials deterministically require reauthorization",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8363,10 +8547,18 @@
       "id": "MS-760",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "REPLAY PROTECTION Use provider/backend mechanisms such as",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "webhook HMAC/time window/durable idempotency and consequential-action contracts"
+      ],
+      "test_evidence": [
+        "webhook HMAC/time window/durable idempotency and consequential-action contracts",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8374,10 +8566,18 @@
       "id": "MS-761",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "SERVER SECRET ROTATION Design server secrets/API credentials so",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "server credentials injected into runtime clients/vault; absent from iOS config/source"
+      ],
+      "test_evidence": [
+        "server credentials injected into runtime clients/vault; absent from iOS config/source",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8385,10 +8585,18 @@
       "id": "MS-762",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "BUSINESS FEED AUTHENTICITY Authenticate business/partner feeds and",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "partner feed/webhook authentication, schema and authorization controls"
+      ],
+      "test_evidence": [
+        "partner feed/webhook authentication, schema and authorization controls",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8396,10 +8604,18 @@
       "id": "MS-763",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "ADMIN AUTHORIZATION Administrative tools must use strong",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "tenant/admin roles and explicit permissions with deny audit tests"
+      ],
+      "test_evidence": [
+        "tenant/admin roles and explicit permissions with deny audit tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8407,10 +8623,18 @@
       "id": "MS-764",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "PRIVACY MANIFEST Implement and audit current Apple Privacy Manifest",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "valid bundled `PrivacyInfo.xcprivacy` and behavioral plist audit"
+      ],
+      "test_evidence": [
+        "valid bundled `PrivacyInfo.xcprivacy` and behavioral plist audit",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8418,10 +8642,18 @@
       "id": "MS-765",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "REQUIRED REASON API AUDIT Audit use of Apple’s Required Reason APIs",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "source audit records no current Required Reason API use; dependency-change gate documented"
+      ],
+      "test_evidence": [
+        "source audit records no current Required Reason API use; dependency-change gate documented",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8429,10 +8661,18 @@
       "id": "MS-766",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "SDK PRIVACY AUDIT Audit third-party SDKs for privacy manifests,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "no third-party SDK dependency; processor/dependency re-audit gate documented"
+      ],
+      "test_evidence": [
+        "no third-party SDK dependency; processor/dependency re-audit gate documented",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8440,10 +8680,18 @@
       "id": "MS-767",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "TRACKING TRANSPARENCY REALITY If any future analytics/advertising",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "NOT_APPLICABLE_VERIFIED",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "no tracking SDK/domain/behavior; manifest false; ATT not requested"
+      ],
+      "test_evidence": [
+        "no tracking SDK/domain/behavior; manifest false; ATT not requested",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8451,10 +8699,18 @@
       "id": "MS-768",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "DATA PROCESSOR INVENTORY Maintain DATA_PROCESSOR_INVENTORY.md",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "`DATA_PROCESSOR_INVENTORY.md`"
+      ],
+      "test_evidence": [
+        "`DATA_PROCESSOR_INVENTORY.md`",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8462,10 +8718,18 @@
       "id": "MS-769",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "DATA RESIDENCY AWARENESS Document material data-residency/regional",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "residency fields/unknowns documented in processor and retention inventories"
+      ],
+      "test_evidence": [
+        "residency fields/unknowns documented in processor and retention inventories",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8473,10 +8737,18 @@
       "id": "MS-770",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "RETENTION POLICY Maintain DATA_RETENTION.md defining retention",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "`DATA_RETENTION.md` + executable retention policy"
+      ],
+      "test_evidence": [
+        "`DATA_RETENTION.md` + executable retention policy",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8484,10 +8756,18 @@
       "id": "MS-771",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "LOG RETENTION Operational logs must have bounded retention",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "bounded operational-log class and expiry tests"
+      ],
+      "test_evidence": [
+        "bounded operational-log class and expiry tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8495,10 +8775,18 @@
       "id": "MS-772",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "ANALYTICS RETENTION Analytics retention must be documented and",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "minimized analytics class and expiry tests"
+      ],
+      "test_evidence": [
+        "minimized analytics class and expiry tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8506,10 +8794,18 @@
       "id": "MS-773",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "INCIDENT RESPONSE Maintain INCIDENT_RESPONSE.md describing how to",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "`INCIDENT_RESPONSE.md`"
+      ],
+      "test_evidence": [
+        "`INCIDENT_RESPONSE.md`",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8517,10 +8813,18 @@
       "id": "MS-774",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "PROVIDER OUTAGE AUTO DEGRADE When provider health crosses failure",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "provider health threshold/degrade behavior and failure isolation tests"
+      ],
+      "test_evidence": [
+        "provider health threshold/degrade behavior and failure isolation tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8528,10 +8832,18 @@
       "id": "MS-775",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "ADMIN ALERTING Create operational alerts for critical backend",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "operational incident monitor covers backend/queue/APNs/database/provider signals"
+      ],
+      "test_evidence": [
+        "operational incident monitor covers backend/queue/APNs/database/provider signals",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8539,10 +8851,18 @@
       "id": "MS-776",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "USER STATUS COMMUNICATION For material prolonged service",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "concise nontechnical service-state presentation contract"
+      ],
+      "test_evidence": [
+        "concise nontechnical service-state presentation contract",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8550,21 +8870,37 @@
       "id": "MS-777",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "SUPPORT CONTACT Provide a legitimate support/contact path",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "support path contract local; owner-selected legitimate public destination queued"
+      ],
+      "test_evidence": [
+        "support path contract local; owner-selected legitimate public destination queued",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
-      "remaining_dependency": null
+      "remaining_dependency": "support path contract local; owner-selected legitimate public destination queued"
     },
     {
       "id": "MS-778",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "DIAGNOSTIC ID For user-reported failures, generate a privacy-safe",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "generated privacy-safe `UA-` diagnostic ID"
+      ],
+      "test_evidence": [
+        "generated privacy-safe `UA-` diagnostic ID",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8572,10 +8908,18 @@
       "id": "MS-779",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "USER FEEDBACK ACTION Provide a simple privacy-conscious ‘Не те /",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "real “Не те” button→ViewModel→persistent record behavioral test"
+      ],
+      "test_evidence": [
+        "real “Не те” button→ViewModel→persistent record behavioral test",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8583,10 +8927,18 @@
       "id": "MS-780",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "FEEDBACK CONTEXT MINIMIZATION Attach only the minimum diagnostic",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "exact serialized key-set test; raw command/provider payload absent"
+      ],
+      "test_evidence": [
+        "exact serialized key-set test; raw command/provider payload absent",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8594,21 +8946,37 @@
       "id": "MS-781",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "LEGAL DOCUMENTS Prepare required Privacy Policy, Terms of Use, and",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "privacy/terms/business drafts complete; owner/legal approval and public URLs absent"
+      ],
+      "test_evidence": [
+        "privacy/terms/business drafts complete; owner/legal approval and public URLs absent",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
-      "remaining_dependency": null
+      "remaining_dependency": "privacy/terms/business drafts complete; owner/legal approval and public URLs absent"
     },
     {
       "id": "MS-782",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "LEGAL TEXT MATCHES REAL DATA FLOW Legal/privacy documents must",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "drafts reference implemented data flows/providers and explicit unknown/live states"
+      ],
+      "test_evidence": [
+        "drafts reference implemented data flows/providers and explicit unknown/live states",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8616,21 +8984,37 @@
       "id": "MS-783",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "STAGING PROVIDER ACCOUNTS Where providers support sandbox/test",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "staging credential separation configured; provider sandbox accounts absent"
+      ],
+      "test_evidence": [
+        "staging credential separation configured; provider sandbox accounts absent",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
-      "remaining_dependency": null
+      "remaining_dependency": "staging credential separation configured; provider sandbox accounts absent"
     },
     {
       "id": "MS-784",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "NO DESTRUCTIVE PRODUCTION TESTING Automated tests must not make",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "fake transports/fixtures only; no automated destructive production actions"
+      ],
+      "test_evidence": [
+        "fake transports/fixtures only; no automated destructive production actions",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8638,10 +9022,18 @@
       "id": "MS-785",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "CONTROLLED TEST FIXTURES Create deterministic test fixtures for",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "deterministic grocery/taxi/ticket/place/hotel/provider failure fixtures/tests"
+      ],
+      "test_evidence": [
+        "deterministic grocery/taxi/ticket/place/hotel/provider failure fixtures/tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8649,21 +9041,37 @@
       "id": "MS-786",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "CONTRACT TESTS AGAINST PROVIDERS Where provider sandbox/test",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "parsers/contracts locally tested; available provider sandbox credentials absent"
+      ],
+      "test_evidence": [
+        "parsers/contracts locally tested; available provider sandbox credentials absent",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
-      "remaining_dependency": null
+      "remaining_dependency": "parsers/contracts locally tested; available provider sandbox credentials absent"
     },
     {
       "id": "MS-787",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "PERFORMANCE BUDGET DOCUMENT Maintain PERFORMANCE_BUDGET.md with",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "`PERFORMANCE_BUDGET.md`"
+      ],
+      "test_evidence": [
+        "`PERFORMANCE_BUDGET.md`",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8671,10 +9079,18 @@
       "id": "MS-788",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MEASURE BEFORE SETTING TARGETS Do not invent unrealistic universal",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "measured simulator baseline separated from future device budgets"
+      ],
+      "test_evidence": [
+        "measured simulator baseline separated from future device budgets",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8682,10 +9098,18 @@
       "id": "MS-789",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "PERFORMANCE REGRESSION GATE A material regression in agreed",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "CI performance regression gate"
+      ],
+      "test_evidence": [
+        "CI performance regression gate",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8693,10 +9117,18 @@
       "id": "MS-790",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "DEGRADATION STATE MODEL For multi-provider/live comparison features",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "explicit complete/partial/unverified/failed provider-result models"
+      ],
+      "test_evidence": [
+        "explicit complete/partial/unverified/failed provider-result models",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8704,10 +9136,18 @@
       "id": "MS-791",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "PARTIAL RESULT IS NOT FAILURE If some providers succeed and others",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "fanout/coordination partial-result behavioral tests"
+      ],
+      "test_evidence": [
+        "fanout/coordination partial-result behavioral tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8715,10 +9155,18 @@
       "id": "MS-792",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "PARTIAL GROCERY EXAMPLE If ATB and Silpo return but Fora/Fozzy",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "grocery partial coverage and unknown/unavailable tests"
+      ],
+      "test_evidence": [
+        "grocery partial coverage and unknown/unavailable tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8726,10 +9174,18 @@
       "id": "MS-793",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "PARTIAL TAXI EXAMPLE If only some taxi providers expose current",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "taxi quote/handoff-only degradation tests"
+      ],
+      "test_evidence": [
+        "taxi quote/handoff-only degradation tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8737,10 +9193,18 @@
       "id": "MS-794",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "PARTIAL TICKET EXAMPLE If one ticket provider fails, preserve",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "ticket provider failure preserves verified alternatives"
+      ],
+      "test_evidence": [
+        "ticket provider failure preserves verified alternatives",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8748,10 +9212,18 @@
       "id": "MS-795",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "PROVIDER COVERAGE DISCLOSURE When result completeness materially",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "result composer/provider coverage disclosures"
+      ],
+      "test_evidence": [
+        "result composer/provider coverage disclosures",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8759,10 +9231,18 @@
       "id": "MS-796",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "LOCALIZATION QA Create a dedicated localization QA pass beyond",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "dedicated `LocalizationAccessibilityTests` suite/document"
+      ],
+      "test_evidence": [
+        "dedicated `LocalizationAccessibilityTests` suite/document",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8770,10 +9250,18 @@
       "id": "MS-797",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "LOCALIZATION LAYOUT TEST Test truncation, Dynamic Type, long",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "critical long-label/Dynamic Type/accessibility layout contract"
+      ],
+      "test_evidence": [
+        "critical long-label/Dynamic Type/accessibility layout contract",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8781,10 +9269,18 @@
       "id": "MS-798",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "LOCALIZATION PLURALS Use locale-correct pluralization and",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "no count-dependent user copy currently requires plural rules; re-audit gate documented"
+      ],
+      "test_evidence": [
+        "no count-dependent user copy currently requires plural rules; re-audit gate documented",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8792,10 +9288,18 @@
       "id": "MS-799",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "LOCALIZATION DATE CURRENCY Test locale-correct dates, times,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "locale date/time/currency/decimal/unit formatting tests"
+      ],
+      "test_evidence": [
+        "locale date/time/currency/decimal/unit formatting tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8803,21 +9307,37 @@
       "id": "MS-800",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "LOCALIZATION VOICE QA Test spoken/recognized Ukrainian/Russian",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "docs/M10_ZERO_OMISSION_AUDIT.md",
+        "local mixed-language fixtures pass; physical-device voice QA queued"
+      ],
+      "test_evidence": [
+        "local mixed-language fixtures pass; physical-device voice QA queued",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
-      "remaining_dependency": null
+      "remaining_dependency": "local mixed-language fixtures pass; physical-device voice QA queued"
     },
     {
       "id": "MS-801",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "APP VERSION SUPPORT POLICY Define how many prior iOS app versions",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "`AppVersionSupportPolicy`; supported-window tests"
+      ],
+      "test_evidence": [
+        "`AppVersionSupportPolicy`; supported-window tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "79179837c43966e404c8c2d84e3ef6af5c471078"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8825,10 +9345,18 @@
       "id": "MS-802",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "FORCED UPDATE ONLY WHEN JUSTIFIED Do not force updates for",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "typed forced-update reasons; convenience rejection tests"
+      ],
+      "test_evidence": [
+        "typed forced-update reasons; convenience rejection tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "79179837c43966e404c8c2d84e3ef6af5c471078"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8836,10 +9364,18 @@
       "id": "MS-803",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "APP DATA MIGRATION TESTS Maintain representative migration tests",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "`LocalStoreMigrationTests` covers legacy-to-current, corruption and restart"
+      ],
+      "test_evidence": [
+        "`LocalStoreMigrationTests` covers legacy-to-current, corruption and restart",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "0c33715adc697e0376b289608fb1623abf986b20"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8847,10 +9383,18 @@
       "id": "MS-804",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "SERVER DATA MIGRATION TESTS Test server/database migrations on",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "staging-only migration/backup/validation/rollback runner tests"
+      ],
+      "test_evidence": [
+        "staging-only migration/backup/validation/rollback runner tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "132eab5672d5edeff0f401cc5b458c0843bd14a9"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8858,10 +9402,18 @@
       "id": "MS-805",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "ARCHITECTURE DECISION RECORDS Maintain an ADR/ directory for",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "six consequential ADRs; directory coverage test"
+      ],
+      "test_evidence": [
+        "six consequential ADRs; directory coverage test",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "8e9f92cacac82899967792a5b02facac52bcdde4"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8869,10 +9421,18 @@
       "id": "MS-806",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "ADR CONTENT Each ADR should briefly state context, decision,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "ADR field/version validation test"
+      ],
+      "test_evidence": [
+        "ADR field/version validation test",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "8e9f92cacac82899967792a5b02facac52bcdde4"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8880,10 +9440,18 @@
       "id": "MS-807",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "NO ARCHITECTURE THRASHING Do not repeatedly replace foundational",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "superseding-ADR policy and stable architecture history"
+      ],
+      "test_evidence": [
+        "superseding-ADR policy and stable architecture history",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "8e9f92cacac82899967792a5b02facac52bcdde4"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8891,10 +9459,18 @@
       "id": "MS-808",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "IMPLEMENTATION ORDER IS MANDATORY Do not attempt all requirements",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "sequential `EXECUTION_STATE` blocks and atomic commits; build after every block"
+      ],
+      "test_evidence": [
+        "sequential `EXECUTION_STATE` blocks and atomic commits; build after every block",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4ab9626b62d25779042deea1ed4cd3fb44141f42"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8902,10 +9478,18 @@
       "id": "MS-809",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MILESTONE M0 ENVIRONMENT FOUNDATION M0: inspect Mac/repository,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "M0 foundation, configs, CI, secret handling and build evidence"
+      ],
+      "test_evidence": [
+        "M0 foundation, configs, CI, secret handling and build evidence",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "b0d0fc24195d0c9ed48c10146d15f59cca2089b2"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8913,10 +9497,18 @@
       "id": "MS-810",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MILESTONE M1 VOICE COMMAND CORE M1: voice/text entry,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "M1 command/voice/text/context/UI/App Intent acceptance"
+      ],
+      "test_evidence": [
+        "M1 command/voice/text/context/UI/App Intent acceptance",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "c363606424d4ae81ea86e929b28d7f0adb15d7d1"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8924,10 +9516,18 @@
       "id": "MS-811",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MILESTONE M2 APPLE LOCAL ACTIONS M2: Contacts/aliases, Calendar,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "M2 Contacts/Calendar/Reminders/Undo/recorder/system routing acceptance"
+      ],
+      "test_evidence": [
+        "M2 Contacts/Calendar/Reminders/Undo/recorder/system routing acceptance",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "f882e9d40a18c9e708e3477923c075a238646515"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8935,10 +9535,18 @@
       "id": "MS-812",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MILESTONE M3 LOCATION PLACES NAVIGATION M3: AccurateLocationEngine,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "M3 location/places/routes/weather recovery acceptance; device checks queued"
+      ],
+      "test_evidence": [
+        "M3 location/places/routes/weather recovery acceptance; device checks queued",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "957271a5c7c4a12ec5c6c5a2073299170f5b4399"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8946,10 +9554,18 @@
       "id": "MS-813",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MILESTONE M4 RETAIL FASHION GROCERY M4: RetailProvider,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "M4 retail/fashion/grocery/provider pipeline acceptance"
+      ],
+      "test_evidence": [
+        "M4 retail/fashion/grocery/provider pipeline acceptance",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "b7d8fa8d40857664c1048e0077e3aad45d725787"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8957,10 +9573,18 @@
       "id": "MS-814",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MILESTONE M5 SERVICES TAXI TRANSPORT TICKETS M5: local",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "M5 services/taxi/transport/tickets/travel/auth/degradation acceptance"
+      ],
+      "test_evidence": [
+        "M5 services/taxi/transport/tickets/travel/auth/degradation acceptance",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "10febe314ec9d9f3afdcf26684715c176d72a714"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8968,10 +9592,18 @@
       "id": "MS-815",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MILESTONE M6 PROACTIVE BACKEND NOTIFICATIONS M6: durable",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "M6 durable queue/APNs/watches/cancellation/observability acceptance"
+      ],
+      "test_evidence": [
+        "M6 durable queue/APNs/watches/cancellation/observability acceptance",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "b9ec97b7c6d2726521d67769e48e05660d717746"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8979,10 +9611,18 @@
       "id": "MS-816",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MILESTONE M7 UNIVERSAL INTEGRATIONS M7: AppCapabilityRegistry,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "M7 registry/integrations/Find My/depth audit acceptance"
+      ],
+      "test_evidence": [
+        "M7 registry/integrations/Find My/depth audit acceptance",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "76b98b7657527d738634997eb8d3c23b5c4e6bf1"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -8990,10 +9630,18 @@
       "id": "MS-817",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MILESTONE M8 ACCOUNTS SYNC MONETIZATION M8: final account/auth",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "M8 account/auth/sync/StoreKit/deletion/privacy acceptance"
+      ],
+      "test_evidence": [
+        "M8 account/auth/sync/StoreKit/deletion/privacy acceptance",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "26c15cbf5208c9aea84f5b51d366ddb168e6c22c"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9001,10 +9649,18 @@
       "id": "MS-818",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MILESTONE M9 BUSINESS PLATFORM M9: business backend/portal",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "M9 partner onboarding/tenant/agreements/ledger/sponsored/config acceptance"
+      ],
+      "test_evidence": [
+        "M9 partner onboarding/tenant/agreements/ledger/sponsored/config acceptance",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "33bfa78f881cdeaa7961a3ab65813d641448d5d2"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9012,10 +9668,18 @@
       "id": "MS-819",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MILESTONE M10 HARDENING M10: performance budgets, chaos/failure",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "M10 performance/chaos/security/backup/localization/CI/incident acceptance"
+      ],
+      "test_evidence": [
+        "M10 performance/chaos/security/backup/localization/CI/incident acceptance",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9023,21 +9687,37 @@
       "id": "MS-820",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MILESTONE M11 REAL DEVICE RELEASE READINESS M11: execute/prepare",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "all local M11 release preparation complete; signed device/TestFlight/App Store checks individually queued"
+      ],
+      "test_evidence": [
+        "all local M11 release preparation complete; signed device/TestFlight/App Store checks individually queued",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4ab9626b62d25779042deea1ed4cd3fb44141f42"
+      ],
       "live_evidence": [],
-      "remaining_dependency": null
+      "remaining_dependency": "all local M11 release preparation complete; signed device/TestFlight/App Store checks individually queued"
     },
     {
       "id": "MS-821",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MILESTONE COMPLETION GATE Do not mark a milestone complete until",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "every completed block has build/test/state/docs/commit evidence; queue preserves external gates"
+      ],
+      "test_evidence": [
+        "every completed block has build/test/state/docs/commit evidence; queue preserves external gates",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4ab9626b62d25779042deea1ed4cd3fb44141f42"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9045,10 +9725,18 @@
       "id": "MS-822",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MILESTONE DOES NOT REMOVE LATER REQUIREMENTS Milestones define",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "canonical state and persistent inventory retain later requirements"
+      ],
+      "test_evidence": [
+        "canonical state and persistent inventory retain later requirements",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "a69509915d7bb57eb304b2945e0d0dd339ee6cb4"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9056,10 +9744,18 @@
       "id": "MS-823",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "WORKING SOFTWARE AFTER EACH MILESTONE Prefer a small number of",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "launchable app/backend with passing regression after each M11 block"
+      ],
+      "test_evidence": [
+        "launchable app/backend with passing regression after each M11 block",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4ab9626b62d25779042deea1ed4cd3fb44141f42"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9067,10 +9763,18 @@
       "id": "MS-824",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "RISK FIRST WITHIN MILESTONE Within each milestone, test the",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "target tests precede full regression; discovered defects fixed before commit"
+      ],
+      "test_evidence": [
+        "target tests precede full regression; discovered defects fixed before commit",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4ab9626b62d25779042deea1ed4cd3fb44141f42"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9078,10 +9782,18 @@
       "id": "MS-825",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "SPIKE ONLY WHEN NEEDED Short technical spikes/prototypes may be",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "NOT_APPLICABLE_VERIFIED",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "no M11 spike/placeholder remains; production paths and behavioral tests are committed"
+      ],
+      "test_evidence": [
+        "no M11 spike/placeholder remains; production paths and behavioral tests are committed",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4ab9626b62d25779042deea1ed4cd3fb44141f42"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9089,10 +9801,18 @@
       "id": "MS-826",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "DEPENDENCY MINIMIZATION Prefer Apple/native or well-maintained",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "native-first dependency gate"
+      ],
+      "test_evidence": [
+        "native-first dependency gate",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "9aae9797945578b10585e62904c94458603d8797"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9100,10 +9820,18 @@
       "id": "MS-827",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "DEPENDENCY INVENTORY Maintain DEPENDENCIES.md with third-party",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "complete actual dependency inventory"
+      ],
+      "test_evidence": [
+        "complete actual dependency inventory",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "9aae9797945578b10585e62904c94458603d8797"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9111,10 +9839,18 @@
       "id": "MS-828",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "DEPENDENCY PINNING Use reproducible dependency versioning/locking",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "exact/locked dependency policy and empty-graph test"
+      ],
+      "test_evidence": [
+        "exact/locked dependency policy and empty-graph test",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "9aae9797945578b10585e62904c94458603d8797"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9122,10 +9858,18 @@
       "id": "MS-829",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "DEPENDENCY UPDATE POLICY Do not auto-upgrade critical dependencies",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "reviewed CI/staging update policy"
+      ],
+      "test_evidence": [
+        "reviewed CI/staging update policy",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "9aae9797945578b10585e62904c94458603d8797"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9133,10 +9877,18 @@
       "id": "MS-830",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "LICENSE AUDIT Verify third-party software/content licenses are",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "NOT_APPLICABLE_VERIFIED",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "no third-party runtime/content dependency; manifests/resources enumerated"
+      ],
+      "test_evidence": [
+        "no third-party runtime/content dependency; manifests/resources enumerated",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "9aae9797945578b10585e62904c94458603d8797"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9144,10 +9896,18 @@
       "id": "MS-831",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "CONTENT COPYRIGHT RESPECT Do not copy protected",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "official-source copyright policy and zero copied-media test"
+      ],
+      "test_evidence": [
+        "official-source copyright policy and zero copied-media test",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "9aae9797945578b10585e62904c94458603d8797"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9155,10 +9915,18 @@
       "id": "MS-832",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "ADMIN CONFIG AUDIT TRAIL Critical Remote Config, feature flag,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "durable typed actor/reason/version config audit and restart tests"
+      ],
+      "test_evidence": [
+        "durable typed actor/reason/version config audit and restart tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "8737a1a9ad2046a6c58d5317a9c060e230908139"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9166,10 +9934,18 @@
       "id": "MS-833",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "TIMEZONE ROBUSTNESS Calendar, reminders, travel, proactive jobs and",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "explicit zoned instants and timezone-preserving reminders"
+      ],
+      "test_evidence": [
+        "explicit zoned instants and timezone-preserving reminders",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "8438dccf9ec6b7d7fa4b23703aaf3201d0b07668"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9177,10 +9953,18 @@
       "id": "MS-834",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "CLOCK SKEW SAFETY Server/client time-dependent validation should",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "bounded authoritative clock-skew window tests"
+      ],
+      "test_evidence": [
+        "bounded authoritative clock-skew window tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "8438dccf9ec6b7d7fa4b23703aaf3201d0b07668"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9188,10 +9972,18 @@
       "id": "MS-835",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "LOCALE CHANGE AT RUNTIME Handle user changing app/system language",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "runtime locale context with unchanged encoded intent"
+      ],
+      "test_evidence": [
+        "runtime locale context with unchanged encoded intent",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "8438dccf9ec6b7d7fa4b23703aaf3201d0b07668"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9199,10 +9991,18 @@
       "id": "MS-836",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "CURRENCY COMPARISON SAFETY When comparing prices across currencies,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "typed cross-currency refusal; domain filters reject mismatch"
+      ],
+      "test_evidence": [
+        "typed cross-currency refusal; domain filters reject mismatch",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "8438dccf9ec6b7d7fa4b23703aaf3201d0b07668"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9210,10 +10010,18 @@
       "id": "MS-837",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "UNIT COMPARISON SAFETY Normalize units only when semantically",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "dimension-safe normalized grocery quantity comparison"
+      ],
+      "test_evidence": [
+        "dimension-safe normalized grocery quantity comparison",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "8438dccf9ec6b7d7fa4b23703aaf3201d0b07668"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9221,10 +10029,18 @@
       "id": "MS-838",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "ACCESSIBILITY VOICE ALTERNATIVE All critical voice-only actions",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "always-visible typed command alternative"
+      ],
+      "test_evidence": [
+        "always-visible typed command alternative",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "c34533bd3d54833d1719964e1a5532b9bec062b8"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9232,10 +10048,18 @@
       "id": "MS-839",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "VOICE PRIVACY MODE Allow the user to use typed interaction and",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "localized voice privacy toggle; typed-flow test"
+      ],
+      "test_evidence": [
+        "localized voice privacy toggle; typed-flow test",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "c34533bd3d54833d1719964e1a5532b9bec062b8"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9243,10 +10067,18 @@
       "id": "MS-840",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MICROPHONE SESSION MANAGEMENT Manage audio session start/stop",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "explicit audio-session lifecycle and state-machine tests"
+      ],
+      "test_evidence": [
+        "explicit audio-session lifecycle and state-machine tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "c34533bd3d54833d1719964e1a5532b9bec062b8"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9254,32 +10086,56 @@
       "id": "MS-841",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "AUDIO INTERRUPTION HANDLING Handle calls, Siri, alarms, Bluetooth",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "real interruption bridge plus local behavior tests; call/Siri/alarm device action queued"
+      ],
+      "test_evidence": [
+        "real interruption bridge plus local behavior tests; call/Siri/alarm device action queued",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "c34533bd3d54833d1719964e1a5532b9bec062b8"
+      ],
       "live_evidence": [],
-      "remaining_dependency": null
+      "remaining_dependency": "real interruption bridge plus local behavior tests; call/Siri/alarm device action queued"
     },
     {
       "id": "MS-842",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "BLUETOOTH AUDIO REALITY Test/handle common Bluetooth",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "Bluetooth HFP configuration/route bridge tested locally; physical devices queued"
+      ],
+      "test_evidence": [
+        "Bluetooth HFP configuration/route bridge tested locally; physical devices queued",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "c34533bd3d54833d1719964e1a5532b9bec062b8"
+      ],
       "live_evidence": [],
-      "remaining_dependency": null
+      "remaining_dependency": "Bluetooth HFP configuration/route bridge tested locally; physical devices queued"
     },
     {
       "id": "MS-843",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "LOCATION PERMISSION LEVELS Handle approximate versus precise",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "reduced/precise contextual location policy and task accuracy"
+      ],
+      "test_evidence": [
+        "reduced/precise contextual location policy and task accuracy",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "c34533bd3d54833d1719964e1a5532b9bec062b8"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9287,10 +10143,18 @@
       "id": "MS-844",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "BACKGROUND LOCATION MINIMIZATION Do not request",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "when-in-use single request; no background-location declaration"
+      ],
+      "test_evidence": [
+        "when-in-use single request; no background-location declaration",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "c34533bd3d54833d1719964e1a5532b9bec062b8"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9298,10 +10162,18 @@
       "id": "MS-845",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "NOTIFICATION AUTHORIZATION MINIMIZATION Request notification",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "app-launch denial and proactive-enable notification policy test"
+      ],
+      "test_evidence": [
+        "app-launch denial and proactive-enable notification policy test",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "c34533bd3d54833d1719964e1a5532b9bec062b8"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9309,10 +10181,18 @@
       "id": "MS-846",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "DATA EXPORT FORMAT Where user-data export is implemented, use",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "portable deterministic assistant-owned JSON export"
+      ],
+      "test_evidence": [
+        "portable deterministic assistant-owned JSON export",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "c38d23da7578d1f820fbdf8ff0198dc7c2e84deb"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9320,10 +10200,18 @@
       "id": "MS-847",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "ACCOUNT DELETION JOB CLEANUP Deleting an account must cancel",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "concurrent durable job/APNs/provider cleanup integration"
+      ],
+      "test_evidence": [
+        "concurrent durable job/APNs/provider cleanup integration",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "c38d23da7578d1f820fbdf8ff0198dc7c2e84deb"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9331,10 +10219,18 @@
       "id": "MS-848",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "PROVIDER OAUTH REVOCATION On disconnect/logout/account deletion,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "OAuth revoke-before-Keychain-delete boundary and test"
+      ],
+      "test_evidence": [
+        "OAuth revoke-before-Keychain-delete boundary and test",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "c38d23da7578d1f820fbdf8ff0198dc7c2e84deb"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9342,10 +10238,18 @@
       "id": "MS-849",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "MULTI TENANT BUSINESS ISOLATION Business portal/backend must",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "server-side tenant authorization/isolation tests"
+      ],
+      "test_evidence": [
+        "server-side tenant authorization/isolation tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "c38d23da7578d1f820fbdf8ff0198dc7c2e84deb"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -9353,10 +10257,18 @@
       "id": "MS-850",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "FINAL PRODUCTION ENGINEERING AUDIT Before final completion, audit",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+        "executable production-surface audit and corrected topology"
+      ],
+      "test_evidence": [
+        "executable production-surface audit and corrected topology",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "c45a641e64732983085bcf94c1caa73aef65c2fb"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
