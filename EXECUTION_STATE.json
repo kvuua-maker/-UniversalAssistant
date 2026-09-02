@@ -1,16 +1,16 @@
 {
   "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
-  "requirement_ids": ["MS-213...MS-226"],
+  "requirement_ids": ["MS-227...MS-234"],
   "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "14 connected-account, OAuth, travel, hotel and WeatherKit requirements reconciled against production and behavioral evidence",
+  "integration_depth": "8 Calendar, natural date/time and Reminders requirements reconciled against production and behavioral evidence",
   "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "MS-213–226 reconciliation verified existing Accounts/OAuth, travel and WeatherKit paths and added only the missing authenticated production HotelProvider HTTP adapter; 27 targeted tests pass.",
+  "material_change": "MS-227–234 reconciliation mapped native EventKit CRUD and added the missing deterministic five-language locale/timezone-aware natural date/time resolver; targeted tests pass.",
   "frozen_baseline_commit": "e1f5df0",
   "dependency": "None for the next local reconciliation slice.",
-  "unresolved_verification_steps": ["1334 canonical requirements remain unreconciled", "MS-217, MS-222 and MS-223–225 await only their recorded provider/device-authorized live verification"],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-227-PLUS"
+  "unresolved_verification_steps": ["1326 canonical requirements remain unreconciled", "MS-227–231 and MS-234 await only their recorded signed-device EventKit verification"],
+  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-235-PLUS"
 }

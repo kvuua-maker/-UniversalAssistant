@@ -294,3 +294,16 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-224 | READY_FOR_LIVE_VERIFICATION | WeatherSnapshot models current observed weather from WeatherKit and WeatherContextEngine bounds failures/timeouts; live current response remains queued; LIVE_VERIFICATION_QUEUE MS-223-225 | 957271a |
 | MS-225 | READY_FOR_LIVE_VERIFICATION | AppleWeatherKitProvider maps bounded hourly and daily forecasts from native WeatherKit without fabricated values; physical entitlement/live response remains queued; LIVE_VERIFICATION_QUEUE MS-223-225 | 957271a |
 | MS-226 | VERIFIED_LOCAL | WeatherRequest and WeatherSnapshot preserve current-location/manual/destination/event/travel context and source provenance; preservesManualLocationProvenanceAndContext | 957271a |
+
+## Slice 12 — MS-227–234
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-227 | READY_FOR_LIVE_VERIFICATION | EventKitCalendarService implements permission-gated native EventKit CRUD/query with authoritative read-back; CalendarServiceTests verify validation and exact undo; physical signed-device execution is queued | f14e4b6 |
+| MS-228 | READY_FOR_LIVE_VERIFICATION | five-language command parsing plus NaturalDateTimeResolver produce a validated CalendarEventDraft path without AI; live EventKit creation/read-back remains queued | c781956 |
+| MS-229 | READY_FOR_LIVE_VERIFICATION | EventKitCalendarService.events performs bounded date-window native EventKit query and returns typed snapshots; live account data requires device permission | f14e4b6 |
+| MS-230 | READY_FOR_LIVE_VERIFICATION | EventKitCalendarService.update validates range, resolves exact identifier, saves and authoritatively reads back; undo restores the prior snapshot; live mutation queued | f14e4b6 |
+| MS-231 | READY_FOR_LIVE_VERIFICATION | EventKitCalendarService.delete requires an exact identifier and verifies absence after native deletion; ambiguous matching is blocked upstream; live deletion queued | f14e4b6 |
+| MS-232 | VERIFIED_LOCAL | NaturalDateTimeResolver deterministically resolves today/tomorrow/day-after-tomorrow and explicit clock time across uk/ru/en/de/fr while preserving caller locale and IANA timezone; ambiguity stays unresolved; NaturalDateTimeResolverTests | c781956 |
+| MS-233 | VERIFIED_LOCAL | InteractionDecisionEngine executes resolved reversible calendar create/update through directAction and reserves confirmation for ambiguous/consequential delete; InteractionDecisionEngineTests | 006eb8a |
+| MS-234 | READY_FOR_LIVE_VERIFICATION | EventKitReminderService implements permission-gated create/query/update/completion/date-timezone/delete/restore through native EventKit; ReminderServiceTests cover validation and exact undo; device execution queued | a031a90 |

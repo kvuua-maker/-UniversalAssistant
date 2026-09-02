@@ -6,6 +6,19 @@
   ],
   "items": [
     {
+      "requirement_id": "MS-227-MS-228-MS-229-MS-230-MS-231-MS-234-LIVE-EVENTKIT",
+      "service_provider": "Apple EventKit Calendar and Reminders on signed physical device",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner-accessible physical iPhone, signed build and owner-granted Calendar/Reminders full access to controlled disposable test records.",
+      "dependency_owner": "Owner/device tester",
+      "local_evidence": ["UniversalAssistant/Calendar/CalendarService.swift", "UniversalAssistant/Reminders/ReminderService.swift", "UniversalAssistant/Core/NaturalDateTimeResolver.swift", "UniversalAssistantTests/CalendarServiceTests.swift", "UniversalAssistantTests/ReminderServiceTests.swift", "UniversalAssistantTests/NaturalDateTimeResolverTests.swift"],
+      "required_live_action": "Grant Calendar and Reminders access; create, query, reschedule, complete and delete controlled records using five-language natural dates; verify exact EventKit identifiers and authoritative read-back after every mutation, then deny permission and verify fail-closed behavior.",
+      "expected_result": "Only resolved authorized records mutate, each mutation is visible in the system app and read back by exact identifier, timezone is preserved, and denial/ambiguity never produces fake success.",
+      "created_at": "2026-09-02T23:12:00+02:00",
+      "last_checked": "2026-09-02T23:12:00+02:00",
+      "completion_evidence": null
+    },
+    {
       "requirement_id": "MS-748-754-LIVE-DRILL",
       "service_provider": "Production backup storage and KMS",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
