@@ -336,6 +336,22 @@
       "created_at": "2026-09-02T19:50:00+02:00",
       "last_checked": "2026-09-02T19:50:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "VISUAL-ADDENDUM-LIVE-OWNER-REVIEW",
+      "service_provider": "Physical iPhone visual, motion, haptic and accessibility review",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner-accessible signed physical-iPhone build after all locally testable visual-system implementation and snapshot/behavioral checks are complete.",
+      "dependency_owner": "Owner/device tester",
+      "local_evidence": [
+        "docs/UNIVERSALASSISTANT_FINAL_VISUAL_UI_UX_DESIGN_SYSTEM_ADDENDUM.md",
+        "Future UI gap-map and visual behavioral/snapshot evidence must be added before live execution"
+      ],
+      "required_live_action": "On the same signed build review Home, voice orb/listening, native cards and detail, booking/action, scanner, dark/light modes, accessibility scaling, Reduce Motion, animations and restrained haptics across representative iPhone sizes.",
+      "expected_result": "The physical presentation matches the textual visual canon, preserves truthful actions and verified flows, remains readable and operable with accessibility settings, and exposes no browser/provider/AI implementation chrome.",
+      "created_at": "2026-09-02T20:55:00+02:00",
+      "last_checked": "2026-09-02T20:55:00+02:00",
+      "completion_evidence": null
     }
   ]
 }
