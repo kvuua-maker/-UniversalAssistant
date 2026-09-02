@@ -6,7 +6,7 @@ M0–M5 plus M6 durable-job, APNs token and notification-policy cores are Codex-
 
 ## CURRENTLY WORKING ON
 
-M6 proactive watch core. Selected path: STABLE.
+M6 notification observability core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live hotel providers will require separat
 
 ## NEXT
 
-Traffic/weather/product/ticket proactive-watch orchestration, then remaining M6 acceptance work.
+Durable privacy-safe delivery observability and health, then remaining M6 acceptance work.
