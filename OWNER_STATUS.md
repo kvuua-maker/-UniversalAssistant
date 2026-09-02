@@ -6,7 +6,7 @@ M0–M7 are Codex-verified at local E3.
 
 ## CURRENTLY WORKING ON
 
-M8 StoreKit entitlement core. Selected path: STABLE.
+M8 account deletion and privacy core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Add StoreKit 2 entitlement observation, restore and downgrade-safe owned-data behavior without hard-coded storefront prices.
+Add explicit deletion/export orchestration, account-scoped job/token cleanup and the required privacy manifest.
