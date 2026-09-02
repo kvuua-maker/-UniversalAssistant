@@ -1,16 +1,142 @@
 import Foundation
 
-struct CurrentContext: Equatable, Sendable {
-    private(set) var lastResults: [String] = []
-    private(set) var selectedResult: String?
-    private(set) var expiresAt: Date?
+struct ContextProvenance: Equatable, Codable, Sendable {
+    let source: String
+    let objectID: String
+    let observedAt: Date
+    let expiresAt: Date
+
+    func isFresh(at date: Date) -> Bool { observedAt <= date && expiresAt > date }
+}
+
+struct ContextEntity: Equatable, Codable, Sendable {
+    enum Kind: String, Codable, Sendable { case person, place, product, store, event, appointment, route, providerResult }
+    let id: String
+    let kind: Kind
+    let displayName: String
+    let phoneNumber: String?
+    let provenance: ContextProvenance
+}
+
+struct ValidatedContextLocation: Equatable, Codable, Sendable {
+    let latitude: Double
+    let longitude: Double
+    let horizontalAccuracyMeters: Double
+    let provenance: ContextProvenance
+}
+
+struct ContextRoute: Equatable, Codable, Sendable {
+    let destination: ContextEntity
+    let provenance: ContextProvenance
+}
+
+struct ContextTask: Equatable, Codable, Sendable {
+    let id: String
+    let kind: String
+    let provenance: ContextProvenance
+}
+
+enum ContextFollowUp: Equatable, Sendable {
+    case cheaper(resultIDs: [String])
+    case navigate(ContextEntity)
+    case call(ContextEntity)
+    case reschedule(ContextEntity, offset: TimeInterval)
+    case searchAlongRoute(category: String, route: ContextRoute)
+    case unresolved
+}
+
+struct CurrentContext: Equatable, Codable, Sendable {
+    private(set) var currentTime: Date? = nil
+    private(set) var validatedLocation: ValidatedContextLocation? = nil
+    private(set) var activeRoute: ContextRoute? = nil
+    private(set) var nextCalendarEvent: ContextEntity? = nil
+    private(set) var currentTask: ContextTask? = nil
+    private(set) var resultEntities: [ContextEntity] = []
+    private(set) var selectedEntity: ContextEntity? = nil
+    private(set) var connectedServiceState: [String: Bool] = [:]
+    private(set) var explicitPreferences: [String: String] = [:]
+    private(set) var expiresAt: Date? = nil
+
+    // Compatibility view for the original short-selection API.
+    var lastResults: [String] { resultEntities.map(\.displayName) }
+    var selectedResult: String? { selectedEntity?.displayName }
+
+    mutating func update(
+        now: Date,
+        lifetime: TimeInterval = 300,
+        location: ValidatedContextLocation? = nil,
+        route: ContextRoute? = nil,
+        nextEvent: ContextEntity? = nil,
+        task: ContextTask? = nil,
+        results: [ContextEntity]? = nil,
+        services: [String: Bool]? = nil,
+        preferences: [String: String]? = nil
+    ) {
+        expireStale(at: now)
+        currentTime = now
+        expiresAt = now.addingTimeInterval(max(1, lifetime))
+        if let location, location.provenance.isFresh(at: now), location.horizontalAccuracyMeters >= 0 { validatedLocation = location }
+        if let route, route.provenance.isFresh(at: now), route.destination.provenance.isFresh(at: now) { activeRoute = route }
+        if let nextEvent, nextEvent.provenance.isFresh(at: now) { nextCalendarEvent = nextEvent }
+        if let task, task.provenance.isFresh(at: now) { currentTask = task }
+        if let results { resultEntities = Array(results.filter { $0.provenance.isFresh(at: now) }.prefix(20)); selectedEntity = nil }
+        if let services { connectedServiceState = services }
+        if let preferences { explicitPreferences = preferences }
+    }
+
     mutating func store(results: [String], now: Date = .now, lifetime: TimeInterval = 300) {
-        lastResults = Array(results.prefix(5)); selectedResult = nil; expiresAt = now.addingTimeInterval(lifetime)
+        let provenance = ContextProvenance(source: "local-result", objectID: UUID().uuidString, observedAt: now, expiresAt: now.addingTimeInterval(lifetime))
+        update(now: now, lifetime: lifetime, results: results.prefix(5).enumerated().map { .init(id: "legacy-\($0.offset)", kind: .providerResult, displayName: $0.element, phoneNumber: nil, provenance: provenance) })
     }
+
     mutating func resolve(_ command: StructuredCommand, now: Date = .now) -> String? {
-        guard let expiresAt, expiresAt > now, command.intent == .contextualSelection,
-              let ordinal = command.constraints.ordinal, lastResults.indices.contains(ordinal - 1) else { return nil }
-        selectedResult = lastResults[ordinal - 1]; return selectedResult
+        expireStale(at: now)
+        guard command.intent == .contextualSelection, let ordinal = command.constraints.ordinal,
+              resultEntities.indices.contains(ordinal - 1) else { return nil }
+        selectedEntity = resultEntities[ordinal - 1]
+        return selectedEntity?.displayName
     }
-    mutating func reset() { lastResults = []; selectedResult = nil; expiresAt = nil }
+
+    @discardableResult
+    mutating func select(entityID: String, now: Date = .now) -> ContextEntity? {
+        expireStale(at: now)
+        selectedEntity = resultEntities.first { $0.id == entityID }
+        return selectedEntity
+    }
+
+    mutating func resolveFollowUp(_ phrase: String, now: Date = .now) -> ContextFollowUp {
+        expireStale(at: now)
+        let text = phrase.lowercased()
+        if text.contains("дешевш") { return resultEntities.isEmpty ? .unresolved : .cheaper(resultIDs: resultEntities.map(\.id)) }
+        if text.contains("веди туди"), let target = selectedEntity ?? activeRoute?.destination { return .navigate(target) }
+        if text.contains("подзвони їм"), let target = selectedEntity, target.phoneNumber != nil { return .call(target) }
+        if text.contains("перенеси на годину"), let event = nextCalendarEvent { return .reschedule(event, offset: 3600) }
+        if text.contains("по дорозі") && text.contains("аптек"), let route = activeRoute { return .searchAlongRoute(category: "pharmacy", route: route) }
+        return .unresolved
+    }
+
+    func externalPayload(requiredFields: Set<String>, now: Date = .now) -> [String: String] {
+        guard expiresAt.map({ $0 > now }) == true else { return [:] }
+        var payload: [String: String] = [:]
+        if requiredFields.contains("selected_entity_id"), let selectedEntity { payload["selected_entity_id"] = selectedEntity.id }
+        if requiredFields.contains("route_destination_id"), let activeRoute { payload["route_destination_id"] = activeRoute.destination.id }
+        if requiredFields.contains("task_id"), let currentTask { payload["task_id"] = currentTask.id }
+        return payload
+    }
+
+    mutating func expireStale(at now: Date = .now) {
+        guard expiresAt.map({ $0 > now }) == true else { reset(); return }
+        if validatedLocation?.provenance.isFresh(at: now) == false { validatedLocation = nil }
+        if activeRoute?.provenance.isFresh(at: now) == false || activeRoute?.destination.provenance.isFresh(at: now) == false { activeRoute = nil }
+        if nextCalendarEvent?.provenance.isFresh(at: now) == false { nextCalendarEvent = nil }
+        if currentTask?.provenance.isFresh(at: now) == false { currentTask = nil }
+        resultEntities.removeAll { !$0.provenance.isFresh(at: now) }
+        if let selectedEntity, !selectedEntity.provenance.isFresh(at: now) { self.selectedEntity = nil }
+    }
+
+    mutating func reset() {
+        currentTime = nil; validatedLocation = nil; activeRoute = nil; nextCalendarEvent = nil
+        currentTask = nil; resultEntities = []; selectedEntity = nil; connectedServiceState = [:]
+        explicitPreferences = [:]; expiresAt = nil
+    }
 }

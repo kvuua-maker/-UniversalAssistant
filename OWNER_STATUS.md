@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M12 Strong context core. Selected path: STABLE.
+M12 Universal Action Graph core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the next local core. Provider live execution remains separately c
 
 ## NEXT
 
-Implement expiring provenance-aware CurrentContext and deterministic follow-up resolution with privacy reset.
+Implement reusable typed entity/action/provider-result graph and verified result-to-action composition.

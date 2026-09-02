@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-ROUTINE-MACRO-CORE",
-  "requirement_ids": ["1057-1063"],
-  "selected_path": "Typed persistent routines over existing capabilities with safe bounded deterministic execution.",
+  "current_task_id": "M12-STRONG-CONTEXT-CORE",
+  "requirement_ids": ["1064-1068"],
+  "selected_path": "Structured expiring local context with exact provenance and deterministic follow-up resolution.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 end-to-end natural creation, persistence, dependency execution, authorization, cancellation and idempotency complete",
-  "acceptance_contract_ref": "docs/M12_ROUTINE_MACRO_CORE.md",
+  "integration_depth": "local E3 context capture, freshness, selection, follow-up resolution, privacy minimization and reset complete",
+  "acceptance_contract_ref": "docs/M12_STRONG_CONTEXT_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Routines are structured and durable, reuse the deterministic executor, isolate partial failures and cannot silently perform unconfirmed consequential actions.",
-  "frozen_baseline_commit": "075d649",
+  "material_change": "Context references retain typed entity and source/object provenance, expire before reuse, and disclose only explicitly required identifiers externally.",
+  "frozen_baseline_commit": "5a437d0",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M12-STRONG-CONTEXT-CORE"
+  "next_task_id": "M12-UNIVERSAL-ACTION-GRAPH-CORE"
 }
