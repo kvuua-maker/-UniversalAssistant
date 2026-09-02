@@ -1,44 +1,277 @@
-BUSINESS PARTNER PLATFORM — FINAL CANONICAL ADDENDUM
-For UniversalAssistant / Master Spec v13.2
+BUSINESS PARTNER PLATFORM — FINAL CANONICAL ADDENDUM For
+UniversalAssistant / Master Spec v13.2
 
-STATUS: This addendum supplements Master Spec v13.2 and every accepted addendum. It does not reopen M0–M8 or authorize duplicate provider, commerce, capability, affiliate, attribution, security, authentication or analytics components.
+STATUS This addendum supplements, and does not replace, Master Spec
+v13.2, Marketplace Commerce & Affiliate Hub, Deterministic Multi-Step
+Coordination + Bounded AI Fallback, and all accepted addenda. Do not
+restart the project, reopen completed M0–M7 or completed M8 blocks, or
+duplicate existing
+provider/commerce/capability/affiliate/attribution/security/authentication/analytics
+components. Inspect actual code/state first, reuse what exists,
+implement only gaps, schedule B2B work in the correct future milestone,
+and continue the current roadmap.
 
-1. BUSINESS GOAL: support voluntary direct-business onboarding through application, verification, agreement, integration, technical validation, approval, activation, discovery, attribution, conversion, refund/reconciliation and settlement, from small local businesses to international providers.
-2. LEGAL/COMMERCIAL POSITION: launch as discovery/comparison/referral/attribution infrastructure, not seller or merchant of record. User and partner retain the transaction relationship. No custody of purchase funds, fulfillment, inventory, delivery, resale or hidden markup without separate owner/legal approval. Eligibility is policy/config driven.
-3. PARTNER CATEGORIES: normalized architecture supports lawful commerce, hospitality, travel, transport, events, local/professional/logistics/education services; regulated/high-risk categories require separate gates.
-4. ENTRY/MONETIZATION: basic participation may be free. Contract-configured models are percent/fixed confirmed outcomes, qualified leads/services, new-customer bounty, affiliate commission, Business subscription, disclosed sponsored placement or custom contract. Never hard-code commercial values.
-5. INTEGRATION LEVELS: L1 verified basic profile; L2 timestamped feed/catalog; L3 affiliate/deep-link attribution; L4 permitted full API/webhook/reconciliation. Partners need not share one level.
-6. SELF-SERVICE ONBOARDING: DRAFT, SUBMITTED, VERIFICATION_REQUIRED, UNDER_REVIEW, TECHNICAL_VALIDATION, CONTRACT_REQUIRED, APPROVED, ACTIVE, SUSPENDED, REJECTED, TERMINATED. Submission alone never activates; every transition is audited.
-7. VERIFICATION: never claim verified without evidence; country/category/law/model/risk determine requirements and critical changes may trigger re-verification.
-8. VERSIONED AGREEMENTS: immutable historical ID/version/effective period/model/rate/currency/attribution/refund/settlement/status; each conversion uses the applicable event-time version.
-9. ORGANIC INTEGRITY: commission never secretly improves organic rank or hides a better lawful non-partner result. Rank by verified user-outcome criteria.
-10. SPONSORED: separate from organic, explicitly disclosed by locale/law, relevance-preserving and without dark patterns.
-11. BUSINESS PRO: future optional analytics/automation/team/feed/API/reporting tools; never mandatory for basic organic participation unless owner changes policy; no invented price.
-12. ATTRIBUTION: minimize data; use attribution/partner/source/offer/campaign IDs, pseudonymous reference where appropriate, expiry and agreement version; no hidden cross-service tracking.
-13. CONVERSION STATES: INITIATED, PENDING, CONFIRMED, REJECTED, CANCELLED, REFUNDED, PARTIALLY_REFUNDED, PAYABLE, PAID, DISPUTED. A click earns nothing unless its contract explicitly says so.
-14. COMMISSION LEDGER: exact decimal money, original evidence and append/adjustment audit history; never binary floating point or erased financial truth.
-15. REFUNDS/DISPUTES: full/partial refund, cancellation, no-show, applicable chargeback, invalid/duplicate/fraud outcomes preserve evidence, actor, reason, time, status, resolution and adjustments.
-16. WEBHOOK SECURITY: authenticated signatures, replay defense, idempotent event IDs, duplicate/schema checks, audit logs and server-side rotatable secrets only.
-17. RECONCILIATION: compare internal attribution/conversion with partner/network reports and expose missing, duplicate, amount/currency/status/refund mismatches without silent rewrite.
-18. SETTLEMENT: do not build a bank/payment processor. PAYABLE is not PAID before confirmation. Invoice, settlement and tax metadata are jurisdiction/config/provider scoped; no merchant/tax-agent claim without owner/legal decision.
-19. MULTI-CURRENCY: preserve original and commission currencies plus historical FX source/rate/time; never recalculate history using current FX.
-20. PARTNER DASHBOARD: strict tenant scope; truthful observed/attributed/confirmed/estimated/unavailable profile, feed, health, traffic, conversion, commission, refund, settlement and error metrics.
-21. INTERNAL ADMIN: authorized/audited application, verification, moderation, agreement, integration, conversion, dispute, reconciliation, settlement, fraud and sponsored controls; high-risk actions require stronger access/audit.
-22. TENANT ISOLATION: backend/data authorization prevents cross-partner credential, analytics, conversion, contract and finance access; UI-only isolation is insufficient.
-23. DATA FRESHNESS: VERIFIED_LIVE, PARTNER_PROVIDED_RECENT, STALE, UNKNOWN with source time; stale/manual data never appears live.
-24. SMALL/LARGE BUSINESS: verified basic profiles work without fake live claims; full developer platform capabilities are added only when justified.
-25. FRAUD/ABUSE: defend against fabricated/duplicate/self-referral/replay/bot/refund/lead/commission/data manipulation with auditable decisions.
-26. CONTENT/COMPLAINTS: validate/moderate content; complaints are review signals, not automatic guilt.
-27. HEALTH/FAILURE: ACTIVE_HEALTHY, DEGRADED, STALE_DATA, TEMPORARILY_UNAVAILABLE, SUSPENDED; bounded timeout/concurrency/rate/retry/backoff/circuit-breaking and isolated truthful alternatives.
-28. OFFBOARDING: suspension/termination stops new monetizable handoffs, revokes credentials as appropriate and preserves required audit/accounting plus pending refund/settlement processing.
-29. PERFORMANCE/SCALE: B2B never slows deterministic fast path; indexed/paginated/bounded queries, cache and streaming/batch replace all-partner RAM loading or app-binary hardcoding.
-30. NORMALIZED ADAPTERS: direct partners and networks map into common Partner/Offer/Service/results while preserving source evidence and network-specific attribution.
-31. USER TRANSPARENCY: show actual seller/provider and required affiliate/commission disclosure; sponsored disclosure is mandatory; monetization never changes facts.
-32. OWNER CONTROL: owner decides categories, models, templates, approvals, sponsored policy, Business Pro, countries, settlement and compliance versions. Codex does not invent them.
-33. NO OVERENGINEERING: no proprietary bank, processor, accounting suite, CRM, ad exchange or KYC provider; reuse boundaries and history.
-34. ACCEPTANCE: test activation gates, tenant isolation, ranking independence, sponsored separation, webhook idempotency, refund adjustments, historical agreements, freshness, failure isolation, reconciliation, suspension, non-partner inclusion, exact money, secret absence, dashboard isolation and contract-configurable models.
-35. IMPLEMENTATION ORDER: persist/reference/hash, gap-analyze and add only missing future B2B blocks; continue the current first unfinished block instead of prematurely building all B2B.
-36. FINAL CONTRACT: monetize via verified outcomes, future optional Business Pro, disclosed sponsorship and consumer subscription; organic usefulness and trust outrank commission; launch remains discovery/referral infrastructure.
-37. CONTINUATION: for every block inspect, implement, build, test, fix, verify, update, commit, push and continue; record true owner-only blockers and pursue independent work; owner-facing communication is Ukrainian.
+1.  BUSINESS GOAL Support direct businesses that voluntarily apply to
+    appear in UniversalAssistant, in addition to affiliate networks and
+    existing providers. Lifecycle: application → verification →
+    commercial agreement → integration → technical validation → approval
+    → activation → discovery → verified attribution → conversion →
+    commission → refund/cancellation → reconciliation → settlement.
+    Scale from a local small business to an international provider.
+
+2.  LEGAL/COMMERCIAL POSITION Initial model: UniversalAssistant is
+    discovery/comparison/referral/attribution infrastructure, not seller
+    or merchant of record for physical goods/external services. USER ↔
+    PARTNER remains the primary transaction relationship. Do not take
+    user purchase funds, fulfillment, inventory, delivery, resale or
+    hidden markup without a separate owner/legal decision.
+    Country/category legal eligibility is policy/config driven and
+    requires appropriate approval before production activation.
+
+3.  PARTNER CATEGORIES Architecture must support marketplaces, stores,
+    brands, restaurants, food delivery, grocery, hotels, travel,
+    airlines, rail/bus/tickets, taxi/rides, car rental, events, salons,
+    repair/automotive, local professionals, logistics,
+    education/services and other lawful categories. Regulated/high-risk
+    categories require separate compliance gates.
+
+4.  ENTRY AND MONETIZATION Basic participation may be free of mandatory
+    monthly fee; primary launch monetization is verified-result based.
+    Do not hardcode prices. Supported contract-driven models:
+    PERCENT_OF_CONFIRMED_SALE FIXED_PER_CONFIRMED_ORDER
+    FIXED_PER_CONFIRMED_BOOKING FIXED_PER_CONFIRMED_GUEST
+    FIXED_PER_QUALIFIED_LEAD FIXED_PER_COMPLETED_SERVICE
+    NEW_CUSTOMER_BOUNTY AFFILIATE_NETWORK_COMMISSION
+    BUSINESS_SUBSCRIPTION SPONSORED_PLACEMENT CUSTOM_CONTRACT Agreement
+    defines rate/value, currency, qualifying event, attribution window,
+    dates, refunds, settlement, geography, scope and caps/floors.
+
+5.  INTEGRATION LEVELS L1 BASIC PROFILE: verified identity, category,
+    location, hours, contacts, service area, menu/catalog/services,
+    provided prices, links/media and freshness. L2 FEED/CATALOG:
+    structured products/services, price, availability, variants,
+    locations, delivery/service data and timestamps. L3 AFFILIATE/DEEP
+    LINK: tracking ID, campaign/sub-ID, exact handoff/deep link,
+    attribution and conversion reporting. L4 FULL API: permitted
+    search/catalog/price/availability/order-or-booking
+    request/state/webhooks/attribution/conversion/reconciliation. Do not
+    require the same level from every partner.
+
+6.  SELF-SERVICE ONBOARDING Application → business/legal identity →
+    contacts/registration → settlement info when required →
+    category/geography → integration method → commercial model/agreement
+    → technical test → review → approval → active. A submitted form
+    alone never activates a business. States: DRAFT, SUBMITTED,
+    VERIFICATION_REQUIRED, UNDER_REVIEW, TECHNICAL_VALIDATION,
+    CONTRACT_REQUIRED, APPROVED, ACTIVE, SUSPENDED, REJECTED,
+    TERMINATED. Audit every transition.
+
+7.  VERIFICATION Never label a business verified without evidence.
+    Verification requirements depend on country, category, law,
+    transaction model and risk. Critical verified/legal-field changes
+    may require re-verification.
+
+8.  VERSIONED COMMERCIAL AGREEMENTS Keep agreement ID/version/effective
+    period/model/rate/currency/attribution/refund/settlement/status.
+    Never retroactively rewrite historical commission rules. Each
+    conversion uses the contract version applicable to its qualifying
+    event.
+
+9.  ORGANIC RANKING INTEGRITY HARD RULE: partner commission must not
+    secretly improve organic ranking. Organic ranking follows user
+    intent/constraints and verified relevance, match, final price,
+    quality, availability, delivery, distance, time, legitimate
+    reliability/rating and task-specific criteria. A higher-paying
+    partner cannot displace a better organic result merely because it
+    pays more. Do not hide a useful lawful non-partner result merely
+    because it generates no commission.
+
+10. SPONSORED RESULTS Sponsored placement is separate from organic
+    ranking, explicitly disclosed as sponsored/advertising according to
+    locale/legal rules, and never masquerades as the organic best
+    result. Campaign data may include budget, targeting, dates, billing
+    and reporting. No dark patterns.
+
+11. BUSINESS PRO Architecturally allow future paid business tools such
+    as advanced analytics, automation, teams, advanced
+    feeds/API/reporting/insights. Do not make Business Pro mandatory for
+    basic organic participation unless owner changes policy. Do not
+    invent pricing.
+
+12. ATTRIBUTION Where lawful/needed, monetizable handoff has
+    attribution_id, partner_id, source/provider, pseudonymous reference
+    when appropriate, offer/service reference, campaign/sub-ID if
+    applicable, creation/expiry and agreement version. Minimize personal
+    data; no hidden cross-service tracking.
+
+13. CONVERSION LIFECYCLE INITIATED, PENDING, CONFIRMED, REJECTED,
+    CANCELLED, REFUNDED, PARTIALLY_REFUNDED, PAYABLE, PAID, DISPUTED. A
+    click is not earned commission unless the contract explicitly pays
+    for that event.
+
+14. COMMISSION LEDGER Store conversion/partner/agreement/external
+    transaction IDs, legitimate gross amount, currencies, commission
+    basis/rate/value/amount, state, timestamps, refund adjustment and
+    source evidence. Use exact monetary representation, not binary
+    floating point. Financial history is auditable/append-or-adjustment
+    based; never erase prior financial truth.
+
+15. REFUNDS AND DISPUTES Handle full/partial refund, cancellation,
+    no-show, applicable chargeback, rejected lead,
+    duplicate/invalid/fraudulent conversion. Disputes preserve reason,
+    evidence, timestamps, status, resolution, adjustments and actor.
+    Never delete history to “fix” a dispute.
+
+16. WEBHOOK SECURITY Direct integrations use authenticated/signed
+    callbacks, replay protection where appropriate, idempotency, event
+    IDs, duplicate detection, schema validation and audit logs. Secrets
+    stay server-side secure storage/key management; never client, source
+    control or user-visible logs. Support credential
+    rotation/revocation.
+
+17. RECONCILIATION Compare internal attribution/conversion ledger with
+    partner/network settlement reports. Detect missing/duplicate
+    conversions, amount/currency/status mismatches and unexpected
+    refunds. Never silently rewrite finance data.
+
+18. SETTLEMENT Do not build a bank/payment processor. Direct partners
+    owe confirmed payable commissions according to contract; affiliate
+    networks use their payout rules. PAYABLE is not PAID until
+    settlement confirmation. Support invoice/settlement references and
+    tax metadata, but tax/VAT/invoice logic is
+    jurisdiction/config/accounting-provider specific. Do not declare
+    UniversalAssistant tax agent/deemed supplier/merchant of record
+    without owner/legal decision.
+
+19. MULTI-CURRENCY Preserve original transaction currency, commission
+    currency and FX source/rate/time when conversion is required. Never
+    recalculate historical accounting using today’s FX.
+
+20. PARTNER DASHBOARD Tenant-scoped dashboard may expose only that
+    partner’s allowed profile/integration/feed health, legitimate
+    impressions, handoffs, leads, bookings, conversions, rates,
+    attributed value where permitted, commissions, refunds,
+    payable/paid, API errors and freshness.
+    Observed/attributed/confirmed/estimated/unavailable metrics must be
+    distinguished truthfully.
+
+21. INTERNAL ADMIN Support partner applications, verification,
+    approval/rejection/suspension, agreements/versions, commission
+    rules, integrations/health, conversions, disputes, refunds,
+    reconciliation, settlement, fraud/anomaly signals, sponsored
+    campaigns and audit history. High-risk admin actions require
+    appropriate access control/audit.
+
+22. TENANT ISOLATION Backend/data-access enforcement must prevent
+    Partner A from reading Partner B credentials, analytics,
+    conversions, contracts or finance. UI-only isolation is
+    insufficient. Add authorization/isolation tests.
+
+23. DATA FRESHNESS Partner price/availability/menu/catalog/hours/service
+    data carries source timestamp/freshness. Distinguish VERIFIED_LIVE,
+    PARTNER_PROVIDED_RECENT, STALE and UNKNOWN. Never present
+    stale/manual data as verified live.
+
+24. SMALL AND LARGE BUSINESS Small businesses without APIs can use
+    verified Basic Profile without false live claims. Large partners can
+    later use API docs, sandbox, credentials, webhooks, feeds,
+    versioning, idempotency, rate limits, test/production credentials
+    and migration/deprecation policy. Do not overbuild a developer
+    platform before needed.
+
+25. FRAUD/ABUSE Protect against fake conversions, self-referral,
+    duplicate attribution, webhook replay, fabricated leads, bots,
+    refund/commission manipulation and partner data tampering.
+    Money/status-impacting decisions must be auditable and appropriately
+    explainable.
+
+26. CONTENT/COMPLAINTS Partner content is validated/moderated; illegal,
+    deceptive, malicious or prohibited listings are not accepted. User
+    complaints can reference partner/listing/order where available and
+    become review signals, not automatic guilt.
+
+27. HEALTH, LIMITS AND FAILURE ISOLATION Partner health states include
+    ACTIVE_HEALTHY, DEGRADED, STALE_DATA, TEMPORARILY_UNAVAILABLE,
+    SUSPENDED. Use bounded concurrency, timeout, rate-limit handling,
+    retry/backoff/circuit breaking where appropriate. One failing
+    partner must not block the Hub or fabricate fallback data; return
+    available verified alternatives.
+
+28. OFFBOARDING Suspension/termination stops new monetizable handoffs
+    but preserves required accounting/audit history and valid pending
+    settlement/refund processing. Revoke credentials where appropriate.
+
+29. PERFORMANCE AND SCALE B2B must not slow deterministic fast path. Do
+    not load all partners/catalogs into RAM. Use
+    indexed/paginated/bounded queries, valid caching, streaming/batch
+    for large feeds. Architecture must scale from tens to
+    hundreds/thousands of partners without hardcoding all partners in
+    the app binary.
+
+30. NORMALIZED ADAPTER ARCHITECTURE Affiliate networks and direct
+    partners adapt into a common normalized Partner/Offer/Service/result
+    domain where appropriate. Preserve source evidence and
+    network-specific attribution semantics without scattering
+    provider-specific logic through UI/domain.
+
+31. USER TRANSPARENCY Show the actual seller/service provider where
+    relevant. Sponsored disclosure is mandatory. Affiliate/commission
+    disclosure is applied where required. Monetization never changes
+    factual answers.
+
+32. OWNER CONTROL Owner retains final control over supported categories,
+    monetization models, commercial templates, partner approval,
+    sponsored policy, Business Pro, market/country activation,
+    settlement providers and legal/compliance policy versions. Codex
+    must not invent these business decisions.
+
+33. NO OVERENGINEERING Do not build a proprietary bank, payment
+    processor, accounting suite, CRM, ad exchange or KYC provider when
+    domain boundaries plus external integrations are sufficient. Do not
+    reopen completed milestones merely to rename/restructure working
+    code.
+
+34. REQUIRED ACCEPTANCE TESTS A. Application cannot become ACTIVE
+    without required verification/approval. B. Partner A cannot access
+    Partner B. C. Higher commission does not alter organic ranking. D.
+    Sponsored result is explicitly separated. E. Duplicate webhook
+    creates no duplicate conversion/commission. F. Full/partial refund
+    creates auditable adjustment. G. Historical agreement version
+    preserves correct commission. H. Stale price/availability is not
+    verified live. I. Partner API failure does not break other
+    providers. J. Reconciliation detects missing/duplicate/mismatch. K.
+    Suspended partner receives no new monetizable handoffs. L. Better
+    non-partner result is not hidden due to zero commission. M. Money
+    arithmetic has no floating-point accounting drift. N. Secrets do not
+    appear in client/logs/repository. O. Partner dashboard is
+    tenant-isolated. P. Commercial model changes through config/contract
+    without rewriting core logic.
+
+35. IMPLEMENTATION ORDER Immediately persist this addendum under docs/
+    as canonical and record its reference/hash in canonical state.
+    Perform gap analysis against actual code. Reuse completed
+    functionality. Add only missing B2B blocks to the correct future
+    roadmap. Then continue the current first unfinished milestone/block;
+    do not stop current roadmap to build the entire B2B platform
+    prematurely.
+
+36. FINAL BUSINESS CONTRACT UniversalAssistant should monetize through a
+    combination of verified transaction/result commissions, future
+    Business Pro, clearly disclosed Sponsored placements and existing
+    consumer subscription where applicable. Basic partner entry should
+    remain low-friction. Organic usefulness and user trust outrank
+    commission size. UniversalAssistant remains discovery/referral
+    infrastructure at launch rather than merchant of record unless owner
+    later changes that decision.
+
+37. CONTINUATION RULE After accepting and persisting this addendum,
+    continue autonomous UniversalAssistant implementation from the
+    actual first unfinished block. For every block: inspect actual state
+    → implement → build → test → fix → verify → update state/docs →
+    commit → push → immediately select next unfinished block. Do not
+    repeat completed blocks. Do not stop between checkpoints without a
+    real owner-only blocker. If one block is owner-only blocked, record
+    the exact blocker and continue another independent unblocked block
+    when possible. All owner-facing messages must be Ukrainian.
 
 END OF CANONICAL BUSINESS PARTNER PLATFORM ADDENDUM

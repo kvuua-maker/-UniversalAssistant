@@ -11,8 +11,8 @@ The project source of truth is the complete, indivisible combination of:
 3. `docs/DETERMINISTIC_MULTI_STEP_COORDINATION_BOUNDED_AI_FALLBACK_ADDENDUM.md`
    - Owner-supplied canonical additive coordination and bounded-AI contract, accepted 2026-09-02.
 4. `docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt`
-   - SHA-256: `86593119e587e1e8f3552afa7fa055cb5f4c9b922548e19a6c5b3f4e218ed928`
-   - 44 lines / 7,561 bytes; canonical content persisted from the complete owner message on 2026-09-02.
+   - SHA-256: `9cc1b9eba8641f9858bb3e599a48787f50180d6fc68e76165bcaf70ad17022b7`
+   - 277 lines / 14,984 bytes; copied byte-for-byte from the owner-provided attachment on 2026-09-02.
 
 All accepted addenda augment the Master Spec and do not remove or weaken it. Later explicit supersession rules inside the Master Spec take precedence over earlier conflicting wording, subject to safety, law, current platform/provider truth, privacy and security.
 
