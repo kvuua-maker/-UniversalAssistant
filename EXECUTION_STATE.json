@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-STRONG-CONTEXT-CORE",
-  "requirement_ids": ["1064-1068"],
-  "selected_path": "Structured expiring local context with exact provenance and deterministic follow-up resolution.",
+  "current_task_id": "M12-UNIVERSAL-ACTION-GRAPH-CORE",
+  "requirement_ids": ["1069-1076"],
+  "selected_path": "Reusable typed entities, actions, providers, verified results and next-action composition.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 context capture, freshness, selection, follow-up resolution, privacy minimization and reset complete",
-  "acceptance_contract_ref": "docs/M12_STRONG_CONTEXT_CORE.md",
+  "integration_depth": "local E3 typed graph composition, provenance/freshness enforcement, consequential confirmation and provider extensibility complete",
+  "acceptance_contract_ref": "docs/M12_UNIVERSAL_ACTION_GRAPH_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Context references retain typed entity and source/object provenance, expire before reuse, and disclose only explicitly required identifiers externally.",
-  "frozen_baseline_commit": "5a437d0",
+  "material_change": "Verified provider objects now compose into reusable typed actions without free-text guessing; stale/unverified inputs and unconfirmed consequential actions are rejected.",
+  "frozen_baseline_commit": "8e7a96c",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M12-UNIVERSAL-ACTION-GRAPH-CORE"
+  "next_task_id": "M12-GOLDEN-USER-JOURNEYS"
 }
