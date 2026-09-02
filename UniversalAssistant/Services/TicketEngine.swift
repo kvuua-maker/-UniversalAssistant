@@ -4,7 +4,7 @@ enum TicketMode: String, Codable, CaseIterable, Sendable {
     case rail, coach, flight, ferry, event, other
 }
 
-struct TicketSegment: Equatable, Sendable {
+struct TicketSegment: Equatable, Codable, Sendable {
     let origin: String
     let destination: String
     let departure: Date
@@ -16,7 +16,7 @@ struct TicketSegment: Equatable, Sendable {
     }
 }
 
-enum TicketInventoryEvidence: Equatable, Sendable {
+enum TicketInventoryEvidence: Equatable, Codable, Sendable {
     case verifiedAvailable(source: String, observedAt: Date)
     case verifiedUnavailable(source: String, observedAt: Date)
     case unknown
@@ -37,7 +37,7 @@ enum TicketInventoryEvidence: Equatable, Sendable {
     }
 }
 
-struct TicketOffer: Identifiable, Equatable, Sendable {
+struct TicketOffer: Identifiable, Equatable, Codable, Sendable {
     let id: String
     let providerID: String
     let mode: TicketMode
@@ -57,7 +57,7 @@ struct TicketOffer: Identifiable, Equatable, Sendable {
     }
 }
 
-struct TicketSearchRequest: Equatable, Sendable {
+struct TicketSearchRequest: Equatable, Codable, Sendable {
     var allowedModes: Set<TicketMode> = Set(TicketMode.allCases)
     var departureNotBefore: Date?
     var arrivalNotAfter: Date?

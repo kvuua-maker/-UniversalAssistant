@@ -16,6 +16,17 @@ private func ticket(_ id: String, now: Date, fare: Decimal? = 500,
           exactPurchaseURL: URL(string: "https://tickets.example/offers/\(id)")!)
 }
 
+private actor TicketHTTPRecorder: TicketHTTPTransport {
+    var responses: [(Data, Int)]
+    private(set) var requests: [URLRequest] = []
+    init(_ responses: [(Data, Int)]) { self.responses = responses }
+    func data(for request: URLRequest) throws -> (Data, Int) {
+        requests.append(request)
+        return responses.removeFirst()
+    }
+    func recorded() -> [URLRequest] { requests }
+}
+
 @Suite("Truthful ticket engine") struct TicketEngineTests {
     @Test func unknownInventoryCannotSatisfyVerifiedSeatRequest() {
         let now = Date()
@@ -73,5 +84,33 @@ private func ticket(_ id: String, now: Date, fare: Decimal? = 500,
         #expect(throws: TicketEngineError.noVerifiedOffers) {
             try TicketEngine().rank([ticket("wrong", now: now)], request: rejected, now: now)
         }
+    }
+
+    @Test func officialHTTPProviderInjectsCredentialParsesAndRejectsCrossProviderRows() async throws {
+        let now = Date()
+        let valid = ticket("valid", now: now,
+            inventory: .verifiedAvailable(source: "official:inventory", observedAt: now))
+        var foreign = valid
+        foreign = .init(id: "foreign", providerID: "other", mode: foreign.mode, segments: foreign.segments,
+            fare: foreign.fare, inventory: foreign.inventory, fareObservedAt: foreign.fareObservedAt,
+            exactPurchaseURL: foreign.exactPurchaseURL)
+        let transport = TicketHTTPRecorder([(try JSONEncoder().encode([valid, foreign]), 200)])
+        let provider = try OfficialTicketHTTPProvider(providerID: "provider",
+            searchURL: URL(string: "https://tickets.example/search")!, bearerToken: "secret", transport: transport)
+        let result = try await provider.search(.init(origin: "Kyiv", destination: "Lviv"))
+        #expect(result.map(\.id) == ["valid"])
+        let recorded = await transport.recorded()
+        #expect(recorded.first?.value(forHTTPHeaderField: "Authorization") == "Bearer secret")
+        #expect(recorded.first?.timeoutInterval == 8)
+    }
+
+    @Test func officialHTTPProviderFailsClosedOnCredentialAndRateLimit() async throws {
+        let endpoint = URL(string: "https://tickets.example/search")!
+        #expect(throws: TicketHTTPError.missingCredential) {
+            try OfficialTicketHTTPProvider(providerID: "provider", searchURL: endpoint, bearerToken: " ")
+        }
+        let provider = try OfficialTicketHTTPProvider(providerID: "provider", searchURL: endpoint,
+            bearerToken: "token", transport: TicketHTTPRecorder([(Data("{}".utf8), 429)]))
+        await #expect(throws: TicketHTTPError.rateLimited) { try await provider.search(.init()) }
     }
 }
