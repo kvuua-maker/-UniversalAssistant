@@ -15,15 +15,19 @@ final class AssistantViewModel {
     private let interactionEngine: any InteractionDeciding
     private let voiceInput = VoiceInputController()
     private let feedbackStore: UserFeedbackStore
+    private let compactResultDuration: Duration
+    private var resultDismissTask: Task<Void, Never>?
 
     init(
         commandEngine: any CommandParsing = LocalCommandEngine(),
         interactionEngine: any InteractionDeciding = InteractionDecisionEngine(),
-        feedbackStore: UserFeedbackStore = .shared
+        feedbackStore: UserFeedbackStore = .shared,
+        compactResultDuration: Duration = .seconds(2)
     ) {
         self.commandEngine = commandEngine
         self.interactionEngine = interactionEngine
         self.feedbackStore = feedbackStore
+        self.compactResultDuration = compactResultDuration
     }
 
     func toggleListening() {
@@ -54,6 +58,7 @@ final class AssistantViewModel {
     }
 
     func submit() {
+        resultDismissTask?.cancel()
         let command = commandEngine.parse(input)
         let summary = ResultSummary(request: command.originalText, intent: command.intent, risk: command.risk)
         interactionDecision = interactionEngine.decide(for: command)
@@ -64,6 +69,15 @@ final class AssistantViewModel {
         } else {
             resultState = .recognized(summary)
             statusText = AppText.value("request_recognized")
+            if interactionDecision?.pattern == .compactAcknowledgement {
+                let duration = compactResultDuration
+                resultDismissTask = Task { [weak self] in
+                    try? await Task.sleep(for: duration)
+                    guard !Task.isCancelled else { return }
+                    self?.resultState = .idle
+                    self?.statusText = AppText.value("ready")
+                }
+            }
         }
     }
 
