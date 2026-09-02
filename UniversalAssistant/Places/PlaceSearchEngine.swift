@@ -52,6 +52,44 @@ actor PlaceSearchEngine {
     }
 }
 
+struct CoffeeScenarioResult: Equatable, Sendable {
+    let places: [Place]
+    let failures: [PlaceProviderFailure]
+    let primaryAction: URL?
+}
+
+struct CoffeeScenarioCoordinator: Sendable {
+    let places: PlaceSearchEngine
+    let routes: any RouteProvider
+    let navigation = NavigationHandoff()
+
+    func search(near location: ValidatedLocation, navigationProvider: NavigationProvider = .appleMaps) async throws -> CoffeeScenarioResult {
+        let response = try await places.search(.init(text: "coffee", category: .cafe, location: location))
+        let origin = RoutePoint(latitude: location.sample.latitude, longitude: location.sample.longitude, name: location.manualLabel)
+        var enriched: [Place] = []
+        for candidate in response.places.prefix(8) {
+            var value = candidate
+            if let route = try? await routes.route(.init(
+                origin: origin,
+                destination: .init(latitude: candidate.latitude, longitude: candidate.longitude, name: candidate.name),
+                mode: .walking
+            )) {
+                value.distanceMeters = route.distanceMeters
+                value.travelTimeSeconds = route.expectedTravelTime
+            }
+            enriched.append(value)
+        }
+        let query = PlaceQuery(text: "coffee", category: .cafe, location: location)
+        let ranked = PlaceRanker().rank(enriched, query: query)
+        let action = try ranked.first.map {
+            try navigation.url(provider: navigationProvider,
+                               destination: .init(latitude: $0.latitude, longitude: $0.longitude, name: $0.name),
+                               mode: .walking)
+        }
+        return .init(places: ranked, failures: response.failures, primaryAction: action)
+    }
+}
+
 private enum PlaceSearchFailure: Error { case timeout, empty }
 private enum ProviderBatch: Sendable {
     case success(String, [Place])
