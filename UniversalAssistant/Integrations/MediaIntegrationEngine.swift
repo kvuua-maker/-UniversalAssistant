@@ -1,0 +1,66 @@
+import Foundation
+
+enum MediaItemKind: String, Codable, Sendable { case song, album, artist, playlist, station }
+struct MediaItem: Identifiable, Equatable, Sendable {
+    let id: String; let providerID: String; let kind: MediaItemKind
+    let title: String; let artist: String?; let exactURL: URL?
+}
+enum MediaAuthorizationState: String, Equatable, Sendable { case authorized, denied, notDetermined, restricted }
+enum MediaControlAction: String, Sendable { case play, pause, resume, next, previous }
+enum MediaActionState: String, Equatable, Sendable { case playing, paused, resumed, advanced, rewound, destinationPrepared }
+struct MediaActionResult: Equatable, Sendable { let providerID: String; let itemID: String?; let state: MediaActionState; let destination: URL? }
+enum MediaIntegrationError: Error, Equatable, Sendable { case invalidRequest, authorizationRequired, unsupportedAction, unmanagedPlayback, invalidDestination }
+
+protocol MediaProviderAdapter: Sendable {
+    var providerID: String { get }
+    func authorizationState() async -> MediaAuthorizationState
+    func requestAuthorization() async -> MediaAuthorizationState
+    func search(query: String, kinds: Set<MediaItemKind>, limit: Int) async throws -> [MediaItem]
+    func control(_ action: MediaControlAction, item: MediaItem?) async throws
+}
+
+actor MediaIntegrationEngine {
+    private let adapters: [String: any MediaProviderAdapter]
+    private var managedProviderID: String?
+    init(adapters: [any MediaProviderAdapter]) { self.adapters = Dictionary(uniqueKeysWithValues: adapters.map { ($0.providerID, $0) }) }
+
+    func search(providerID: String, query: String, kinds: Set<MediaItemKind>, limit: Int = 20,
+                requestAuthorization: Bool = false) async throws -> [MediaItem] {
+        let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, !kinds.isEmpty, (1...50).contains(limit), let adapter = adapters[providerID] else { throw MediaIntegrationError.invalidRequest }
+        var state = await adapter.authorizationState()
+        if state == .notDetermined && requestAuthorization { state = await adapter.requestAuthorization() }
+        guard state == .authorized else { throw MediaIntegrationError.authorizationRequired }
+        return try await adapter.search(query: text, kinds: kinds, limit: limit).filter { $0.providerID == providerID && !$0.id.isEmpty }
+    }
+
+    func play(_ item: MediaItem) async throws -> MediaActionResult {
+        guard let adapter = adapters[item.providerID], await adapter.authorizationState() == .authorized else { throw MediaIntegrationError.authorizationRequired }
+        try await adapter.control(.play, item: item); managedProviderID = item.providerID
+        return .init(providerID: item.providerID, itemID: item.id, state: .playing, destination: nil)
+    }
+
+    func control(_ action: MediaControlAction) async throws -> MediaActionResult {
+        guard action != .play else { throw MediaIntegrationError.invalidRequest }
+        guard let providerID = managedProviderID, let adapter = adapters[providerID] else { throw MediaIntegrationError.unmanagedPlayback }
+        try await adapter.control(action, item: nil)
+        let state: MediaActionState = switch action { case .pause: .paused; case .resume: .resumed; case .next: .advanced; case .previous: .rewound; case .play: .playing }
+        return .init(providerID: providerID, itemID: nil, state: state, destination: nil)
+    }
+
+    func handoff(_ item: MediaItem) throws -> MediaActionResult {
+        guard let url = item.exactURL, url.scheme == "https", url.host != nil, !url.path.isEmpty, url.path != "/" else { throw MediaIntegrationError.invalidDestination }
+        return .init(providerID: item.providerID, itemID: item.id, state: .destinationPrepared, destination: url)
+    }
+}
+
+#if canImport(MusicKit)
+import MusicKit
+struct AppleMusicAuthorizationGateway: Sendable {
+    func current() -> MediaAuthorizationState { map(MusicAuthorization.currentStatus) }
+    func request() async -> MediaAuthorizationState { map(await MusicAuthorization.request()) }
+    private func map(_ status: MusicAuthorization.Status) -> MediaAuthorizationState {
+        switch status { case .authorized: .authorized; case .denied: .denied; case .restricted: .restricted; case .notDetermined: .notDetermined; @unknown default: .restricted }
+    }
+}
+#endif
