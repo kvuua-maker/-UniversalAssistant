@@ -432,3 +432,34 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-332 | NOT_APPLICABLE_VERIFIED | no watchOS product/target/SDK dependency exists in project.pbxproj; project target audit | b837945 |
 | MS-333 | NOT_APPLICABLE_VERIFIED | no WatchConnectivity import or runtime path exists; repository integration audit | b837945 |
 | MS-334 | VERIFIED_LOCAL | command parsing, action graph, capability registry and service actors are platform-neutral typed cores separable from SwiftUI, preserving future client extensibility without adding watch scope; architecture tests | 6627cff |
+
+## Slice 18 — MS-335–360
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-335 | VERIFIED_LOCAL | separate Swift backend target contains tenant-scoped partner onboarding, profiles, operations, agreements, ledger, settlement and feed runtime without coupling consumer UI; backend regression | c63dc57 |
+| MS-336 | VERIFIED_LOCAL | PartnerTenantAuthorization and onboarding application contracts provide server-side business identity/access boundary and registration lifecycle; tenant/onboarding tests | c63dc57 |
+| MS-337 | VERIFIED_LOCAL | PartnerProfileService implements unclaimed profile registration and explicit claimant transition without automatic verification; profile tests | 1689274 |
+| MS-338 | VERIFIED_LOCAL | evidence-gated PartnerOnboardingService and PartnerProfileService implement review/approval verification workflows; onboarding/profile tests | 1689274 |
+| MS-339 | VERIFIED_LOCAL | BusinessProfileVerificationState exactly supports UNCLAIMED, PENDING, VERIFIED, REJECTED and SUSPENDED; state-transition tests | 1689274 |
+| MS-340 | VERIFIED_LOCAL | PartnerProfileService.update permits profile changes only in VERIFIED state and appends actor/reason audit evidence; profile tests | 1689274 |
+| MS-341 | VERIFIED_LOCAL | BusinessOpeningHours stores weekly schedule plus sourceReference/observedAt and rejects future/missing evidence on update; profile tests | 1689274 |
+| MS-342 | VERIFIED_LOCAL | BusinessContactDetails supports official phone/HTTPS site/address behind verified-partner update gate; insecure URL test | 1689274 |
+| MS-343 | VERIFIED_LOCAL | BusinessOperationsStore applies idempotent normalized partner catalog feed records keyed by partner/provider/external ID with field evidence; BusinessOperationsTests | f88596e |
+| MS-344 | VERIFIED_LOCAL | typed variants carry exact Decimal stock and truthful available/unavailable/unknown state; price/stock/deletion/stale feed tests | f88596e |
+| MS-345 | VERIFIED_LOCAL | provider-neutral catalog/service connector capabilities cover service data, price and availability without requiring identical connector depth; capability mismatch/partial failure tests | f88596e |
+| MS-346 | VERIFIED_LOCAL | normalized commerce offers and catalog items preserve verified price/action/freshness while invalid or stale partner events fail closed; commerce/business operations tests | f88596e |
+| MS-347 | VERIFIED_LOCAL | SponsoredCampaign has bounded dates, exact Money budget/spend, language disclosure and enabled state; SponsoredResultSeparationTests | 168f2df |
+| MS-348 | VERIFIED_LOCAL | tenant authorization and partner dashboard projections expose only allowed partner analytics without cross-tenant customer/finance access; PartnerTenantAuthorizationTests | c63dc57 |
+| MS-349 | VERIFIED_LOCAL | versioned CommercialAgreement plus exact commission ledger/reconciliation/settlement references form the billing boundary without building a payment processor; backend finance tests | 32a0fd2 |
+| MS-350 | VERIFIED_LOCAL | SponsoredResultSeparator returns physically separate organic and sponsored arrays; SponsoredResultSeparationTests | 168f2df |
+| MS-351 | VERIFIED_LOCAL | sponsored placement requires a nonempty active-language disclosure or is omitted; sponsored tests | 168f2df |
+| MS-352 | VERIFIED_LOCAL | organic ranker receives no campaign economics and retains partner/non-partner offers regardless of sponsorship; higherCommissionNeverChangesOrganicOrder | 168f2df |
+| MS-353 | VERIFIED_LOCAL | only campaigns tied to an existing eligible offer can render; request constraints remain enforced by the upstream normalized offer pipeline; sponsored/commerce tests | 168f2df |
+| MS-354 | VERIFIED_LOCAL | contract-driven monetization enum covers sponsored, subscription and supported result-based models without hardcoded prices; commercial agreement tests | 32a0fd2 |
+| MS-355 | VERIFIED_LOCAL | qualifying event and commission model are versioned contract data; click is never assumed payable and conversion lifecycle gates commission; ledger/agreement tests | 32a0fd2 |
+| MS-356 | VERIFIED_LOCAL | verification/onboarding/freshness gates apply independently of commercial state; paying partner cannot bypass eligibility or truth controls; onboarding/feed tests | 8fb8acd |
+| MS-357 | VERIFIED_LOCAL | PartnerFeedRecord source timestamps and evaluator distinguish VERIFIED_LIVE, PARTNER_PROVIDED_RECENT, STALE and UNKNOWN; feed tests | 8fb8acd |
+| MS-358 | VERIFIED_LOCAL | PartnerProfileService.report persists categorized evidence as a review signal without automatic guilt/state change; reportDoesNotAutomaticallyConvictAndSuspensionRequiresAuditedActorReason | 1689274 |
+| MS-359 | VERIFIED_LOCAL | onboarding/profile suspension stops active state and MonetizableHandoffGate rejects suspended partners; offboarding/profile tests | 1689274 |
+| MS-360 | VERIFIED_LOCAL | critical onboarding/profile transitions and data changes append ordered actor/reason/time audit events; onboarding/profile tests | 1689274 |

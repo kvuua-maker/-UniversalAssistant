@@ -1,16 +1,16 @@
 {
   "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
-  "requirement_ids": ["MS-319...MS-334"],
+  "requirement_ids": ["MS-335...MS-360"],
   "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "16 compact voice UI, quick-launch and explicit watchOS exclusion requirements reconciled",
+  "integration_depth": "26 Business Platform architecture, profile, feed, sponsored, monetization and audit requirements reconciled",
   "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "MS-319–334 reconciliation completed typed processing, action-required, failure and expanded presentation states while retaining the official quick-launch path and explicit no-watch V1 boundary.",
-  "frozen_baseline_commit": "55c824e",
-  "dependency": "Owner physical devices are required only for queued Action Button and alternative entry-point verification; no dependency blocks the next local slice.",
-  "unresolved_verification_steps": ["1226 canonical requirements remain unreconciled", "MS-327–330 await only their exact LIVE_VERIFICATION_QUEUE physical quick-launch procedure"],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-335-PLUS-BUSINESS"
+  "material_change": "MS-335–360 reconciliation added only the missing compact partner profile claim/edit/hours/contact/report/suspension/audit layer and reused all existing M9 platform, feed, sponsored and finance components.",
+  "frozen_baseline_commit": "1689274",
+  "dependency": "No external dependency blocks the next local reconciliation slice.",
+  "unresolved_verification_steps": ["1200 canonical requirements remain unreconciled", "Existing provider-specific Business Platform live operations remain in LIVE_VERIFICATION_QUEUE"],
+  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-361-PLUS"
 }
