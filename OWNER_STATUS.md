@@ -6,7 +6,7 @@ M0–M6 and the completed M7 capability-registry, launch-market matrix, Find My 
 
 ## CURRENTLY WORKING ON
 
-M7 integration-depth audit. Selected path: STABLE.
+M7 acceptance. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Cross-check every M7 claim against its evidence and fallback depth, then complete M7 acceptance.
+Freeze the locally verified M7 evidence and advance to the first unfinished M8 block.
