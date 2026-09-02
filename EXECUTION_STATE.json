@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-DEFINITION-EVIDENCE-GOVERNANCE-AUDIT",
-  "requirement_ids": ["1343-1454"],
-  "selected_path": "Typed capability/acceptance/scope contracts, evidence-gated transitions and complete canonical ID inventory.",
-  "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "all locally executable definition/evidence governance complete; global requirement audit remains active",
-  "acceptance_contract_ref": "docs/M12_DEFINITION_EVIDENCE_GOVERNANCE_AUDIT.md",
+  "current_task_id": "M12-ON-DEVICE-PDF-PROCESSING-CORE",
+  "requirement_ids": ["1474"],
+  "selected_path": "On-device VisionKit/Vision/PDFKit production path with real PDF-byte transformations.",
+  "feasibility_state": "PASS_SELECTED_PATH",
+  "integration_depth": "merge/split/reorder/delete/rotate verified locally; remaining MS-1474 operations active",
+  "acceptance_contract_ref": "docs/M12_ON_DEVICE_PDF_PROCESSING_CORE.md",
   "required_evidence_level": "E3",
-  "current_exit_state": "VERIFIED_LOCAL",
+  "current_exit_state": "IMPLEMENTED_UNVERIFIED",
   "last_failure_signature": null,
-  "material_change": "MS-1343-1454 now have executable depth/acceptance/status/traceability gates and a 1787-ID canonical inventory.",
-  "frozen_baseline_commit": "3cd9308",
-  "dependency": "Fresh full iOS regression awaits recovery of the local CoreSimulator test runner; source builds and deterministic inventory validation succeed.",
-  "unresolved_verification_steps": ["fresh full iOS regression after simulator service recovery", "MS-1455-1459 final global audits"],
-  "next_task_id": "M12-REMAINING-V12-V13-CANONICAL-ROADMAP-AUDIT"
+  "material_change": "Actual PDF bytes now support safe merge, split, reorder, delete and rotation with fail-closed validation.",
+  "frozen_baseline_commit": "2e0300c",
+  "dependency": "None for remaining on-device implementation.",
+  "unresolved_verification_steps": ["remaining MS-1474 processing operations", "physical VisionKit capture verification remains in live queue"],
+  "next_task_id": "M12-MS-1474-REMAINING-DOCUMENT-PROCESSING"
 }
