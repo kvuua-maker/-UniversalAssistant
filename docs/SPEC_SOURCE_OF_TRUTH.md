@@ -19,6 +19,9 @@ The project source of truth is the complete, indivisible combination of:
    - SHA-256: `bb12b460bc75ae32d7404e33fe000b9f1ce7e5af13386c4997ee5430aadf7d21`
    - 381 lines / 12,702 bytes; owner-supplied canonical policy accepted on 2026-09-02.
    - Persistent live-verification state: `LIVE_VERIFICATION_QUEUE.json`.
+6. `docs/VOICE_OUTPUT_POLICY_ADDENDUM.md`
+   - SHA-256: `1a302401f5d5b15844a85d6721be6260f579c583d5aa61246bb1ce4d3f4ff5ea`
+   - 13 lines / 1,104 bytes; owner-supplied canonical voice-output policy accepted on 2026-09-02.
 
 All accepted addenda augment the Master Spec and do not remove or weaken it. Every requirement retains an evidence-backed zero-omission status; documentation, interfaces, mocks and external dependencies alone never establish completion. Later explicit supersession rules inside the Master Spec take precedence over earlier conflicting wording, subject to safety, law, current platform/provider truth, privacy and security.
 

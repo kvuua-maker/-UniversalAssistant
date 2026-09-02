@@ -15,6 +15,40 @@ struct RuntimeExperiencePolicyTests {
         #expect(policy.shouldSpeak(.mandatorySafetyConfirmation))
     }
 
+    @Test func ordinaryAndLongInformationDefaultsToScreenWithoutAutomaticSpeech() {
+        let policy = SpeechOutputPolicy()
+        let ordinary = policy.decide(.init(category: .usefulFact, context: .typed, isExplicitlyRequested: false, isLongResponse: false))
+        let longVoice = policy.decide(.init(category: .usefulFact, context: .voice, isExplicitlyRequested: false, isLongResponse: true))
+        #expect(ordinary == .init(speak: false, showOnScreen: true, reason: "screen_primary"))
+        #expect(longVoice == .init(speak: false, showOnScreen: true, reason: "long_response_screen_default"))
+    }
+
+    @Test func naturalVoiceContextsAndExplicitReadUseSpeechWithoutFullDuplication() {
+        let policy = SpeechOutputPolicy()
+        let handsFree = policy.decide(.init(category: .usefulFact, context: .handsFree, isExplicitlyRequested: false, isLongResponse: false))
+        let explicit = policy.decide(.init(category: .usefulFact, context: .typed, isExplicitlyRequested: true, isLongResponse: true))
+        #expect(handsFree == .init(speak: true, showOnScreen: false, reason: "contextual_voice_output"))
+        #expect(explicit == .init(speak: true, showOnScreen: false, reason: "explicit_read_or_say"))
+    }
+
+    @Test func directActionsAreNeverNarratedEvenWhenVoiceWasUsed() {
+        let decision = SpeechOutputPolicy().decide(.init(category: .directActionNarration, context: .voice, isExplicitlyRequested: false, isLongResponse: false))
+        #expect(decision == .init(speak: false, showOnScreen: false, reason: "do_dont_narrate"))
+    }
+
+    @Test func voicePreferencePersistsAndScreenOnlySuppressesAutomaticSpeech() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        let store = VoiceOutputPreferenceStore(store: LocalStore(baseDirectory: directory))
+        #expect(try await store.load() == .contextual)
+        try await store.save(.screenOnly)
+        #expect(try await store.load() == .screenOnly)
+        let decision = SpeechOutputPolicy().decide(
+            .init(category: .usefulFact, context: .handsFree, isExplicitlyRequested: false, isLongResponse: false),
+            preference: .screenOnly
+        )
+        #expect(!decision.speak && decision.showOnScreen)
+    }
+
     @Test func coffeeActivatesOnlyCanonicalMinimalPath() throws {
         let command = LocalCommandEngine().parse("Хочу кави")
         #expect(command.intent == .placeSearch)
