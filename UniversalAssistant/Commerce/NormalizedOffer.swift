@@ -62,6 +62,10 @@ struct NormalizedOffer: Identifiable, Equatable, Sendable {
     var affiliateAttributionSupported: Bool
     var imageURL: URL? = nil
     var originalItemPrice: Money? = nil
+    var productDescription: String? = nil
+    var deliveryInformation: String? = nil
+    var sourceConfidence: RetailExtractionConfidence? = nil
+    var sourceProvenance: [String] = []
 
     func isFresh(now: Date = .now, maximumAge: TimeInterval = 15 * 60) -> Bool {
         let age = now.timeIntervalSince(sourceTimestamp)
@@ -71,12 +75,38 @@ struct NormalizedOffer: Identifiable, Equatable, Sendable {
 
 struct OfferDeduplicator: Sendable {
     func deduplicate(_ offers: [NormalizedOffer]) -> [NormalizedOffer] {
-        var seen: Set<String> = [], result: [NormalizedOffer] = []
+        var seen: Set<String> = [], strongIndexes: [String: Int] = [:], result: [NormalizedOffer] = []
         for offer in offers {
             let key = "\(offer.providerID)|\(offer.providerOfferID)|\(offer.seller.id)"
-            if seen.insert(key).inserted { result.append(offer) }
+            guard seen.insert(key).inserted else { continue }
+            if let strong = strongKey(offer), let index = strongIndexes[strong] {
+                if result[index].providerID == "generic-retail-web", offer.providerID != "generic-retail-web" {
+                    result[index] = offer
+                }
+                continue
+            }
+            if let strong = strongKey(offer) { strongIndexes[strong] = result.count }
+            result.append(offer)
         }
         return result
+    }
+
+    private func strongKey(_ offer: NormalizedOffer) -> String? {
+        let identity = offer.identity
+        let product: String
+        if let gtin = identity.gtin { product = "gtin:\(gtin)" }
+        else if let sku = identity.sku, let brand = identity.brand {
+            product = "sku:\(normalized(brand)):\(normalized(sku))"
+        } else { return nil }
+        let variant = [identity.variant.storage, identity.variant.size, identity.variant.color,
+                       identity.variant.generation, identity.variant.region, identity.variant.configuration]
+            .map { normalized($0 ?? "-") }.joined(separator: "|")
+        return "\(product)|\(variant)|\(normalized(offer.seller.name))"
+    }
+
+    private func normalized(_ value: String) -> String {
+        value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .filter { $0.isLetter || $0.isNumber }
     }
 }
 

@@ -380,6 +380,19 @@
       "completion_evidence": null
     },
     {
+      "requirement_id": "GENERIC-RETAIL-WEB-LIVE-DISCOVERY-EXTRACTION",
+      "service_provider": "Owner-approved web search API and controlled public retail product pages",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner selection and credentials for a lawful HTTPS web search API, plus controlled public product pages whose terms/robots permit automated retrieval; no search vendor or permission may be invented.",
+      "dependency_owner": "Owner, legal/privacy owner and selected search provider",
+      "local_evidence": ["UniversalAssistant/Commerce/GenericRetailWebProvider.swift", "UniversalAssistant/Commerce/NormalizedOffer.swift", "UniversalAssistantTests/GenericRetailWebProviderTests.swift", "docs/GENERIC_RETAIL_WEB_DISCOVERY_EXTRACTION_AUDIT.md", "17 targeted generic-retail/normalization tests passed on 2026-09-02"],
+      "required_live_action": "Inject the selected search credential through runtime configuration; discover an unknown controlled merchant product page; verify access permission, retrieve its current HTML, compare extracted identity/variant/price/availability/source timestamp to the visible authoritative page, then repeat blocked/dynamic/stale and API-versus-web duplicate cases without bypassing CAPTCHA/login/robots.",
+      "expected_result": "A previously unknown lawful merchant becomes a normalized native product card with exact truthful handoff and no invented affiliate attribution; current structured facts match the page, unknown stays unknown, restricted/unavailable pages report failure rather than no stock, and preferred partner/API evidence wins an exact duplicate without merging variants.",
+      "created_at": "2026-09-02T22:25:00+02:00",
+      "last_checked": "2026-09-02T22:25:00+02:00",
+      "completion_evidence": null
+    },
+    {
       "requirement_id": "BUSINESS-OPERATIONS-LIVE-PARTNER-CONNECTORS",
       "service_provider": "Owner-approved partner CRM/ERP/marketplace/booking connectors",
       "current_status": "READY_FOR_LIVE_VERIFICATION",

@@ -8,7 +8,7 @@
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "MS-155–182 reconciled per ID: 27 VERIFIED_LOCAL and MS-174 READY_FOR_LIVE_VERIFICATION after production Silpo adapter contract tests; 29 targeted iOS tests and 4 backend Silpo tests pass.",
+  "material_change": "Generic retail web targeted audit closed the missing unknown-retailer path by reusing RetailProvider/NormalizedOffer/native cards: configured discovery, bounded retrieval, JSON-LD/microdata/RDFa/OpenGraph extraction, truth/freshness/confidence, variant-safe dedup, partner preference and exact non-affiliate handoff; 17 targeted tests and the full 390-test iOS plus 83-test backend regressions pass.",
   "frozen_baseline_commit": "e1f5df0",
   "dependency": "None for the next local reconciliation slice.",
   "unresolved_verification_steps": ["1378 canonical requirements remain unreconciled", "MS-174 awaits only owner/provider-authorized Silpo OAuth live verification"],
