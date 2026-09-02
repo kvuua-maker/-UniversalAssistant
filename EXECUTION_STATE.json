@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M11-ACCEPTANCE",
-  "requirement_ids": ["801-850"],
-  "selected_path": "Requirement-by-requirement M11 zero-omission acceptance with final full regression and persistent live-only queue.",
+  "current_task_id": "M12-DEVICE-SYSTEM-ACTIONS-CORE",
+  "requirement_ids": ["851-870"],
+  "selected_path": "Reuse structured command/local action/capability registries for exact alias app routing, ambiguity and deepest verified context.",
   "feasibility_state": "VERIFIED_LOCAL",
   "integration_depth": "local E3 complete; provider-specific live revocation covered by existing queue",
-  "acceptance_contract_ref": "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+  "acceptance_contract_ref": "docs/M12_DEVICE_SYSTEM_ACTIONS_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Every MS-801–850 requirement has an allowed evidence status with implementation, test and commit traceability.",
-  "frozen_baseline_commit": "c45a641",
+  "material_change": "One deterministic entry routes local, external and exact supported-app commands without fuzzy selection or unnecessary narration.",
+  "frozen_baseline_commit": "4ab9626",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M12-DEVICE-SYSTEM-ACTIONS-CORE"
+  "next_task_id": "M12-LOCAL-IPHONE-SEARCH-CORE"
 }

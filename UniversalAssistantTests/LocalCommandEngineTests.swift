@@ -22,6 +22,7 @@ struct LocalCommandEngineTests {
 
     @Test("Representative deterministic intents", arguments: [
         ("Нагадай завтра о 9", CommandIntent.reminderCreate), ("Позвони маме", .contactCall), ("Weather tomorrow", .weather),
+        ("Покажи погоду", .weather),
         ("Zeige neue Kollektion", .fashionDiscovery), ("Billet pour Paris", .ticketSearch), ("Подзвони 112", .emergency)
     ])
     func intentCorpus(_ phrase: String, _ intent: CommandIntent) { #expect(engine.parse(phrase).intent == intent) }

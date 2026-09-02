@@ -53,7 +53,7 @@ struct LocalCommandEngine: CommandParsing {
         (.contactCall, ["подзвони", "позвони", "call ", "ruf ", "appelle"]),
         (.messageCompose, ["напиши ", "отправь сообщение", "message ", "schreib ", "écris "]),
         (.navigation, ["веди ", "маршрут до", "navigate", "route to", "navigiere", "itinéraire"]),
-        (.weather, ["погода", "weather", "wetter", "météo"]),
+        (.weather, ["погод", "weather", "wetter", "météo"]),
         (.audioRecord, ["диктофон", "запиши аудіо", "voice recorder", "sprachmemo", "enregistre audio"]),
         (.ticketSearch, ["квиток", "квитки", "билет", "ticket", "fahrkarte", "billet"]),
         (.hotelSearch, ["готель", "отель", "hotel", "hôtel", "квартиру"]),

@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M12 device and system actions core. Selected path: STABLE.
+M12 local iPhone search core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Implement the first post-M11 canonical device/system action requirements with public iOS APIs and truthful fallbacks.
+Implement privacy-first local search over permitted iPhone data sources with typed results and truthful permission/unavailable states.

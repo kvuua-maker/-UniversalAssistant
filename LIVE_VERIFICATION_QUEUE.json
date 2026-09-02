@@ -157,6 +157,24 @@
       "created_at": "2026-09-02T14:40:00+02:00",
       "last_checked": "2026-09-02T14:40:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-859-869-LIVE-INSTALLED-APP-ACTIONS",
+      "service_provider": "Physical iPhone with representative installed system and third-party applications",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "A signed build on a physical supported iPhone with Telegram, Viber and Google Maps installed and their current App Intents/App Shortcuts exposed to the device.",
+      "dependency_owner": "Owner/device tester",
+      "local_evidence": [
+        "UniversalAssistant/Integrations/UniversalDeviceCommandRouter.swift",
+        "UniversalAssistantTests/UniversalDeviceCommandRouterTests.swift",
+        "PROVIDER_CAPABILITY_MATRIX.md",
+        "235 iOS tests across 60 suites passed on 2026-09-02"
+      ],
+      "required_live_action": "From the signed build, issue exact and ambiguous application names, open Telegram and an exact public Telegram username, open Viber, open a Google Maps search, inspect exposed App Intents/App Shortcuts, and repeat with one target app absent.",
+      "expected_result": "Unambiguous targets open silently at the deepest verified context, ambiguity asks exactly one clarification, absence uses the documented web/unsupported fallback, and no private API or arbitrary fuzzy selection occurs.",
+      "created_at": "2026-09-02T15:10:00+02:00",
+      "last_checked": "2026-09-02T15:10:00+02:00",
+      "completion_evidence": null
     }
   ]
 }
