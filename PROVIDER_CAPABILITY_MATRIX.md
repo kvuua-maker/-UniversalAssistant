@@ -20,3 +20,13 @@ Commerce providers additionally require per-capability fields for exact identity
 | Google Maps | Official Maps URLs / Universal Links | Exact search context through HTTPS Maps URL | Falls back to the same legitimate web destination if the app is absent |
 
 App Intents/App Shortcuts exposed by third-party binaries are discoverable only on an installed physical-device configuration. That specific verification is queued; no private inter-app enumeration or control is used.
+
+## M12 messenger capability evidence (MS-941–948)
+
+| Messenger | FIND | OPEN_CHAT | COMPOSE | SEND | CALL | SEARCH_HISTORY | APP_INTENT | DEEPLINK | API | Deepest V1 behavior |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Messages/SMS/iMessage | no | no | yes | no | no | no | device audit | no | MessageUI compose only | system composer; user sends |
+| WhatsApp consumer | no | yes | yes | no | no | no | device audit | yes | no authorized consumer-history API | exact click-to-chat draft |
+| Telegram consumer | no | yes | yes | no | no | no | device audit | yes | Bot/API access is not user inbox access | exact public username draft |
+| Viber consumer | no | no | yes | no | no | no | device audit | yes | Bot API is not user inbox access | public share draft |
+| Signal consumer | no | no | no | no | no | no | device audit | not claimed | no authorized consumer API | system share-sheet selection |

@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-GMAIL-EMAIL-INTEGRATION-CORE",
-  "requirement_ids": ["927-940"],
-  "selected_path": "Official Gmail REST provider behind existing OAuth/Keychain boundary with real content, attachment, draft and confirmed mutation contracts.",
+  "current_task_id": "M12-MESSAGING-CORE",
+  "requirement_ids": ["941-948"],
+  "selected_path": "Public MessageUI plus validated exact messenger draft/deep-link handoffs with no history or silent-send claims.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 complete; controlled authorized Gmail execution queued",
-  "acceptance_contract_ref": "docs/M12_GMAIL_EMAIL_INTEGRATION_CORE.md",
+  "integration_depth": "local E3 complete; physical composer/app behavior queued",
+  "acceptance_contract_ref": "docs/M12_MESSAGING_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Connected Gmail now has a real official API client for search, MIME content, attachments, drafts and confirmed mutations rather than an app-launch placeholder.",
-  "frozen_baseline_commit": "e015ba8",
+  "material_change": "Messages and major messengers now have explicit deepest legitimate compose/context behavior and truthful unsupported history/send boundaries.",
+  "frozen_baseline_commit": "e7ac66d",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M12-MESSAGING-SYSTEM-DOMAINS-CORE"
+  "next_task_id": "M12-APPLE-SYSTEM-DOMAINS-CORE"
 }
