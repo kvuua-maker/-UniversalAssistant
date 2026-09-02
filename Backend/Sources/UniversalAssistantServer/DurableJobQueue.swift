@@ -1,7 +1,7 @@
 import Foundation
 
 public enum ProactiveJobKind: String, Codable, Sendable {
-    case trafficWatch, weatherWatch, productWatch, ticketWatch, notificationDelivery
+    case trafficWatch, weatherWatch, productWatch, ticketWatch, parcelWatch, notificationDelivery
 }
 
 public struct ProactiveJob: Identifiable, Codable, Equatable, Sendable {

@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-BILLS-RECEIPTS-DOCUMENTS-CORE",
-  "requirement_ids": ["1023-1029"],
-  "selected_path": "Typed verified document facts, cross-source personal search, safe reminders and confirmed official payment handoff.",
+  "current_task_id": "M12-PARCEL-DELIVERY-CORE",
+  "requirement_ids": ["1030-1037"],
+  "selected_path": "Modular authenticated carrier adapters, verified parcel facts, exact branch routes and persistent changed-state watches.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 document behavior complete; no external dependency is required for this core",
-  "acceptance_contract_ref": "docs/M12_BILLS_RECEIPTS_DOCUMENTS_CORE.md",
+  "integration_depth": "local E3 production and behavioral integration complete; real carrier accounts and controlled shipments remain live-only",
+  "acceptance_contract_ref": "docs/M12_PARCEL_DELIVERY_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Document facts cannot drive reminders or warranty claims unless verified; payment remains a confirmed official handoff.",
-  "frozen_baseline_commit": "b837945",
-  "dependency": null,
-  "unresolved_verification_steps": [],
-  "next_task_id": "M12-PARCEL-DELIVERY-CORE"
+  "material_change": "Carrier failures remain truthful partial results; credentials are injected at the boundary and parcel watches persist across restart.",
+  "frozen_baseline_commit": "20c0a4e",
+  "dependency": "Owner/provider credentials and controlled live shipments only for live verification.",
+  "unresolved_verification_steps": ["MS-1030-1037-LIVE-PARCEL-PROVIDERS"],
+  "next_task_id": "M12-GOVERNMENT-LOCAL-SERVICES-CORE"
 }

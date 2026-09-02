@@ -1,7 +1,7 @@
 import Foundation
 
 public enum NotificationCategory: String, Codable, CaseIterable, Sendable {
-    case traffic, weather, product, ticket, business
+    case traffic, weather, product, ticket, parcel, business
 }
 
 public struct NotificationPreferences: Codable, Equatable, Sendable {

@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M12 Parcel delivery core. Selected path: STABLE.
+M12 Government and local services core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -14,7 +14,7 @@ Voice recognition and fast system invocation are ready for a later stable iPhone
 
 ## BLOCKED AND WHY
 
-No blocker for the current local core. Live media providers remain separately entitlement/authorization/device gated.
+No blocker for the next local core. Real parcel providers remain separately account/credential/shipment gated in the live queue.
 
 ## OWNER ACTION NEEDED NOW
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Implement modular truthful carrier tracking, saved/contextual parcel lookup, watches, branch search and navigation handoff.
+Audit and implement the deepest legitimate official Diia, municipal parking, transport, administrative, utility and bill handoff capabilities.

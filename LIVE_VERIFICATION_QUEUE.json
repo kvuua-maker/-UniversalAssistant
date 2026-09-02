@@ -258,6 +258,19 @@
       "created_at": "2026-09-02T17:02:00+02:00",
       "last_checked": "2026-09-02T17:02:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-1030-1037-LIVE-PARCEL-PROVIDERS",
+      "service_provider": "Nova Poshta, Ukrposhta and Meest official production/sandbox APIs",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Provider-issued Nova Poshta API key, Ukrposhta agreement token/bearer credential, Meest OAuth/API access, and controlled active/delivered shipments plus a test location for each enabled carrier.",
+      "dependency_owner": "Owner and authorized carrier account administrators",
+      "local_evidence": ["UniversalAssistant/Delivery/ParcelDeliveryEngine.swift", "UniversalAssistant/Delivery/ParcelProviderAdapters.swift", "UniversalAssistantTests/ParcelDeliveryEngineTests.swift", "Backend/Sources/UniversalAssistantServer/ProactiveWatchEngine.swift", "Backend/Tests/UniversalAssistantServerTests/ProactiveWatchEngineTests.swift", "docs/M12_PARCEL_DELIVERY_CORE.md"],
+      "required_live_action": "Inject each credential through runtime configuration; track controlled active, delivered and unknown identifiers; verify authorization/rate-limit/no-result handling; query nearby real branches; persist a watch across process restart and observe one actual carrier status transition through durable scheduling and notification.",
+      "expected_result": "Returned status, event evidence and branch coordinates match each official carrier; unavailable facts remain unknown; one provider failure leaves truthful alternatives; no secret appears in client persistence/logs/repository; and a real changed status generates exactly one parcel notification.",
+      "created_at": "2026-09-02T17:32:00+02:00",
+      "last_checked": "2026-09-02T17:32:00+02:00",
+      "completion_evidence": null
     }
   ]
 }

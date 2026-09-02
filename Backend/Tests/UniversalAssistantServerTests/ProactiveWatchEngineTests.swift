@@ -42,4 +42,31 @@ private func rule(_ now: Date, kind: ProactiveWatchKind = .traffic, threshold: D
         #expect(await engine.rules(userID: "user").isEmpty)
         #expect(try await engine.dueJobs(now: now).isEmpty)
     }
+
+    @Test func parcelWatchPersistsAcrossRestartAndTriggersOnlyOnChangedProviderState() async throws {
+        let now = Date(), url = watchURL()
+        let value = ProactiveWatchRule(userID: "parcel-user", subjectID: "novaPoshta:20400000000000",
+            kind: .parcel, checkInterval: 60, createdAt: now,
+            expiresAt: now.addingTimeInterval(30 * 24 * 3_600))
+        let engine = try ProactiveWatchEngine(fileURL: url)
+        try await engine.add(value, now: now)
+        let job = try #require(try await engine.dueJobs(now: now).first)
+        #expect(job.kind == .parcelWatch)
+        #expect(String(decoding: job.payload, as: UTF8.self) == value.subjectID)
+
+        let restored = try ProactiveWatchEngine(fileURL: url)
+        let persisted = try #require(await restored.rules(userID: "parcel-user").first)
+        #expect(persisted.id == value.id)
+        #expect(persisted.kind == .parcel)
+        #expect(persisted.subjectID == value.subjectID)
+        #expect(persisted.nextCheckAt == now.addingTimeInterval(value.checkInterval))
+        #expect(try await restored.record(ruleID: value.id,
+            observation: .init(state: "at_branch", source: "novaPoshta:event-1", observedAt: now), now: now) == nil)
+        #expect(try await restored.record(ruleID: value.id,
+            observation: .init(state: "at_branch", source: "novaPoshta:event-1", observedAt: now), now: now) == nil)
+        let trigger = try await restored.record(ruleID: value.id,
+            observation: .init(state: "delivered", source: "novaPoshta:event-2", observedAt: now), now: now)
+        #expect(trigger?.category == .parcel)
+        #expect(trigger?.eventKey == value.subjectID)
+    }
 }

@@ -1,7 +1,7 @@
 import Foundation
 
 public enum ProactiveWatchKind: String, Codable, Sendable {
-    case traffic, weather, businessHours, product, ticket
+    case traffic, weather, businessHours, product, ticket, parcel
 
     var jobKind: ProactiveJobKind {
         switch self {
@@ -9,6 +9,7 @@ public enum ProactiveWatchKind: String, Codable, Sendable {
         case .weather: .weatherWatch
         case .product: .productWatch
         case .ticket: .ticketWatch
+        case .parcel: .parcelWatch
         case .businessHours: .notificationDelivery
         }
     }
@@ -126,7 +127,7 @@ public actor ProactiveWatchEngine {
         return previous.state != current.state && current.state != nil
     }
     private func category(_ kind: ProactiveWatchKind) -> NotificationCategory {
-        switch kind { case .traffic: .traffic; case .weather: .weather; case .product: .product; case .ticket: .ticket; case .businessHours: .business }
+        switch kind { case .traffic: .traffic; case .weather: .weather; case .product: .product; case .ticket: .ticket; case .parcel: .parcel; case .businessHours: .business }
     }
     private func fingerprint(_ value: ProactiveObservation) -> String {
         let number = value.numericValue.map { String($0) } ?? "-"
