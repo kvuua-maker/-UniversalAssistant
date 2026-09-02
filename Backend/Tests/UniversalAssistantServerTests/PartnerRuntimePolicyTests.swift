@@ -34,6 +34,30 @@ struct PartnerRuntimePolicyTests {
         #expect(await ledger.auditTrail().count == 3)
     }
 
+    @Test func knownConfigurationCanRollbackWithoutRewritingHistory() async throws {
+        let store = PartnerRuntimePolicyStore(), now = Date()
+        let v1 = PartnerRuntimePolicySnapshot(
+            version: 1, effectiveFrom: now.addingTimeInterval(-10),
+            expiresAt: now.addingTimeInterval(100), rules: [
+                .init(feature: .partnerFeeds, enabled: false, countryCodes: [], categories: [])
+            ], sourceReference: "reviewed-v1"
+        )
+        let v2 = PartnerRuntimePolicySnapshot(
+            version: 2, effectiveFrom: now.addingTimeInterval(-5),
+            expiresAt: now.addingTimeInterval(100), rules: [
+                .init(feature: .partnerFeeds, enabled: true, countryCodes: [], categories: [])
+            ], sourceReference: "reviewed-v2"
+        )
+        try await store.install(v1)
+        try await store.install(v2)
+        #expect(await store.isEnabled(.partnerFeeds, countryCode: "UA", category: "grocery", now: now))
+        #expect(try await store.rollback(to: 1).sourceReference == "reviewed-v1")
+        #expect(!(await store.isEnabled(.partnerFeeds, countryCode: "UA", category: "grocery", now: now)))
+        await #expect(throws: PartnerRuntimePolicyError.unknownVersion) {
+            try await store.rollback(to: 99)
+        }
+    }
+
     @Test func costAndCurrencyLimitsFailClosedWithoutConsumption() async {
         let now = Date()
         let ledger = PartnerCostQuotaLedger(policy: .init(policyID: "quota", version: 1, scopeID: "provider",

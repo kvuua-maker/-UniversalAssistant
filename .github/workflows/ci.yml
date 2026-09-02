@@ -3,10 +3,59 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
-  ios:
+  verify:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - run: xcodebuild -project UniversalAssistant.xcodeproj -scheme UniversalAssistant -configuration Development -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
-      - run: swift test --package-path Backend
+      - name: Static configuration checks
+        run: |
+          git diff --check
+          plutil -lint UniversalAssistant/PrivacyInfo.xcprivacy
+          for file in UniversalAssistant/Resources/*.lproj/Localizable.strings; do plutil -lint "$file"; done
+      - name: Backend tests
+        run: swift test --package-path Backend 2>&1 | tee backend-tests.log
+      - name: iOS build and tests
+        run: |
+          set -o pipefail
+          xcodebuild -project UniversalAssistant.xcodeproj -scheme UniversalAssistant -configuration Development -destination 'platform=iOS Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO test 2>&1 | tee ios-tests.log
+      - name: Release candidate identity
+        run: |
+          mkdir -p release-evidence
+          git rev-parse HEAD > release-evidence/git-commit.txt
+          xcodebuild -version > release-evidence/xcode-version.txt
+          swift --version > release-evidence/swift-version.txt
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            backend-tests.log
+            ios-tests.log
+            release-evidence/
+
+  staging:
+    if: github.event_name == 'workflow_dispatch'
+    needs: verify
+    environment: staging
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift build --package-path Backend -c release
+      - name: Produce reviewed staging artifact
+        run: |
+          mkdir -p staging-artifact
+          cp Backend/.build/release/UniversalAssistantServer staging-artifact/
+          git rev-parse HEAD > staging-artifact/git-commit.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: staging-backend-${{ github.sha }}
+          path: staging-artifact/

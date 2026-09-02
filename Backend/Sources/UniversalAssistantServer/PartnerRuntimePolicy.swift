@@ -26,10 +26,12 @@ struct PartnerRuntimePolicySnapshot: Equatable, Codable, Sendable {
 enum PartnerRuntimePolicyError: Error, Equatable, Sendable {
     case invalidSnapshot
     case staleVersion
+    case unknownVersion
 }
 
 actor PartnerRuntimePolicyStore {
     private var current: PartnerRuntimePolicySnapshot?
+    private var versions: [Int: PartnerRuntimePolicySnapshot] = [:]
 
     func install(_ snapshot: PartnerRuntimePolicySnapshot) throws {
         guard snapshot.version > 0, snapshot.effectiveFrom < snapshot.expiresAt,
@@ -40,6 +42,7 @@ actor PartnerRuntimePolicyStore {
         guard current.map({ snapshot.version > $0.version }) ?? true else {
             throw PartnerRuntimePolicyError.staleVersion
         }
+        versions[snapshot.version] = snapshot
         current = snapshot
     }
 
@@ -53,6 +56,15 @@ actor PartnerRuntimePolicyStore {
     }
 
     func snapshot() -> PartnerRuntimePolicySnapshot? { current }
+
+    @discardableResult
+    func rollback(to version: Int) throws -> PartnerRuntimePolicySnapshot {
+        guard let snapshot = versions[version] else {
+            throw PartnerRuntimePolicyError.unknownVersion
+        }
+        current = snapshot
+        return snapshot
+    }
 }
 
 struct PartnerQuotaPolicy: Equatable, Codable, Sendable {

@@ -6,7 +6,7 @@ M0–M9 and the deterministic coordination addendum are Codex-verified at local 
 
 ## CURRENTLY WORKING ON
 
-M10 CI/CD and rollback. Selected path: STABLE.
+M10 incident response and operational alerting. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Implement reproducible build/test gates, artifact identity, migration-safe rollback checks and an explicit rollback runbook.
+Implement privacy-safe diagnostics, selective dependency health alerts, user-safe degradation communication and an incident runbook.

@@ -41,6 +41,25 @@
       "created_at": "2026-09-02T12:58:00+02:00",
       "last_checked": "2026-09-02T12:58:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-741-745-747-LIVE-DEPLOY",
+      "service_provider": "GitHub Actions and production backend host",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner-configured protected staging/production GitHub Environments, deployment identity and selected backend hosting target.",
+      "dependency_owner": "Owner and deployment operator",
+      "local_evidence": [
+        ".github/workflows/ci.yml",
+        "ROLLBACK.md",
+        "Backend/Sources/UniversalAssistantServer/PartnerRuntimePolicy.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PartnerRuntimePolicyTests.swift",
+        "214 iOS tests and 62 backend tests passed locally on 2026-09-02"
+      ],
+      "required_live_action": "Run CI on origin/main, approve staging, deploy the immutable identified artifact through the selected host adapter, verify health, then execute config and last-known-good artifact rollback drills.",
+      "expected_result": "Critical failures block promotion; logs and artifact identity are retained; staging health succeeds; reviewed rollback restores the known-good code/config without destructive data reversal.",
+      "created_at": "2026-09-02T13:04:00+02:00",
+      "last_checked": "2026-09-02T13:04:00+02:00",
+      "completion_evidence": null
     }
   ]
 }

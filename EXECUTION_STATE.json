@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M10-LOCALIZATION-ACCESSIBILITY-QA",
-  "requirement_ids": ["468", "469", "470", "796", "797", "798", "799", "800", "835", "838", "839"],
-  "selected_path": "Behavioral locale parity, runtime region formatting and accessible typed/voice interaction verification.",
+  "current_task_id": "M10-CI-CD-ROLLBACK",
+  "requirement_ids": ["737", "738", "739", "740", "741", "742", "743", "744", "745", "746", "747"],
+  "selected_path": "Fail-closed CI tests, immutable artifact identity, controlled staging artifact and known-version config rollback.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 plus ready-for-live device voice QA",
-  "acceptance_contract_ref": "docs/M10_LOCALIZATION_ACCESSIBILITY_QA.md",
+  "integration_depth": "local E3 plus ready-for-live deployment drill",
+  "acceptance_contract_ref": "ROLLBACK.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Five-locale parity, runtime currency/date locale behavior, long-label coverage and accessible voice alternatives are verified.",
-  "frozen_baseline_commit": "646ee9d",
-  "dependency": "Only physical-device mixed Ukrainian/Russian voice QA remains in LIVE_VERIFICATION_QUEUE.json.",
+  "material_change": "CI now runs static, backend and iOS test gates with artifacts; runtime config has tested known-version rollback.",
+  "frozen_baseline_commit": "ef5e5fd",
+  "dependency": "Protected GitHub deployment environments and a selected backend host remain in LIVE_VERIFICATION_QUEUE.json.",
   "unresolved_verification_steps": [
     {
       "requirement_id": "M10-THREAT-PRIVACY",
@@ -18,5 +18,5 @@
       "step": "Complete repository-wide security scan 507d18d3-2af0-47b7-9c7d-135bb49e29d1 after workbench handoff ownership is available."
     }
   ],
-  "next_task_id": "M10-CI-CD-ROLLBACK"
+  "next_task_id": "M10-INCIDENT-RESPONSE-OPERATIONAL-ALERTING"
 }
