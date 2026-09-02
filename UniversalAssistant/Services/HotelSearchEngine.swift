@@ -10,20 +10,20 @@ enum HotelAvailabilityState: String, Codable, Sendable {
     var isVerifiedAvailable: Bool { self == .liveConfirmed || self == .providerConfirmed }
 }
 
-struct HotelAvailabilityEvidence: Equatable, Sendable {
+struct HotelAvailabilityEvidence: Equatable, Codable, Sendable {
     let state: HotelAvailabilityState
     let source: String?
     let observedAt: Date?
 }
 
-struct HotelPriceQuote: Equatable, Sendable {
+struct HotelPriceQuote: Equatable, Codable, Sendable {
     let knownTotal: Money?
     let nightlyRate: Money?
     let includesMandatoryFees: Bool
     let observedAt: Date?
 }
 
-struct HotelOffer: Identifiable, Equatable, Sendable {
+struct HotelOffer: Identifiable, Equatable, Codable, Sendable {
     let id: String
     let providerID: String
     let providerOfferID: String
@@ -39,7 +39,7 @@ struct HotelOffer: Identifiable, Equatable, Sendable {
     let fetchedAt: Date
 }
 
-struct HotelSearchRequest: Equatable, Sendable {
+struct HotelSearchRequest: Equatable, Codable, Sendable {
     let location: String
     let checkIn: Date
     let checkOut: Date

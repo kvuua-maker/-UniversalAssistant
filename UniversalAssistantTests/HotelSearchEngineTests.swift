@@ -17,6 +17,17 @@ private struct HotelProviderFixture: HotelProvider {
     private enum FixtureError: Error { case failed }
 }
 
+private actor HotelHTTPRecorder: HotelHTTPTransport {
+    var responses: [(Data, Int)]
+    private(set) var requests: [URLRequest] = []
+    init(_ responses: [(Data, Int)]) { self.responses = responses }
+    func data(for request: URLRequest) throws -> (Data, Int) {
+        requests.append(request)
+        return responses.removeFirst()
+    }
+    func recorded() -> [URLRequest] { requests }
+}
+
 private func hotelRequest(_ now: Date, maximum: Decimal? = nil) -> HotelSearchRequest {
     .init(location: "Lviv", checkIn: now.addingTimeInterval(86_400),
           checkOut: now.addingTimeInterval(172_800), guestCount: 2,
@@ -105,5 +116,28 @@ private func hotel(_ id: String, provider: String, request: HotelSearchRequest, 
         let handoff = try await engine.bookingHandoff(for: hotel("verified", provider: "p", request: request, now: now), now: now)
         #expect(handoff.state == .destinationPrepared)
         #expect(handoff.destination.path == "/offers/verified")
+    }
+
+    @Test func officialHTTPProviderInjectsCredentialAndParsesOnlyItsOffers() async throws {
+        let now = Date(), request = hotelRequest(now)
+        let valid = hotel("valid", provider: "official", request: request, now: now)
+        let foreign = hotel("foreign", provider: "other", request: request, now: now)
+        let transport = HotelHTTPRecorder([(try JSONEncoder().encode([valid, foreign]), 200)])
+        let provider = try OfficialHotelHTTPProvider(providerID: "official",
+            searchURL: URL(string: "https://hotels.example/search")!, bearerToken: "secret", transport: transport)
+        #expect(try await provider.search(request).map(\.id) == ["valid"])
+        let recorded = await transport.recorded()
+        #expect(recorded.first?.value(forHTTPHeaderField: "Authorization") == "Bearer secret")
+        #expect(recorded.first?.timeoutInterval == 8)
+    }
+
+    @Test func officialHTTPProviderRejectsCredentialAndRateLimitFailures() async throws {
+        let endpoint = URL(string: "https://hotels.example/search")!
+        #expect(throws: HotelHTTPError.missingCredential) {
+            try OfficialHotelHTTPProvider(providerID: "official", searchURL: endpoint, bearerToken: " ")
+        }
+        let provider = try OfficialHotelHTTPProvider(providerID: "official", searchURL: endpoint,
+            bearerToken: "token", transport: HotelHTTPRecorder([(Data("{}".utf8), 429)]))
+        await #expect(throws: HotelHTTPError.rateLimited) { try await provider.search(hotelRequest(.now)) }
     }
 }
