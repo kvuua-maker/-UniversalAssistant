@@ -74,13 +74,25 @@ enum PartnerWebhookSignature {
 }
 
 actor PartnerWebhookIngestion {
+    private struct ProcessedSnapshot: Codable { let keys: Set<String> }
     private let vault: PartnerWebhookCredentialVault
     private let replayWindow: TimeInterval
-    private var processed: Set<String> = []
+    private let processedEventURL: URL?
+    private var processed: Set<String>
     private var audit: [PartnerWebhookAuditEvent] = []
 
-    init(vault: PartnerWebhookCredentialVault, replayWindow: TimeInterval = 300) {
-        self.vault = vault; self.replayWindow = replayWindow
+    init(vault: PartnerWebhookCredentialVault, replayWindow: TimeInterval = 300,
+         processedEventURL: URL? = nil) throws {
+        self.vault = vault
+        self.replayWindow = replayWindow
+        self.processedEventURL = processedEventURL
+        if let url = processedEventURL, FileManager.default.fileExists(atPath: url.path) {
+            processed = try JSONDecoder().decode(
+                ProcessedSnapshot.self, from: Data(contentsOf: url)
+            ).keys
+        } else {
+            processed = []
+        }
     }
 
     func ingest(_ request: PartnerWebhookRequest, now: Date = .now) async throws -> PartnerWebhookOutcome {
@@ -105,12 +117,23 @@ actor PartnerWebhookIngestion {
               envelope.schemaVersion == 1, !envelope.eventType.isEmpty,
               !envelope.externalTransactionID.isEmpty else { throw PartnerWebhookError.invalidSchema }
         processed.insert(deduplicationKey)
+        try persistProcessed()
         audit.append(.init(partnerID: request.partnerID, eventID: request.eventID,
                            outcome: "accepted", occurredAt: now))
         return .accepted(envelope)
     }
 
     func auditTrail() -> [PartnerWebhookAuditEvent] { audit }
+
+    private func persistProcessed() throws {
+        guard let url = processedEventURL else { return }
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true
+        )
+        try JSONEncoder().encode(ProcessedSnapshot(keys: processed)).write(
+            to: url, options: [.atomic, .completeFileProtection]
+        )
+    }
 }
 
 private extension Data {

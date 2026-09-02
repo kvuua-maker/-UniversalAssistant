@@ -15,7 +15,7 @@ struct PartnerWebhookIngestionTests {
         try await vault.install(partnerID: partner, keyID: "key-1", secret: secret)
         let request = PartnerWebhookRequest(partnerID: partner, keyID: "key-1", eventID: "event-1",
             timestamp: now, body: body, signatureHex: PartnerWebhookSignature.sign(timestamp: now, body: body, secret: secret))
-        let ingestion = PartnerWebhookIngestion(vault: vault)
+        let ingestion = try PartnerWebhookIngestion(vault: vault)
         #expect(try await ingestion.ingest(request, now: now) == .accepted(
             .init(schemaVersion: 1, eventType: "conversion.confirmed", externalTransactionID: "tx-1")))
         #expect(try await ingestion.ingest(request, now: now) == .duplicate)
@@ -26,7 +26,7 @@ struct PartnerWebhookIngestionTests {
         let vault = PartnerWebhookCredentialVault(), partner = UUID(), now = Date()
         let secret = Data(repeating: 8, count: 32), body = try webhookBody()
         try await vault.install(partnerID: partner, keyID: "key", secret: secret)
-        let ingestion = PartnerWebhookIngestion(vault: vault, replayWindow: 60)
+        let ingestion = try PartnerWebhookIngestion(vault: vault, replayWindow: 60)
         let signature = PartnerWebhookSignature.sign(timestamp: now, body: body, secret: secret)
         await #expect(throws: PartnerWebhookError.invalidSignature) {
             try await ingestion.ingest(.init(partnerID: partner, keyID: "key", eventID: "bad",
@@ -44,7 +44,7 @@ struct PartnerWebhookIngestionTests {
         try await vault.install(partnerID: partner, keyID: "old", secret: old)
         try await vault.install(partnerID: partner, keyID: "new", secret: new)
         await vault.revoke(partnerID: partner, keyID: "old")
-        let ingestion = PartnerWebhookIngestion(vault: vault)
+        let ingestion = try PartnerWebhookIngestion(vault: vault)
         await #expect(throws: PartnerWebhookError.credentialUnavailable) {
             try await ingestion.ingest(.init(partnerID: partner, keyID: "old", eventID: "old-event",
                 timestamp: now, body: body, signatureHex: PartnerWebhookSignature.sign(timestamp: now, body: body, secret: old)), now: now)
@@ -58,11 +58,28 @@ struct PartnerWebhookIngestionTests {
         let vault = PartnerWebhookCredentialVault(), partner = UUID(), now = Date(), body = try webhookBody()
         let secret = Data(repeating: 9, count: 32)
         try await vault.install(partnerID: partner, keyID: "key", secret: secret)
-        let ingestion = PartnerWebhookIngestion(vault: vault)
+        let ingestion = try PartnerWebhookIngestion(vault: vault)
         _ = try await ingestion.ingest(.init(partnerID: partner, keyID: "key", eventID: "event",
             timestamp: now, body: body,
             signatureHex: PartnerWebhookSignature.sign(timestamp: now, body: body, secret: secret)), now: now)
         let labels = Set(Mirror(reflecting: try #require(await ingestion.auditTrail().first)).children.compactMap(\.label))
         #expect(labels.isDisjoint(with: ["secret", "signature", "signatureHex", "body", "payload"]))
+    }
+
+    @Test func duplicateRemainsRejectedAfterProcessRestart() async throws {
+        let vault = PartnerWebhookCredentialVault(), partner = UUID(), now = Date()
+        let secret = Data(repeating: 4, count: 32), body = try webhookBody()
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ua-webhook-\(UUID().uuidString)/processed.json")
+        try await vault.install(partnerID: partner, keyID: "key", secret: secret)
+        let request = PartnerWebhookRequest(
+            partnerID: partner, keyID: "key", eventID: "durable-event",
+            timestamp: now, body: body,
+            signatureHex: PartnerWebhookSignature.sign(timestamp: now, body: body, secret: secret)
+        )
+        let first = try PartnerWebhookIngestion(vault: vault, processedEventURL: url)
+        #expect(try await first.ingest(request, now: now) != .duplicate)
+        let restarted = try PartnerWebhookIngestion(vault: vault, processedEventURL: url)
+        #expect(try await restarted.ingest(request, now: now) == .duplicate)
     }
 }
