@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M10-BACKUP-DISASTER-RECOVERY",
-  "requirement_ids": ["748", "749", "750", "751", "752", "753", "754"],
-  "selected_path": "Encrypted authenticated backup core, deterministic retention and tested restore with an explicit disaster recovery runbook.",
+  "current_task_id": "M10-LOCALIZATION-ACCESSIBILITY-QA",
+  "requirement_ids": ["468", "469", "470", "796", "797", "798", "799", "800", "835", "838", "839"],
+  "selected_path": "Behavioral locale parity, runtime region formatting and accessible typed/voice interaction verification.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 plus ready-for-live infrastructure drill",
-  "acceptance_contract_ref": "DISASTER_RECOVERY.md",
+  "integration_depth": "local E3 plus ready-for-live device voice QA",
+  "acceptance_contract_ref": "docs/M10_LOCALIZATION_ACCESSIBILITY_QA.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "AES-256-GCM backup archives, integrity verification, retention, expiry, RPO/RTO and fail-closed restoration are implemented and tested.",
-  "frozen_baseline_commit": "a695099",
-  "dependency": "Only the production storage/KMS restore drill remains in LIVE_VERIFICATION_QUEUE.json.",
+  "material_change": "Five-locale parity, runtime currency/date locale behavior, long-label coverage and accessible voice alternatives are verified.",
+  "frozen_baseline_commit": "646ee9d",
+  "dependency": "Only physical-device mixed Ukrainian/Russian voice QA remains in LIVE_VERIFICATION_QUEUE.json.",
   "unresolved_verification_steps": [
     {
       "requirement_id": "M10-THREAT-PRIVACY",
@@ -18,5 +18,5 @@
       "step": "Complete repository-wide security scan 507d18d3-2af0-47b7-9c7d-135bb49e29d1 after workbench handoff ownership is available."
     }
   ],
-  "next_task_id": "M10-LOCALIZATION-ACCESSIBILITY-QA"
+  "next_task_id": "M10-CI-CD-ROLLBACK"
 }

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CommerceOfferCard: View {
+    @Environment(\.locale) private var locale
     let presentation: CommerceOfferPresentation
     let onPurchase: () -> Void
 
@@ -109,7 +110,9 @@ struct CommerceOfferCard: View {
             if let value = offer.seller.returns { detailLine("commerce_returns", value) }
             if let value = offer.seller.warranty { detailLine("commerce_warranty", value) }
             if let value = offer.seller.buyerProtection { detailLine("commerce_protection", value) }
-            detailLine("commerce_freshness", RelativeDateTimeFormatter().localizedString(for: offer.sourceTimestamp, relativeTo: .now))
+            detailLine("commerce_freshness", LocalizedFormatting.relativeDate(
+                offer.sourceTimestamp, relativeTo: .now, locale: locale
+            ))
         }
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -124,7 +127,7 @@ struct CommerceOfferCard: View {
     }
 
     private func money(_ value: Money) -> String {
-        value.amount.formatted(.currency(code: value.currency))
+        LocalizedFormatting.money(value, locale: locale)
     }
 
     private var availabilityKey: LocalizedStringKey {
@@ -150,5 +153,17 @@ struct CommerceOfferCard: View {
         case .fastestDelivery: "commerce_fastest"
         case .officialStore: "commerce_official_store"
         }
+    }
+}
+
+enum LocalizedFormatting {
+    static func money(_ value: Money, locale: Locale) -> String {
+        value.amount.formatted(.currency(code: value.currency).locale(locale))
+    }
+
+    static func relativeDate(_ date: Date, relativeTo reference: Date, locale: Locale) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = locale
+        return formatter.localizedString(for: date, relativeTo: reference)
     }
 }

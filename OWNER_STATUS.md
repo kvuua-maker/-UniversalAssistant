@@ -6,7 +6,7 @@ M0–M9 and the deterministic coordination addendum are Codex-verified at local 
 
 ## CURRENTLY WORKING ON
 
-M10 localization/accessibility QA. Selected path: STABLE.
+M10 CI/CD and rollback. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Verify every shipped locale, fallback behavior, dynamic text and accessibility semantics without relying on documentation-only claims.
+Implement reproducible build/test gates, artifact identity, migration-safe rollback checks and an explicit rollback runbook.
