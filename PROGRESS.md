@@ -2,7 +2,7 @@
 
 - Stage: M7 — Universal Integrations
 - Completed: M0; M1 local implementation; M2 Apple local actions; M3 location/places/navigation/weather; M4 retail/fashion/grocery and Commerce Hub foundation; M5 services/rides/transport/tickets/hotels/travel/auth/degradation at local E3.
-- Verified: Development build passes; iOS Swift Testing 133 tests across 31 suites passes; backend Swift Testing 29 tests across 7 suites passes.
+- Verified: Development build passes; iOS Swift Testing 137 tests across 32 suites passes; backend Swift Testing 29 tests across 7 suites passes.
 - Blockers: live hotel/provider access remains capability-specific; no blocker for the provider-neutral hotel core.
 - Mandatory addendum: Marketplace Commerce & Affiliate Hub accepted and persisted; implementation is routed into M4 without reopening M0/M1.
 - Device tests: VOICE-001 and VOICE-002 queued; delivery build not issued yet.
@@ -12,4 +12,5 @@
 - M6 completed blocks now also include the APNs delivery request/response contract.
 - M6 completed blocks now also include durable rule-based proactive watch orchestration.
 - M6 accepted at local E3 with 29 backend tests and 133 iOS tests.
-- Current: M7 AppCapabilityRegistry core.
+- M7 completed blocks: evidence-gated AppCapabilityRegistry core.
+- Current: M7 app integration matrix.
