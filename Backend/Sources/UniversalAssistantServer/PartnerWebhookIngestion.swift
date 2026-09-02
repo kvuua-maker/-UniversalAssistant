@@ -41,6 +41,12 @@ actor PartnerWebhookCredentialVault {
         credentials[partnerID]?[keyID]?.active = false
     }
 
+    func revokeAll(partnerID: UUID) {
+        for keyID in credentials[partnerID, default: [:]].keys {
+            credentials[partnerID]?[keyID]?.active = false
+        }
+    }
+
     func secret(partnerID: UUID, keyID: String) throws -> Data {
         guard let credential = credentials[partnerID]?[keyID], credential.active else {
             throw PartnerWebhookError.credentialUnavailable
