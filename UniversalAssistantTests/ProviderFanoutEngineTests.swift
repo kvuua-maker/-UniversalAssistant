@@ -26,6 +26,11 @@ private func providerTicket(_ id: String, now: Date, provider: String) -> Ticket
 }
 
 @Suite("Bounded provider degradation") struct ProviderFanoutEngineTests {
+    private actor CancellationProbe {
+        private(set) var observed = false
+        func mark() { observed = true }
+    }
+
     @Test func ticketProviderFailureReturnsRankedPartialResults() async throws {
         let now = Date()
         let response = try await TicketProviderCoordinator(providers: [
@@ -62,5 +67,66 @@ private func providerTicket(_ id: String, now: Date, provider: String) -> Ticket
         await #expect(throws: ProviderFanoutError.invalidConfiguration) {
             try await ProviderFanoutEngine<Int>(maximumProviders: 1).execute([operation, operation])
         }
+    }
+
+    @Test func providerThatNeverRespondsIsBoundedByTimeout() async throws {
+        let operation = ProviderOperation<Int>(providerID: "never") {
+            try await Task.sleep(for: .seconds(60))
+            return [1]
+        }
+        let response = try await ProviderFanoutEngine<Int>(timeout: .milliseconds(15)).execute([operation])
+        #expect(response.coverage == .failed)
+        #expect(response.failures == [.init(providerID: "never", reason: "timeout")])
+    }
+
+    @Test func lateProviderIsCancelledAndCannotLeakAResult() async throws {
+        let probe = CancellationProbe()
+        let operation = ProviderOperation<Int>(providerID: "late") {
+            do {
+                try await Task.sleep(for: .seconds(60))
+                return [99]
+            } catch is CancellationError {
+                await probe.mark()
+                throw CancellationError()
+            }
+        }
+        let response = try await ProviderFanoutEngine<Int>(timeout: .milliseconds(15)).execute([operation])
+        #expect(response.values.isEmpty)
+        #expect(response.failures == [.init(providerID: "late", reason: "timeout")])
+        #expect(await probe.observed)
+    }
+
+    @Test func simultaneousBackendAndNetworkFailuresRemainIsolated() async throws {
+        enum Outage: Error { case backendDown, networkLost }
+        let response = try await ProviderFanoutEngine<Int>().execute([
+            .init(providerID: "backend") { throw Outage.backendDown },
+            .init(providerID: "network") { throw Outage.networkLost },
+            .init(providerID: "local") { [7] }
+        ])
+        #expect(response.values == [7])
+        #expect(response.coverage == .partial)
+        #expect(response.failures == [
+            .init(providerID: "backend", reason: "provider_error"),
+            .init(providerID: "network", reason: "provider_error")
+        ])
+    }
+
+    @Test func cancellingOldCommandDoesNotReturnAStaleAggregate() async throws {
+        let oldCommand = Task {
+            try await ProviderFanoutEngine<Int>(timeout: .seconds(5)).execute([
+                .init(providerID: "old") {
+                    try await Task.sleep(for: .seconds(60))
+                    return [1]
+                }
+            ])
+        }
+        oldCommand.cancel()
+        await #expect(throws: CancellationError.self) { try await oldCommand.value }
+
+        let current = try await ProviderFanoutEngine<Int>().execute([
+            .init(providerID: "new") { [2] }
+        ])
+        #expect(current.values == [2])
+        #expect(current.coverage == .complete)
     }
 }

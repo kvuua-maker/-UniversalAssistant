@@ -6,7 +6,7 @@ M0–M9 and the deterministic coordination addendum are Codex-verified at local 
 
 ## CURRENTLY WORKING ON
 
-M10 chaos/failure tests core. Selected path: STABLE.
+M10 threat/privacy audit. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Exercise bounded failure isolation and recovery invariants without live-provider dependencies.
+Audit concrete trust boundaries, privacy manifests, secret handling and consequential-action controls; fix validated gaps only.

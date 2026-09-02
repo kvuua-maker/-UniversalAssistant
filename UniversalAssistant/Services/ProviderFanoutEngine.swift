@@ -42,6 +42,7 @@ struct ProviderFanoutEngine<Output: Sendable>: Sendable {
 
         var indexed: [(Int, [Output])] = []
         var failures: [(Int, ProviderFailure)] = []
+        var wasCancelled = false
         await withTaskGroup(of: ProviderOperationResult<Output>.self) { group in
             for (index, operation) in operations.enumerated() {
                 group.addTask { await fetch(operation, index: index) }
@@ -50,9 +51,13 @@ struct ProviderFanoutEngine<Output: Sendable>: Sendable {
                 switch result {
                 case let .success(index, values): indexed.append((index, values))
                 case let .failure(index, failure): failures.append((index, failure))
+                case .cancelled:
+                    wasCancelled = true
+                    group.cancelAll()
                 }
             }
         }
+        if wasCancelled || Task.isCancelled { throw CancellationError() }
         let values = indexed.sorted { $0.0 < $1.0 }.flatMap(\.1)
         let orderedFailures = failures.sorted { $0.0 < $1.0 }.map(\.1)
         let coverage: ProviderFanoutCoverage = orderedFailures.isEmpty ? .complete : (values.isEmpty ? .failed : .partial)
@@ -71,6 +76,8 @@ struct ProviderFanoutEngine<Output: Sendable>: Sendable {
             return .success(index, values)
         } catch ProviderTimeout.timeout {
             return .failure(index, .init(providerID: operation.providerID, reason: "timeout"))
+        } catch is CancellationError {
+            return .cancelled
         } catch {
             return .failure(index, .init(providerID: operation.providerID, reason: "provider_error"))
         }
@@ -80,6 +87,7 @@ struct ProviderFanoutEngine<Output: Sendable>: Sendable {
 private enum ProviderOperationResult<Output: Sendable>: Sendable {
     case success(Int, [Output])
     case failure(Int, ProviderFailure)
+    case cancelled
 }
 
 private enum ProviderTimeout: Error { case timeout }
