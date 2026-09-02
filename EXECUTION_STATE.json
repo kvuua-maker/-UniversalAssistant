@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M11-ADMIN-CONFIG-AUDIT-TRAIL",
-  "requirement_ids": ["832"],
-  "selected_path": "Extend the existing partner runtime policy boundary with required actor/reason and durable typed change history.",
+  "current_task_id": "M11-TIME-LOCALE-SAFETY-CORE",
+  "requirement_ids": ["833", "834", "835", "836", "837"],
+  "selected_path": "Explicit zoned instants, bounded authoritative clock skew, runtime presentation context and typed money/unit comparisons.",
   "feasibility_state": "VERIFIED_LOCAL",
   "integration_depth": "local E3 plus ready-for-live deployed-store verification",
-  "acceptance_contract_ref": "docs/M11_ADMIN_CONFIG_AUDIT_TRAIL.md",
+  "acceptance_contract_ref": "docs/M11_TIME_LOCALE_SAFETY_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Critical remote config, feature, sponsored and provider policy changes have durable actor/reason/version audit evidence.",
-  "frozen_baseline_commit": "9aae979",
+  "material_change": "Time, locale, currency and unit semantics are explicit and reject silent unsafe comparisons.",
+  "frozen_baseline_commit": "8737a1a",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M11-TIME-LOCALE-ACCESSIBILITY-CORE"
+  "next_task_id": "M11-ACCESSIBILITY-AUDIO-PERMISSIONS-CORE"
 }

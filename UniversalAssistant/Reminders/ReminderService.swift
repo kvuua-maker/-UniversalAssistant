@@ -6,6 +6,7 @@ struct ReminderDraft: Equatable, Codable, Sendable {
     var dueDate: Date?
     var notes: String?
     var priority: Int = 0
+    var timeZoneIdentifier: String?
 
     func validated() throws -> Self {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -121,7 +122,12 @@ actor EventKitReminderService: ReminderMutating {
         reminder.title = draft.title
         reminder.notes = draft.notes
         reminder.priority = draft.priority
-        reminder.dueDateComponents = draft.dueDate.map { Calendar.current.dateComponents(in: .current, from: $0) }
+        reminder.dueDateComponents = draft.dueDate.map {
+            let zone = draft.timeZoneIdentifier.flatMap(TimeZone.init(identifier:)) ?? .autoupdatingCurrent
+            var calendar = Calendar.autoupdatingCurrent
+            calendar.timeZone = zone
+            return calendar.dateComponents(in: zone, from: $0)
+        }
     }
 
     private func snapshot(_ reminder: EKReminder) -> ReminderSnapshot { Self.snapshotValue(reminder) }
@@ -131,9 +137,14 @@ actor EventKitReminderService: ReminderMutating {
             identifier: reminder.calendarItemIdentifier,
             draft: .init(
                 title: reminder.title,
-                dueDate: reminder.dueDateComponents.flatMap { Calendar.current.date(from: $0) },
+                dueDate: reminder.dueDateComponents.flatMap { components in
+                    var calendar = Calendar.autoupdatingCurrent
+                    if let zone = components.timeZone { calendar.timeZone = zone }
+                    return calendar.date(from: components)
+                },
                 notes: reminder.notes,
-                priority: reminder.priority
+                priority: reminder.priority,
+                timeZoneIdentifier: reminder.dueDateComponents?.timeZone?.identifier
             ),
             isCompleted: reminder.isCompleted
         )
