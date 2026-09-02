@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-GOVERNMENT-LOCAL-SERVICES-CORE",
-  "requirement_ids": ["1038-1042"],
-  "selected_path": "Official-source confirmed handoffs, explicit no-private-Diia boundary and configurable municipal bill integration.",
+  "current_task_id": "M12-FOOD-DELIVERY-COMPARISON-CORE",
+  "requirement_ids": ["1043-1049"],
+  "selected_path": "Modular bounded provider comparison using verified complete delivered price, ETA hard constraints and confirmed handoff only.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 public government handoff behavior complete; Diia partner operations remain approval and credential gated",
-  "acceptance_contract_ref": "docs/M12_GOVERNMENT_LOCAL_SERVICES_CORE.md",
+  "integration_depth": "local E3 comparison behavior complete; live Glovo/Bolt consumer data and ordering remain partner-access gated",
+  "acceptance_contract_ref": "docs/M12_FOOD_DELIVERY_COMPARISON_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Consequential government and utility flows now require confirmed official HTTPS sources; private Diia access is explicitly unavailable.",
-  "frozen_baseline_commit": "d6c79b7",
-  "dependency": "Approved Diia organizational use case, partner onboarding and credentials only for live partner verification.",
-  "unresolved_verification_steps": ["MS-1039-LIVE-DIIA-PARTNER-INTEGRATION"],
-  "next_task_id": "M12-FOOD-DELIVERY-COMPARISON-CORE"
+  "material_change": "Food results are comparable only with verified total fees and ETA; ordering is never claimed beyond a confirmed exact handoff.",
+  "frozen_baseline_commit": "79c093a",
+  "dependency": "Glovo/Bolt partner authorization, credentials, test stores and controlled transactions only for live verification.",
+  "unresolved_verification_steps": ["MS-1043-1049-LIVE-FOOD-DELIVERY"],
+  "next_task_id": "M12-APPOINTMENT-ENGINE-CORE"
 }
