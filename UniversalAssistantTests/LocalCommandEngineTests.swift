@@ -27,6 +27,21 @@ struct LocalCommandEngineTests {
     ])
     func intentCorpus(_ phrase: String, _ intent: CommandIntent) { #expect(engine.parse(phrase).intent == intent) }
 
+    @Test("Canonical intent recognition matrix", arguments: [
+        ("Ресторан поруч", CommandIntent.restaurantSearch), ("Забронюй столик", .reservation),
+        ("Виклич таксі", .taxiSearch), ("Побудуй маршрут", .routeSearch), ("Кав'ярня по дорозі", .routeAwareSearch),
+        ("Що в календарі", .calendarQuery), ("Перенеси зустріч", .calendarUpdate), ("Видали зустріч", .calendarDelete),
+        ("Покажи нагадування", .reminderQuery), ("Створи нотатку", .noteCreate), ("Покажи нотатки", .noteQuery),
+        ("Список покупок", .shoppingList), ("Знайди контакт Ірина", .contactLookup),
+        ("Громадський транспорт", .publicTransport), ("Як доїхати до вокзалу", .transportRoute),
+        ("Купи квиток до Львова", .ticketPurchaseHandoff)
+    ])
+    func canonicalIntentRecognition(_ phrase: String, _ intent: CommandIntent) {
+        let command = engine.parse(phrase)
+        #expect(command.intent == intent)
+        #expect(!command.needsClarification)
+    }
+
     @Test func contextResolvesAndExpires() {
         let now = Date(timeIntervalSince1970: 1_000); var context = CurrentContext()
         context.store(results: ["A", "B", "C"], now: now, lifetime: 30)
