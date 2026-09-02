@@ -1,7 +1,7 @@
 import Foundation
 
 enum ExecutionCapability: String, Codable, Sendable {
-    case directAction, relativeDate, calendar, location, candidateDiscovery
+    case voice, command, directAction, relativeDate, calendar, location, places, route, candidateDiscovery
     case weather, transport, hotel, deterministicCompose
 }
 enum ConstraintStrength: String, Codable, Sendable { case hard, soft }
@@ -39,6 +39,24 @@ struct DeterministicExecutionPlan: Equatable, Codable, Sendable {
 enum ExecutionPlanError: Error, Equatable, Sendable { case invalidPlan, cyclicDependencies, unresolvedCommand }
 
 struct DeterministicExecutionPlanBuilder: Sendable {
+    /// Minimal module path for a command. This is planning metadata over the
+    /// existing capabilities, not a second router or provider registry.
+    func activationPath(for command: StructuredCommand) throws -> [ExecutionCapability] {
+        guard !command.needsClarification, command.intent != .unknown else { throw ExecutionPlanError.unresolvedCommand }
+        switch command.intent {
+        case .placeSearch:
+            return [.voice, .command, .location, .places, .route]
+        case .navigation:
+            return [.voice, .command, .location, .route]
+        case .calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete:
+            return [.voice, .command, .calendar]
+        case .travelPlan, .multiStep:
+            return [.voice, .command, .relativeDate, .calendar, .location, .candidateDiscovery, .weather, .transport, .hotel, .deterministicCompose]
+        default:
+            return [.voice, .command, .directAction]
+        }
+    }
+
     func plan(for command: StructuredCommand) throws -> DeterministicExecutionPlan {
         guard !command.needsClarification, command.intent != .unknown else { throw ExecutionPlanError.unresolvedCommand }
         if command.intent == .travelPlan || command.intent == .multiStep {

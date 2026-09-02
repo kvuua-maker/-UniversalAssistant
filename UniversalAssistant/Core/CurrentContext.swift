@@ -124,6 +124,16 @@ struct CurrentContext: Equatable, Codable, Sendable {
         return payload
     }
 
+    func confirmedPreference(_ key: String, now: Date = .now) -> String? {
+        guard expiresAt.map({ $0 > now }) == true else { return nil }
+        return explicitPreferences[key]
+    }
+
+    func savedPlace(named name: String, now: Date = .now) -> ContextEntity? {
+        guard let id = confirmedPreference("place.\(name.lowercased())", now: now) else { return nil }
+        return resultEntities.first { $0.id == id && $0.kind == .place && $0.provenance.isFresh(at: now) }
+    }
+
     mutating func expireStale(at now: Date = .now) {
         guard expiresAt.map({ $0 > now }) == true else { reset(); return }
         if validatedLocation?.provenance.isFresh(at: now) == false { validatedLocation = nil }
