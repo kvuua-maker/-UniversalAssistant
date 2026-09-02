@@ -55,7 +55,10 @@ struct LocalCommandEngine: CommandParsing {
         (.webSearch, ["пошукай в інтернеті", "поищи в интернете", "search the web", "im web suchen", "recherche sur le web"]),
         (.deviceAction, ["увімкни ліхтарик", "включи фонарик", "turn on flashlight", "taschenlampe einschalten", "allume la lampe"]),
         (.appAction, ["дія в застосунку", "действие в приложении", "action in app", "aktion in app", "action dans l'app"]),
-        (.audioRecord, ["диктофон", "запиши аудіо", "voice recorder", "sprachmemo", "enregistre audio"]),
+        (.audioRecord, ["диктофон", "запиши аудіо", "призупини запис", "продовж запис", "зупини запис",
+                        "voice recorder", "pause recording", "resume recording", "stop recording",
+                        "sprachmemo", "aufnahme pausieren", "aufnahme fortsetzen", "aufnahme stoppen",
+                        "enregistre audio", "pause l'enregistrement", "reprends l'enregistrement", "arrête l'enregistrement"]),
         (.calendarCreate, ["запиши", "додай зустріч", "создай встреч", "add event", "termin erstellen", "ajoute un rendez-vous"]),
         (.reminderCreate, ["нагадай", "нагадати", "напомни", "напомнить", "remind", "erinnere", "rappelle"]),
         (.contactCall, ["подзвони", "позвони", "call ", "ruf ", "appelle"]),
@@ -105,8 +108,16 @@ struct LocalCommandEngine: CommandParsing {
         constraints.ordinal = ordinal(in: normalized)
         if intent == .open, let target = target(after: ["відкрий", "открой", "open", "öffne", "ouvre"], in: text) { entities["app"] = target }
         if intent == .serviceSearch, let category = serviceCategory(in: normalized) { entities["serviceCategory"] = category }
+        if intent == .audioRecord { entities["recorder_action"] = recorderAction(in: normalized) }
         let risk: ActionRisk = intent == .emergency ? .emergency : ([.calendarCreate, .reminderCreate, .cancel, .undo].contains(intent) ? .reversible : .informational)
         return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: intent, entities: entities, constraints: constraints, risk: risk, needsClarification: intent == .unknown)
+    }
+
+    private func recorderAction(in text: String) -> String {
+        if ["призупини", "pause recording", "aufnahme pausieren", "pause l'enregistrement"].contains(where: text.contains) { return "pause" }
+        if ["продовж", "resume recording", "aufnahme fortsetzen", "reprends l'enregistrement"].contains(where: text.contains) { return "resume" }
+        if ["зупини", "stop recording", "aufnahme stoppen", "arrête l'enregistrement"].contains(where: text.contains) { return "stop" }
+        return "start"
     }
 
     private func normalize(_ text: String) -> String {

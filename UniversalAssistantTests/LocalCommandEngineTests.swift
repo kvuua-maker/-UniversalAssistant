@@ -55,6 +55,14 @@ struct LocalCommandEngineTests {
         #expect(engine.parse(phrase).intent == intent)
     }
 
+    @Test(arguments: [("Запиши аудіо", "start"), ("Призупини запис", "pause"),
+                      ("Resume recording", "resume"), ("Aufnahme stoppen", "stop")])
+    func recorderCommandsHaveTypedAction(_ phrase: String, _ action: String) {
+        let command = engine.parse(phrase)
+        #expect(command.intent == .audioRecord)
+        #expect(command.entities["recorder_action"] == action)
+    }
+
     @Test func contextResolvesAndExpires() {
         let now = Date(timeIntervalSince1970: 1_000); var context = CurrentContext()
         context.store(results: ["A", "B", "C"], now: now, lifetime: 30)

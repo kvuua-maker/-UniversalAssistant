@@ -56,6 +56,8 @@ enum AudioRecorderError: Error, Equatable {
     case invalidState, noRecording, invalidName, operationFailed
 }
 
+enum AudioRecorderCommand: String, Equatable, Sendable { case start, pause, resume, stop }
+
 @MainActor
 @Observable
 final class AudioRecorderController {
@@ -90,6 +92,15 @@ final class AudioRecorderController {
             recordingURL = url
             state = .recording
         } catch { state = .failed }
+    }
+
+    func execute(_ command: AudioRecorderCommand) async {
+        switch command {
+        case .start: await start()
+        case .pause: pause()
+        case .resume: resume()
+        case .stop: stop()
+        }
     }
 
     func pause() {

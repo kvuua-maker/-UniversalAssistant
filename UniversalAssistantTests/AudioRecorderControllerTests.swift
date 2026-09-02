@@ -42,6 +42,16 @@ struct AudioRecorderControllerTests {
         #expect(backend.events.isEmpty)
     }
 
+    @Test func typedCommandsDriveTheRealControllerStateMachine() async {
+        let backend = RecorderBackendSpy()
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        let controller = AudioRecorderController(backend: backend, directory: directory, permission: { true })
+        await controller.execute(.start); #expect(controller.state == .recording)
+        await controller.execute(.pause); #expect(controller.state == .paused)
+        await controller.execute(.resume); #expect(controller.state == .recording)
+        await controller.execute(.stop); #expect(controller.state == .stopped)
+    }
+
     @Test func noRecordingCannotPlayShareRenameOrDelete() {
         let controller = AudioRecorderController(backend: RecorderBackendSpy(), directory: FileManager.default.temporaryDirectory)
         #expect(throws: AudioRecorderError.noRecording) { try controller.play() }
