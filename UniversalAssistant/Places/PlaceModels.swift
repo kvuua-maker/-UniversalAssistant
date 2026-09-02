@@ -27,7 +27,16 @@ struct Place: Identifiable, Equatable, Codable, Sendable {
     let source: String
     let timestamp: Date
     let verification: PlaceVerification
+    var confidence: Double? = nil
+
+    func freshness(now: Date = .now, recentFor: TimeInterval = 900) -> PlaceFreshness {
+        let age = now.timeIntervalSince(timestamp)
+        if age < -5 { return .unknown }
+        return age <= recentFor ? .recent : .stale
+    }
 }
+
+enum PlaceFreshness: String, Equatable, Codable, Sendable { case recent, stale, unknown }
 
 struct PlaceQuery: Equatable, Sendable {
     let text: String
@@ -96,9 +105,11 @@ struct PlaceRanker: Sendable {
         if name == needle { value += 100 } else if name.contains(needle) { value += 50 }
         if query.category == place.category { value += 30 }
         if place.isOpenNow == true { value += 15 } else if place.isOpenNow == false { value -= 20 }
-        if let distance = place.distanceMeters { value += max(0, 20 - distance / 250) }
+        if let travelTime = place.travelTimeSeconds { value += max(0, 24 - travelTime / 90) }
+        else if let distance = place.distanceMeters { value += max(0, 20 - distance / 250) }
         if let rating = place.rating, let count = place.reviewCount, count > 0 { value += min(10, rating * log10(Double(count) + 1)) }
         if place.verification == .providerVerified { value += 5 }
+        if let confidence = place.confidence { value += max(0, min(1, confidence)) * 5 }
         return value
     }
 }

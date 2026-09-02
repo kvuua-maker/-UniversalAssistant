@@ -11,6 +11,23 @@ struct RouteResult: Equatable, Sendable {
     let source: String
     let timestamp: Date
 }
+
+struct InitialWalkingGuidance: Equatable, Sendable {
+    let instruction: String
+    let source: String
+    let timestamp: Date
+}
+
+struct InitialWalkingGuidanceComposer: Sendable {
+    func compose(from route: RouteResult, mode: TravelMode) -> InitialWalkingGuidance? {
+        guard mode == .walking,
+              route.distanceMeters > 0,
+              route.expectedTravelTime > 0,
+              let first = route.steps.lazy.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
+                .first(where: { !$0.isEmpty }) else { return nil }
+        return .init(instruction: first, source: route.source, timestamp: route.timestamp)
+    }
+}
 protocol RouteProvider: Sendable {
     var providerID: String { get }
     func route(_ request: RouteRequest) async throws -> RouteResult

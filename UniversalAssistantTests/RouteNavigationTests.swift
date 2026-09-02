@@ -54,4 +54,18 @@ struct RouteNavigationTests {
         try await restored.restore()
         #expect(await restored.defaultProvider == .waze)
     }
+
+    @Test func initialWalkingGuidanceUsesOnlyVerifiedFirstRouteStep() {
+        let time = Date(timeIntervalSince1970: 100)
+        let route = RouteResult(distanceMeters: 500, expectedTravelTime: 420,
+                                steps: ["", "  Turn left onto Main Street  ", "Continue"],
+                                source: "verified-route", timestamp: time)
+        #expect(InitialWalkingGuidanceComposer().compose(from: route, mode: .walking) ==
+                .init(instruction: "Turn left onto Main Street", source: "verified-route", timestamp: time))
+        #expect(InitialWalkingGuidanceComposer().compose(from: route, mode: .driving) == nil)
+        #expect(InitialWalkingGuidanceComposer().compose(
+            from: .init(distanceMeters: 500, expectedTravelTime: 420, steps: [], source: "verified-route", timestamp: time),
+            mode: .walking
+        ) == nil)
+    }
 }

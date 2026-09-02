@@ -24,6 +24,46 @@ struct ValidatedLocation: Equatable, Codable, Sendable {
     let manualLabel: String?
 }
 
+protocol ManualLocationGeocoding: Sendable {
+    func resolve(_ label: String) async throws -> LocationSample
+}
+
+actor AppleManualLocationGeocoder: ManualLocationGeocoding {
+    private let geocoder = CLGeocoder()
+
+    func resolve(_ label: String) async throws -> LocationSample {
+        let query = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { throw ManualLocationError.emptyQuery }
+        let placemarks = try await geocoder.geocodeAddressString(query)
+        guard let coordinate = placemarks.first?.location?.coordinate else {
+            throw ManualLocationError.notFound
+        }
+        return .init(latitude: coordinate.latitude, longitude: coordinate.longitude,
+                     horizontalAccuracy: 0, timestamp: .now, speed: -1, course: -1,
+                     source: .manual)
+    }
+}
+
+enum ManualLocationError: Error, Equatable, Sendable { case emptyQuery, notFound, unsafeResult }
+
+struct ManualLocationContextResolver: Sendable {
+    let geocoder: any ManualLocationGeocoding
+    private let validator = LocationValidator()
+
+    init(geocoder: any ManualLocationGeocoding = AppleManualLocationGeocoder()) {
+        self.geocoder = geocoder
+    }
+
+    func resolve(_ label: String) async throws -> ValidatedLocation {
+        let sample = try await geocoder.resolve(label)
+        let validated = validator.validate(sample)
+        guard validated.isSafeForLocationActions else { throw ManualLocationError.unsafeResult }
+        return .init(sample: validated.sample, quality: validated.quality,
+                     isSafeForLocationActions: true,
+                     manualLabel: label.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+}
+
 struct LocationValidator: Sendable {
     var poorAfter: TimeInterval = 30
     var unavailableAfter: TimeInterval = 120

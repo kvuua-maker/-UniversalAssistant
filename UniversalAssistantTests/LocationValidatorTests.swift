@@ -2,6 +2,11 @@ import Foundation
 import Testing
 @testable import UniversalAssistant
 
+private struct FixtureManualGeocoder: ManualLocationGeocoding {
+    let sample: LocationSample
+    func resolve(_ label: String) async throws -> LocationSample { sample }
+}
+
 struct LocationValidatorTests {
     private let now = Date(timeIntervalSince1970: 10_000)
     private func sample(lat: Double = 50.45, lon: Double = 30.52, accuracy: Double, age: TimeInterval = 0, reduced: Bool = false, source: LocationSource = .device) -> LocationSample {
@@ -35,6 +40,15 @@ struct LocationValidatorTests {
     @Test func manualOverrideIsExplicitAndUsableOffline() {
         let result = LocationValidator().validate(sample(accuracy: 0, source: .manual), now: now)
         #expect(result.sample.source == .manual)
+        #expect(result.quality == .approximate)
+        #expect(result.isSafeForLocationActions)
+    }
+
+    @Test func namedManualContextIsResolvedAndNeverMasqueradesAsDeviceLocation() async throws {
+        let geocoder = FixtureManualGeocoder(sample: sample(lat: 50.4501, lon: 30.5234, accuracy: 0, source: .manual))
+        let result = try await ManualLocationContextResolver(geocoder: geocoder).resolve("  Майдан  ")
+        #expect(result.sample.source == .manual)
+        #expect(result.manualLabel == "Майдан")
         #expect(result.quality == .approximate)
         #expect(result.isSafeForLocationActions)
     }

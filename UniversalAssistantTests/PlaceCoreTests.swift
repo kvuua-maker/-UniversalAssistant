@@ -29,4 +29,25 @@ struct PlaceCoreTests {
         #expect(PlaceRanker().rank([far, near, closed], query: query).map(\.id) == ["near", "far", "closed"])
         #expect(PlaceRanker().rank([near, near], query: query).map(\.id) == ["near", "near"])
     }
+
+    @Test func freshnessConfidenceAndVerifiedTravelTimeAreBehavioralRankingInputs() {
+        let now = Date.now
+        var quick = place("quick", distance: 2_000, open: true)
+        quick.travelTimeSeconds = 120
+        quick.confidence = 1
+        var slow = place("slow", distance: 100, open: true)
+        slow.travelTimeSeconds = 1_800
+        slow.confidence = 0.2
+        let query = PlaceQuery(text: "Coffee", category: .cafe, location: location)
+        #expect(PlaceRanker().rank([slow, quick], query: query).first?.id == "quick")
+        #expect(quick.freshness(now: now, recentFor: 900) == .recent)
+        var stale = quick
+        stale = .init(id: stale.id, providerID: stale.providerID, name: stale.name,
+                      category: stale.category, latitude: stale.latitude, longitude: stale.longitude,
+                      distanceMeters: stale.distanceMeters, travelTimeSeconds: stale.travelTimeSeconds,
+                      isOpenNow: stale.isOpenNow, source: stale.source,
+                      timestamp: now.addingTimeInterval(-901), verification: stale.verification,
+                      confidence: stale.confidence)
+        #expect(stale.freshness(now: now, recentFor: 900) == .stale)
+    }
 }
