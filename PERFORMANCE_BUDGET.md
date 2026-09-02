@@ -1,12 +1,13 @@
 # Performance Budget
 
-Targets are evidence-driven and will be tightened after physical-device baselines. M1 records bounded in-memory samples only; no raw command text is retained.
+Canonical metrics: cold launch, warm launch, Action Button → listening, end-of-speech → local parse, first network result, normal RAM, and selected CPU/battery checks.
 
-| Metric | Current evidence | Provisional regression rule |
-|---|---|---|
-| Local structured parse | 1,000 representative parses: 0.189 s on designated Mac/Simulator test run, 2026-09-01 | Under 2 seconds in CI/Simulator; physical per-command baseline pending |
-| Cold/warm launch | Simulator launch observed | Measure on supported iPhone before setting release threshold |
-| Voice invocation → listening | System path implemented | Physical iPhone baseline pending VOICE-001/002 |
-| First commerce result/card/images | M4 | Establish per-provider and weak-network baselines before thresholds |
+Targets are not invented before measurement. A release budget record must include the supported device/OS/build/environment reference, measured baseline, unit, agreed maximum, sample method/count and date. Missing or invalid measurements produce `unavailable` and cannot pass the release gate; values above an agreed maximum fail it unless an explicit reviewed justification is recorded.
 
-Commerce addendum requires independent startup, first useful result, scrolling, memory, image, cancellation and timeout budgets; Commerce modules remain unloaded at launch.
+Current local baseline evidence:
+
+- Local parser regression fixture: 1,000 representative parses complete within the existing two-second simulator/host guard. This is a regression fixture, not a device release budget.
+- Provider fan-out and deterministic coordination have bounded timeout/concurrency tests and first-useful-result telemetry.
+- Cold/warm launch, Action Button → listening, normal RAM and CPU/battery release baselines remain real-device measurements for M11; no fabricated numeric target is recorded here.
+
+`PerformanceBudgetEvaluator` consumes measured `Decimal` values and explicit budgets. Every canonical metric is typed, and the aggregate release gate fails closed on a regression or missing measurement.

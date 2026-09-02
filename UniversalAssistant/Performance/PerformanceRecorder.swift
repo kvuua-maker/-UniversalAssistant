@@ -142,3 +142,35 @@ actor CoordinationObservabilityRecorder {
 
     func snapshot() -> [CoordinationObservation] { observations }
 }
+
+enum PerformanceBudgetMetric: String, Codable, CaseIterable, Sendable {
+    case coldLaunch, warmLaunch, actionButtonToListening, endOfSpeechToLocalParse
+    case firstNetworkResult, normalRAM, selectedCPU, selectedBattery
+}
+
+struct PerformanceBudget: Equatable, Codable, Sendable {
+    let metric: PerformanceBudgetMetric
+    let baseline: Decimal
+    let targetMaximum: Decimal
+    let unit: String
+    let environmentReference: String
+}
+
+enum PerformanceBudgetVerdict: Equatable, Sendable {
+    case pass
+    case fail(measured: Decimal, maximum: Decimal)
+    case unavailable
+}
+
+struct PerformanceBudgetEvaluator: Sendable {
+    func evaluate(_ budget: PerformanceBudget, measured: Decimal?) -> PerformanceBudgetVerdict {
+        guard budget.baseline >= 0, budget.targetMaximum >= 0,
+              !budget.unit.isEmpty, !budget.environmentReference.isEmpty,
+              let measured, measured >= 0 else { return .unavailable }
+        return measured <= budget.targetMaximum ? .pass : .fail(measured: measured, maximum: budget.targetMaximum)
+    }
+
+    func releaseGate(budgets: [PerformanceBudget], measurements: [PerformanceBudgetMetric: Decimal]) -> Bool {
+        !budgets.isEmpty && budgets.allSatisfy { evaluate($0, measured: measurements[$0.metric]) == .pass }
+    }
+}

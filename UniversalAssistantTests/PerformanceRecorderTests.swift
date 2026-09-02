@@ -83,4 +83,20 @@ struct PerformanceRecorderTests {
         #expect(!json.contains("providerPayload"))
         #expect(!json.contains("userIdentifier"))
     }
+
+    @Test func measuredPerformanceBudgetFailsMaterialRegression() {
+        let budget = PerformanceBudget(metric: .endOfSpeechToLocalParse, baseline: 30,
+                                       targetMaximum: 40, unit: "milliseconds",
+                                       environmentReference: "iPhone-fixture")
+        #expect(PerformanceBudgetEvaluator().evaluate(budget, measured: 39) == .pass)
+        #expect(PerformanceBudgetEvaluator().evaluate(budget, measured: 41) == .fail(measured: 41, maximum: 40))
+    }
+
+    @Test func missingOrInvalidMeasurementCannotPassReleaseGate() {
+        let budget = PerformanceBudget(metric: .coldLaunch, baseline: 1,
+                                       targetMaximum: 2, unit: "seconds",
+                                       environmentReference: "supported-device")
+        #expect(PerformanceBudgetEvaluator().evaluate(budget, measured: nil) == .unavailable)
+        #expect(!PerformanceBudgetEvaluator().releaseGate(budgets: [budget], measurements: [:]))
+    }
 }

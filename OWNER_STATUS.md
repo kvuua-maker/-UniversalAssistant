@@ -6,7 +6,7 @@ M0–M9 and the deterministic coordination addendum are Codex-verified at local 
 
 ## CURRENTLY WORKING ON
 
-M10 performance budgets core. Selected path: STABLE.
+M10 chaos/failure tests core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Define measurable deterministic fast-path/provider/coordination performance budgets and regression gates.
+Exercise bounded failure isolation and recovery invariants without live-provider dependencies.
