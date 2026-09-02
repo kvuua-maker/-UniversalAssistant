@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-PHOTOS-FILES-SPOTLIGHT-CORE",
-  "requirement_ids": ["879-894", "905", "911-917"],
-  "selected_path": "Public PhotoKit metadata search, explicitly authorized Files URLs and assistant-owned Core Spotlight indexing with truthful platform limits.",
+  "current_task_id": "M12-CONNECTED-ACCOUNTS-HUB-CORE",
+  "requirement_ids": ["921-926"],
+  "selected_path": "Reuse ProviderAuthenticationBoundary and Keychain for minimum-scope connection, persistent non-secret health, revocation and isolation.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 complete; physical Apple permission/provider/Spotlight behavior queued",
-  "acceptance_contract_ref": "docs/M12_PHOTOS_FILES_SPOTLIGHT_CORE.md",
+  "integration_depth": "local E3 complete; each live provider remains separately verifiable",
+  "acceptance_contract_ref": "docs/M12_CONNECTED_ACCOUNTS_HUB_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Real PhotoKit metadata, authorized document-provider URLs and assistant-owned Spotlight records now have production boundaries without global/private index claims.",
-  "frozen_baseline_commit": "68862b5",
+  "material_change": "External accounts now share one minimum-scope, Keychain-backed, persistently health-tracked connection and disconnect surface.",
+  "frozen_baseline_commit": "d814576",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M12-CONNECTED-ACCOUNTS-HUB-CORE"
+  "next_task_id": "M12-GMAIL-EMAIL-INTEGRATION-CORE"
 }
