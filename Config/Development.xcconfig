@@ -12,3 +12,4 @@ INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = UniversalAssistant accesse
 INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = UniversalAssistant uses your location only for nearby, route, navigation, weather, or emergency requests.
 INFOPLIST_KEY_NSAppleMusicUsageDescription = UniversalAssistant uses Apple Music access only when you ask to search or play music.
 INFOPLIST_KEY_NSPhotoLibraryUsageDescription = UniversalAssistant searches only photos you permit to find requested local results.
+INFOPLIST_KEY_NSCameraUsageDescription = UniversalAssistant uses the camera only when you ask to capture an image.

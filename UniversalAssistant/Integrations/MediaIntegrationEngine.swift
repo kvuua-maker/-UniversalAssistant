@@ -55,12 +55,48 @@ actor MediaIntegrationEngine {
 }
 
 #if canImport(MusicKit)
-import MusicKit
+@preconcurrency import MusicKit
 struct AppleMusicAuthorizationGateway: Sendable {
     func current() -> MediaAuthorizationState { map(MusicAuthorization.currentStatus) }
     func request() async -> MediaAuthorizationState { map(await MusicAuthorization.request()) }
     private func map(_ status: MusicAuthorization.Status) -> MediaAuthorizationState {
         switch status { case .authorized: .authorized; case .denied: .denied; case .restricted: .restricted; case .notDetermined: .notDetermined; @unknown default: .restricted }
+    }
+}
+
+@MainActor final class AppleMusicProviderAdapter: @preconcurrency MediaProviderAdapter {
+    nonisolated let providerID = "apple-music"
+    private let player = ApplicationMusicPlayer.shared
+
+    func authorizationState() -> MediaAuthorizationState { AppleMusicAuthorizationGateway().current() }
+    func requestAuthorization() async -> MediaAuthorizationState { await AppleMusicAuthorizationGateway().request() }
+
+    func search(query: String, kinds: Set<MediaItemKind>, limit: Int) async throws -> [MediaItem] {
+        var request = MusicCatalogSearchRequest(term: query, types: [Song.self, Album.self, Artist.self, Playlist.self, Station.self])
+        request.limit = limit
+        let response = try await request.response()
+        var items: [MediaItem] = []
+        if kinds.contains(.song) { items += response.songs.map { .init(id: $0.id.rawValue, providerID: providerID, kind: .song, title: $0.title, artist: $0.artistName, exactURL: $0.url) } }
+        if kinds.contains(.album) { items += response.albums.map { .init(id: $0.id.rawValue, providerID: providerID, kind: .album, title: $0.title, artist: $0.artistName, exactURL: $0.url) } }
+        if kinds.contains(.artist) { items += response.artists.map { .init(id: $0.id.rawValue, providerID: providerID, kind: .artist, title: $0.name, artist: nil, exactURL: $0.url) } }
+        if kinds.contains(.playlist) { items += response.playlists.map { .init(id: $0.id.rawValue, providerID: providerID, kind: .playlist, title: $0.name, artist: $0.curatorName, exactURL: $0.url) } }
+        if kinds.contains(.station) { items += response.stations.map { .init(id: $0.id.rawValue, providerID: providerID, kind: .station, title: $0.name, artist: nil, exactURL: $0.url) } }
+        return Array(items.prefix(limit))
+    }
+
+    func control(_ action: MediaControlAction, item: MediaItem?) async throws {
+        switch action {
+        case .play:
+            guard let item else { throw MediaIntegrationError.invalidRequest }
+            let request = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: MusicItemID(item.id))
+            guard let song = try await request.response().items.first else { throw MediaIntegrationError.invalidRequest }
+            player.queue = [song]
+            try await player.play()
+        case .pause: player.pause()
+        case .resume: try await player.play()
+        case .next: try await player.skipToNextEntry()
+        case .previous: try await player.skipToPreviousEntry()
+        }
     }
 }
 #endif

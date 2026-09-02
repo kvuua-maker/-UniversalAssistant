@@ -219,6 +219,19 @@
       "created_at": "2026-09-02T15:50:00+02:00",
       "last_checked": "2026-09-02T15:50:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-949-955-LIVE-APPLE-SYSTEM-DOMAINS",
+      "service_provider": "Physical iPhone camera, Apple Music/MusicKit and Apple podcast catalog",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "A signed physical-iPhone build, camera permission, owner Apple Music account/subscription where required, enabled MusicKit capability/entitlement, and reachable regional Apple catalog.",
+      "dependency_owner": "Owner/device tester and Apple Developer account holder",
+      "local_evidence": ["UniversalAssistant/Integrations/AppleSystemDomainIntegration.swift", "UniversalAssistant/Integrations/MediaIntegrationEngine.swift", "UniversalAssistant/Integrations/ApplePodcastProvider.swift", "UniversalAssistantTests/AppleSystemDomainIntegrationTests.swift", "UniversalAssistantTests/ApplePodcastProviderTests.swift"],
+      "required_live_action": "Capture and cancel a controlled photo; grant/deny Music authorization, search every supported catalog kind, play/pause/resume/next/previous a controlled song; perform a regional podcast search/open; recheck Clock/App Intent availability on the shipping OS without executing private controls.",
+      "expected_result": "Camera returns only a newly user-captured asset, MusicKit results and managed playback reflect actual account state, podcast handoff opens the exact episode, denial is truthful, and no timer/alarm/private system action is falsely reported complete.",
+      "created_at": "2026-09-02T16:05:00+02:00",
+      "last_checked": "2026-09-02T16:05:00+02:00",
+      "completion_evidence": null
     }
   ]
 }

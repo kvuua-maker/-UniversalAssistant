@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M12 Apple system domains core. Selected path: STABLE.
+M12 Universal Personal Search core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Complete Camera and MusicKit production adapters and verify all remaining Apple system-domain limits without fake Clock control.
+Compose local and connected authorized sources into privacy-first Universal Personal Search with provenance, partial failure and exact follow-up actions.

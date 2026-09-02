@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-MESSAGING-CORE",
-  "requirement_ids": ["941-948"],
-  "selected_path": "Public MessageUI plus validated exact messenger draft/deep-link handoffs with no history or silent-send claims.",
+  "current_task_id": "M12-APPLE-SYSTEM-DOMAINS-CORE",
+  "requirement_ids": ["949-955"],
+  "selected_path": "Complete public system-domain audit plus real camera, MusicKit and podcast adapters while preserving truthful Clock/private API limits.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 complete; physical composer/app behavior queued",
-  "acceptance_contract_ref": "docs/M12_MESSAGING_CORE.md",
+  "integration_depth": "local E3 complete; physical camera/MusicKit/catalog behavior queued",
+  "acceptance_contract_ref": "docs/M12_APPLE_SYSTEM_DOMAINS_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Messages and major messengers now have explicit deepest legitimate compose/context behavior and truthful unsupported history/send boundaries.",
-  "frozen_baseline_commit": "e7ac66d",
+  "material_change": "All Apple system domains now have explicit implemented depth, with real camera capture, MusicKit catalog/playback and podcast search production adapters.",
+  "frozen_baseline_commit": "19248bb",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M12-APPLE-SYSTEM-DOMAINS-CORE"
+  "next_task_id": "M12-UNIVERSAL-PERSONAL-SEARCH-CORE"
 }
