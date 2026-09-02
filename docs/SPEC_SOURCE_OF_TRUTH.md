@@ -8,8 +8,10 @@ The project source of truth is the complete, indivisible combination of:
 2. `docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt`
    - SHA-256: `299bf8025f23a120c77329f831c26217b9ba810835322cf8b085fc09d6c9c23b`
    - 259 lines / 11,837 bytes
+3. `docs/DETERMINISTIC_MULTI_STEP_COORDINATION_BOUNDED_AI_FALLBACK_ADDENDUM.md`
+   - Owner-supplied canonical additive coordination and bounded-AI contract, accepted 2026-09-02.
 
-The Marketplace Commerce & Affiliate Hub addendum augments the Master Spec and does not remove or weaken it. Later explicit supersession rules inside the Master Spec take precedence over earlier conflicting wording, subject to safety, law, current platform/provider truth, privacy and security.
+Both addenda augment the Master Spec and do not remove or weaken it. Later explicit supersession rules inside the Master Spec take precedence over earlier conflicting wording, subject to safety, law, current platform/provider truth, privacy and security.
 
 Both canonical files were read completely and copied byte-for-byte from the owner-provided attachments on 2026-09-01. Their hashes were verified after persistence.
 

@@ -6,7 +6,7 @@ M0–M7 are Codex-verified at local E3.
 
 ## CURRENTLY WORKING ON
 
-M8 account/auth decision. Selected path: STABLE.
+M8 Sign in with Apple core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Decide the minimal account boundary required for sync and monetization, then implement the selected M8 path.
+Implement the bounded Sign in with Apple session boundary, then deterministic guest allowance accounting.
