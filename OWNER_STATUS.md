@@ -6,7 +6,7 @@ M0–M7 are Codex-verified at local E3.
 
 ## CURRENTLY WORKING ON
 
-M8 Sign in with Apple core. Selected path: STABLE.
+M8 guest allowance core. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Implement the bounded Sign in with Apple session boundary, then deterministic guest allowance accounting.
+Implement deterministic one-task allowance accounting without device fingerprinting or sub-operation charging.
