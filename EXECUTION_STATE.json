@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M12-DEVICE-SYSTEM-ACTIONS-CORE",
-  "requirement_ids": ["851-870"],
-  "selected_path": "Reuse structured command/local action/capability registries for exact alias app routing, ambiguity and deepest verified context.",
+  "current_task_id": "M12-LOCAL-IPHONE-SEARCH-CORE",
+  "requirement_ids": ["871-878", "895-905"],
+  "selected_path": "Typed concurrent privacy-first local search with deterministic ranking, bounded results and incremental permission-aware index.",
   "feasibility_state": "VERIFIED_LOCAL",
-  "integration_depth": "local E3 complete; provider-specific live revocation covered by existing queue",
-  "acceptance_contract_ref": "docs/M12_DEVICE_SYSTEM_ACTIONS_CORE.md",
+  "integration_depth": "local E3 core complete; Apple framework adapters continue in dedicated blocks",
+  "acceptance_contract_ref": "docs/M12_LOCAL_IPHONE_SEARCH_CORE.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "One deterministic entry routes local, external and exact supported-app commands without fuzzy selection or unnecessary narration.",
-  "frozen_baseline_commit": "4ab9626",
+  "material_change": "Permitted local sources now search concurrently and return deterministic privacy-safe bounded results without AI or backend dependency.",
+  "frozen_baseline_commit": "6627cff",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M12-LOCAL-IPHONE-SEARCH-CORE"
+  "next_task_id": "M12-PHOTOS-FILES-SPOTLIGHT-CORE"
 }
