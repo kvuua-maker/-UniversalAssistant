@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M11 server-data migration core. Selected path: STABLE.
+M11 ADR coverage audit. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
