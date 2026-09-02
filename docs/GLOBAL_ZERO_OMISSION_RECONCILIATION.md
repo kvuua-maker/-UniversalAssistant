@@ -235,3 +235,29 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-180 | VERIFIED_LOCAL | optimizer enumerates only one- or two-store plans and proves complete coverage before emitting a plan; optimizerUsesAtMostTwoStoresForCompleteCoverage | 8b04a53 |
 | MS-181 | VERIFIED_LOCAL | route detour duration/distance and Decimal travel cost participate in plan feasibility and estimated total; travelCostPreventsTrivialSavingsFromWinning | 8b04a53 |
 | MS-182 | VERIFIED_LOCAL | GroceryBasketEngine consumes route-derived detour constraints, rejects stale/incomplete candidates and selects a truthful route-aware basket plan; GroceryBasketEngineTests | 8b04a53 |
+
+## Slice 9 — MS-183–203
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-183 | VERIFIED_LOCAL | RestaurantSearchRequest and RestaurantDiscoveryEngine enforce cuisine, price, rating, distance, open-now, party, time and dietary constraints against fresh sourced offers; filtersEverySupportedRestaurantConstraintUsingEvidence | 41bbacf |
+| MS-184 | VERIFIED_LOCAL | ReservationProvider is the typed availability/booking boundary consumed concurrently and provider-neutrally by RestaurantDiscoveryEngine; RestaurantDiscoveryEngineTests | 41bbacf |
+| MS-185 | READY_FOR_LIVE_VERIFICATION | OfficialRestaurantHTTPProvider implements authenticated HTTPS availability retrieval, typed parsing, timeout/error mapping and freshness gates; local request/response tests pass; an owner-approved booking API credential is required solely for authoritative live slot verification; LIVE_VERIFICATION_QUEUE MS-185-186 | 9e291be |
+| MS-186 | READY_FOR_LIVE_VERIFICATION | booking requires explicit confirmation plus authoritative provider confirmed state/reference; production HTTP mutation and fail-closed response validation pass locally; an approved provider account is required solely for a real booking/readback; LIVE_VERIFICATION_QUEUE MS-185-186 | 9e291be |
+| MS-187 | VERIFIED_LOCAL | restaurant fallback deterministically prefers exact official booking page, then validated phone, then Apple Maps navigation without claiming a booking; fallbackUsesExactOfficialPageThenPhoneThenNavigation | 41bbacf |
+| MS-188 | VERIFIED_LOCAL | LocalServiceCategory covers tow, taxi, courier, plumber, electrician, locksmith, cleaner, beauty, repair and medical service with typed provider capability filtering; LocalServiceDomainTests | d9e1ff2 |
+| MS-189 | VERIFIED_LOCAL | LocalServiceEngine.towPlan validates location, filters verified tow providers and emits call/navigation handoffs plus truthful no-provider fallback; towFlowValidatesLocationAndProducesVerifiedHandoff | d9e1ff2 |
+| MS-190 | VERIFIED_LOCAL | RideComparisonEngine applies verified freshness, availability, capability, budget and wait constraints with deterministic ranking; RideComparisonEngineTests | 226be8c |
+| MS-191 | VERIFIED_LOCAL | RideProviderRegistry records researched official capability state for Uber, Bolt and Uklon and prevents unavailable provider claims from becoming comparison evidence; RideProviderRegistryTests and M5_RIDE_PROVIDER_CAPABILITY_HANDOFF | a35d297 |
+| MS-192 | VERIFIED_LOCAL | RideOffer price is optional evidence and cheapest/budget logic uses it only when fresh, available and currency-compatible; RideComparisonEngineTests | 226be8c |
+| MS-193 | VERIFIED_LOCAL | pickup ETA remains optional and fastest/max-wait ranking excludes missing or stale evidence when required; RideComparisonEngineTests | 226be8c |
+| MS-194 | VERIFIED_LOCAL | VerifiedServiceAvailability distinguishes available/unavailable/unknown and only explicitly available fresh offers enter comparison; unknownDataIsNeverTreatedAsAvailable | 226be8c |
+| MS-195 | VERIFIED_LOCAL | RideOffer carries optional estimatedArrival independently and no engine path synthesizes arrival time; RideComparisonEngineTests | 226be8c |
+| MS-196 | VERIFIED_LOCAL | RideClass and typed capabilities model only provider-exposed class/seat/pet/vehicle/luggage facts; RideComparisonEngineTests | 226be8c |
+| MS-197 | VERIFIED_LOCAL | ComparisonMode supports CHEAPEST, FASTEST, OPTIMAL, COMFORT, LARGE_VEHICLE, CHILD_SEAT, PET_FRIENDLY and LUGGAGE; mode/ranking behavioral tests | 226be8c |
+| MS-198 | VERIFIED_LOCAL | maximumPrice is a hard Decimal/currency constraint and excludes unknown/over-budget offers; budgetIsHardConstraint | 226be8c |
+| MS-199 | VERIFIED_LOCAL | maximumWaitSeconds is a hard constraint and rejects unknown or excessive wait; maximumWaitIsHardConstraint | 226be8c |
+| MS-200 | VERIFIED_LOCAL | TaxiPreference persists explicit cheapest/max-wait rule and KnownPreferenceResolver turns it into a deterministic request; RuntimeExperiencePolicyTests | ffd98a9 |
+| MS-201 | VERIFIED_LOCAL | comparison rejects unknown/stale price, ETA and availability rather than inventing values; RideComparisonEngineTests | 226be8c |
+| MS-202 | VERIFIED_LOCAL | UberRideHandoffBuilder creates only an exact official route-prefilled HTTPS handoff with runtime client ID and validated locations; RideProviderRegistryTests | a35d297 |
+| MS-203 | VERIFIED_LOCAL | ComparableServiceOffer is the shared provider-neutral comparison foundation and RideComparisonEngine consumes its normalized truth fields without provider-specific ranking branches; RideComparisonEngineTests | 226be8c |

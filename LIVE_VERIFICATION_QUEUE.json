@@ -406,6 +406,19 @@
       "completion_evidence": null
     },
     {
+      "requirement_id": "MS-185-186-LIVE-RESTAURANT-RESERVATION",
+      "service_provider": "Owner-approved restaurant reservation API",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "An approved restaurant booking provider contract/account, documented HTTPS endpoints and runtime bearer credential; no provider access may be invented.",
+      "dependency_owner": "Owner and approved restaurant reservation provider",
+      "local_evidence": ["UniversalAssistant/Services/OfficialRestaurantHTTPProvider.swift", "UniversalAssistant/Services/RestaurantDiscoveryEngine.swift", "UniversalAssistantTests/RestaurantDiscoveryEngineTests.swift", "6 targeted tests passed on 2026-09-02"],
+      "required_live_action": "Inject the credential through runtime secret configuration; request availability for a controlled restaurant/party/time; compare returned slots with the provider UI; after explicit confirmation create one controlled booking and read back its provider ID and confirmed state.",
+      "expected_result": "Only authoritative fresh slots appear; the credential is absent from logs/storage; failures remain unavailable rather than empty availability; no success is shown until the provider returns a nonempty booking reference and CONFIRMED state matching the selected slot.",
+      "created_at": "2026-09-02T22:50:00+02:00",
+      "last_checked": "2026-09-02T22:50:00+02:00",
+      "completion_evidence": null
+    },
+    {
       "requirement_id": "BUSINESS-OPERATIONS-LIVE-PARTNER-CONNECTORS",
       "service_provider": "Owner-approved partner CRM/ERP/marketplace/booking connectors",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
