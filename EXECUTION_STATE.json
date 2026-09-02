@@ -1,16 +1,16 @@
 {
-  "current_task_id": "M11-ADR-COVERAGE-AUDIT",
-  "requirement_ids": ["805", "806", "807"],
-  "selected_path": "Versioned ADR catalog with required content and automated consequential-decision coverage.",
+  "current_task_id": "M11-DEPENDENCY-LICENSE-CONTENT-AUDIT",
+  "requirement_ids": ["826", "827", "828", "829", "830", "831"],
+  "selected_path": "Repository-derived dependency inventory, reproducible update policy, license gate and bundled-content audit.",
   "feasibility_state": "VERIFIED_LOCAL",
   "integration_depth": "local E3 plus ready-for-live deployed-store verification",
-  "acceptance_contract_ref": "docs/M11_ADR_COVERAGE_AUDIT.md",
+  "acceptance_contract_ref": "docs/M11_DEPENDENCY_LICENSE_CONTENT_AUDIT.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "Every consequential architecture category has a complete, versioned ADR and automated coverage validation.",
-  "frozen_baseline_commit": "132eab5",
+  "material_change": "Dependency/license/content state is derived from real manifests and resources, with enforced admission, pinning and update policy.",
+  "frozen_baseline_commit": "8e9f92c",
   "dependency": null,
   "unresolved_verification_steps": [],
-  "next_task_id": "M11-DEPENDENCY-LICENSE-CONTENT-AUDIT"
+  "next_task_id": "M11-ADMIN-CONFIG-AUDIT-TRAIL"
 }

@@ -6,7 +6,7 @@ M0–M10 and the deterministic coordination addendum are Codex-verified at local
 
 ## CURRENTLY WORKING ON
 
-M11 dependency, license and content audit. Selected path: STABLE.
+M11 admin configuration audit trail. Selected path: STABLE.
 
 ## NEEDS OWNER IPHONE TEST
 
@@ -22,4 +22,4 @@ No blocker for the current local core. Live media providers remain separately en
 
 ## NEXT
 
-Audit dependency pinning/update policy, third-party licenses and bundled content without repeating accepted milestones.
+Implement persistent audit evidence for critical operational configuration changes without repeating accepted milestones.
