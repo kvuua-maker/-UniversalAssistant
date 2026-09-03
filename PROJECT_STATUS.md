@@ -1,13 +1,11 @@
 # Project Status
 
-- Overall: M0–M11 complete; M12 sequential capability completion active; local E3 evidence and live-only queue maintained
-- Current block/action: global ZERO-OMISSION reconciliation of all 1787 canonical requirements
-- Last measurable progress: 1750/1787 requirements explicitly reconciled; 37 intentional global/final gates remain open
-- Last successful build/test: full iOS regression 469 tests across 100 suites; full backend regression 92 tests across 25 suites (0 failed), 2026-09-03
-- Last commit: 4c496e1 (MS-1644–1660 evidence reconciliation)
-- External blocker: live provider capabilities require separate capability-specific access; none for current local core
-- Internal engineering problems: none open
-- STALLED: NO
-- Latest frozen block: all non-final Master Spec and canonical addendum requirements
-- Next block: strict remaining-ID/final-gate audit and full regression; Jobs Marketplace remains excluded
-- OWNER ACTION REQUIRED: none
+- Overall: canonical local implementation/reconciliation complete under ZERO-OMISSION; external live verification remains explicitly separate.
+- Inventory: 1787/1787 IDs reconciled; 1595 VERIFIED_LOCAL, 178 READY_FOR_LIVE_VERIFICATION, 14 NOT_APPLICABLE_VERIFIED, 0 NOT_IMPLEMENTED, 0 IMPLEMENTED_UNVERIFIED.
+- Regression: 479 iOS tests across 104 suites and 92 backend tests across 25 suites passed with zero failures on 2026-09-03.
+- Final audit: `Scripts/audit_final_requirements.py` validates exact ID order/count, evidence commits, canonical hashes, live queue coverage, production markers and Jobs Marketplace exclusion.
+- Live queue: 59 exact items; complete owner-readable index in `docs/LIVE_VERIFICATION_QUEUE_REPORT.md`.
+- Jobs Marketplace: not started, as directed.
+- Current block: no locally executable canonical gap remains.
+- Next block: execute only the matching live-verification action when its recorded device/account/credential/approval becomes available.
+- Owner action required now: none; no signed test build is currently registered.

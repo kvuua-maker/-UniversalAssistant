@@ -1,25 +1,19 @@
-# UniversalAssistant
+# UniversalAssistant — статус owner
 
-## DONE AND CODEX-VERIFIED
+## Завершено локально
 
-M0–M10 and the deterministic coordination addendum are Codex-verified at local E3.
+Глобальний ZERO-OMISSION reconciliation завершено для всіх 1787 canonical requirements. Відкритих `NOT_IMPLEMENTED` або `IMPLEMENTED_UNVERIFIED` немає. Jobs Marketplace не розпочинався.
 
-## CURRENTLY WORKING ON
+## Перевірка
 
-M12 remaining canonical roadmap audit. Selected path: STABLE.
+- iOS: 479 тестів у 104 suites, 0 failures.
+- Backend: 92 тести у 25 suites, 0 failures.
+- Final audit: усі ID, evidence commits, canonical SHA-256, queue contracts і production-marker scan пройдені.
 
-## NEEDS OWNER IPHONE TEST
+## Залишилось тільки live
 
-Voice recognition and fast system invocation are ready for a later stable iPhone test build; no test is requested now.
+178 requirement ID мають статус `READY_FOR_LIVE_VERIFICATION` і згруповані у 59 точних зовнішніх перевірок. Повний список: `docs/LIVE_VERIFICATION_QUEUE_REPORT.md`. Жодна з них не видана за `VERIFIED_LIVE`.
 
-## BLOCKED AND WHY
+## Що потрібно від owner зараз
 
-No blocker for the next local core. Provider live execution remains separately credential/account gated in the live queue.
-
-## OWNER ACTION NEEDED NOW
-
-ТОБІ ЗАРАЗ НІЧОГО РОБИТИ НЕ ТРЕБА.
-
-## NEXT
-
-Run the strict final-gate and remaining-ID audit; close only conditions proven by full evidence. Jobs Marketplace remains excluded.
+Нічого. Коли з’явиться конкретний підписаний build/device/API credential/provider approval/legal decision, потрібно виконати лише відповідні дії з `LIVE_VERIFICATION_QUEUE.json`, без переписування готових модулів.

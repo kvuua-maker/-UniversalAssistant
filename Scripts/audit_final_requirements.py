@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, re, subprocess
+import hashlib, json, re, subprocess
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 INV = json.loads((ROOT / "REQUIREMENT_INVENTORY.json").read_text())
@@ -47,6 +47,21 @@ for base in [ROOT/'UniversalAssistant', ROOT/'Backend/Sources', ROOT/'ShareExten
         for marker in ['todo','fixme','placeholder','fake success','fake-success','hardcoded demo']:
             assert marker not in low, f"production marker {marker}: {path}"
         assert 'jobsmarketplace' not in low and 'jobs marketplace' not in low
+canonical_hashes = {
+    "UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt": "16489fc577d199918fedb99f68e5fb59548361f4e15f1253cf3c9e7f2bd8fd95",
+    "UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt": "299bf8025f23a120c77329f831c26217b9ba810835322cf8b085fc09d6c9c23b",
+    "DETERMINISTIC_MULTI_STEP_COORDINATION_BOUNDED_AI_FALLBACK_ADDENDUM.md": "7bff9bbd535f1d5e2de52c154d8726552771412ee2160247749e5b739ef9a0ef",
+    "UniversalAssistant_Business_Partner_Platform_FINAL.txt": "9cc1b9eba8641f9858bb3e599a48787f50180d6fc68e76165bcaf70ad17022b7",
+    "ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md": "bb12b460bc75ae32d7404e33fe000b9f1ce7e5af13386c4997ee5430aadf7d21",
+    "VOICE_OUTPUT_POLICY_ADDENDUM.md": "1a302401f5d5b15844a85d6721be6260f579c583d5aa61246bb1ce4d3f4ff5ea",
+    "UNIVERSALASSISTANT_FINAL_VISUAL_UI_UX_DESIGN_SYSTEM_ADDENDUM.md": "d69ab80ed56c01a54c7a5bbf64e669cfdc222c1200c4270c2d44a86dc5c8fa28",
+    "QUICK_LAUNCH_PHYSICAL_ACCESS_ADDENDUM.md": "c8a6d5392340b61a6716fb5239445faf108ed5eebcdfc414462e135afdff9ba4",
+    "BUSINESS_PLATFORM_COMPETITIVE_GAP_AUDIT.md": "9e90bffe15f8f008bb71185449df579120b0fe94b89bc2f34ee3f73243dc8e7d",
+    "GENERAL_UNKNOWN_INTENT_DISCOVERY_ANSWER_ACTION_ADDENDUM.md": "5f3f4f051ee4758a7e6981c1d33b2d12354fc74987ebcb99b94635070cb266fe",
+}
+for name, expected_hash in canonical_hashes.items():
+    actual = hashlib.sha256((ROOT / "docs" / name).read_bytes()).hexdigest()
+    assert actual == expected_hash, f"canonical source hash mismatch: {name}"
 report=(ROOT/'docs/LIVE_VERIFICATION_QUEUE_REPORT.md').read_text()
 assert report.count('|') > len(QUEUE['items']) * 3
 print(f"FINAL AUDIT OK: {len(rows)} requirements; {len(ready)} READY IDs; {len(QUEUE['items'])} exact live queue items")

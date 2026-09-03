@@ -1,26 +1,21 @@
 {
-  "current_task_id": "GLOBAL-ZERO-OMISSION-FINAL-GATES-AUDIT",
+  "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
   "requirement_ids": [
-    "MS-675 and 32 remaining Master Spec final gates",
-    "ZOP-15",
-    "ZOP-16",
-    "ZOP-20",
-    "ZOP-21"
+    "all 1787 canonical requirement IDs"
   ],
-  "selected_path": "Strict remaining-gate audit after complete per-ID reconciliation of every non-gate canonical requirement.",
+  "selected_path": "Completed strict per-ID evidence import plus executable remaining-ID, queue, source-hash and production-path audit.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "1750/1787 requirements explicitly reconciled; only 37 global/final/continuation gates remain open",
-  "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
-  "required_evidence_level": "E3",
-  "current_exit_state": "IN_PROGRESS",
+  "integration_depth": "1787/1787 reconciled: 1595 VERIFIED_LOCAL, 178 READY_FOR_LIVE_VERIFICATION, 14 NOT_APPLICABLE_VERIFIED",
+  "acceptance_contract_ref": "docs/FINAL_ZERO_OMISSION_AUDIT.md",
+  "required_evidence_level": "E3 local; E4/E5/E6 retained for queued external execution",
+  "current_exit_state": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
   "last_failure_signature": null,
-  "material_change": "MS-1644–1660 and all MCA/BPP/DCA plus non-final ZOP requirements now have per-ID production/test/commit evidence; three addendum live-only executions are queued exactly.",
-  "frozen_baseline_commit": "4c496e1",
-  "dependency": "Physical camera-commerce, post-purchase provider read-back and App Store/legal review remain queued; no blocker for local final audits.",
+  "material_change": "Final audit corrected stale OWNER_TEST_QUEUE coverage, generated a complete 59-item owner-readable live report, verified all 1787 IDs/source hashes/evidence commits, and found no production placeholder/fake-success or Jobs Marketplace implementation.",
+  "frozen_baseline_commit": "a923914",
+  "dependency": "Only 59 exact physical/Apple/provider/legal live actions remain; none can be executed without the dependency recorded in each queue item.",
   "unresolved_verification_steps": [
-    "37 intentional global/final gates remain NOT_IMPLEMENTED",
-    "Run strict final audit and full regression before closing any completion gate",
-    "Keep physical/provider-only items READY_FOR_LIVE_VERIFICATION"
+    "Execute matching LIVE_VERIFICATION_QUEUE items only when the named owner/device/provider dependency becomes available",
+    "Never promote an external capability to VERIFIED_LIVE without E4/E5/E6 read-back evidence"
   ],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-FINAL-GATES"
+  "next_task_id": "LIVE-VERIFICATION-QUEUE-WHEN-DEPENDENCIES-AVAILABLE"
 }
