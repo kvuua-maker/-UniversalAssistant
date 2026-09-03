@@ -22,9 +22,10 @@ enum AIInterpretationValidationError: Error { case timeout }
 struct BoundedAIInterpreter: Sendable {
     let provider: any AIInterpretationProvider
     let timeout: Duration
+    let privacyGate: PrivacyOutboundGate
 
-    init(provider: any AIInterpretationProvider, timeout: Duration = .seconds(2)) {
-        self.provider = provider; self.timeout = timeout
+    init(provider: any AIInterpretationProvider, timeout: Duration = .seconds(2), privacyGate: PrivacyOutboundGate = .init()) {
+        self.provider = provider; self.timeout = timeout; self.privacyGate = privacyGate
     }
 
     func resolve(_ unresolved: UnresolvedInterpretation?) async -> BoundedInterpretationOutcome {
@@ -34,7 +35,11 @@ struct BoundedAIInterpreter: Sendable {
             return .deterministicFallback(reason: "invalid_unresolved_contract", invocationCount: 0)
         }
         do {
-            let response = try await oneRequest(unresolved)
+            let safeText = privacyGate.sanitizeUntrustedContent(unresolved.text)
+            let privacy = try privacyGate.evaluate(.init(destination: .ai(providerID: "bounded-interpretation"), purpose: "semantic_interpretation", fields: [.init(id: "text", name: "request_text", value: safeText, classification: .personal, purpose: "semantic_interpretation", requiredForSemantics: true)], consent: .granted, permittedPurposes: ["semantic_interpretation"], maxPersonalFields: 1, contentTrust: .trustedLocal))
+            guard let permittedText = privacy.allowedFields.first?.value, !permittedText.isEmpty else { return .deterministicFallback(reason: "privacy_gate_blocked", invocationCount: 0) }
+            let safe = UnresolvedInterpretation(commandID: unresolved.commandID, text: permittedText, reason: unresolved.reason, allowedConstraintKeys: unresolved.allowedConstraintKeys)
+            let response = try await oneRequest(safe)
             guard !response.constraints.isEmpty,
                   response.constraints.allSatisfy({ unresolved.allowedConstraintKeys.contains($0.key) && !$0.value.isEmpty && (0...1).contains($0.confidence) }) else {
                 return .deterministicFallback(reason: "schema_validation_failed", invocationCount: 1)
