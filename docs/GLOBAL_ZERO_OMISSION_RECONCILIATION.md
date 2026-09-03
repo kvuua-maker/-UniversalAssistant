@@ -638,3 +638,8 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-518 | VERIFIED_LOCAL | exact open-second command retains ordinal and resolves only fresh bounded prior results; canonical/context tests | fab773a |
 | MS-519 | VERIFIED_LOCAL | exact show-route command routes to native route presentation/action rather than generic show | fab773a |
 | MS-520 | VERIFIED_LOCAL | dentist+Sensodyne+departure compound command routes to typed multi-step coordination; canonical/coordination tests | fab773a |
+| MS-521 | VERIFIED_LOCAL | bounded CurrentContext resolves fresh ordinal/open, cheaper, navigation, call, reschedule, route-aware and pending-task confirmation follow-ups; context tests | b289278 |
+| MS-522 | VERIFIED_LOCAL | CurrentContext caps recent results, expires session state and resets all contextual data rather than retaining an unlimited transcript; context tests | 8e7a96c |
+| MS-523 | VERIFIED_LOCAL | context stores typed entities/routes/tasks/service state and explicit key-value preferences with provenance instead of conversational prose; context tests | 8e7a96c |
+| MS-524 | VERIFIED_LOCAL | durable presentation/account preferences are written only through explicit settings/policy APIs; inferred command behavior is not persisted; configuration tests | ffd98a9 |
+| MS-525 | VERIFIED_LOCAL | context and telemetry models have no inferred demographic/sensitive-attribute fields and external payload is field-allowlisted; privacy/context tests | 8e7a96c |
