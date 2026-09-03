@@ -1,0 +1,383 @@
+UNIVERSALASSISTANT — LOYALTY / DISCOUNT / ATTRIBUTION / COMMISSION INTEGRITY
+FINAL NUMBERED ZERO-OMISSION CANONICAL ADDENDUM
+
+LOYALTY-001 [AUTHORITY]
+mandatory canonical authority; preserve existing Core
+
+LOYALTY-002 [AUTHORITY]
+evidence audit then implement gaps once
+
+LOYALTY-003 [AUTHORITY]
+reuse existing commerce infrastructure
+
+LOYALTY-004 [AUTHORITY]
+preserve verified commerce behavior
+
+LOYALTY-005 [AUTHORITY]
+never invent incompatible stacking
+
+LOYALTY-006 [MODEL]
+separate typed economic concepts
+
+LOYALTY-007 [MODEL]
+customer loyalty is customer-owned
+
+LOYALTY-008 [MODEL]
+partner discount is partner-provided
+
+LOYALTY-009 [MODEL]
+UA commission is verified revenue
+
+LOYALTY-010 [MODEL]
+UA-funded benefit requires owner funding
+
+LOYALTY-011 [MODEL]
+never merge discount and commission
+
+LOYALTY-012 [PARTNER_RULES]
+provider-specific verified stacking policy
+
+LOYALTY-013 [PARTNER_RULES]
+no assumed loyalty plus commission
+
+LOYALTY-014 [PARTNER_RULES]
+no assumed login or coupon attribution
+
+LOYALTY-015 [PARTNER_RULES]
+typed commercial rule states
+
+LOYALTY-016 [PARTNER_RULES]
+unknown is not compatible
+
+LOYALTY-017 [PARTNER_RULES]
+provider rules stay in configuration
+
+LOYALTY-018 [ATTRIBUTION]
+typed attribution lifecycle
+
+LOYALTY-019 [ATTRIBUTION]
+permitted attribution identifiers only
+
+LOYALTY-020 [ATTRIBUTION]
+login effect requires evidence
+
+LOYALTY-021 [ATTRIBUTION]
+cross-device requires supported mechanism
+
+LOYALTY-022 [ATTRIBUTION]
+evidence-backed attribution window
+
+LOYALTY-023 [ATTRIBUTION]
+official handoff mechanisms only
+
+LOYALTY-024 [ATTRIBUTION]
+no attribution manipulation
+
+LOYALTY-025 [COMMISSION]
+typed commission basis
+
+LOYALTY-026 [COMMISSION]
+use actual partner commission base
+
+LOYALTY-027 [COMMISSION]
+unknown basis stays unknown
+
+LOYALTY-028 [COMMISSION]
+typed commission state
+
+LOYALTY-029 [COMMISSION]
+estimate is not confirmed
+
+LOYALTY-030 [COMMISSION]
+partial refund follows verified rules
+
+LOYALTY-031 [COMMISSION]
+cancellation follows verified rules
+
+LOYALTY-032 [COMMISSION]
+line-level multi-merchant attribution
+
+LOYALTY-033 [PRICE]
+verified ordered price components
+
+LOYALTY-034 [PRICE]
+separate benefit components
+
+LOYALTY-035 [PRICE]
+no double-application
+
+LOYALTY-036 [PRICE]
+never worsen price for commission
+
+LOYALTY-037 [PRICE]
+best verified user-value path
+
+LOYALTY-038 [PRICE]
+do not hide cheaper personal price
+
+LOYALTY-039 [PRICE]
+verified savings only
+
+LOYALTY-040 [LOYALTY_ACCOUNT]
+official account linking only
+
+LOYALTY-041 [LOYALTY_ACCOUNT]
+secrets never reach AI
+
+LOYALTY-042 [LOYALTY_ACCOUNT]
+user-provider account scoping
+
+LOYALTY-043 [LOYALTY_ACCOUNT]
+disconnect invalidates cache
+
+LOYALTY-044 [LOYALTY_ACCOUNT]
+no cross-user loyalty reuse
+
+LOYALTY-045 [LOYALTY_ACCOUNT]
+expiry becomes reauth or unknown
+
+LOYALTY-046 [CHECKOUT]
+pre-checkout compatibility matrix
+
+LOYALTY-047 [CHECKOUT]
+preserve benefits and attribution when supported
+
+LOYALTY-048 [CHECKOUT]
+use required attributed token path
+
+LOYALTY-049 [CHECKOUT]
+do not drop attribution via generic route
+
+LOYALTY-050 [CHECKOUT]
+handoff is not completion
+
+LOYALTY-051 [CHECKOUT]
+installments require provider rule
+
+LOYALTY-052 [CHECKOUT]
+price change recomputes economics
+
+LOYALTY-053 [CHECKOUT]
+variant/stock change invalidates quote
+
+LOYALTY-054 [COUPON_STACKING]
+provider-specific coupon stacking
+
+LOYALTY-055 [COUPON_STACKING]
+record incompatibility explicitly
+
+LOYALTY-056 [COUPON_STACKING]
+failed coupon clears stale price
+
+LOYALTY-057 [COUPON_STACKING]
+single-user coupon isolation
+
+LOYALTY-058 [CASHBACK]
+partner and UA cashback differ
+
+LOYALTY-059 [CASHBACK]
+UA cashback requires owner funding
+
+LOYALTY-060 [CASHBACK]
+no premature cashback promise
+
+LOYALTY-061 [CASHBACK]
+auditable cashback reversal
+
+LOYALTY-062 [REFUND_RETURN]
+returns update all economics states
+
+LOYALTY-063 [REFUND_RETURN]
+confirmed return reverses per rule
+
+LOYALTY-064 [REFUND_RETURN]
+initiated return is not confirmation
+
+LOYALTY-065 [REFUND_RETURN]
+line-aware partial return
+
+LOYALTY-066 [REFUND_RETURN]
+no duplicate negative UA payout
+
+LOYALTY-067 [ORDER_IDENTITY]
+scoped provider order identity
+
+LOYALTY-068 [ORDER_IDENTITY]
+duplicate webhook is idempotent
+
+LOYALTY-069 [ORDER_IDENTITY]
+auditable reconciliation events
+
+LOYALTY-070 [ORDER_IDENTITY]
+ambiguous order mapping is unknown
+
+LOYALTY-071 [PROVIDER_AUDIT]
+partner policy matrix fields
+
+LOYALTY-072 [PROVIDER_AUDIT]
+mock is not provider integration
+
+LOYALTY-073 [PROVIDER_AUDIT]
+unexposed rules remain unknown
+
+LOYALTY-074 [PROVIDER_AUDIT]
+terms change invalidates policy cache
+
+LOYALTY-075 [UX]
+show payable price and benefits
+
+LOYALTY-076 [UX]
+label personal versus UA discount
+
+LOYALTY-077 [UX]
+concise material incompatibility reason
+
+LOYALTY-078 [UX]
+do not narrate attribution internals
+
+LOYALTY-079 [UX]
+do not expose unconfirmed economics
+
+LOYALTY-080 [PRIVACY]
+privacy/data-flow rules apply
+
+LOYALTY-081 [PRIVACY]
+NEVER_AI secrets and identifiers
+
+LOYALTY-082 [PRIVACY]
+aggregate privacy-safe analytics
+
+LOYALTY-083 [FAILURE]
+failed lookup stays unknown
+
+LOYALTY-084 [FAILURE]
+failed confirmation stays pending/unknown
+
+LOYALTY-085 [FAILURE]
+alternative official path only
+
+LOYALTY-086 [FAILURE]
+never trade truth for checkout success
+
+LOYALTY-087 [TESTS]
+test compatible loyalty and commission
+
+LOYALTY-088 [TESTS]
+test incompatible loyalty attribution
+
+LOYALTY-089 [TESTS]
+test coupon stacking variants
+
+LOYALTY-090 [TESTS]
+test partner discount plus loyalty
+
+LOYALTY-091 [TESTS]
+test login before and after referral
+
+LOYALTY-092 [TESTS]
+test attributed deep-link session
+
+LOYALTY-093 [TESTS]
+test handoff is not completion
+
+LOYALTY-094 [TESTS]
+test quote price change
+
+LOYALTY-095 [TESTS]
+test stock and variant invalidation
+
+LOYALTY-096 [TESTS]
+test installment policy
+
+LOYALTY-097 [TESTS]
+test confirmed full refund
+
+LOYALTY-098 [TESTS]
+test partial commission reversal
+
+LOYALTY-099 [TESTS]
+test cancellation chargeback dispute
+
+LOYALTY-100 [TESTS]
+test split multi-merchant order
+
+LOYALTY-101 [TESTS]
+test webhook idempotency
+
+LOYALTY-102 [TESTS]
+test cross-device support
+
+LOYALTY-103 [TESTS]
+test attribution expiry
+
+LOYALTY-104 [TESTS]
+test unknown stacking
+
+LOYALTY-105 [TESTS]
+test disconnect cache invalidation
+
+LOYALTY-106 [TESTS]
+test cross-user isolation
+
+LOYALTY-107 [TESTS]
+test UA-funded accounting separation
+
+LOYALTY-108 [TESTS]
+test user benefit not removed for revenue
+
+LOYALTY-109 [EVIDENCE]
+per-ID evidence matrix
+
+LOYALTY-110 [EVIDENCE]
+partner rule evidence and live item
+
+LOYALTY-111 [EVIDENCE]
+generic knowledge is insufficient
+
+LOYALTY-112 [EVIDENCE]
+maintain partner policy matrix
+
+LOYALTY-113 [LIVE]
+real partner flows stay queued
+
+LOYALTY-114 [LIVE]
+live item exact setup and result
+
+LOYALTY-115 [LIVE]
+mocks never close live claims
+
+LOYALTY-116 [REGRESSION]
+targeted and full regression
+
+LOYALTY-117 [REGRESSION]
+no commerce regression
+
+LOYALTY-118 [REGRESSION]
+repair integrity regressions
+
+LOYALTY-119 [REGRESSION]
+build sync and clean tree
+
+LOYALTY-120 [COMPLETION]
+127-ID completion gate
+
+LOYALTY-121 [COMPLETION]
+zero local unfinished statuses
+
+LOYALTY-122 [COMPLETION]
+no benefit or attribution sacrifice
+
+LOYALTY-123 [FINAL]
+benefit and revenue are separate
+
+LOYALTY-124 [FINAL]
+preserve both when allowed
+
+LOYALTY-125 [FINAL]
+verified rules when incompatible
+
+LOYALTY-126 [FINAL]
+never hide better price
+
+LOYALTY-127 [FINAL]
+never lose avoidable official attribution

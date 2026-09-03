@@ -135,4 +135,144 @@ private actor StrategyMemoryStore: AttributionStrategyPersisting {
         try await restored.restore()
         #expect(await restored.snapshot() == [strategy()])
     }
+
+    private func component(_ id: String, _ kind: LoyaltyPriceComponentKind, _ amount: Decimal,
+                           funding: LoyaltyBenefitFunding = .customer, semantic: String? = nil) -> LoyaltyPriceComponent {
+        .init(id: id, kind: kind, funding: funding, amount: .init(amount: amount, currency: "UAH"),
+              sourceReference: "contract:\(id)", verifiedAt: now, semanticBenefitID: semantic ?? id)
+    }
+
+    private func integrityPolicy(state: LoyaltyCommercialRuleState = .verified,
+                                 combinations: Set<String> = [], crossDevice: Bool = true,
+                                 installments: LoyaltyCommercialRuleState = .compatible,
+                                 basis: LoyaltyCommissionBasis? = .netAfterDiscounts,
+                                 rate: Decimal? = 0.10,
+                                 reversal: LoyaltyCommercialRuleState = .verified) -> LoyaltyStackingPolicy {
+        .init(id: "policy-v1", merchantID: "shop", version: 1, effectiveFrom: now.addingTimeInterval(-60),
+              state: state, allowedCombinations: combinations, attributionMethods: [.affiliateLink],
+              crossDeviceSupported: crossDevice, installmentCompatibility: installments,
+              commissionBasis: basis, commissionRate: rate, fixedCommission: nil, refundReversal: reversal,
+              evidenceReference: "partner-contract:v1")
+    }
+
+    private func checkout(components: [LoyaltyPriceComponent] = [], policy: LoyaltyStackingPolicy? = nil,
+                          user: String = "u1", loyaltyUser: String? = "u1", crossDevice: Bool = false,
+                          installments: Bool = false, available: Bool? = true,
+                          attribution: CommissionEligibility = .eligible) -> LoyaltyCheckoutContext {
+        .init(userID: user, loyaltyAccountUserID: loyaltyUser, merchantID: "shop", orderID: "order-1",
+              publicPrice: .init(amount: 1_000, currency: "UAH"), components: components, policy: policy,
+              attribution: .init(eligibility: attribution, method: attribution == .eligible ? .affiliateLink : nil,
+                                 strategyID: "program-v1", reason: "test"),
+              referralCreatedAt: now.addingTimeInterval(-30), isCrossDevice: crossDevice,
+              usesInstallments: installments, variantIsAvailable: available, quotedAt: now)
+    }
+
+    @Test func compatibleLoyaltyAndCommissionPreserveBoth() throws {
+        let combo = "customerLoyalty+partnerDiscount"
+        let result = try LoyaltyCommissionIntegrityEngine().evaluate(checkout(
+            components: [component("loyalty", .customerLoyalty, 100), component("partner", .partnerDiscount, 50, funding: .partner)],
+            policy: integrityPolicy(combinations: [combo])), now: now)
+        #expect(result.payablePrice?.amount == 850)
+        #expect(result.attributionState == .established)
+        #expect(result.commissionAmount?.amount == 85)
+        #expect(result.commissionState == .pendingPartnerConfirmation)
+    }
+
+    @Test func incompatibleBenefitsChooseVerifiedBestUserValueWithoutHidingIt() throws {
+        let result = try LoyaltyCommissionIntegrityEngine().evaluate(checkout(
+            components: [component("loyalty", .customerLoyalty, 200), component("coupon", .coupon, 50)],
+            policy: integrityPolicy()), now: now)
+        #expect(result.payablePrice?.amount == 800)
+        #expect(result.appliedComponentIDs == ["loyalty"])
+        #expect(result.reason == "best_user_value_verified_subset")
+    }
+
+    @Test func couponLoyaltyCompatibleAndIncompatibleAreProviderConfigured() throws {
+        let components = [component("loyalty", .customerLoyalty, 100), component("coupon", .coupon, 80)]
+        let key = "coupon+customerLoyalty"
+        #expect(try LoyaltyCommissionIntegrityEngine().evaluate(checkout(components: components, policy: integrityPolicy(combinations: [key])), now: now).payablePrice?.amount == 820)
+        #expect(try LoyaltyCommissionIntegrityEngine().evaluate(checkout(components: components, policy: integrityPolicy()), now: now).payablePrice?.amount == 900)
+    }
+
+    @Test func sameBenefitCannotBeDoubleApplied() {
+        #expect(throws: LoyaltyIntegrityError.duplicateBenefit) {
+            try LoyaltyCommissionIntegrityEngine().evaluate(checkout(
+                components: [component("a", .coupon, 100, semantic: "same"), component("b", .partnerDiscount, 100, semantic: "same")],
+                policy: integrityPolicy(combinations: ["coupon+partnerDiscount"])), now: now)
+        }
+    }
+
+    @Test func unknownStackingPolicyNeverGuessesCompatibilityOrCommission() throws {
+        let result = try LoyaltyCommissionIntegrityEngine().evaluate(checkout(
+            components: [component("loyalty", .customerLoyalty, 100)], policy: integrityPolicy(state: .unknown)), now: now)
+        #expect(result.payablePrice?.amount == 1_000)
+        #expect(result.commissionState == .unknown)
+    }
+
+    @Test func loginScopeCannotLeakLoyaltyAcrossUsers() {
+        #expect(throws: LoyaltyIntegrityError.userScopeMismatch) {
+            try LoyaltyCommissionIntegrityEngine().evaluate(checkout(policy: integrityPolicy(), user: "u1", loyaltyUser: "u2"), now: now)
+        }
+    }
+
+    @Test func accountDisconnectInvalidatesCachedPersonalPrice() async throws {
+        let cache = LoyaltyAccountQuoteCache()
+        let value = try LoyaltyCommissionIntegrityEngine().evaluate(checkout(policy: integrityPolicy()), now: now)
+        await cache.put(.init(userID: "u1", merchantID: "shop", value: value, expiresAt: now.addingTimeInterval(60)))
+        #expect(await cache.value(userID: "u1", merchantID: "shop", now: now) != nil)
+        await cache.disconnect(userID: "u1", merchantID: "shop")
+        #expect(await cache.value(userID: "u1", merchantID: "shop", now: now) == nil)
+    }
+
+    @Test func attributedDeepLinkIsRequiredButExternalHandoffIsNotCompletion() throws {
+        let result = try LoyaltyCommissionIntegrityEngine().evaluate(checkout(policy: integrityPolicy()), now: now)
+        #expect(result.attributedHandoffRequired)
+        #expect(result.completion == .handoffOnly)
+    }
+
+    @Test func crossDeviceAttributionRequiresExplicitPartnerSupport() throws {
+        #expect(try LoyaltyCommissionIntegrityEngine().evaluate(checkout(policy: integrityPolicy(crossDevice: false), crossDevice: true), now: now).attributionState == .unknown)
+        #expect(try LoyaltyCommissionIntegrityEngine().evaluate(checkout(policy: integrityPolicy(crossDevice: true), crossDevice: true), now: now).attributionState == .established)
+    }
+
+    @Test func installmentCompatibilityIsNeverAssumed() throws {
+        #expect(try LoyaltyCommissionIntegrityEngine().evaluate(checkout(policy: integrityPolicy(installments: .unknown), installments: true), now: now).attributionState == .unknown)
+    }
+
+    @Test func priceOrVariantChangeInvalidatesStaleEconomics() throws {
+        let result = try LoyaltyCommissionIntegrityEngine().evaluate(checkout(
+            components: [component("coupon", .coupon, 100)], policy: integrityPolicy(), available: false), now: now)
+        #expect(result.payablePrice == nil)
+        #expect(result.reason == "variant_unavailable")
+    }
+
+    @Test func netCommissionUsesActualDiscountedAmountNotCatalogPrice() throws {
+        let result = try LoyaltyCommissionIntegrityEngine().evaluate(checkout(
+            components: [component("personal", .personalPrice, 250)], policy: integrityPolicy()), now: now)
+        #expect(result.payablePrice?.amount == 750)
+        #expect(result.commissionAmount?.amount == 75)
+    }
+
+    @Test func unknownCommissionBasisNeverProducesApproximateRevenue() throws {
+        let result = try LoyaltyCommissionIntegrityEngine().evaluate(checkout(policy: integrityPolicy(basis: nil, rate: nil)), now: now)
+        #expect(result.commissionAmount == nil)
+        #expect(result.commissionState == .unknown)
+    }
+
+    @Test func fullAndPartialRefundWaitForPartnerConfirmationThenAdjustExactly() {
+        let engine = LoyaltyCommissionIntegrityEngine()
+        let policy = integrityPolicy()
+        let pending = engine.adjustedCommission(original: .init(amount: 80, currency: "UAH"), refunded: .init(amount: 400, currency: "UAH"), orderNet: .init(amount: 800, currency: "UAH"), partnerConfirmed: false, policy: policy)
+        #expect(pending.0.amount == 80 && pending.1 == .pendingPartnerConfirmation)
+        let partial = engine.adjustedCommission(original: .init(amount: 80, currency: "UAH"), refunded: .init(amount: 200, currency: "UAH"), orderNet: .init(amount: 800, currency: "UAH"), partnerConfirmed: true, policy: policy)
+        #expect(partial.0.amount == 60 && partial.1 == .partiallyReversed)
+        let full = engine.adjustedCommission(original: .init(amount: 80, currency: "UAH"), refunded: .init(amount: 800, currency: "UAH"), orderNet: .init(amount: 800, currency: "UAH"), partnerConfirmed: true, policy: policy)
+        #expect(full.0.amount == 0 && full.1 == .reversed)
+    }
+
+    @Test func uaFundedBenefitRemainsSeparatelyTypedFromCustomerAndPartnerBenefits() {
+        let values = [component("customer", .customerLoyalty, 10), component("partner", .partnerDiscount, 20, funding: .partner), component("ua", .uaFundedBenefit, 30, funding: .universalAssistant)]
+        #expect(values.map(\.funding) == [.customer, .partner, .universalAssistant])
+    }
+
 }

@@ -239,3 +239,160 @@ struct AttributionStrategyEvaluator: Sendable {
         return .init(eligibility: .eligible, method: method, strategyID: strategy.id, reason: "verified_contract")
     }
 }
+
+
+// MARK: - Loyalty / discount / attribution / commission integrity
+
+enum LoyaltyCommercialRuleState: String, Codable, Sendable { case verified, unknown, incompatible, compatible, conditional }
+enum LoyaltyPriceComponentKind: String, Codable, Sendable {
+    case customerLoyalty, personalPrice, partnerDiscount, coupon, partnerCashback, uaFundedBenefit, paymentMethodDiscount, delivery
+}
+enum LoyaltyBenefitFunding: String, Codable, Sendable { case customer, partner, universalAssistant }
+enum LoyaltyAttributionState: String, Codable, Sendable { case notEstablished, established, pendingConfirmation, confirmed, lost, expired, unknown }
+enum LoyaltyCommissionState: String, Codable, Sendable { case estimatedOnly, pendingPartnerConfirmation, confirmed, reversed, partiallyReversed, unknown }
+enum LoyaltyCommissionBasis: String, Codable, Sendable { case grossOrderValue, netAfterDiscounts, netAfterReturns, categorySpecific, fixedFee, otherVerified }
+enum LoyaltyAccountAccessState: String, Codable, Sendable { case current, reauthRequired, disconnected, unknown }
+enum LoyaltyCheckoutCompletion: String, Codable, Sendable { case handoffOnly, partnerConfirmed }
+
+struct LoyaltyPriceComponent: Identifiable, Equatable, Codable, Sendable {
+    let id: String
+    let kind: LoyaltyPriceComponentKind
+    let funding: LoyaltyBenefitFunding
+    let amount: Money
+    let sourceReference: String
+    let verifiedAt: Date
+    var expiresAt: Date?
+    var semanticBenefitID: String
+}
+
+struct LoyaltyStackingPolicy: Identifiable, Equatable, Codable, Sendable {
+    let id: String
+    let merchantID: String
+    let version: Int
+    let effectiveFrom: Date
+    var effectiveUntil: Date?
+    let state: LoyaltyCommercialRuleState
+    let allowedCombinations: Set<String>
+    let attributionMethods: [AttributionTrackingMethod]
+    let crossDeviceSupported: Bool
+    let installmentCompatibility: LoyaltyCommercialRuleState
+    let commissionBasis: LoyaltyCommissionBasis?
+    let commissionRate: Decimal?
+    let fixedCommission: Money?
+    let refundReversal: LoyaltyCommercialRuleState
+    let evidenceReference: String
+}
+
+struct LoyaltyCheckoutContext: Equatable, Sendable {
+    let userID: String
+    let loyaltyAccountUserID: String?
+    let merchantID: String
+    let orderID: String?
+    let publicPrice: Money
+    let components: [LoyaltyPriceComponent]
+    let policy: LoyaltyStackingPolicy?
+    let attribution: AttributionDecision
+    let referralCreatedAt: Date?
+    let isCrossDevice: Bool
+    let usesInstallments: Bool
+    let variantIsAvailable: Bool?
+    let quotedAt: Date
+}
+
+struct LoyaltyCheckoutEconomics: Equatable, Sendable {
+    let payablePrice: Money?
+    let appliedComponentIDs: [String]
+    let attributionState: LoyaltyAttributionState
+    let commissionState: LoyaltyCommissionState
+    let commissionAmount: Money?
+    let completion: LoyaltyCheckoutCompletion
+    let attributedHandoffRequired: Bool
+    let reason: String
+}
+
+enum LoyaltyIntegrityError: Error, Equatable, Sendable { case userScopeMismatch, currencyMismatch, duplicateBenefit, invalidPolicy }
+
+struct LoyaltyCommissionIntegrityEngine: Sendable {
+    func evaluate(_ context: LoyaltyCheckoutContext, now: Date = .now) throws -> LoyaltyCheckoutEconomics {
+        guard context.loyaltyAccountUserID == nil || context.loyaltyAccountUserID == context.userID else { throw LoyaltyIntegrityError.userScopeMismatch }
+        guard context.variantIsAvailable != false else {
+            return .init(payablePrice: nil, appliedComponentIDs: [], attributionState: .unknown, commissionState: .unknown,
+                         commissionAmount: nil, completion: .handoffOnly, attributedHandoffRequired: false, reason: "variant_unavailable")
+        }
+        guard let policy = context.policy, !policy.evidenceReference.isEmpty, policy.effectiveFrom <= now,
+              policy.effectiveUntil.map({ now < $0 }) ?? true else {
+            return .init(payablePrice: context.publicPrice, appliedComponentIDs: [], attributionState: .unknown,
+                         commissionState: .unknown, commissionAmount: nil, completion: .handoffOnly,
+                         attributedHandoffRequired: false, reason: "commercial_policy_unknown")
+        }
+        guard policy.state == .verified || policy.state == .compatible || policy.state == .conditional else {
+            return .init(payablePrice: context.publicPrice, appliedComponentIDs: [], attributionState: .unknown,
+                         commissionState: .unknown, commissionAmount: nil, completion: .handoffOnly,
+                         attributedHandoffRequired: false, reason: "stacking_not_verified")
+        }
+        let current = context.components.filter { component in
+            component.amount.currency == context.publicPrice.currency && !component.sourceReference.isEmpty &&
+            component.verifiedAt <= now && (component.expiresAt.map { now <= $0 } ?? true)
+        }
+        guard current.allSatisfy({ $0.amount.currency == context.publicPrice.currency }) else { throw LoyaltyIntegrityError.currencyMismatch }
+        let grouped = Dictionary(grouping: current, by: \.semanticBenefitID)
+        guard grouped.values.allSatisfy({ $0.count == 1 }) else { throw LoyaltyIntegrityError.duplicateBenefit }
+        let kinds = Set(current.map { $0.kind.rawValue })
+        let combination = kinds.sorted().joined(separator: "+")
+        let compatible = current.count <= 1 || policy.allowedCombinations.contains(combination)
+        let applied = compatible ? current : bestUserValueSubset(current, allowed: policy.allowedCombinations)
+        let discount = applied.filter { $0.kind != .delivery && $0.kind != .partnerCashback }.reduce(Decimal.zero) { $0 + $1.amount.amount }
+        let delivery = applied.filter { $0.kind == .delivery }.reduce(Decimal.zero) { $0 + $1.amount.amount }
+        let payable = Money(amount: max(0, context.publicPrice.amount - discount + delivery), currency: context.publicPrice.currency)
+        var attributionState: LoyaltyAttributionState
+        if context.isCrossDevice && !policy.crossDeviceSupported { attributionState = .unknown }
+        else if context.attribution.eligibility == .eligible { attributionState = .established }
+        else if context.attribution.eligibility == .notEligible { attributionState = .lost }
+        else { attributionState = .unknown }
+        if context.usesInstallments && ![.verified, .compatible].contains(policy.installmentCompatibility) { attributionState = .unknown }
+        let commission = commissionAmount(policy: policy, publicPrice: context.publicPrice, payable: payable)
+        let commissionState: LoyaltyCommissionState = attributionState == .established && commission != nil ? .pendingPartnerConfirmation : .unknown
+        return .init(payablePrice: payable, appliedComponentIDs: applied.map(\.id).sorted(), attributionState: attributionState,
+                     commissionState: commissionState, commissionAmount: commission, completion: .handoffOnly,
+                     attributedHandoffRequired: attributionState == .established, reason: compatible ? "verified_compatible_path" : "best_user_value_verified_subset")
+    }
+
+    func adjustedCommission(original: Money, refunded: Money, orderNet: Money,
+                            partnerConfirmed: Bool, policy: LoyaltyStackingPolicy) -> (Money, LoyaltyCommissionState) {
+        guard partnerConfirmed, policy.refundReversal == .verified, original.currency == refunded.currency,
+              refunded.currency == orderNet.currency, orderNet.amount > 0 else { return (original, .pendingPartnerConfirmation) }
+        let ratio = min(1, max(0, refunded.amount / orderNet.amount))
+        let amount = max(0, original.amount * (1 - ratio))
+        return (Money(amount: amount, currency: original.currency), amount == 0 ? .reversed : .partiallyReversed)
+    }
+
+    private func bestUserValueSubset(_ components: [LoyaltyPriceComponent], allowed: Set<String>) -> [LoyaltyPriceComponent] {
+        var candidates = components.map { [$0] }
+        if allowed.contains(components.map({ $0.kind.rawValue }).sorted().joined(separator: "+")) { candidates.append(components) }
+        return candidates.min { lhs, rhs in lhs.reduce(0) { $0 + $1.amount.amount } > rhs.reduce(0) { $0 + $1.amount.amount } } ?? []
+    }
+
+    private func commissionAmount(policy: LoyaltyStackingPolicy, publicPrice: Money, payable: Money) -> Money? {
+        guard let basis = policy.commissionBasis else { return nil }
+        if basis == .fixedFee { return policy.fixedCommission }
+        guard let rate = policy.commissionRate else { return nil }
+        let base: Decimal
+        switch basis {
+        case .grossOrderValue: base = publicPrice.amount
+        case .netAfterDiscounts, .netAfterReturns: base = payable.amount
+        case .categorySpecific, .otherVerified, .fixedFee: return nil
+        }
+        return Money(amount: base * rate, currency: payable.currency)
+    }
+}
+
+actor LoyaltyAccountQuoteCache {
+    struct Entry: Equatable, Sendable { let userID: String; let merchantID: String; let value: LoyaltyCheckoutEconomics; let expiresAt: Date }
+    private var entries: [String: Entry] = [:]
+    func put(_ entry: Entry) { entries[entry.userID + ":" + entry.merchantID] = entry }
+    func value(userID: String, merchantID: String, now: Date = .now) -> LoyaltyCheckoutEconomics? {
+        guard let entry = entries[userID + ":" + merchantID], entry.expiresAt >= now else { return nil }
+        return entry.value
+    }
+    func disconnect(userID: String, merchantID: String) { entries[userID + ":" + merchantID] = nil }
+}
