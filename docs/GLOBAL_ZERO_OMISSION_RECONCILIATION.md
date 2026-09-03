@@ -493,3 +493,50 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-378 | VERIFIED_LOCAL | regional profiles select distinct ride and ticket provider IDs per country without embedding routing in UI; regional tests | 1a48751 |
 | MS-379 | VERIFIED_LOCAL | typed country profiles select emergency service numbers/semantics and preserve user-initiated-call-only safety; regional and UkraineEmergencyPlanner tests | 1a48751 |
 | MS-380 | VERIFIED_LOCAL | profiles select ISO currency and metric/US-customary units while existing SafeMoneyComparison forbids implicit cross-currency comparison; regional and locale-safety tests | 1a48751 |
+
+## Slice 21 — MS-381–422
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-381 | VERIFIED_LOCAL | privacy manifest/data map and data-minimized telemetry limit collection to enabled functions; privacy and telemetry tests | 7a6cd05 |
+| MS-382 | VERIFIED_LOCAL | ContextualPermissionPolicy requests nothing at launch and gates microphone/notification/location by feature trigger; permission tests | c34533b |
+| MS-383 | VERIFIED_LOCAL | voice/recorder/location enter stable denied states without retry/crash and typed input remains usable; denied tests | 7a6cd05 |
+| MS-384 | VERIFIED_LOCAL | denied voice state exposes one concise UIApplication Settings link only while useful; denied recovery test | 7a6cd05 |
+| MS-385 | VERIFIED_LOCAL | provider credentials use scoped this-device-only Keychain while server secrets are runtime injected; auth/security tests | c38d23d |
+| MS-386 | VERIFIED_LOCAL | production clients require runtime credentials and secret-pattern scan found no app production secret; security audit | 1a5ecf7 |
+| MS-387 | VERIFIED_LOCAL | repository secret-pattern verification plus hosted standard scan report no committed production secret; M10 audit | 1a5ecf7 |
+| MS-388 | VERIFIED_LOCAL | optional AI config persists only a Keychain/server reference, never credential text; configuration/auth tests | c38d23d |
+| MS-389 | VERIFIED_LOCAL | telemetry has no raw command/URL/payload/user-ID field and rejects free-text dimensions; telemetry privacy test | 7a6cd05 |
+| MS-390 | VERIFIED_LOCAL | PrivacySafeProductMetrics aggregates bounded feature IDs/counts without content; aggregate test | 7a6cd05 |
+| MS-391 | VERIFIED_LOCAL | performance/coordination/product record command/provider/critical-path completion durations; performance tests | 7a6cd05 |
+| MS-392 | VERIFIED_LOCAL | connectorFailure and connectorFallback counters provide aggregate reliability/fallback frequency; aggregate test | 7a6cd05 |
+| MS-393 | VERIFIED_LOCAL | crashSignal ingests only infrastructure occurrence without stack/private payload; telemetry test | 7a6cd05 |
+| MS-394 | VERIFIED_LOCAL | cold/warm launch typed durations and release budgets measure responsiveness; performance tests | 7a6cd05 |
+| MS-395 | VERIFIED_LOCAL | voiceToCommand duration aggregates without transcript; telemetry test | 7a6cd05 |
+| MS-396 | VERIFIED_LOCAL | commandToAction duration aggregates without command/action payload; telemetry test | 7a6cd05 |
+| MS-397 | VERIFIED_LOCAL | memoryPressure is counted and resource policy reduces concurrency/cache and purges work; resource tests | 7a6cd05 |
+| MS-398 | VERIFIED_LOCAL | AssistantResultFailure exposes only human message/recovery while provider errors stay typed internally; presentation tests | 55c824e |
+| MS-399 | VERIFIED_LOCAL | bounded request-keyed LRU cache reuses stable normalized results; cache tests | 94e56d9 |
+| MS-400 | VERIFIED_LOCAL | cache TTL/source evidence reject stale live-sensitive offers as current; stale-offer tests | 94e56d9 |
+| MS-401 | VERIFIED_LOCAL | inventory retains observed time, confidence and known/unknown availability; commerce/feed freshness tests | 94e56d9 |
+| MS-402 | VERIFIED_LOCAL | ride engine rejects quote/ETA outside its short freshness window; ride tests | 94e56d9 |
+| MS-403 | VERIFIED_LOCAL | ticket engine requires current sourced inventory and prevents stale purchase; ticket tests | 8f78ab4 |
+| MS-404 | VERIFIED_LOCAL | reservation engine requires fresh provider availability and never equates handoff with booking; restaurant tests | 7a6cd05 |
+| MS-405 | VERIFIED_LOCAL | transport/departure require fresh real-time route evidence and reject stale traffic; transport tests | 7a6cd05 |
+| MS-406 | VERIFIED_LOCAL | place freshness derives from source time so open-now is never permanently cached; place tests | 7a6cd05 |
+| MS-407 | VERIFIED_LOCAL | REAL_DEVICE_TEST_MATRIX tracks each device-only capability, reason and queue reference; matrix audit | 6ec7080 |
+| MS-408 | VERIFIED_LOCAL | matrix/policy keep simulator success separate from physical VERIFIED_LIVE evidence; queue audit | 6ec7080 |
+| MS-409 | READY_FOR_LIVE_VERIFICATION | microphone production/local path complete; physical audio test queued MS-409...422 | 01378bd |
+| MS-410 | READY_FOR_LIVE_VERIFICATION | Speech framework/mixed-language path locally tested; physical speech queued | 01378bd |
+| MS-411 | READY_FOR_LIVE_VERIFICATION | location/suspicious recovery locally complete; moving physical GPS queued | 01378bd |
+| MS-412 | READY_FOR_LIVE_VERIFICATION | App Intent quick launch locally complete; supported-device Action Button queued | 01378bd |
+| MS-413 | READY_FOR_LIVE_VERIFICATION | Contacts permission/resolution locally complete; physical Contacts queued | 01378bd |
+| MS-414 | READY_FOR_LIVE_VERIFICATION | Calendar CRUD/permission locally complete; physical EventKit queued | 01378bd |
+| MS-415 | READY_FOR_LIVE_VERIFICATION | Reminders CRUD/permission locally complete; physical EventKit queued | 01378bd |
+| MS-416 | READY_FOR_LIVE_VERIFICATION | phone handoff locally validated without completion claim; physical cancel/handoff queued | 01378bd |
+| MS-417 | READY_FOR_LIVE_VERIFICATION | message compose/handoff safety locally tested; physical composition queued | 01378bd |
+| MS-418 | READY_FOR_LIVE_VERIFICATION | notification contracts locally verified; signed-device delivery queued | 01378bd |
+| MS-419 | READY_FOR_LIVE_VERIFICATION | schemes/Universal Links locally tested; installed-app execution queued | 01378bd |
+| MS-420 | READY_FOR_LIVE_VERIFICATION | missing-app fallback is truthful locally; physical absence queued | 01378bd |
+| MS-421 | READY_FOR_LIVE_VERIFICATION | offline/timeout/partial failure locally tested; physical network transitions queued | 01378bd |
+| MS-422 | READY_FOR_LIVE_VERIFICATION | permission-state paths locally tested; physical combinations queued | 01378bd |
