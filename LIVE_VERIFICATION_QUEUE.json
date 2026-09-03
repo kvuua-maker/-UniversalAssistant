@@ -488,7 +488,7 @@
       "completion_evidence": null
     },
     {
-      "requirement_id": "MS-1030-1037-LIVE-PARCEL-PROVIDERS",
+      "requirement_id": "MS-1031-1033-LIVE-PARCEL-ADAPTERS",
       "service_provider": "Nova Poshta, Ukrposhta and Meest official production/sandbox APIs",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
       "missing_dependency": "Provider-issued Nova Poshta API key, Ukrposhta agreement token/bearer credential, Meest OAuth/API access, and controlled active/delivered shipments plus a test location for each enabled carrier.",
@@ -504,7 +504,27 @@
       "required_live_action": "Inject each credential through runtime configuration; track controlled active, delivered and unknown identifiers; verify authorization/rate-limit/no-result handling; query nearby real branches; persist a watch across process restart and observe one actual carrier status transition through durable scheduling and notification.",
       "expected_result": "Returned status, event evidence and branch coordinates match each official carrier; unavailable facts remain unknown; one provider failure leaves truthful alternatives; no secret appears in client persistence/logs/repository; and a real changed status generates exactly one parcel notification.",
       "created_at": "2026-09-02T17:32:00+02:00",
-      "last_checked": "2026-09-02T17:32:00+02:00",
+      "last_checked": "2026-09-03T13:20:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-1035-1037-LIVE-PARCEL-TRACK-WATCH",
+      "service_provider": "Nova Poshta, Ukrposhta and Meest official production/sandbox APIs",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Provider-issued Nova Poshta API key, Ukrposhta agreement token/bearer credential, Meest OAuth/API access, and controlled active/delivered shipments plus a test location for each enabled carrier.",
+      "dependency_owner": "Owner and authorized carrier account administrators",
+      "local_evidence": [
+        "UniversalAssistant/Delivery/ParcelDeliveryEngine.swift",
+        "UniversalAssistant/Delivery/ParcelProviderAdapters.swift",
+        "UniversalAssistantTests/ParcelDeliveryEngineTests.swift",
+        "Backend/Sources/UniversalAssistantServer/ProactiveWatchEngine.swift",
+        "Backend/Tests/UniversalAssistantServerTests/ProactiveWatchEngineTests.swift",
+        "docs/M12_PARCEL_DELIVERY_CORE.md"
+      ],
+      "required_live_action": "Inject each credential through runtime configuration; track controlled active, delivered and unknown identifiers; verify authorization/rate-limit/no-result handling; query nearby real branches; persist a watch across process restart and observe one actual carrier status transition through durable scheduling and notification.",
+      "expected_result": "Returned status, event evidence and branch coordinates match each official carrier; unavailable facts remain unknown; one provider failure leaves truthful alternatives; no secret appears in client persistence/logs/repository; and a real changed status generates exactly one parcel notification.",
+      "created_at": "2026-09-02T17:32:00+02:00",
+      "last_checked": "2026-09-03T13:20:00+02:00",
       "completion_evidence": null
     },
     {
@@ -525,7 +545,7 @@
       "completion_evidence": null
     },
     {
-      "requirement_id": "MS-1043-1049-LIVE-FOOD-DELIVERY",
+      "requirement_id": "MS-1044-1045-LIVE-FOOD-PROVIDERS",
       "service_provider": "Glovo, Bolt Food and authorized regional food-delivery providers",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
       "missing_dependency": "Provider-approved consumer discovery/checkout scope, partner credentials, sandbox/test stores with controlled menus and permission to execute disposable controlled orders/refunds.",
@@ -538,11 +558,28 @@
       "required_live_action": "Implement only the exact provider-approved adapter contract, then query the same controlled dish/address across enabled providers; verify menu price, every required fee, availability and ETA; execute one explicitly confirmed disposable order and read back its real provider state/cancellation or refund.",
       "expected_result": "Comparison matches current provider totals and ETA, missing facts stay incomplete, a failed provider does not block alternatives, no unconfirmed order executes, and confirmed/cancelled/refunded state comes only from provider evidence.",
       "created_at": "2026-09-02T17:49:00+02:00",
-      "last_checked": "2026-09-02T17:49:00+02:00",
+      "last_checked": "2026-09-03T13:20:00+02:00",
       "completion_evidence": null
     },
     {
-      "requirement_id": "MS-1050-1056-LIVE-APPOINTMENTS",
+      "requirement_id": "MS-1047-1049-LIVE-FOOD-COMPARE-ORDER",
+      "service_provider": "Glovo, Bolt Food and authorized regional food-delivery providers",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Provider-approved consumer discovery/checkout scope, partner credentials, sandbox/test stores with controlled menus and permission to execute disposable controlled orders/refunds.",
+      "dependency_owner": "Owner/business development and provider account managers",
+      "local_evidence": [
+        "UniversalAssistant/FoodDelivery/FoodDeliveryComparisonEngine.swift",
+        "UniversalAssistantTests/FoodDeliveryComparisonEngineTests.swift",
+        "docs/M12_FOOD_DELIVERY_COMPARISON_CORE.md"
+      ],
+      "required_live_action": "Implement only the exact provider-approved adapter contract, then query the same controlled dish/address across enabled providers; verify menu price, every required fee, availability and ETA; execute one explicitly confirmed disposable order and read back its real provider state/cancellation or refund.",
+      "expected_result": "Comparison matches current provider totals and ETA, missing facts stay incomplete, a failed provider does not block alternatives, no unconfirmed order executes, and confirmed/cancelled/refunded state comes only from provider evidence.",
+      "created_at": "2026-09-02T17:49:00+02:00",
+      "last_checked": "2026-09-03T13:20:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-1052-1056-LIVE-APPOINTMENTS",
       "service_provider": "Authorized appointment/booking provider",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
       "missing_dependency": "Owner-selected lawful provider, approved API access, bearer credentials, sandbox or controlled service account and permission for disposable booking/reschedule/cancel operations.",
@@ -556,7 +593,7 @@
       "required_live_action": "Configure the provider-issued endpoints/credential; search a controlled real slot with time/price constraints; explicitly confirm booking and read it back; reschedule and read back; cancel and read back; verify linked Calendar/departure artifacts follow only confirmed provider states.",
       "expected_result": "Slots match current provider availability, no stale/unknown slot is offered, each mutation matches authoritative provider IDs/state, fallback is never called booked, and no credential appears in persistence/logs/repository.",
       "created_at": "2026-09-02T18:00:00+02:00",
-      "last_checked": "2026-09-02T18:00:00+02:00",
+      "last_checked": "2026-09-03T13:20:00+02:00",
       "completion_evidence": null
     },
     {

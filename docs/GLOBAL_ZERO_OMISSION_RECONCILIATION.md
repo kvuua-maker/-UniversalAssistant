@@ -1032,3 +1032,59 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-1020 | READY_FOR_LIVE_VERIFICATION | captured document pages feed local Vision OCR and typed save/document output; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
 | MS-1021 | READY_FOR_LIVE_VERIFICATION | only validated extracted dates/merchant/amount/action fields feed subsequent actions; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
 | MS-1022 | READY_FOR_LIVE_VERIFICATION | vCard validation uses Contacts and presents the system user-confirmed new-contact UI; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
+
+
+| MS-1023 | VERIFIED_LOCAL | BillsReceiptsDocumentsEngine models bills/receipts/invoices/warranties/tickets with typed fact confidence; behavioral production-path tests | 20c0a4e |
+| MS-1024 | VERIFIED_LOCAL | bill query reuses concurrent authorized Files/Notes/connected-email personal search with provenance; behavioral production-path tests | 20c0a4e |
+| MS-1025 | VERIFIED_LOCAL | only a verified due date can produce a typed reminder plan; behavioral production-path tests | 20c0a4e |
+| MS-1026 | VERIFIED_LOCAL | bill payment is a confirmed official HTTPS handoff and never payment success; behavioral production-path tests | 20c0a4e |
+| MS-1027 | VERIFIED_LOCAL | engine contains no banking credential capture or unauthorized bank automation path; behavioral production-path tests | 20c0a4e |
+| MS-1028 | VERIFIED_LOCAL | receipt purchase and warranty reminders require verified linked evidence; behavioral production-path tests | 20c0a4e |
+| MS-1029 | VERIFIED_LOCAL | assistant documents retain source object ID and exact personal-search open reference; behavioral production-path tests | 20c0a4e |
+| MS-1030 | VERIFIED_LOCAL | ParcelDeliveryEngine validates identifiers and performs modular bounded provider fanout; behavioral production-path tests | d6c79b7 |
+| MS-1031 | READY_FOR_LIVE_VERIFICATION | Nova Poshta official request/response adapter and credential factory are production-tested; exact provider execution remains in LIVE_VERIFICATION_QUEUE | d6c79b7 |
+| MS-1032 | READY_FOR_LIVE_VERIFICATION | Ukrposhta bearer/query adapter and response/error mapping are production-tested; exact provider execution remains in LIVE_VERIFICATION_QUEUE | d6c79b7 |
+| MS-1033 | READY_FOR_LIVE_VERIFICATION | Meest OAuth/bearer adapter, nested response and coordinate validation are production-tested; exact provider execution remains in LIVE_VERIFICATION_QUEUE | d6c79b7 |
+| MS-1034 | VERIFIED_LOCAL | ParcelDeliveryProvider remains provider-neutral and isolates provider-specific rules; behavioral production-path tests | d6c79b7 |
+| MS-1035 | READY_FOR_LIVE_VERIFICATION | tracking command uses explicit validated carrier identifier and exact attributed results; exact provider execution remains in LIVE_VERIFICATION_QUEUE | d6c79b7 |
+| MS-1036 | READY_FOR_LIVE_VERIFICATION | status, ETA and branch facts require provider evidence and unknown remains unknown; exact provider execution remains in LIVE_VERIFICATION_QUEUE | d6c79b7 |
+| MS-1037 | READY_FOR_LIVE_VERIFICATION | persistent expiring parcel watches schedule deduplicated jobs and notify only on changed state; exact provider execution remains in LIVE_VERIFICATION_QUEUE | d6c79b7 |
+| MS-1038 | VERIFIED_LOCAL | GovernmentLocalServicesEngine audit records official Ukrainian/municipal capabilities and limits; behavioral production-path tests | 79c093a |
+| MS-1039 | READY_FOR_LIVE_VERIFICATION | Diia partner-depth path requires approved organization, credentials and explicit user consent; exact provider execution remains in LIVE_VERIFICATION_QUEUE | 79c093a |
+| MS-1040 | VERIFIED_LOCAL | private Diia document access is explicitly rejected and never claimed; behavioral production-path tests | 79c093a |
+| MS-1041 | VERIFIED_LOCAL | official parking/Kyiv Digital/utility handoffs are typed, confirmed and host-validated; behavioral production-path tests | 79c093a |
+| MS-1042 | VERIFIED_LOCAL | government actions require configured authoritative official HTTPS sources; behavioral production-path tests | 79c093a |
+| MS-1043 | VERIFIED_LOCAL | FoodDeliveryComparisonEngine performs bounded concurrent normalized provider comparison; behavioral production-path tests | 03d8803 |
+| MS-1044 | READY_FOR_LIVE_VERIFICATION | Glovo official capability audit distinguishes partner API from unproven consumer access; exact provider execution remains in LIVE_VERIFICATION_QUEUE | 03d8803 |
+| MS-1045 | READY_FOR_LIVE_VERIFICATION | Bolt Food official capability audit preserves partner authorization boundary; exact provider execution remains in LIVE_VERIFICATION_QUEUE | 03d8803 |
+| MS-1046 | VERIFIED_LOCAL | FoodDeliveryProvider is modular for other authorized regional providers; behavioral production-path tests | 03d8803 |
+| MS-1047 | READY_FOR_LIVE_VERIFICATION | ranking uses verified Decimal delivered total including required fees and verified ETA; exact provider execution remains in LIVE_VERIFICATION_QUEUE | 03d8803 |
+| MS-1048 | READY_FOR_LIVE_VERIFICATION | food request applies availability/ETA/price constraints and truthful provider coverage; exact provider execution remains in LIVE_VERIFICATION_QUEUE | 03d8803 |
+| MS-1049 | READY_FOR_LIVE_VERIFICATION | ordering requires confirmation/exact provider handoff and never reports fake placement; exact provider execution remains in LIVE_VERIFICATION_QUEUE | 03d8803 |
+| MS-1050 | VERIFIED_LOCAL | AppointmentEngine supplies one typed provider-neutral availability/booking foundation; behavioral production-path tests | 075d649 |
+| MS-1051 | VERIFIED_LOCAL | typed extensible categories cover lawful medical/salon/vehicle/veterinary/repair services; behavioral production-path tests | 075d649 |
+| MS-1052 | READY_FOR_LIVE_VERIFICATION | only fresh provider-attributed explicitly verified slots satisfy availability search; exact provider execution remains in LIVE_VERIFICATION_QUEUE | 075d649 |
+| MS-1053 | READY_FOR_LIVE_VERIFICATION | direct booking requires confirmation and authoritative matching provider read-back; exact provider execution remains in LIVE_VERIFICATION_QUEUE | 075d649 |
+| MS-1054 | READY_FOR_LIVE_VERIFICATION | only confirmed bookings create linked Calendar drafts and route-evidence departure plans; exact provider execution remains in LIVE_VERIFICATION_QUEUE | 075d649 |
+| MS-1055 | READY_FOR_LIVE_VERIFICATION | reschedule/cancel require matching provider IDs/state and return linked-artifact synchronization data; exact provider execution remains in LIVE_VERIFICATION_QUEUE | 075d649 |
+| MS-1056 | READY_FOR_LIVE_VERIFICATION | canonical after-15 tire-service journey enforces date/time/price/rating hard constraints; exact provider execution remains in LIVE_VERIFICATION_QUEUE | 075d649 |
+| MS-1057 | VERIFIED_LOCAL | RoutineMacroEngine builds safe multi-step automation over existing capabilities; behavioral production-path tests | 5a437d0 |
+| MS-1058 | VERIFIED_LOCAL | supported natural creation compiles into typed triggers/conditions/actions/dependencies; behavioral production-path tests | 5a437d0 |
+| MS-1059 | VERIFIED_LOCAL | home/store route example compiles to existing navigation and along-route capabilities; behavioral production-path tests | 5a437d0 |
+| MS-1060 | VERIFIED_LOCAL | RoutineMacroStore atomically persists structured definitions and RoutineExecutionLedger claims events; behavioral production-path tests | 5a437d0 |
+| MS-1061 | VERIFIED_LOCAL | store supports typed edit/delete/enable/disable across restart; behavioral production-path tests | 5a437d0 |
+| MS-1062 | VERIFIED_LOCAL | each routine step enforces existing permission and consequential confirmation policy; behavioral production-path tests | 5a437d0 |
+| MS-1063 | VERIFIED_LOCAL | cycles/recursion are unencodable or rejected; cancellation/idempotency/partial failure are tested; behavioral production-path tests | 5a437d0 |
+| MS-1064 | VERIFIED_LOCAL | CurrentContext is a structured local Codable context rather than a raw transcript; behavioral production-path tests | 8e7a96c |
+| MS-1065 | VERIFIED_LOCAL | context includes time/location/route/event/task/entities/selection/services/preferences with provenance; behavioral production-path tests | 8e7a96c |
+| MS-1066 | VERIFIED_LOCAL | global and per-object expiration reject stale provider objects; behavioral production-path tests | 8e7a96c |
+| MS-1067 | VERIFIED_LOCAL | typed cheaper/navigate/call/reschedule/along-route followups resolve deterministically; behavioral production-path tests | 8e7a96c |
+| MS-1068 | VERIFIED_LOCAL | manual reset and deny-by-default externalPayload minimize private context disclosure; behavioral production-path tests | 8e7a96c |
+| MS-1069 | VERIFIED_LOCAL | UniversalActionGraph models reusable verified cross-domain entities/actions/results; behavioral production-path tests | 2737995 |
+| MS-1070 | VERIFIED_LOCAL | entity taxonomy includes person/place/product/store/email/document/event/reminder/ticket/parcel/appointment/route/provider result; behavioral production-path tests | 2737995 |
+| MS-1071 | VERIFIED_LOCAL | typed action taxonomy covers canonical search/open/show/call/message/route/create/remind/compare/book/cancel/reschedule/track/share; behavioral production-path tests | 2737995 |
+| MS-1072 | VERIFIED_LOCAL | provider adapters register explicit capabilities and return typed verified results; behavioral production-path tests | 2737995 |
+| MS-1073 | VERIFIED_LOCAL | composition validates provenance/freshness/kind/confirmation before producing typed invocation; behavioral production-path tests | 2737995 |
+| MS-1074 | VERIFIED_LOCAL | behavioral tests cover canonical email/product/ticket/parcel/appointment graph compositions; behavioral production-path tests | 2737995 |
+| MS-1075 | VERIFIED_LOCAL | graph never derives execution arguments from opaque free text or provider magic; behavioral production-path tests | 2737995 |
+| MS-1076 | VERIFIED_LOCAL | capability-based registration lets new adapters join compatible flows without scenario rewrites; behavioral production-path tests | 2737995 |
