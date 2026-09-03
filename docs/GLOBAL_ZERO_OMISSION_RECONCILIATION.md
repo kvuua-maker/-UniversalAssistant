@@ -719,3 +719,53 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-598 | VERIFIED_LOCAL | CurrentContext resolves yes/no, ordinal/open, cheaper, closer/navigation/call/reschedule/route-aware replies from bounded fresh preceding context; StrongCurrentContextTests | b289278 |
 | MS-599 | VERIFIED_LOCAL | purchase handoff never claims purchase and direct financial/consequential action requires typed explicit confirmation/provider flow; commerce safety tests | 27ad853 |
 | MS-600 | VERIFIED_LOCAL | booking/order/appointment engines validate consequential confirmation and authoritative provider response without redundant informational confirmation; appointment/food/commerce tests | 27ad853 |
+
+| MS-601 | VERIFIED_LOCAL | UkraineEmergencyPlanner test mode returns typed dialer/location/route plans and UI evidence without executing a real call; emergency and canonical scenario tests | fab773a |
+| MS-602 | VERIFIED_LOCAL | bounded AI receives only allowlisted structured unresolved context/verified facts; privacy filter and AI fallback tests reject broad personal datasets | ca92a6f |
+| MS-603 | VERIFIED_LOCAL | capability/provider routing prefers specialized structured sources before generic discovery, which preserves explicit source kind/provenance; unknown-intent precedence/conflict tests | 2037125 |
+| MS-604 | VERIFIED_LOCAL | retail extraction keeps branch/variant stock unknown unless structured source proves it and never treats page presence as inventory; generic retail tests | 9757b3a |
+| MS-605 | VERIFIED_LOCAL | restaurant and appointment availability requires fresh authoritative provider slots; webpage/phone/handoff never becomes reservation proof; booking tests | 41bbacf |
+| MS-606 | VERIFIED_LOCAL | official-source routers require exact non-homepage context, validated scheme/host/path and reject generic/unapproved destinations; deep-link/fashion tests | 6a2bac5 |
+| MS-607 | VERIFIED_LOCAL | UniversalDeviceCommandRouter and IntegrationFallbackPolicy return exact official web/system/App Store alternative or truthful unavailable state when target app is absent; routing tests | eb698bd |
+| MS-608 | VERIFIED_LOCAL | AppCapabilityRegistry models region/version/auth/mechanism constraints and unsupported execution falls back without assuming scheme availability; registry tests | 762c336 |
+| MS-609 | VERIFIED_LOCAL | DeterministicExecutionPlanner creates typed dependency plans for common compound commands with zero AI; coordination acceptance tests | 27ad853 |
+| MS-610 | VERIFIED_LOCAL | DeterministicPlanExecutor preserves completed safe steps, reports failed/unavailable steps and returns partial verified composition under bounded fanout; coordination tests | 27ad853 |
+| MS-611 | VERIFIED_LOCAL | action ledger, execution step IDs and provider idempotency prevent retry duplication of calendar/reminder/booking/order work; coordination and lifecycle tests | 27ad853 |
+| MS-612 | VERIFIED_LOCAL | booking/order/webhook/backend mutations use typed idempotency keys/event IDs where supported and reject duplicate consequential events; M9 and appointment tests | 27ad853 |
+| MS-613 | VERIFIED_LOCAL | generic result composition caps the initial shortlist at three and emits typed “Показати ще” only when additional results exist; genericComparisonIsCappedAtThreeWithShowMore | ca50a5b |
+| MS-614 | VERIFIED_LOCAL | bounded CurrentContext resolves other/cheaper/closer/ordinal-open refinements against fresh preceding results without restarting; context tests | b289278 |
+| MS-615 | VERIFIED_LOCAL | grocery, ride, travel, place and product rankers enforce explicit cheapest/fastest/nearest/open/size/wait constraints before soft ranking; domain tests | fab773a |
+| MS-616 | VERIFIED_LOCAL | native result/card models expose concise title/facts/source/action while technical provider IDs/API/confidence remain outside normal UI; presentation tests | 58447af |
+| MS-617 | VERIFIED_LOCAL | AssistantResultState supports explicit expanded/details/action-required presentations while default success remains compact; result-state tests | 58447af |
+| MS-618 | VERIFIED_LOCAL | SHOW/OPEN routing selects exact official visual/current source for fashion/product/place/travel domains and never reproduces unverified current content; official-source tests | 6a2bac5 |
+| MS-619 | VERIFIED_LOCAL | retail freshness/provenance derives current/new collection facts from source timestamps/labels rather than popularity and rejects stale evidence; retail tests | 9757b3a |
+| MS-620 | VERIFIED_LOCAL | GroceryBasketEngine treats explicit brand as a hard comparable-product constraint and does not silently substitute brands; grocery tests | 8b04a53 |
+| MS-621 | VERIFIED_LOCAL | grocery normalization uses quantity/unit/category attributes for deterministic comparable generic products across stores; grocery comparison tests | 8b04a53 |
+| MS-622 | VERIFIED_LOCAL | promotion/offer validity and observed timestamps are freshness-gated; expired grocery/commerce prices are excluded rather than treated current; commerce tests | 8b04a53 |
+| MS-623 | VERIFIED_LOCAL | normalized loyalty core separates public and verified user-specific prices and preserves unknown discounts when no account/card evidence exists; loyalty tests | 00a3609 |
+| MS-624 | VERIFIED_LOCAL | RideComparisonEngine compares normalized matching ride classes and preserves class labels instead of equating unlike offers; ride tests | 226be8c |
+| MS-625 | VERIFIED_LOCAL | ride/user-specific promotions remain distinct verified account/provider adjustments and are not inferred as public quote value; ride truth tests | 226be8c |
+| MS-626 | VERIFIED_LOCAL | ride optimal mode uses explicit configurable exact price/pickup-time weighting with reproducible ranking; RideComparisonEngineTests | 226be8c |
+| MS-627 | VERIFIED_LOCAL | explicit maximum wait/budget constraints filter ride offers before default optimal ranking; RideComparisonEngineTests | 226be8c |
+| MS-628 | VERIFIED_LOCAL | Transport/Travel engines enforce arrival deadline as a hard constraint before price/ranking and reject late cheaper options; transport tests | 48f8a09 |
+| MS-629 | VERIFIED_LOCAL | SmartDepartureEngine recomputes material route/weather/transport changes and links updated recommendation to notification/reminder state; departure tests | 48f8a09 |
+| MS-630 | VERIFIED_LOCAL | proactive categories/rules are explicit persisted user controls with deterministic disable/suppression behavior; proactive policy tests | d6c79b7 |
+| MS-631 | VERIFIED_LOCAL | ProactiveWatchEngine parses natural stop/cancel phrases and removes the exact persisted rule/observation without settings navigation; naturalCancellationRemovesRuleAndObservation | d6c79b7 |
+| MS-632 | VERIFIED_LOCAL | calendar/action ledger uses recent logical identity/idempotency to prevent duplicate assistant-created events on retry/repeated phrase; calendar tests | ddbccca |
+| MS-633 | VERIFIED_LOCAL | linked plan mutation preserves event, reminder, route watch and shopping-stop identifiers so reschedule/cancel updates the coherent plan; linkage tests | ddbccca |
+| MS-634 | VERIFIED_LOCAL | LocalContactResolver uses exact/alias resolution and returns ambiguity for multiple people rather than guessing; contact tests | 26e9264 |
+| MS-635 | VERIFIED_LOCAL | phone actions use public tel handoff with required user/system control and never claim silent completed calling; system-router tests | 68be1a5 |
+| MS-636 | VERIFIED_LOCAL | message actions use public composition/handoff and authoritative user completion, never silent unrestricted sending; messaging tests | 68be1a5 |
+| MS-637 | VERIFIED_LOCAL | camera integration uses authorized in-app capture/public picker and explicitly rejects unsupported Camera-app automation; camera tests | 762c336 |
+| MS-638 | VERIFIED_LOCAL | SystemQuickActionPlanner exposes only public Settings links/typed instructions and fails closed for arbitrary setting mutation; quick-action tests | 68be1a5 |
+| MS-639 | VERIFIED_LOCAL | scene/background policy stops transient listening and uses legitimate background tasks/notifications/server scheduling, never continuous execution; lifecycle tests | d6c79b7 |
+| MS-640 | VERIFIED_LOCAL | recurring external watches execute through backend durable jobs/ProactiveWatchEngine rather than continuous iPhone polling; backend proactive tests | d6c79b7 |
+| MS-641 | VERIFIED_LOCAL | provider access validation and evidence governance reject prohibited scraping, CAPTCHA/login bypass and retain deepest legitimate fallback; integration tests | 2037125 |
+| MS-642 | VERIFIED_LOCAL | typed fallback policy retains exact official web/phone/navigation/reduced automation when direct API is absent; fallback tests | eb698bd |
+| MS-643 | VERIFIED_LOCAL | integration-depth audit checks API/SDK/OAuth/App Intent/deep link/feed/web/phone/navigation evidence before accepting a shallow path; governance tests | eb698bd |
+| MS-644 | VERIFIED_LOCAL | Ukrainian retailer/provider matrices record checked official avenues, result, limitation, source URL and review date/status; artifact tests | eb698bd |
+| MS-645 | VERIFIED_LOCAL | offline paths preserve local functions and label cached/static/live facts truthfully, with live traffic/stock/quotes/tickets/availability excluded; offline/failure tests | 94e56d9 |
+| MS-646 | VERIFIED_LOCAL | consumer AssistantHomeView contains no partner administration; tenant-scoped business operations remain backend/dashboard contracts; isolation/UI tests | 81d4161 |
+| MS-647 | VERIFIED_LOCAL | SponsoredOrganicSeparation keeps best organic result available independently of campaign/commission and renders sponsored separately; ranking tests | 168f2df |
+| MS-648 | VERIFIED_LOCAL | sponsored retrieval is secondary/isolated and cannot delay or replace the deterministic organic result critical path; separation/performance tests | 168f2df |
+| MS-649 | VERIFIED_LOCAL | CostQuotaManager checks are bounded/actor-local and simple local/system commands bypass remote cost quota dependency; runtime/performance tests | 069b18a |
