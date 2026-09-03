@@ -46,6 +46,9 @@ struct AssistantHomeView: View {
                         homeScreenShortcut: .available, assistiveTouch: .available))) {
                         Image(systemName: "bolt.circle")
                     }.accessibilityLabel("Швидкий запуск")
+                    NavigationLink(destination: AssistantSettingsView(model: model)) {
+                        Image(systemName: "gearshape")
+                    }.accessibilityLabel("Settings")
                 }
             }
             .tabItem { Label("home", systemImage: "house") }
@@ -54,6 +57,8 @@ struct AssistantHomeView: View {
             FavoritesView(favorites: model.favorites)
                 .tabItem { Label("favorites", systemImage: "star") }
         }
+        .preferredColorScheme(model.presentationPreferences.appearance == .dark ? .dark : model.presentationPreferences.appearance == .light ? .light : nil)
+        .tint(model.presentationPreferences.accent.color)
     }
 }
 

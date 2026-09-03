@@ -13,24 +13,32 @@ final class AssistantViewModel {
     private(set) var interactionDecision: InteractionDecision?
     private(set) var personalTasks: [PersonalTaskItem] = []
     private(set) var favorites: [FavoriteReference] = []
+    var presentationPreferences = PresentationPreferences()
     let recorder = AudioRecorderController()
     private let commandEngine: any CommandParsing
     private let interactionEngine: any InteractionDeciding
     private let voiceInput = VoiceInputController()
     private let feedbackStore: UserFeedbackStore
     private let compactResultDuration: Duration
+    private let presentationPreferenceStore: PresentationPreferenceStore
     private var resultDismissTask: Task<Void, Never>?
 
     init(
         commandEngine: any CommandParsing = LocalCommandEngine(),
         interactionEngine: any InteractionDeciding = InteractionDecisionEngine(),
         feedbackStore: UserFeedbackStore = .shared,
-        compactResultDuration: Duration = .seconds(2)
+        compactResultDuration: Duration = .seconds(2),
+        presentationPreferenceStore: PresentationPreferenceStore = PresentationPreferenceStore()
     ) {
         self.commandEngine = commandEngine
         self.interactionEngine = interactionEngine
         self.feedbackStore = feedbackStore
         self.compactResultDuration = compactResultDuration
+        self.presentationPreferenceStore = presentationPreferenceStore
+        Task { [weak self] in
+            guard let self else { return }
+            if let value = try? await presentationPreferenceStore.load() { self.presentationPreferences = value }
+        }
     }
 
     func toggleListening() {
@@ -64,6 +72,11 @@ final class AssistantViewModel {
         guard QuickLaunchRequestStore().consumeVoiceLaunch() else { return }
         guard voiceInputEnabled else { statusText = AppText.value("voice_disabled"); return }
         toggleListening()
+    }
+
+    func savePresentationPreferences(_ value: PresentationPreferences) {
+        presentationPreferences = value
+        Task { try? await presentationPreferenceStore.save(value) }
     }
 
     func setVoiceInputEnabled(_ enabled: Bool) {

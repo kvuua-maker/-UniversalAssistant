@@ -5,7 +5,7 @@ enum SpeechContentCategory: String, Codable, Sendable {
     case warning, unverifiable, necessaryDecision, mandatorySafetyConfirmation
 }
 
-enum VoiceOutputPreference: String, Codable, Sendable {
+enum VoiceOutputPreference: String, Codable, CaseIterable, Sendable {
     /// Speak only when the interaction context makes audio the natural channel.
     case contextual
     /// Never produce automatic speech; an explicit read/say request still wins.
