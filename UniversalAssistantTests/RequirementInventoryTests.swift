@@ -16,6 +16,7 @@ import Testing
         #expect((1...37).allSatisfy { ids.contains("BPP-\($0)") })
         #expect((1...21).allSatisfy { ids.contains("ZOP-\($0)") })
         #expect((1...5).allSatisfy { ids.contains("DCA-\($0)") })
+        #expect((1...97).allSatisfy { ids.contains(String(format: "JOBS-%03d", $0)) })
         let allowed = Set(["NOT_IMPLEMENTED", "IMPLEMENTED_UNVERIFIED", "VERIFIED_LOCAL",
                            "READY_FOR_LIVE_VERIFICATION", "VERIFIED_LIVE", "NOT_APPLICABLE_VERIFIED"])
         #expect(requirements.allSatisfy { allowed.contains($0["status"] as? String ?? "") })
