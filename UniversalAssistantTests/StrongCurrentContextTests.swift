@@ -23,13 +23,15 @@ struct StrongCurrentContextTests {
 
     @Test func canonicalNaturalFollowUpsResolveDeterministically() {
         var context = CurrentContext(); let destination = entity("office"); let shop = entity("shop", kind: .store, phone: "+380441234567")
-        context.update(now: now, route: .init(destination: destination, provenance: provenance("route")), nextEvent: entity("meeting", kind: .event), results: [shop, destination])
+        let task = ContextTask(id: "pending-booking", kind: "confirmation", provenance: provenance("task"))
+        context.update(now: now, route: .init(destination: destination, provenance: provenance("route")), nextEvent: entity("meeting", kind: .event), task: task, results: [shop, destination])
         context.select(entityID: "shop", now: now)
         #expect(context.resolveFollowUp("А дешевше є?", now: now) == .cheaper(resultIDs: ["shop", "office"]))
         #expect(context.resolveFollowUp("Веди туди", now: now) == .navigate(shop))
         #expect(context.resolveFollowUp("Подзвони їм", now: now) == .call(shop))
         #expect(context.resolveFollowUp("Перенеси на годину", now: now) == .reschedule(entity("meeting", kind: .event), offset: 3600))
         #expect(context.resolveFollowUp("А по дорозі є аптека?", now: now) == .searchAlongRoute(category: "pharmacy", route: .init(destination: destination, provenance: provenance("route"))))
+        #expect(context.resolveFollowUp("Так", now: now) == .confirm(task))
     }
 
     @Test func staleObjectsCannotBeReused() {

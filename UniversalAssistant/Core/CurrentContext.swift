@@ -37,6 +37,7 @@ struct ContextTask: Equatable, Codable, Sendable {
 }
 
 enum ContextFollowUp: Equatable, Sendable {
+    case confirm(ContextTask)
     case cheaper(resultIDs: [String])
     case navigate(ContextEntity)
     case call(ContextEntity)
@@ -107,6 +108,7 @@ struct CurrentContext: Equatable, Codable, Sendable {
     mutating func resolveFollowUp(_ phrase: String, now: Date = .now) -> ContextFollowUp {
         expireStale(at: now)
         let text = phrase.lowercased()
+        if ["так", "да", "yes", "ja", "oui"].contains(text.trimmingCharacters(in: .whitespacesAndNewlines)), let currentTask { return .confirm(currentTask) }
         if text.contains("дешевш") { return resultEntities.isEmpty ? .unresolved : .cheaper(resultIDs: resultEntities.map(\.id)) }
         if text.contains("веди туди"), let target = selectedEntity ?? activeRoute?.destination { return .navigate(target) }
         if text.contains("подзвони їм"), let target = selectedEntity, target.phoneNumber != nil { return .call(target) }
