@@ -22,4 +22,4 @@ One-time pre-implementation audit on 2026-09-03. It must not be repeated after i
 
 ## Legacy source blocker
 
-JOBS-087/JOBS-092 require a byte-accurate map of a prior legacy Jobs addendum sections 1–95. The supplied file references that document but does not contain its section text; repository history and unreachable blobs contain no copy. Assigning `PRESERVED`, `PRESERVED_AND_EXTENDED`, `SUPERSEDED_BY_NEWER_OWNER_DECISION` or `NOT_APPLICABLE_VERIFIED` without the source would fabricate evidence. The exact missing dependency is the complete prior legacy Jobs Marketplace addendum sections 1–95 from the owner. All independent current JOBS-ID work proceeds.
+JOBS-087/JOBS-092 legacy source dependency was resolved by the owner inline artifact on 2026-09-03. `docs/JOBS_LEGACY_01_95_COVERAGE.md` maps all 95 sections with zero omissions. LEGACY-03 alone is `SUPERSEDED_BY_NEWER_OWNER_DECISION` at the exact source-priority conflict via JOBS-007–009; all non-conflicting legacy requirements are preserved.
