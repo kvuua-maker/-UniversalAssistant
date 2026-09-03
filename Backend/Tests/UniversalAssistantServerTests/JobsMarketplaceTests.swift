@@ -17,7 +17,7 @@ private func jobSalary() -> JobSalary {
     minimum: 40_000, maximum: 60_000, currency: "UAH", period: .monthly, basis: .gross,
     guaranteed: 40_000, variableDescription: nil)
 }
-private func jobVacancy(
+func jobVacancy(
   _ employer: UUID, tier: JobsSourceTier = .directPaidEmployer, state: VacancyState = .draft,
   text: String = "Безпечна вакансія"
 ) -> JobVacancy {
