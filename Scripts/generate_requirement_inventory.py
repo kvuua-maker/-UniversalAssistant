@@ -63,6 +63,15 @@ def main():
         title = next((value.strip() for value in loyalty_lines[index + 1:] if value.strip() and not value.startswith("LOYALTY-")), requirement_id)
         prior = existing.get(requirement_id, {})
         records.append({"id": requirement_id, "source": str(loyalty.relative_to(ROOT)), "title": title, "status": prior.get("status", "NOT_IMPLEMENTED"), "implementation_evidence": prior.get("implementation_evidence", []), "test_evidence": prior.get("test_evidence", []), "commit_evidence": prior.get("commit_evidence", []), "live_evidence": prior.get("live_evidence", []), "remaining_dependency": prior.get("remaining_dependency")})
+    privacy = ROOT / "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt"
+    privacy_lines = privacy.read_text().splitlines()
+    for index, line in enumerate(privacy_lines):
+        match = re.fullmatch(r"PRIVACY-(\d{3}) \[[A-Z_]+\]", line.strip())
+        if not match: continue
+        requirement_id = f"PRIVACY-{int(match.group(1)):03d}"
+        title = next((value.strip() for value in privacy_lines[index + 1:] if value.strip() and not value.startswith("PRIVACY-")), requirement_id)
+        prior = existing.get(requirement_id, {})
+        records.append({"id": requirement_id, "source": str(privacy.relative_to(ROOT)), "title": title, "status": prior.get("status", "NOT_IMPLEMENTED"), "implementation_evidence": prior.get("implementation_evidence", []), "test_evidence": prior.get("test_evidence", []), "commit_evidence": prior.get("commit_evidence", []), "live_evidence": prior.get("live_evidence", []), "remaining_dependency": prior.get("remaining_dependency")})
     coordination = ROOT / "docs/DETERMINISTIC_MULTI_STEP_COORDINATION_BOUNDED_AI_FALLBACK_ADDENDUM.md"
     for index, title in enumerate(["Deterministic core", "Facts and composition", "Bounded AI fallback", "Observability and acceptance", "Roadmap rule"], 1):
         requirement_id = f"DCA-{index}"

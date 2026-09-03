@@ -55,6 +55,11 @@ The project source of truth is the complete, indivisible combination of:
    - 127 independently tracked `LOYALTY-ID` requirements accepted on 2026-09-03.
    - Preserves customer benefit and UA revenue as separate states; partner-specific unknown behavior remains fail-closed and queued for live verification.
 
+14. `docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt`
+   - SHA-256: `2cd2094900eb086a176ba85a84f22555d9ba9d167132b8b5bfb33422dffe10ea`
+   - 168 independently tracked `PRIVACY-ID` requirements accepted on 2026-09-03.
+   - Requires capability-preserving local-first, purpose-bound, consent-governed minimization and absolute NEVER_AI secret handling.
+
 All accepted addenda augment the Master Spec and do not remove or weaken it. Every requirement retains an evidence-backed zero-omission status; documentation, interfaces, mocks and external dependencies alone never establish completion. Later explicit supersession rules inside the Master Spec take precedence over earlier conflicting wording, subject to safety, law, current platform/provider truth, privacy and security.
 
 Both canonical files were read completely and copied byte-for-byte from the owner-provided attachments on 2026-09-01. Their hashes were verified after persistence.

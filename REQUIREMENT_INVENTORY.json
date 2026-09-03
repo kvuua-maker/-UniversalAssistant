@@ -8,7 +8,7 @@
     "VERIFIED_LIVE",
     "VERIFIED_LOCAL"
   ],
-  "requirement_count": 2011,
+  "requirement_count": 2179,
   "requirements": [
     {
       "id": "MS-1",
@@ -38099,6 +38099,3702 @@
       ],
       "commit_evidence": [
         "328b34b"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-001",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "mandatory canonical privacy authority",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-002",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "hardening must preserve every verified capability",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-003",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "unavoidable capability conflict requires owner-only decision",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-004",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "reuse existing privacy and security architecture",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-005",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "data-flow-specific decisions; no blanket deny",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-006",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "four ordered audit-analysis-hardening-regression phases",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-007",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "Phase A is read-only",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-008",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "evidence-backed data-flow map precedes Phase B",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-009",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "each fix has compatibility impact",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-010",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "only capability-preserving fixes proceed",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-011",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "data flow map requirement 11 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-012",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "data flow map requirement 12 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-013",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "data flow map requirement 13 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-014",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "data flow map requirement 14 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-015",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "data flow map requirement 15 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-016",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "data flow map requirement 16 applies with the full owner-defined data-flow-specific semantics",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Physical device/configured provider/SDK retention/App Store privacy evidence; see PRIVACY-016-157-LIVE-DATA-FLOW"
+    },
+    {
+      "id": "PRIVACY-017",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "typed data classification",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-018",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "data classification requirement 18 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-019",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "data classification requirement 19 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-020",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "data classification requirement 20 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-021",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "data classification requirement 21 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-022",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "unknown outbound classification fails closed",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-023",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "absolute NEVER_AI gate",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-024",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "NEVER_AI is provider-independent",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-025",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "AI never receives credentials or payment secrets",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-026",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "indirect secret paths are gated",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-027",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "user-supplied secret is redacted while preserving task",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-028",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "secrets never enter diagnostics or evidence",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-029",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "local first requirement 29 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-030",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "local first requirement 30 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-031",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "local first requirement 31 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-032",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "local first requirement 32 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-033",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "local first requirement 33 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-034",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "local first requirement 34 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-035",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "central outbound minimization",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-036",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "minimization requirement 36 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-037",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "minimization requirement 37 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-038",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "minimization requirement 38 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-039",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "minimization requirement 39 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-040",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "minimization requirement 40 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-041",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "minimization requirement 41 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-042",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "OS permission differs from transfer consent",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-043",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "consent requirement 43 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-044",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "consent requirement 44 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-045",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "consent requirement 45 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-046",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "consent requirement 46 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-047",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "revocation immediately blocks outbound access",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-048",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "AI has no unrestricted device access",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-049",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "ai routing requirement 49 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-050",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "ai routing requirement 50 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-051",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "ai routing requirement 51 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-052",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "provider switch cannot weaken privacy",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-053",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "ai routing requirement 53 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-054",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "ai routing requirement 54 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-055",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "retrieved content is untrusted data",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-056",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "prompt injection requirement 56 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-057",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "content cannot authorize tools",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-058",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "prompt injection requirement 58 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-059",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "prompt injection requirement 59 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-060",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "secure credential storage only",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-061",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "auth storage requirement 61 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-062",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "auth storage requirement 62 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-063",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "auth storage requirement 63 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-064",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "auth storage requirement 64 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-065",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "inventory all outbound endpoints",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Physical device/configured provider/SDK retention/App Store privacy evidence; see PRIVACY-016-157-LIVE-DATA-FLOW"
+    },
+    {
+      "id": "PRIVACY-066",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "network requirement 66 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-067",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "network requirement 67 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-068",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "network requirement 68 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-069",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "network requirement 69 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-070",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "audit all logging paths",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-071",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "logging requirement 71 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-072",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "logging requirement 72 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-073",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "logging requirement 73 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-074",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "logging requirement 74 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-075",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "logging requirement 75 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-076",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "cache retention requirement 76 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-077",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "cache is user/account/provider/purpose scoped",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-078",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "cache retention requirement 78 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-079",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "cache retention requirement 79 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-080",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "no unverified provider retention claim",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Physical device/configured provider/SDK retention/App Store privacy evidence; see PRIVACY-016-157-LIVE-DATA-FLOW"
+    },
+    {
+      "id": "PRIVACY-081",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "cache retention requirement 81 applies with the full owner-defined data-flow-specific semantics",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Physical device/configured provider/SDK retention/App Store privacy evidence; see PRIVACY-016-157-LIVE-DATA-FLOW"
+    },
+    {
+      "id": "PRIVACY-082",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "sdk third party requirement 82 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-083",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "sdk third party requirement 83 applies with the full owner-defined data-flow-specific semantics",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Physical device/configured provider/SDK retention/App Store privacy evidence; see PRIVACY-016-157-LIVE-DATA-FLOW"
+    },
+    {
+      "id": "PRIVACY-084",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "sdk third party requirement 84 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-085",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "sdk third party requirement 85 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-086",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "sdk third party requirement 86 applies with the full owner-defined data-flow-specific semantics",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Physical device/configured provider/SDK retention/App Store privacy evidence; see PRIVACY-016-157-LIVE-DATA-FLOW"
+    },
+    {
+      "id": "PRIVACY-087",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "backend independently enforces trust boundary",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-088",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "backend requirement 88 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-089",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "backend requirement 89 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-090",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "cross-tenant authorization",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-091",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "backend requirement 91 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-092",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "backend requirement 92 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-093",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "business jobs requirement 93 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-094",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "business jobs requirement 94 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-095",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "business jobs requirement 95 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-096",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "business jobs requirement 96 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-097",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "email messages requirement 97 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-098",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "email messages requirement 98 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-099",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "email messages requirement 99 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-100",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "email messages requirement 100 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-101",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "audit voice capture and routing",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Physical device/configured provider/SDK retention/App Store privacy evidence; see PRIVACY-016-157-LIVE-DATA-FLOW"
+    },
+    {
+      "id": "PRIVACY-102",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "voice requirement 102 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-103",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "voice requirement 103 applies with the full owner-defined data-flow-specific semantics",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Physical device/configured provider/SDK retention/App Store privacy evidence; see PRIVACY-016-157-LIVE-DATA-FLOW"
+    },
+    {
+      "id": "PRIVACY-104",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "voice requirement 104 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-105",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "voice requirement 105 applies with the full owner-defined data-flow-specific semantics",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Physical device/configured provider/SDK retention/App Store privacy evidence; see PRIVACY-016-157-LIVE-DATA-FLOW"
+    },
+    {
+      "id": "PRIVACY-106",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "photos files requirement 106 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-107",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "photos files requirement 107 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-108",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "photos files requirement 108 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-109",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "photos files requirement 109 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-110",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "photos files requirement 110 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-111",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "location requirement 111 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-112",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "location requirement 112 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-113",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "location requirement 113 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-114",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "location requirement 114 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-115",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "payment secrets never reach AI",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-116",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "payments requirement 116 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-117",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "payments requirement 117 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-118",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "payments requirement 118 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-119",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "before/after compatibility evidence",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-120",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "compatibility requirement 120 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-121",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "compatibility requirement 121 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-122",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "compatibility requirement 122 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-123",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "compatibility requirement 123 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-124",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "compatibility requirement 124 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-125",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "sensitive transfer fails closed with safe fallback",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-126",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "failure requirement 126 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-127",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "failure requirement 127 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-128",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "failure requirement 128 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-129",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "failure requirement 129 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-130",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "test NEVER_AI for all providers",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-131",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "test bounded personal-data minimization",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-132",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "test permission without external consent",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-133",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "test revocation",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-134",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "test provider switch",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-135",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "test prompt injection",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-136",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "test diagnostics secret absence",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-137",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "test retry transmission bounds",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-138",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "test cache isolation",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-139",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "test limited PhotoKit",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Physical device/configured provider/SDK retention/App Store privacy evidence; see PRIVACY-016-157-LIVE-DATA-FLOW"
+    },
+    {
+      "id": "PRIVACY-140",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "test coarse location",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-141",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "test metadata stripping",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-142",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "test Jobs privacy",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-143",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "test verified flows remain functional",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-144",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "test no-AI/local-first",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-145",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "live-only remains queued",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-146",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "168-ID evidence matrix",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-147",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "evidence requirement 147 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-148",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "evidence requirement 148 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-149",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "evidence requirement 149 applies with the full owner-defined data-flow-specific semantics",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Physical device/configured provider/SDK retention/App Store privacy evidence; see PRIVACY-016-157-LIVE-DATA-FLOW"
+    },
+    {
+      "id": "PRIVACY-150",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "final outbound recipient inventory",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-151",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "device/provider/SDK/legal checks go to live queue",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Physical device/configured provider/SDK retention/App Store privacy evidence; see PRIVACY-016-157-LIVE-DATA-FLOW"
+    },
+    {
+      "id": "PRIVACY-152",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "live item has exact observable pass/fail",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Physical device/configured provider/SDK retention/App Store privacy evidence; see PRIVACY-016-157-LIVE-DATA-FLOW"
+    },
+    {
+      "id": "PRIVACY-153",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "mock never closes live privacy",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Physical device/configured provider/SDK retention/App Store privacy evidence; see PRIVACY-016-157-LIVE-DATA-FLOW"
+    },
+    {
+      "id": "PRIVACY-154",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "targeted and full regressions",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-155",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "regression requirement 155 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-156",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "regression requirement 156 applies with the full owner-defined data-flow-specific semantics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-157",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "production build has no debug bypass",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Physical device/configured provider/SDK retention/App Store privacy evidence; see PRIVACY-016-157-LIVE-DATA-FLOW"
+    },
+    {
+      "id": "PRIVACY-158",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "full privacy completion gate",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-159",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "zero local unfinished statuses",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-160",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "safety cannot silently remove capability",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-161",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "atomic push and clean sync",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-162",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "continue next checkpoint",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-163",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "privacy cannot reduce verified capability",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-164",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "secrets never go to AI",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-165",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "personal data is local-first minimized purpose-bound consent-governed",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-166",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "typed capabilities mediate AI resource access",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-167",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "external content cannot authorize access",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "PRIVACY-168",
+      "source": "docs/UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt",
+      "title": "unknown provider privacy remains unknown",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Policy/PrivacyOutboundGate.swift",
+        "UniversalAssistant/Core/BoundedAIInterpretation.swift",
+        "docs/PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "docs/PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PrivacyOutboundGateTests.swift: 11 targeted behavioral tests",
+        "existing privacy/security/domain regression suites",
+        "Scripts/audit_privacy_requirements.py"
+      ],
+      "commit_evidence": [
+        "47dcbf1"
       ],
       "live_evidence": [],
       "remaining_dependency": null

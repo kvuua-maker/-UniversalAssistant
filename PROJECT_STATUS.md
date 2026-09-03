@@ -1,16 +1,16 @@
 # Project Status
 
 - Overall: canonical local implementation/reconciliation complete under ZERO-OMISSION; external live verification remains explicitly separate.
-- Inventory: 2011/2011 IDs reconciled; 1790 VERIFIED_LOCAL, 207 READY_FOR_LIVE_VERIFICATION, 14 NOT_APPLICABLE_VERIFIED, 0 NOT_IMPLEMENTED, 0 IMPLEMENTED_UNVERIFIED.
+- Inventory: 2179/2179 IDs reconciled; 1943 VERIFIED_LOCAL, 222 READY_FOR_LIVE_VERIFICATION, 14 NOT_APPLICABLE_VERIFIED, 0 NOT_IMPLEMENTED, 0 IMPLEMENTED_UNVERIFIED.
 - Jobs Marketplace: 97/97 JOBS-ID reconciled; 91 VERIFIED_LOCAL and 6 READY_FOR_LIVE_VERIFICATION; legacy coverage 95/95.
-- Regression: 501 iOS tests across 106 suites and 109 backend tests across 27 suites passed; zero failures.
-- Final audits: `Scripts/audit_loyalty_requirements.py`, `Scripts/audit_jobs_requirements.py` and `Scripts/audit_final_requirements.py` validate IDs, evidence commits, canonical hashes, live queue, production symbols and behavioral/golden coverage.
-- Live queue: 63 exact items; owner-readable index in `docs/LIVE_VERIFICATION_QUEUE_REPORT.md`.
+- Regression: 512 iOS tests across 107 suites and 109 backend tests across 27 suites passed; zero failures.
+- Final audits: `Scripts/audit_privacy_requirements.py`, `Scripts/audit_loyalty_requirements.py`, `Scripts/audit_jobs_requirements.py` and `Scripts/audit_final_requirements.py` validate IDs, evidence commits, canonical hashes, live queue, production symbols and behavioral/golden coverage.
+- Live queue: 64 exact items; owner-readable index in `docs/LIVE_VERIFICATION_QUEUE_REPORT.md`.
 
-Current block/action: Loyalty integrity local completion verified; only explicitly queued external execution remains.
-Last measurable progress: 2026-09-03T15:05:41+02:00 — full iOS/backend regression passed.
-Last successful build/test: iOS 501/106 and backend 109/27 passed with zero failures.
-Last commit: 328b34b.
+Current block/action: Privacy/AI data-flow hardening local completion verified; only explicitly queued external execution remains.
+Last measurable progress: 2026-09-03T15:19:09+02:00 — full iOS/backend regression passed.
+Last successful build/test: iOS 512/107 and backend 109/27 passed with zero failures.
+Last commit: 47dcbf1.
 External blocker: only exact live actions recorded in LIVE_VERIFICATION_QUEUE; none blocks local completion.
 Internal engineering problems: none known after state-governance correction.
 STALLED: NO.

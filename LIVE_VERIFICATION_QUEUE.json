@@ -1156,6 +1156,24 @@
       "created_at": "2026-09-03T15:02:00+02:00",
       "last_checked": "2026-09-03T15:02:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "PRIVACY-016-157-LIVE-DATA-FLOW",
+      "service_provider": "Physical iPhone, configured AI/OAuth/API providers, App Store privacy disclosure",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Signed physical build, real configured provider accounts/retention controls, observable network environment and App Store privacy review are absent; local gates, inventories and tests are complete.",
+      "dependency_owner": "Owner/device tester and provider administrators",
+      "local_evidence": [
+        "PrivacyOutboundGate.swift",
+        "PrivacyOutboundGateTests.swift",
+        "PRIVACY_AI_DATA_FLOW_PHASE_A_B_AUDIT.md",
+        "PRIVACY_OUTBOUND_RECIPIENT_INVENTORY.md"
+      ],
+      "required_live_action": "On a signed device exercise each permission/consent/revocation flow; inspect outbound payload/domain/log behavior for configured AI/OAuth/API providers; validate provider retention controls and App Store privacy declarations.",
+      "expected_result": "Only classified, purpose-bound, consented minimized fields reach the intended HTTPS recipient; secrets never reach AI/logs; revocation stops access; verified capabilities remain functional.",
+      "created_at": "2026-09-03T15:16:00+02:00",
+      "last_checked": "2026-09-03T15:16:00+02:00",
+      "completion_evidence": null
     }
   ]
 }

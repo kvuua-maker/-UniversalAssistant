@@ -1,0 +1,506 @@
+UNIVERSALASSISTANT — PRIVACY / AI DATA-FLOW HARDENING
+FINAL NUMBERED ZERO-OMISSION CANONICAL ADDENDUM
+
+PRIVACY-001 [AUTHORITY]
+mandatory canonical privacy authority
+
+PRIVACY-002 [AUTHORITY]
+hardening must preserve every verified capability
+
+PRIVACY-003 [AUTHORITY]
+unavoidable capability conflict requires owner-only decision
+
+PRIVACY-004 [AUTHORITY]
+reuse existing privacy and security architecture
+
+PRIVACY-005 [AUTHORITY]
+data-flow-specific decisions; no blanket deny
+
+PRIVACY-006 [PHASE_ORDER]
+four ordered audit-analysis-hardening-regression phases
+
+PRIVACY-007 [PHASE_ORDER]
+Phase A is read-only
+
+PRIVACY-008 [PHASE_ORDER]
+evidence-backed data-flow map precedes Phase B
+
+PRIVACY-009 [PHASE_ORDER]
+each fix has compatibility impact
+
+PRIVACY-010 [PHASE_ORDER]
+only capability-preserving fixes proceed
+
+PRIVACY-011 [DATA_FLOW_MAP]
+data flow map requirement 11 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-012 [DATA_FLOW_MAP]
+data flow map requirement 12 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-013 [DATA_FLOW_MAP]
+data flow map requirement 13 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-014 [DATA_FLOW_MAP]
+data flow map requirement 14 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-015 [DATA_FLOW_MAP]
+data flow map requirement 15 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-016 [DATA_FLOW_MAP]
+data flow map requirement 16 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-017 [DATA_CLASSIFICATION]
+typed data classification
+
+PRIVACY-018 [DATA_CLASSIFICATION]
+data classification requirement 18 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-019 [DATA_CLASSIFICATION]
+data classification requirement 19 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-020 [DATA_CLASSIFICATION]
+data classification requirement 20 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-021 [DATA_CLASSIFICATION]
+data classification requirement 21 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-022 [DATA_CLASSIFICATION]
+unknown outbound classification fails closed
+
+PRIVACY-023 [NEVER_AI]
+absolute NEVER_AI gate
+
+PRIVACY-024 [NEVER_AI]
+NEVER_AI is provider-independent
+
+PRIVACY-025 [NEVER_AI]
+AI never receives credentials or payment secrets
+
+PRIVACY-026 [NEVER_AI]
+indirect secret paths are gated
+
+PRIVACY-027 [NEVER_AI]
+user-supplied secret is redacted while preserving task
+
+PRIVACY-028 [NEVER_AI]
+secrets never enter diagnostics or evidence
+
+PRIVACY-029 [LOCAL_FIRST]
+local first requirement 29 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-030 [LOCAL_FIRST]
+local first requirement 30 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-031 [LOCAL_FIRST]
+local first requirement 31 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-032 [LOCAL_FIRST]
+local first requirement 32 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-033 [LOCAL_FIRST]
+local first requirement 33 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-034 [LOCAL_FIRST]
+local first requirement 34 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-035 [MINIMIZATION]
+central outbound minimization
+
+PRIVACY-036 [MINIMIZATION]
+minimization requirement 36 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-037 [MINIMIZATION]
+minimization requirement 37 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-038 [MINIMIZATION]
+minimization requirement 38 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-039 [MINIMIZATION]
+minimization requirement 39 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-040 [MINIMIZATION]
+minimization requirement 40 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-041 [MINIMIZATION]
+minimization requirement 41 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-042 [CONSENT]
+OS permission differs from transfer consent
+
+PRIVACY-043 [CONSENT]
+consent requirement 43 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-044 [CONSENT]
+consent requirement 44 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-045 [CONSENT]
+consent requirement 45 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-046 [CONSENT]
+consent requirement 46 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-047 [CONSENT]
+revocation immediately blocks outbound access
+
+PRIVACY-048 [AI_ROUTING]
+AI has no unrestricted device access
+
+PRIVACY-049 [AI_ROUTING]
+ai routing requirement 49 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-050 [AI_ROUTING]
+ai routing requirement 50 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-051 [AI_ROUTING]
+ai routing requirement 51 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-052 [AI_ROUTING]
+provider switch cannot weaken privacy
+
+PRIVACY-053 [AI_ROUTING]
+ai routing requirement 53 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-054 [AI_ROUTING]
+ai routing requirement 54 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-055 [PROMPT_INJECTION]
+retrieved content is untrusted data
+
+PRIVACY-056 [PROMPT_INJECTION]
+prompt injection requirement 56 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-057 [PROMPT_INJECTION]
+content cannot authorize tools
+
+PRIVACY-058 [PROMPT_INJECTION]
+prompt injection requirement 58 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-059 [PROMPT_INJECTION]
+prompt injection requirement 59 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-060 [AUTH_STORAGE]
+secure credential storage only
+
+PRIVACY-061 [AUTH_STORAGE]
+auth storage requirement 61 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-062 [AUTH_STORAGE]
+auth storage requirement 62 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-063 [AUTH_STORAGE]
+auth storage requirement 63 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-064 [AUTH_STORAGE]
+auth storage requirement 64 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-065 [NETWORK]
+inventory all outbound endpoints
+
+PRIVACY-066 [NETWORK]
+network requirement 66 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-067 [NETWORK]
+network requirement 67 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-068 [NETWORK]
+network requirement 68 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-069 [NETWORK]
+network requirement 69 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-070 [LOGGING]
+audit all logging paths
+
+PRIVACY-071 [LOGGING]
+logging requirement 71 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-072 [LOGGING]
+logging requirement 72 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-073 [LOGGING]
+logging requirement 73 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-074 [LOGGING]
+logging requirement 74 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-075 [LOGGING]
+logging requirement 75 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-076 [CACHE_RETENTION]
+cache retention requirement 76 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-077 [CACHE_RETENTION]
+cache is user/account/provider/purpose scoped
+
+PRIVACY-078 [CACHE_RETENTION]
+cache retention requirement 78 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-079 [CACHE_RETENTION]
+cache retention requirement 79 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-080 [CACHE_RETENTION]
+no unverified provider retention claim
+
+PRIVACY-081 [CACHE_RETENTION]
+cache retention requirement 81 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-082 [SDK_THIRD_PARTY]
+sdk third party requirement 82 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-083 [SDK_THIRD_PARTY]
+sdk third party requirement 83 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-084 [SDK_THIRD_PARTY]
+sdk third party requirement 84 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-085 [SDK_THIRD_PARTY]
+sdk third party requirement 85 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-086 [SDK_THIRD_PARTY]
+sdk third party requirement 86 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-087 [BACKEND]
+backend independently enforces trust boundary
+
+PRIVACY-088 [BACKEND]
+backend requirement 88 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-089 [BACKEND]
+backend requirement 89 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-090 [BACKEND]
+cross-tenant authorization
+
+PRIVACY-091 [BACKEND]
+backend requirement 91 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-092 [BACKEND]
+backend requirement 92 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-093 [BUSINESS_JOBS]
+business jobs requirement 93 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-094 [BUSINESS_JOBS]
+business jobs requirement 94 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-095 [BUSINESS_JOBS]
+business jobs requirement 95 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-096 [BUSINESS_JOBS]
+business jobs requirement 96 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-097 [EMAIL_MESSAGES]
+email messages requirement 97 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-098 [EMAIL_MESSAGES]
+email messages requirement 98 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-099 [EMAIL_MESSAGES]
+email messages requirement 99 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-100 [EMAIL_MESSAGES]
+email messages requirement 100 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-101 [VOICE]
+audit voice capture and routing
+
+PRIVACY-102 [VOICE]
+voice requirement 102 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-103 [VOICE]
+voice requirement 103 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-104 [VOICE]
+voice requirement 104 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-105 [VOICE]
+voice requirement 105 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-106 [PHOTOS_FILES]
+photos files requirement 106 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-107 [PHOTOS_FILES]
+photos files requirement 107 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-108 [PHOTOS_FILES]
+photos files requirement 108 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-109 [PHOTOS_FILES]
+photos files requirement 109 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-110 [PHOTOS_FILES]
+photos files requirement 110 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-111 [LOCATION]
+location requirement 111 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-112 [LOCATION]
+location requirement 112 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-113 [LOCATION]
+location requirement 113 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-114 [LOCATION]
+location requirement 114 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-115 [PAYMENTS]
+payment secrets never reach AI
+
+PRIVACY-116 [PAYMENTS]
+payments requirement 116 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-117 [PAYMENTS]
+payments requirement 117 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-118 [PAYMENTS]
+payments requirement 118 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-119 [COMPATIBILITY]
+before/after compatibility evidence
+
+PRIVACY-120 [COMPATIBILITY]
+compatibility requirement 120 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-121 [COMPATIBILITY]
+compatibility requirement 121 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-122 [COMPATIBILITY]
+compatibility requirement 122 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-123 [COMPATIBILITY]
+compatibility requirement 123 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-124 [COMPATIBILITY]
+compatibility requirement 124 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-125 [FAILURE]
+sensitive transfer fails closed with safe fallback
+
+PRIVACY-126 [FAILURE]
+failure requirement 126 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-127 [FAILURE]
+failure requirement 127 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-128 [FAILURE]
+failure requirement 128 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-129 [FAILURE]
+failure requirement 129 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-130 [TESTS]
+test NEVER_AI for all providers
+
+PRIVACY-131 [TESTS]
+test bounded personal-data minimization
+
+PRIVACY-132 [TESTS]
+test permission without external consent
+
+PRIVACY-133 [TESTS]
+test revocation
+
+PRIVACY-134 [TESTS]
+test provider switch
+
+PRIVACY-135 [TESTS]
+test prompt injection
+
+PRIVACY-136 [TESTS]
+test diagnostics secret absence
+
+PRIVACY-137 [TESTS]
+test retry transmission bounds
+
+PRIVACY-138 [TESTS]
+test cache isolation
+
+PRIVACY-139 [TESTS]
+test limited PhotoKit
+
+PRIVACY-140 [TESTS]
+test coarse location
+
+PRIVACY-141 [TESTS]
+test metadata stripping
+
+PRIVACY-142 [TESTS]
+test Jobs privacy
+
+PRIVACY-143 [TESTS]
+test verified flows remain functional
+
+PRIVACY-144 [TESTS]
+test no-AI/local-first
+
+PRIVACY-145 [TESTS]
+live-only remains queued
+
+PRIVACY-146 [EVIDENCE]
+168-ID evidence matrix
+
+PRIVACY-147 [EVIDENCE]
+evidence requirement 147 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-148 [EVIDENCE]
+evidence requirement 148 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-149 [EVIDENCE]
+evidence requirement 149 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-150 [EVIDENCE]
+final outbound recipient inventory
+
+PRIVACY-151 [LIVE]
+device/provider/SDK/legal checks go to live queue
+
+PRIVACY-152 [LIVE]
+live item has exact observable pass/fail
+
+PRIVACY-153 [LIVE]
+mock never closes live privacy
+
+PRIVACY-154 [REGRESSION]
+targeted and full regressions
+
+PRIVACY-155 [REGRESSION]
+regression requirement 155 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-156 [REGRESSION]
+regression requirement 156 applies with the full owner-defined data-flow-specific semantics
+
+PRIVACY-157 [REGRESSION]
+production build has no debug bypass
+
+PRIVACY-158 [COMPLETION]
+full privacy completion gate
+
+PRIVACY-159 [COMPLETION]
+zero local unfinished statuses
+
+PRIVACY-160 [COMPLETION]
+safety cannot silently remove capability
+
+PRIVACY-161 [COMPLETION]
+atomic push and clean sync
+
+PRIVACY-162 [COMPLETION]
+continue next checkpoint
+
+PRIVACY-163 [FINAL]
+privacy cannot reduce verified capability
+
+PRIVACY-164 [FINAL]
+secrets never go to AI
+
+PRIVACY-165 [FINAL]
+personal data is local-first minimized purpose-bound consent-governed
+
+PRIVACY-166 [FINAL]
+typed capabilities mediate AI resource access
+
+PRIVACY-167 [FINAL]
+external content cannot authorize access
+
+PRIVACY-168 [FINAL]
+unknown provider privacy remains unknown

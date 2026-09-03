@@ -1,6 +1,6 @@
 # Live Verification Queue Report
 
-Exact queue items: 63. Generated from LIVE_VERIFICATION_QUEUE.json; JSON remains authoritative.
+Exact queue items: 64. Generated from LIVE_VERIFICATION_QUEUE.json; JSON remains authoritative.
 
 | Requirement | Provider | Missing dependency | Required action |
 |---|---|---|---|
@@ -67,3 +67,4 @@ Exact queue items: 63. Generated from LIVE_VERIFICATION_QUEUE.json; JSON remains
 | JOBS-014-JOBS-025-JOBS-029-JOBS-030-LIVE-PROVIDERS | Authorized Ukrainian Jobs/ATS/commercial providers | Provider-approved credentials, official schemas and executed commercial agreement where applicable are absent; public truthful handoff is implemented. | Inject each granted credential server-side; search/ingest/update/close a controlled vacancy; verify application callback and attribution only where contracted. |
 | JOBS-026-LIVE-INTERVIEW-DEVICE | Physical iPhone Calendar/Maps/notifications | Signed physical iPhone with permissions and controlled employer/candidate accounts required solely for real interview scheduling verification. | Propose, confirm, create controlled Calendar event, verify link/location route and notification, then update/cancel. |
 | LOYALTY-012-115-LIVE-PARTNER-INTEGRITY | Each configured commerce/loyalty/affiliate partner | Provider-specific account, API/terms/commercial contract, attributed checkout and controlled refund capability are absent; all local typed policy, fail-closed economics and tests are complete. | For each partner, record versioned evidence; link a controlled loyalty account; compare public/personal/coupon paths; execute official attributed same-device and cross-device checkout; confirm order commission; perform partial/full refund and reconcile. |
+| PRIVACY-016-157-LIVE-DATA-FLOW | Physical iPhone, configured AI/OAuth/API providers, App Store privacy disclosure | Signed physical build, real configured provider accounts/retention controls, observable network environment and App Store privacy review are absent; local gates, inventories and tests are complete. | On a signed device exercise each permission/consent/revocation flow; inspect outbound payload/domain/log behavior for configured AI/OAuth/API providers; validate provider retention controls and App Store privacy declarations. |

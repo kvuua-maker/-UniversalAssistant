@@ -2,7 +2,7 @@
 
 Local audit completed 2026-09-03. This closes audit/instruction gates at `VERIFIED_LOCAL`; it does not convert any external capability to `VERIFIED_LIVE`. Physical/provider/Apple actions remain in the authoritative queue and complete product release is not claimed as live-verified.
 
-Regression: **501 iOS tests / 106 suites**, **109 backend tests / 27 suites**, zero failures. Inventory integrity: **2011/2011 IDs**, including **97/97 JOBS IDs** and **127/127 LOYALTY IDs**, with no missing/extra/duplicate IDs. Production-marker scan: no TODO/FIXME/placeholder/fake-success/hardcoded-demo path. Jobs Marketplace has 91 `VERIFIED_LOCAL` IDs and six exact `READY_FOR_LIVE_VERIFICATION` IDs; no external success is claimed.
+Regression: **512 iOS tests / 107 suites**, **109 backend tests / 27 suites**, zero failures. Inventory integrity: **2179/2179 IDs**, including **97/97 JOBS IDs** and **127/127 LOYALTY IDs**, with no missing/extra/duplicate IDs. Production-marker scan: no TODO/FIXME/placeholder/fake-success/hardcoded-demo path. Jobs Marketplace has 91 `VERIFIED_LOCAL` IDs and six exact `READY_FOR_LIVE_VERIFICATION` IDs; no external success is claimed.
 
 | Requirement | Status | Production/test evidence | Commit |
 |---|---|---|---|
@@ -41,5 +41,5 @@ Regression: **501 iOS tests / 106 suites**, **109 backend tests / 27 suites**, z
 | MS-1643 | VERIFIED_LOCAL | requirements 1–1643 and later superseding addenda are reconciled as one source set; local work complete without paid/owner-only actions or fake completion | a923914 |
 | ZOP-15 | VERIFIED_LOCAL | Scripts/audit_final_requirements.py executes the final requirement-by-requirement inventory/evidence/queue/production-marker audit | a923914 |
 | ZOP-16 | VERIFIED_LOCAL | final importer and audit produce NOT_IMPLEMENTED=0 and IMPLEMENTED_UNVERIFIED=0; only precise READY live operations remain | a923914 |
-| ZOP-20 | VERIFIED_LOCAL | all 2011 IDs have VERIFIED_LOCAL, READY_FOR_LIVE_VERIFICATION, VERIFIED_LIVE or NOT_APPLICABLE_VERIFIED evidence status | a923914,9a652bd |
+| ZOP-20 | VERIFIED_LOCAL | all 2179 IDs have VERIFIED_LOCAL, READY_FOR_LIVE_VERIFICATION, VERIFIED_LIVE or NOT_APPLICABLE_VERIFIED evidence status | a923914,9a652bd |
 | ZOP-21 | VERIFIED_LOCAL | all independent local work continued through full regression/final audit; only exact external live actions remain queued | a923914 |

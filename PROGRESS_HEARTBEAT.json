@@ -1,17 +1,17 @@
 {
-  "current_block": "LOYALTY-COMMISSION-INTEGRITY-COMPLETION",
+  "current_block": "PRIVACY-AI-DATA-FLOW-HARDENING-COMPLETION",
   "current_action": "local completion verified; external live actions remain queued",
   "status": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
-  "last_measurable_progress": "2026-09-03T13:05:41Z",
+  "last_measurable_progress": "2026-09-03T13:19:09Z",
   "attempt_path_id": "jobs-final-regression-v1",
-  "last_commit": "328b34b",
+  "last_commit": "47dcbf1",
   "blocker": null,
   "evidence": {
-    "reconciled_requirements": "2011/2011 including LOYALTY-001 through LOYALTY-127",
-    "inventory_counts": "1790 VERIFIED_LOCAL; 207 READY_FOR_LIVE_VERIFICATION; 14 NOT_APPLICABLE_VERIFIED; 0 NOT_IMPLEMENTED; 0 IMPLEMENTED_UNVERIFIED",
-    "target_tests": "25 Loyalty behavioral tests and executable 127-ID audit",
-    "full_regression": "501 iOS tests/106 suites and 109 backend tests/27 suites passed, 0 failures",
-    "completed_task": "Loyalty / Discount / Attribution / Commission Integrity local completion",
+    "reconciled_requirements": "2179/2179 including PRIVACY-001 through PRIVACY-168",
+    "inventory_counts": "1943 VERIFIED_LOCAL; 222 READY_FOR_LIVE_VERIFICATION; 14 NOT_APPLICABLE_VERIFIED; 0 NOT_IMPLEMENTED; 0 IMPLEMENTED_UNVERIFIED",
+    "target_tests": "11 Privacy gate tests plus bounded-AI and existing privacy/domain suites",
+    "full_regression": "Release build passed; 512 iOS tests/107 suites and 109 backend tests/27 suites passed",
+    "completed_task": "Privacy / AI Data-Flow Hardening local completion",
     "verification_type": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
     "next_task": "execute exact live queue items only when dependencies become available"
   }
