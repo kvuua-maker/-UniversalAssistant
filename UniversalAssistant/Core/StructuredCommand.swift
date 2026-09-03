@@ -21,6 +21,7 @@ struct CommandConstraints: Equatable, Codable, Sendable {
     var category: String?
     var season: String?
     var ordinal: Int?
+    var maximumWaitMinutes: Int?
     var hardConstraintKeys: Set<String> = []
 }
 
@@ -103,6 +104,7 @@ struct LocalCommandEngine: CommandParsing {
         let intent = priorityIntent(normalized) ?? Self.intentPatterns.first { _, patterns in patterns.contains { normalized.contains($0) } }?.0 ?? contextualIntent(normalized)
         var entities: [String: String] = [:]; var constraints = CommandConstraints()
         extractPrice(from: normalized, into: &constraints); extractSize(from: normalized, into: &constraints)
+        extractMaximumWait(from: normalized, into: &constraints)
         extractFashionFilters(from: text, normalized: normalized, into: &constraints)
         constraints.ordinal = ordinal(in: normalized)
         if intent == .open, let target = target(after: ["відкрий", "открой", "open", "öffne", "ouvre"], in: text) { entities["app"] = target }
@@ -160,6 +162,13 @@ struct LocalCommandEngine: CommandParsing {
             let value = String(text[match]).split(separator: " ").first(where: { $0.contains(where: \.isNumber) || $0.allSatisfy { "xsml".contains($0) } })
             if let value { constraints.size = String(value); constraints.hardConstraintKeys.insert("size"); return }
         }
+    }
+    private func extractMaximumWait(from text: String, into constraints: inout CommandConstraints) {
+        let pattern = #"(?:чекати|ждать|wait|warten|attendre)[^0-9]{0,24}([0-9]{1,3})\s*(?:хв|мин|min)"#
+        guard let range = text.range(of: pattern, options: .regularExpression),
+              let value = String(text[range]).split(whereSeparator: { !$0.isNumber }).compactMap({ Int($0) }).first else { return }
+        constraints.maximumWaitMinutes = value
+        constraints.hardConstraintKeys.insert("maximumWaitMinutes")
     }
     private func extractFashionFilters(from original: String, normalized text: String, into constraints: inout CommandConstraints) {
         let knownBrands = ["Baldinini", "Nike", "Adidas", "Puma", "Zara", "Mango", "Gucci", "Prada"]

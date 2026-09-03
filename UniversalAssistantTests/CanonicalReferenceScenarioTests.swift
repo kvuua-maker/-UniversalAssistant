@@ -27,6 +27,9 @@ struct CanonicalReferenceScenarioTests {
     @Test func consequentialAndContextSemanticsRemainTyped() {
         #expect(parser.parse("Подзвони 112").risk == .emergency)
         #expect(parser.parse("Запиши завтра стоматолога о 10").risk == .reversible)
+        let taxi = parser.parse("Таксі додому, чекати максимум 5 хвилин")
+        #expect(taxi.constraints.maximumWaitMinutes == 5)
+        #expect(taxi.constraints.hardConstraintKeys.contains("maximumWaitMinutes"))
         let openSecond = parser.parse("Відкрий другий")
         #expect(openSecond.constraints.ordinal == 2)
         var context = CurrentContext(); let now = Date(timeIntervalSince1970: 1_000)
