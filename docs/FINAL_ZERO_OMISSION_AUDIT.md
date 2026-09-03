@@ -2,11 +2,11 @@
 
 Local audit completed 2026-09-03. This closes audit/instruction gates at `VERIFIED_LOCAL`; it does not convert any external capability to `VERIFIED_LIVE`. Physical/provider/Apple actions remain in the authoritative queue and complete product release is not claimed as live-verified.
 
-Regression: **479 iOS tests / 104 suites**, **92 backend tests / 25 suites**, zero failures. Inventory integrity: **1787/1787 IDs**, no missing/extra/duplicate IDs. Production-marker scan: no TODO/FIXME/placeholder/fake-success/hardcoded-demo path. Jobs Marketplace: absent and not started.
+Regression: **486 iOS tests / 106 suites**, **109 backend tests / 27 suites**, zero failures. Inventory integrity: **1884/1884 IDs**, including **97/97 JOBS IDs**, with no missing/extra/duplicate IDs. Production-marker scan: no TODO/FIXME/placeholder/fake-success/hardcoded-demo path. Jobs Marketplace has 91 `VERIFIED_LOCAL` IDs and six exact `READY_FOR_LIVE_VERIFICATION` IDs; no external success is claimed.
 
 | Requirement | Status | Production/test evidence | Commit |
 |---|---|---|---|
-| MS-675 | VERIFIED_LOCAL | complete 1787-ID inventory, explicit per-ID evidence ledgers, final audit script and full 479 iOS/92 backend regression | a923914 |
+| MS-675 | VERIFIED_LOCAL | complete 1884-ID inventory, explicit per-ID evidence ledgers, executable global/Jobs audits and full 486 iOS/109 backend regression | a923914,9a652bd |
 | MS-919 | VERIFIED_LOCAL | IntegrationDepthAuditor, provider capability matrix and exact 59-item live report audit every device/system action; local tests complete and external E4/E5 steps remain queued | a923914 |
 | MS-920 | VERIFIED_LOCAL | M12_FINAL_CAPABILITY_AUDIT plus IntegrationDepthAuditor verifies deepest legitimate public path or precise queued limitation | a923914 |
 | MS-1000 | VERIFIED_LOCAL | INTEGRATION_STATUS, capability matrix and live queue reconcile each connected account/system/messenger/search source; integration suites | a923914 |
@@ -29,17 +29,17 @@ Regression: **479 iOS tests / 104 suites**, **92 backend tests / 25 suites**, ze
 | MS-1191 | VERIFIED_LOCAL | OWNER_TEST_QUEUE now points to a complete generated 59-item report aligned with LIVE_VERIFICATION_QUEUE and REAL_DEVICE_TEST_MATRIX; none claimed PASS | a923914 |
 | MS-1268 | VERIFIED_LOCAL | FeasibilityPathGovernance, capability scope docs and integration status preserve per-integration feasibility decisions and exact external dependencies | a923914 |
 | MS-1269 | VERIFIED_LOCAL | ATTEMPT_LEDGER contains no undocumented post-PASS technology switch; failures changed only after objective diagnostics | a923914 |
-| MS-1270 | VERIFIED_LOCAL | attempt/history audit found no parallel competing framework or Jobs Marketplace work; one stale owner-queue report was corrected | a923914 |
+| MS-1270 | VERIFIED_LOCAL | attempt/history audit found no parallel competing framework; later owner-authorized Jobs work reuses existing shared infrastructure | a923914,9a652bd |
 | MS-1271 | VERIFIED_LOCAL | OWNER_STATUS states completed local audit, live blockers, latest regression and owner action in one file | a923914 |
 | MS-1455 | VERIFIED_LOCAL | IntegrationVerificationPolicy and inventory use only formal evidence statuses; no external capability is labelled VERIFIED_LIVE | a923914 |
 | MS-1456 | VERIFIED_LOCAL | production scan plus domain end-to-end tests prove real adapters/routers fail closed and fixtures cannot masquerade as production | a923914 |
 | MS-1457 | VERIFIED_LOCAL | reconciler validates implementation/test/commit evidence for every final status and queue coverage for READY; RequirementInventoryTests | a923914 |
 | MS-1458 | VERIFIED_LOCAL | IntegrationDepthAuditor/FeasibilityPathGovernance require bounded official negative proof and deepest legitimate alternative; tests | a923914 |
-| MS-1459 | VERIFIED_LOCAL | Git/source audit found no Jobs Marketplace or unrelated CRM/ERP/bank/ad platform implementation; components map to canonical requirements | a923914 |
+| MS-1459 | VERIFIED_LOCAL | Git/source audit maps all components to canonical requirements; owner-authorized Jobs remains bounded to Employment Core with no unrelated CRM/ERP/bank/ad platform | a923914,9a652bd |
 | MS-1460 | VERIFIED_LOCAL | requirements 1–1460 reconciled under binding capability/evidence/status/production-path contracts with external execution kept READY | a923914 |
 | MS-1509 | VERIFIED_LOCAL | every V12 capability maps user intent through router/production path/result/failure evidence; E4/E5/E6-only actions remain precisely queued | a923914 |
 | MS-1643 | VERIFIED_LOCAL | requirements 1–1643 and later superseding addenda are reconciled as one source set; local work complete without paid/owner-only actions or fake completion | a923914 |
 | ZOP-15 | VERIFIED_LOCAL | Scripts/audit_final_requirements.py executes the final requirement-by-requirement inventory/evidence/queue/production-marker audit | a923914 |
 | ZOP-16 | VERIFIED_LOCAL | final importer and audit produce NOT_IMPLEMENTED=0 and IMPLEMENTED_UNVERIFIED=0; only precise READY live operations remain | a923914 |
-| ZOP-20 | VERIFIED_LOCAL | all 1787 IDs have VERIFIED_LOCAL, READY_FOR_LIVE_VERIFICATION, VERIFIED_LIVE or NOT_APPLICABLE_VERIFIED evidence status | a923914 |
+| ZOP-20 | VERIFIED_LOCAL | all 1884 IDs have VERIFIED_LOCAL, READY_FOR_LIVE_VERIFICATION, VERIFIED_LIVE or NOT_APPLICABLE_VERIFIED evidence status | a923914,9a652bd |
 | ZOP-21 | VERIFIED_LOCAL | all independent local work continued through full regression/final audit; only exact external live actions remain queued | a923914 |

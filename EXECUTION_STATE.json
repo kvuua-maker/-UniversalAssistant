@@ -1,18 +1,19 @@
 {
-  "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
+  "current_task_id": "JOBS-MARKETPLACE-COMPLETION",
   "requirement_ids": [
-    "all 1787 canonical requirement IDs"
+    "JOBS-001 through JOBS-097",
+    "all 1884 canonical requirement IDs"
   ],
-  "selected_path": "Completed strict per-ID evidence import plus executable remaining-ID, queue, source-hash and production-path audit.",
+  "selected_path": "Per-ID Jobs reconciliation with production behavioral/golden evidence and exact live-only queue.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "1787/1787 reconciled: 1595 VERIFIED_LOCAL, 178 READY_FOR_LIVE_VERIFICATION, 14 NOT_APPLICABLE_VERIFIED",
-  "acceptance_contract_ref": "docs/FINAL_ZERO_OMISSION_AUDIT.md",
+  "integration_depth": "1884/1884 reconciled: 1686 VERIFIED_LOCAL, 184 READY_FOR_LIVE_VERIFICATION, 14 NOT_APPLICABLE_VERIFIED; Jobs 97/97",
+  "acceptance_contract_ref": "docs/JOBS_REQUIREMENT_RECONCILIATION.md",
   "required_evidence_level": "E3 local; E4/E5/E6 retained for queued external execution",
   "current_exit_state": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
   "last_failure_signature": null,
-  "material_change": "Final audit corrected stale OWNER_TEST_QUEUE coverage, generated a complete 59-item owner-readable live report, verified all 1787 IDs/source hashes/evidence commits, and found no production placeholder/fake-success or Jobs Marketplace implementation.",
+  "material_change": "Jobs production core, policy safeguards, deterministic discovery, 15 golden journeys, 97-ID evidence ledger and three exact live contracts completed locally.",
   "frozen_baseline_commit": "a923914",
-  "dependency": "Only 59 exact physical/Apple/provider/legal live actions remain; none can be executed without the dependency recorded in each queue item.",
+  "dependency": "Only 62 exact external live actions remain; Jobs adds payment, authorized provider/ATS and physical interview device verification.",
   "unresolved_verification_steps": [
     "Execute matching LIVE_VERIFICATION_QUEUE items only when the named owner/device/provider dependency becomes available",
     "Never promote an external capability to VERIFIED_LIVE without E4/E5/E6 read-back evidence"

@@ -1083,6 +1083,62 @@
       "created_at": "2026-09-03T14:00:00+02:00",
       "last_checked": "2026-09-03T14:00:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "JOBS-006-LIVE-EMPLOYER-PAYMENT",
+      "service_provider": "Production payment/entitlement provider",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner production payment account, signed employer test account and approved Jobs product configuration required solely for real prepaid purchase verification.",
+      "dependency_owner": "Owner/payment administrator",
+      "local_evidence": [
+        "JobsMarketplace.swift",
+        "JobsMarketplaceTests.swift",
+        "d676e80",
+        "9a652bd"
+      ],
+      "required_live_action": "Buy one controlled publication entitlement, publish once, replay callback, verify exact single credit and consumption.",
+      "expected_result": "Exactly one auditable entitlement is credited and consumed once; retry changes nothing.",
+      "created_at": "2026-09-03T14:42:00+02:00",
+      "last_checked": "2026-09-03T14:42:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "JOBS-014-JOBS-025-JOBS-029-JOBS-030-LIVE-PROVIDERS",
+      "service_provider": "Authorized Ukrainian Jobs/ATS/commercial providers",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Provider-approved credentials, official schemas and executed commercial agreement where applicable are absent; public truthful handoff is implemented.",
+      "dependency_owner": "Owner/business development and provider administrators",
+      "local_evidence": [
+        "JobsDiscoveryEngine.swift",
+        "JobsMarketplace.swift",
+        "UKRAINIAN_JOBS_SOURCE_AUDIT.md",
+        "Jobs tests",
+        "91111c0",
+        "9a652bd"
+      ],
+      "required_live_action": "Inject each granted credential server-side; search/ingest/update/close a controlled vacancy; verify application callback and attribution only where contracted.",
+      "expected_result": "Authorized operations are truthful, idempotent and isolated; no false submission or revenue.",
+      "created_at": "2026-09-03T14:42:00+02:00",
+      "last_checked": "2026-09-03T14:42:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "JOBS-026-LIVE-INTERVIEW-DEVICE",
+      "service_provider": "Physical iPhone Calendar/Maps/notifications",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Signed physical iPhone with permissions and controlled employer/candidate accounts required solely for real interview scheduling verification.",
+      "dependency_owner": "Owner/device tester",
+      "local_evidence": [
+        "JobsPolicyExtensions.swift",
+        "JobsPolicyExtensionsTests.swift",
+        "Calendar/Appointment/SmartDeparture paths",
+        "2000304"
+      ],
+      "required_live_action": "Propose, confirm, create controlled Calendar event, verify link/location route and notification, then update/cancel.",
+      "expected_result": "Nothing is scheduled before confirmation; real system references match the controlled interview.",
+      "created_at": "2026-09-03T14:42:00+02:00",
+      "last_checked": "2026-09-03T14:42:00+02:00",
+      "completion_evidence": null
     }
   ]
 }

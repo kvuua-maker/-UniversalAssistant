@@ -1,17 +1,17 @@
 {
-  "current_block": "GLOBAL-ZERO-OMISSION-AUDIT",
-  "current_action": "local-reconciliation-complete-await-specific-live-dependencies",
+  "current_block": "JOBS-MARKETPLACE-COMPLETION",
+  "current_action": "local completion verified; external live actions remain queued",
   "status": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
-  "last_measurable_progress": "2026-09-03T14:15:00+02:00",
-  "attempt_path_id": "global-audit-final",
-  "last_commit": "a923914",
-  "blocker": "59 exact live/physical/provider actions require their individually recorded external dependencies; no local engineering blocker remains",
+  "last_measurable_progress": "2026-09-03T12:50:35Z",
+  "attempt_path_id": "jobs-final-regression-v1",
+  "last_commit": "9a652bd",
+  "blocker": null,
   "evidence": {
-    "reconciled_requirements": "1787/1787 canonical IDs",
-    "inventory_counts": "1595 VERIFIED_LOCAL; 178 READY_FOR_LIVE_VERIFICATION; 14 NOT_APPLICABLE_VERIFIED; 0 NOT_IMPLEMENTED; 0 IMPLEMENTED_UNVERIFIED",
-    "target_tests": "final audit script validates IDs, statuses, evidence commits, queue contracts, source hashes, production markers and Jobs exclusion",
-    "full_regression": "479 iOS tests/104 suites and 92 backend tests/25 suites passed, 0 failures",
-    "completed_task": "GLOBAL ZERO-OMISSION local reconciliation and final completion-gate audit",
+    "reconciled_requirements": "1884/1884 canonical IDs including 97/97 JOBS IDs",
+    "inventory_counts": "1686 VERIFIED_LOCAL; 184 READY_FOR_LIVE_VERIFICATION; 14 NOT_APPLICABLE_VERIFIED; 0 NOT_IMPLEMENTED; 0 IMPLEMENTED_UNVERIFIED",
+    "target_tests": "Jobs and global executable audits validate IDs, evidence commits, queue contracts, source hashes, production symbols and behavioral/golden coverage",
+    "full_regression": "486 iOS tests/106 suites and 109 backend tests/27 suites passed, 0 failures",
+    "completed_task": "JOBS Marketplace local completion and GLOBAL ZERO-OMISSION reconciliation",
     "verification_type": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
     "next_task": "execute exact live queue items only when dependencies become available"
   }

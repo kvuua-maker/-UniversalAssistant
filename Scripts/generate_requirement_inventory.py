@@ -31,9 +31,7 @@ def main():
                 continue
             requirement_id = f"{prefix}-{int(match.group(1))}"
             prior = existing.get(requirement_id, {})
-            audited_definition_rule = prefix == "MS" and 1343 <= int(match.group(1)) <= 1454
-            document_processing_increment = prefix == "MS" and int(match.group(1)) == 1474
-            status = "VERIFIED_LOCAL" if audited_definition_rule or document_processing_increment else prior.get("status", "NOT_IMPLEMENTED")
+            status = prior.get("status", "NOT_IMPLEMENTED")
             if status not in ALLOWED:
                 raise SystemExit(f"invalid status for {requirement_id}: {status}")
             records.append({
@@ -41,9 +39,9 @@ def main():
                 "source": str(path.relative_to(ROOT)),
                 "title": match.group(2).strip(),
                 "status": status,
-                "implementation_evidence": ["CapabilityEvidenceGovernance.swift; IntegrationVerificationPolicy.swift; REQUIREMENT_INVENTORY.json"] if audited_definition_rule else (["AppleScannerIntegration.swift; OnDevicePDFProcessor.swift"] if document_processing_increment else prior.get("implementation_evidence", [])),
-                "test_evidence": ["CapabilityEvidenceGovernanceTests; RequirementInventory generator validation"] if audited_definition_rule else (["OnDevicePDFProcessorTests: actual PDF bytes"] if document_processing_increment else prior.get("test_evidence", [])),
-                "commit_evidence": ["atomic M12 definition/evidence governance checkpoint"] if audited_definition_rule else (["atomic on-device PDF processing checkpoint"] if document_processing_increment else prior.get("commit_evidence", [])),
+                "implementation_evidence": prior.get("implementation_evidence", []),
+                "test_evidence": prior.get("test_evidence", []),
+                "commit_evidence": prior.get("commit_evidence", []),
                 "live_evidence": prior.get("live_evidence", []),
                 "remaining_dependency": prior.get("remaining_dependency"),
             })

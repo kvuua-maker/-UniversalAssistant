@@ -6,10 +6,10 @@ INV = json.loads((ROOT / "REQUIREMENT_INVENTORY.json").read_text())
 QUEUE = json.loads((ROOT / "LIVE_VERIFICATION_QUEUE.json").read_text())
 expected = ([f"MS-{i}" for i in range(1, 1661)] + [f"MCA-{i}" for i in range(1, 65)] +
             [f"BPP-{i}" for i in range(1, 38)] + [f"ZOP-{i}" for i in range(1, 22)] +
-            [f"DCA-{i}" for i in range(1, 6)])
+            [f"JOBS-{i:03d}" for i in range(1, 98)] + [f"DCA-{i}" for i in range(1, 6)])
 rows = INV["requirements"]
 ids = [r["id"] for r in rows]
-assert INV["requirement_count"] == 1787 == len(rows)
+assert INV["requirement_count"] == 1884 == len(rows)
 assert ids == expected, "canonical IDs are missing, duplicated, reordered or unexpected"
 assert not [r for r in rows if r["status"] in {"NOT_IMPLEMENTED", "IMPLEMENTED_UNVERIFIED"}]
 allowed = set(INV["allowed_statuses"])
@@ -46,7 +46,6 @@ for base in [ROOT/'UniversalAssistant', ROOT/'Backend/Sources', ROOT/'ShareExten
         low = path.read_text(errors='ignore').lower()
         for marker in ['todo','fixme','placeholder','fake success','fake-success','hardcoded demo']:
             assert marker not in low, f"production marker {marker}: {path}"
-        assert 'jobsmarketplace' not in low and 'jobs marketplace' not in low
 canonical_hashes = {
     "UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt": "16489fc577d199918fedb99f68e5fb59548361f4e15f1253cf3c9e7f2bd8fd95",
     "UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt": "299bf8025f23a120c77329f831c26217b9ba810835322cf8b085fc09d6c9c23b",
@@ -58,6 +57,7 @@ canonical_hashes = {
     "QUICK_LAUNCH_PHYSICAL_ACCESS_ADDENDUM.md": "c8a6d5392340b61a6716fb5239445faf108ed5eebcdfc414462e135afdff9ba4",
     "BUSINESS_PLATFORM_COMPETITIVE_GAP_AUDIT.md": "9e90bffe15f8f008bb71185449df579120b0fe94b89bc2f34ee3f73243dc8e7d",
     "GENERAL_UNKNOWN_INTENT_DISCOVERY_ANSWER_ACTION_ADDENDUM.md": "5f3f4f051ee4758a7e6981c1d33b2d12354fc74987ebcb99b94635070cb266fe",
+    "UniversalAssistant_Jobs_Marketplace_FINAL_CLEAR_NUMBERED.txt": "4b46941d2c6d6930c328a726e5ee1d3c9d56c178aad9fe596d6913e5e33ca7b7",
 }
 for name, expected_hash in canonical_hashes.items():
     actual = hashlib.sha256((ROOT / "docs" / name).read_bytes()).hexdigest()
