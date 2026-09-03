@@ -177,4 +177,146 @@ private actor JobCallCounter {
     let restored = try JobsMarketplaceService(entitlements: ledger, persistenceURL: file)
     #expect(await restored.watchMatches(watch.id, candidates: [active]).isEmpty)
   }
+
+  @Test func multipleCVsRequiredCVAndMustHaveScreeningAreEnforced() async throws {
+    let employer = UUID()
+    let ledger = try JobsEntitlementLedger()
+    let service = try JobsMarketplaceService(entitlements: ledger)
+    let profile = EmploymentProfile(
+      id: UUID(), accountID: UUID(), roles: ["Водій", "Кур’єр"], locality: "Київ",
+      remoteModes: [.onsite], desiredSalary: jobSalary(), employmentTypes: ["повна"],
+      schedules: ["денна"], experience: "5 років", skills: ["керування"], languages: ["uk"],
+      licenses: ["B"], workAuthorization: "explicit", availability: "now", visibility: .private,
+      consentedAt: nil, permittedDisplayName: "Кандидат", restrictedEmail: nil, restrictedPhone: nil
+    )
+    try await service.upsertProfile(profile)
+    let cv1 = CandidateCV(
+      id: UUID(), profileID: profile.id, version: 1, fileReference: "secure://cv-1",
+      mimeType: "application/pdf", createdAt: .now)
+    let cv2 = CandidateCV(
+      id: UUID(), profileID: profile.id, version: 2, fileReference: "secure://cv-2",
+      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      createdAt: .now)
+    try await service.addCV(cv1)
+    try await service.addCV(cv2)
+    let question = JobScreeningQuestion(id: UUID(), prompt: "Маєте посвідчення B?", kind: .mustHave)
+    var active = jobVacancy(employer, state: .active)
+    active.cvRequirement = .required
+    active.screening = [question]
+    try await service.ingestATS(
+      eventID: "required-cv", vacancy: active, capabilities: ["vacancy_sync"])
+    await #expect(throws: JobsError.cvRequired) {
+      try await service.apply(
+        vacancyID: active.id, profileID: profile.id, cvID: nil, answers: [question.id: "так"],
+        confirmed: true)
+    }
+    await #expect(throws: JobsError.invalid) {
+      try await service.apply(
+        vacancyID: active.id, profileID: profile.id, cvID: cv2.id, answers: [:], confirmed: true)
+    }
+    let app = try await service.apply(
+      vacancyID: active.id, profileID: profile.id, cvID: cv2.id, answers: [question.id: "так"],
+      confirmed: true)
+    #expect(app.snapshot.cvVersion == 2 && app.snapshot.roles.count == 2)
+  }
+
+  @Test func materialEditTriggersReviewAndSalarySemanticsFailClosed() async throws {
+    let employer = UUID()
+    let ledger = try JobsEntitlementLedger()
+    let service = try JobsMarketplaceService(entitlements: ledger)
+    let active = jobVacancy(employer, state: .active)
+    try await service.ingestATS(eventID: "active", vacancy: active, capabilities: ["vacancy_sync"])
+    let edited = try await service.edit(
+      active.id, details: "Нові обов’язки", salary: jobSalary(), actor: "employer")
+    #expect(edited.status == .needsReview && edited.version == 2)
+    let invalidSalary = JobSalary(
+      minimum: 60_000, maximum: 40_000, currency: "UAH", period: .monthly, basis: .gross,
+      guaranteed: nil, variableDescription: "bonus unknown")
+    #expect(!invalidSalary.valid)
+    await #expect(throws: JobsError.invalid) {
+      try await service.edit(active.id, details: "x", salary: invalidSalary, actor: "employer")
+    }
+  }
+
+  @Test func salaryMismatchNeedsReviewAndCrediblePaymentScamProtectsWithoutPublicGuilt()
+    async throws
+  {
+    let employer = UUID()
+    let service = try JobsMarketplaceService(entitlements: JobsEntitlementLedger())
+    let active = jobVacancy(employer, state: .active)
+    try await service.ingestATS(eventID: "active", vacancy: active, capabilities: ["vacancy_sync"])
+    let mismatch = try await service.complain(
+      vacancyID: active.id, reporterID: UUID(), kind: .salaryMismatch, evidence: "offer differs")
+    #expect(mismatch.disposition == .reviewRequired)
+    let scam = try await service.complain(
+      vacancyID: active.id, reporterID: UUID(), kind: .paymentRequest,
+      evidence: "payment screenshot")
+    #expect(scam.disposition == .temporarilySuspended)
+    #expect(await service.vacancy(active.id)?.status == .needsReview)
+  }
+
+  @Test func invitationRequiresDiscoverabilityPaidEntitlementAndDeclineKeepsContactPrivate()
+    async throws
+  {
+    let employer = UUID()
+    let ledger = try JobsEntitlementLedger()
+    let service = try JobsMarketplaceService(entitlements: ledger)
+    let privateProfile = EmploymentProfile(
+      id: UUID(), accountID: UUID(), roles: ["Водій"], locality: nil, remoteModes: [],
+      desiredSalary: nil, employmentTypes: [], schedules: [], experience: nil, skills: [],
+      languages: [], licenses: [], workAuthorization: nil, availability: nil, visibility: .private,
+      consentedAt: nil, permittedDisplayName: nil, restrictedEmail: "hidden@test",
+      restrictedPhone: nil)
+    try await service.upsertProfile(privateProfile)
+    await #expect(throws: JobsError.candidatePrivate) {
+      try await service.invite(
+        employerID: employer, profileID: privateProfile.id, vacancyID: UUID(), eventID: "private")
+    }
+    var visible = privateProfile
+    visible = .init(
+      id: UUID(), accountID: privateProfile.accountID, roles: privateProfile.roles, locality: nil,
+      remoteModes: [], desiredSalary: nil, employmentTypes: [], schedules: [], experience: nil,
+      skills: [], languages: [], licenses: [], workAuthorization: nil, availability: nil,
+      visibility: .discoverable, consentedAt: .now, permittedDisplayName: "Allowed",
+      restrictedEmail: "hidden@test", restrictedPhone: nil)
+    try await service.upsertProfile(visible)
+    try await ledger.credit(
+      employerID: employer, kind: .invitation, quantity: 1, paymentEventID: "invite-credit")
+    let invitation = try await service.invite(
+      employerID: employer, profileID: visible.id, vacancyID: UUID(), eventID: "invite")
+    #expect(try await service.respond(invitation.id, accept: false) == nil)
+  }
+
+  @Test func ATSRequiresDeclaredCapabilityRejectsStaleAndPropagatesClose() async throws {
+    let employer = UUID()
+    let service = try JobsMarketplaceService(entitlements: JobsEntitlementLedger())
+    let active = jobVacancy(employer, state: .active)
+    await #expect(throws: JobsError.unsupportedCapability) {
+      try await service.ingestATS(eventID: "bad", vacancy: active, capabilities: [])
+    }
+    var closed = active
+    closed.status = .closed
+    closed.updatedAt = active.updatedAt.addingTimeInterval(1)
+    try await service.ingestATS(eventID: "create", vacancy: active, capabilities: ["vacancy_sync"])
+    try await service.ingestATS(eventID: "close", vacancy: closed, capabilities: ["vacancy_sync"])
+    #expect(await service.vacancy(active.id)?.status == .closed)
+    var stale = active
+    stale.updatedAt = active.updatedAt.addingTimeInterval(-1)
+    await #expect(throws: JobsError.staleEvent) {
+      try await service.ingestATS(eventID: "stale", vacancy: stale, capabilities: ["vacancy_sync"])
+    }
+  }
+
+  @Test func expiredVacancyAndHardConstraintsNeverMatch() {
+    let employer = UUID()
+    let selector = JobsSourceSelector()
+    let now = Date()
+    var expired = jobVacancy(employer, state: .active)
+    expired.expiresAt = now.addingTimeInterval(-1)
+    var low = jobVacancy(employer, state: .active)
+    low.salary = JobSalary(
+      minimum: 10_000, maximum: 20_000, currency: "UAH", period: .monthly, basis: .gross,
+      guaranteed: 10_000, variableDescription: nil)
+    #expect(selector.matches(jobRequest(), in: [expired, low], now: now).isEmpty)
+  }
 }
