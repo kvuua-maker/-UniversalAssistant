@@ -44,6 +44,11 @@ The project source of truth is the complete, indivisible combination of:
    - 296 lines / 20,668 bytes; copied byte-for-byte from the owner attachment on 2026-09-03.
    - Adds 97 independently tracked `JOBS-ID` requirements and preserves OUR JOBS FIRST → active commercial partners → legitimate external fallback only when insufficient.
 
+12. `docs/JOBS_LEGACY_01_95_COVERAGE.md`
+   - SHA-256: `2f36df75366e6cd13bbd6f802d70eefb93201c6e92ce95689f300b21a7f2bdc5`
+   - Owner-provided inline legacy Jobs sections 1–95 mapped 95/95 to the authoritative numbered Jobs canon on 2026-09-03.
+   - Only LEGACY-03 source priority is superseded, strictly by JOBS-007–009; every non-conflicting legacy requirement remains preserved.
+
 All accepted addenda augment the Master Spec and do not remove or weaken it. Every requirement retains an evidence-backed zero-omission status; documentation, interfaces, mocks and external dependencies alone never establish completion. Later explicit supersession rules inside the Master Spec take precedence over earlier conflicting wording, subject to safety, law, current platform/provider truth, privacy and security.
 
 Both canonical files were read completely and copied byte-for-byte from the owner-provided attachments on 2026-09-01. Their hashes were verified after persistence.
