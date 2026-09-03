@@ -1,8 +1,7 @@
 # Owner Test Queue
 
-Current recommended build: none; no current immutable signed build has been issued through `OwnerTestBuildRegistry`. Pending historical tests: 2. Estimated session: 5 minutes after a delivery channel, signing, and physical device are verified. Critical blocker: no verified delivery configuration. These tests can wait and do not block independent engineering work.
+Authoritative source: `LIVE_VERIFICATION_QUEUE.json`. Human-readable complete index: `docs/LIVE_VERIFICATION_QUEUE_REPORT.md`.
 
-| Test ID | Feature/block | Build/commit | Prerequisites | Action | Expected result | Retest linkage | Status |
-|---|---|---|---|---|---|---|---|
-| VOICE-001 | M1 voice capture | Historical Build 1 / `948e5bd` | Microphone and Speech permissions | Tap the central microphone, allow permissions, say “Відкрий Telegram”, tap again | Listening state is visible; recognized text appears in input; microphone stops | Issue a new immutable build after delivery configuration is verified | NOT_TESTED |
-| VOICE-002 | M1 system invocation | Historical Build 1 / `948e5bd` | Add the UniversalAssistant shortcut to an available system invocation surface | Run “Start UniversalAssistant” | App opens directly to its command screen | Issue a new immutable build after delivery configuration is verified | NOT_TESTED |
+There are **59** precise live/physical/provider verification items. None is represented as PASS or VERIFIED_LIVE. Every item records its requirement ID, provider/system, missing dependency, dependency owner, local evidence, exact live action, expected result, timestamps and empty completion evidence. Items remain `READY_FOR_LIVE_VERIFICATION` and do not block independent local work.
+
+No immutable signed owner-test build is currently registered, so no test is requested now. When a signed delivery channel/device/provider credential becomes available, select matching queue items, execute only their stated live action, record read-back evidence, and advance the relevant requirement only after the required E4/E5/E6 result.

@@ -18,6 +18,9 @@ jobs:
           git diff --check
           plutil -lint UniversalAssistant/PrivacyInfo.xcprivacy
           for file in UniversalAssistant/Resources/*.lproj/Localizable.strings; do plutil -lint "$file"; done
+          python3 Scripts/reconcile_requirement_evidence.py
+          git diff --exit-code REQUIREMENT_INVENTORY.json
+          python3 Scripts/audit_final_requirements.py
       - name: Backend tests
         run: swift test --package-path Backend 2>&1 | tee backend-tests.log
       - name: iOS build and tests

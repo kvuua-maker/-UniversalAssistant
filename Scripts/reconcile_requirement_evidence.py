@@ -3,6 +3,7 @@
 import json
 import re
 import subprocess
+from functools import lru_cache
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,6 +13,7 @@ SOURCES = [
     ROOT / "docs/M10_ZERO_OMISSION_AUDIT.md",
     ROOT / "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
     ROOT / "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+    ROOT / "docs/FINAL_ZERO_OMISSION_AUDIT.md",
 ]
 ALLOWED = {
     "VERIFIED_LOCAL", "READY_FOR_LIVE_VERIFICATION",
@@ -22,6 +24,7 @@ ROW = re.compile(r"^\|\s*((?:MS|MCA|BPP|ZOP|DCA)-\d+)\s*\|\s*([A-Z_]+)\s*\|\s*(.
 def git(*args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
 
+@lru_cache(maxsize=None)
 def verified_commit(value: str | None, source: Path) -> str:
     candidates = re.findall(r"[0-9a-f]{7,40}", value or "")
     candidate = candidates[0] if candidates else git("log", "-1", "--format=%H", "--", str(source.relative_to(ROOT)))
@@ -71,7 +74,11 @@ def main() -> None:
             record["commit_evidence"] = [verified_commit(commit, source)]
             record["remaining_dependency"] = evidence if status == "READY_FOR_LIVE_VERIFICATION" else None
             imported.add(requirement_id)
-    expected = {f"MS-{value}" for value in range(1, 675)} | {f"MS-{value}" for value in range(676, 919)} | {f"MS-{value}" for value in range(921, 949)} | {f"MS-{value}" for value in range(949, 1000)} | {f"MS-{value}" for value in range(1005, 1023)} | {f"MS-{value}" for value in range(1023, 1077)} | {f"MS-{value}" for value in range(1077, 1088)} | {f"MS-{value}" for value in range(1098, 1142)} | {f"MS-{value}" for value in range(1144, 1191)} | {f"MS-{value}" for value in range(1192, 1268)} | {f"MS-{value}" for value in range(1272, 1343)} | {f"MS-{value}" for value in range(1343, 1455)} | {f"MS-{value}" for value in range(1461, 1509)} | {"MS-1510"} | {f"MS-{value}" for value in range(1511, 1581)} | {f"MS-{value}" for value in range(1581, 1643)} | {f"MS-{value}" for value in range(1644, 1661)} | {f"MCA-{value}" for value in range(1, 65)} | {f"BPP-{value}" for value in range(1, 38)} | {f"ZOP-{value}" for value in list(range(1, 15)) + list(range(17, 20))} | {f"DCA-{value}" for value in range(1, 6)}
+    expected = ({f"MS-{value}" for value in range(1, 1661)} |
+                {f"MCA-{value}" for value in range(1, 65)} |
+                {f"BPP-{value}" for value in range(1, 38)} |
+                {f"ZOP-{value}" for value in range(1, 22)} |
+                {f"DCA-{value}" for value in range(1, 6)})
     if imported != expected:
         missing = sorted(expected - imported)
         unexpected = sorted(imported - expected)
