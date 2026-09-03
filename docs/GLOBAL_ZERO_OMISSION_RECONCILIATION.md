@@ -683,3 +683,39 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-563 | VERIFIED_LOCAL | provider matrix/live queue record exact credential, approval, account, device and owner dependencies instead of hiding them | 6ec7080 |
 | MS-564 | VERIFIED_LOCAL | Xcode configurations, release metadata, privacy/permission artifacts, TestFlight matrix, review notes and blocker queue are locally prepared and audited | 401ee00 |
 | MS-565 | VERIFIED_LOCAL | release state/checklist explicitly says signing, TestFlight and App Store owner actions are incomplete; no publication claim exists | 401ee00 |
+
+| MS-566 | VERIFIED_LOCAL | iOS deployment target, app target and explicit no-watchOS project scope keep V1 iPhone-only; Xcode project build | 7a6cd05 |
+| MS-567 | VERIFIED_LOCAL | AssistantHomeView and deterministic direct-action/result policy provide a lighter single request→result→action surface; UI workflow tests | 7a6cd05 |
+| MS-568 | VERIFIED_LOCAL | primary Home is voice/text-first with only tasks/favorites secondary navigation, not a category maze; localization/accessibility UI tests | 7a6cd05 |
+| MS-569 | VERIFIED_LOCAL | AssistantHomeView contains orb/microphone, compact state/result, typed input, settings/quick-launch and minimal tabs; UI workflow tests | 7a6cd05 |
+| MS-570 | VERIFIED_LOCAL | QuickLaunchPolicy exposes only available public system mechanisms and StartAssistantIntent opens the app; policy tests cover unavailable Action Button and permission/text fallback, while physical behavior remains queued | 58447af |
+| MS-571 | VERIFIED_LOCAL | proactive work uses bounded server jobs/notifications and app scene lifecycle stops transient listening; proactive and lifecycle tests | d6c79b7 |
+| MS-572 | VERIFIED_LOCAL | backend ProactiveWatchEngine and DurableProactiveJobQueue own recurring external checks without continuous iPhone execution; backend tests | d6c79b7 |
+| MS-573 | VERIFIED_LOCAL | provider capability/evidence governance plus generic retrieval access validation rejects prohibited/blocked/CAPTCHA paths and preserves legitimate fallback; integration and generic discovery tests | 2037125 |
+| MS-574 | VERIFIED_LOCAL | official-source/fallback routers require exact HTTPS path and reject homepages/unapproved hosts; fashion/local-service/fallback tests | eb698bd |
+| MS-575 | VERIFIED_LOCAL | LocalServiceHandoffPlanner selects resolved callable provider phone before navigation when deeper verified action is absent; local-service tests | eb698bd |
+| MS-576 | VERIFIED_LOCAL | IntegrationFallbackPolicy retains exact official web/phone/navigation or truthful unavailable functionality when direct API is absent; fallback tests | eb698bd |
+| MS-577 | VERIFIED_LOCAL | IntegrationDepthAuditor and provider matrices require researched deeper legitimate paths before fallback and reject generic unsupported claims; governance tests | eb698bd |
+| MS-578 | VERIFIED_LOCAL | M4_UA_RETAILER_SOURCE_MATRIX and provider capability matrix record official Ukrainian integration avenues, source URLs, limitations and review state; artifact audits | eb698bd |
+| MS-579 | VERIFIED_LOCAL | Calendar, reminders, contacts, notes, recorder and local search implementations do not require backend and preserve useful local operation under provider/backend failure; failure tests | 928f150 |
+| MS-580 | VERIFIED_LOCAL | normalized truth/freshness models render unavailable/unknown rather than live traffic, stock, quote, ticket, booking or business claims when offline; truth/failure tests | 94e56d9 |
+| MS-581 | VERIFIED_LOCAL | repository scope/status and security audit contain only UniversalAssistant project assets and no trading-VPS deployment/configuration path; repository audit | 27da423 |
+| MS-582 | VERIFIED_LOCAL | Xcode project, Simulator builds and local development run in designated Mac repository with Git remote persistence; build and repository-state evidence | 5898cd5 |
+| MS-583 | VERIFIED_LOCAL | existing UniversalAssistant repository uses configured origin and commits/pushes canonical state without a duplicate repository; Git verification | 5898cd5 |
+| MS-584 | VERIFIED_LOCAL | change inventory and security/release audits remain repository-scoped with no unrelated system-wide mutation; audit evidence | 27da423 |
+| MS-585 | VERIFIED_LOCAL | execution state, heartbeat, attempt ledger and autonomous continuation contracts preserve resumable progress without idle approval waits; governance tests | 27da423 |
+| MS-586 | VERIFIED_LOCAL | owner/system permissions remain explicit external dependencies; no TCC/password bypass exists and independent local work continues through live queue | 27da423 |
+| MS-587 | VERIFIED_LOCAL | build/test/repository workflows use project/user-space tools and make no root/admin assumption; CI and environment audit | 5898cd5 |
+| MS-588 | VERIFIED_LOCAL | startup/state audit captures Xcode/project/SDK/destination/Git/repository/build readiness and release signing dependencies; environment evidence | 5898cd5 |
+| MS-589 | VERIFIED_LOCAL | Live Verification Queue records exact external dependencies/actions while production boundaries, fallbacks and independent roadmap continue; queue governance tests | 27da423 |
+| MS-590 | VERIFIED_LOCAL | EXECUTION_STATE, PROJECT_STATUS, PROGRESS_HEARTBEAT and atomic Git checkpoints provide recoverable progress; state validation | 27da423 |
+| MS-591 | VERIFIED_LOCAL | Apple/system/provider capability artifacts cite and enforce current official public mechanisms, with researched/unsupported states instead of stale assumptions; integration audit | 762c336 |
+| MS-592 | VERIFIED_LOCAL | StartAssistantIntent/AppShortcuts expose public Siri/Shortcuts/Action Button entry while delegating execution to app coordinator; quick-launch tests | 58447af |
+| MS-593 | VERIFIED_LOCAL | capability registry and deterministic coordinator reuse iOS/system entry points while UniversalAssistant owns cross-domain orchestration; coordination tests | 27ad853 |
+| MS-594 | VERIFIED_LOCAL | LocalCommandEngine automatically selects capability from natural voice/text commands; Home has no required domain-menu path; parser/UI tests | fab773a |
+| MS-595 | VERIFIED_LOCAL | AssistantHomeView always exposes editable typed command field and submit path independent of voice availability; accessibility/permission UI tests | c34533b |
+| MS-596 | VERIFIED_LOCAL | VoiceInputController publishes live Speech-framework bestTranscription and Home reflects listening state without persisting a chat transcript; voice tests | c34533b |
+| MS-597 | VERIFIED_LOCAL | stopping listening places the recognized transcript in the editable input so a user can minimally correct an entity/time/name without repeating the command; AssistantViewModel workflow tests | c34533b |
+| MS-598 | VERIFIED_LOCAL | CurrentContext resolves yes/no, ordinal/open, cheaper, closer/navigation/call/reschedule/route-aware replies from bounded fresh preceding context; StrongCurrentContextTests | b289278 |
+| MS-599 | VERIFIED_LOCAL | purchase handoff never claims purchase and direct financial/consequential action requires typed explicit confirmation/provider flow; commerce safety tests | 27ad853 |
+| MS-600 | VERIFIED_LOCAL | booking/order/appointment engines validate consequential confirmation and authoritative provider response without redundant informational confirmation; appointment/food/commerce tests | 27ad853 |
