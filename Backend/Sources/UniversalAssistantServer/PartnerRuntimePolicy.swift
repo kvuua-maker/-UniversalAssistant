@@ -13,6 +13,33 @@ struct PartnerFeatureRule: Equatable, Codable, Sendable {
     let enabled: Bool
     let countryCodes: Set<String>
     let categories: Set<String>
+    let languageCodes: Set<String>
+    let minimumAppVersion: String?
+
+    init(feature: PartnerFeature, enabled: Bool, countryCodes: Set<String>, categories: Set<String>, languageCodes: Set<String> = [], minimumAppVersion: String? = nil) {
+        self.feature = feature; self.enabled = enabled; self.countryCodes = countryCodes
+        self.categories = categories; self.languageCodes = languageCodes; self.minimumAppVersion = minimumAppVersion
+    }
+
+    private enum CodingKeys: String, CodingKey { case feature, enabled, countryCodes, categories, languageCodes, minimumAppVersion }
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        feature = try values.decode(PartnerFeature.self, forKey: .feature)
+        enabled = try values.decode(Bool.self, forKey: .enabled)
+        countryCodes = try values.decode(Set<String>.self, forKey: .countryCodes)
+        categories = try values.decode(Set<String>.self, forKey: .categories)
+        languageCodes = try values.decodeIfPresent(Set<String>.self, forKey: .languageCodes) ?? []
+        minimumAppVersion = try values.decodeIfPresent(String.self, forKey: .minimumAppVersion)
+    }
+}
+
+struct RemoteProviderRule: Equatable, Codable, Sendable {
+    let providerID: String
+    let enabled: Bool
+    let priority: Int
+    let timeoutMilliseconds: Int
+    let countryCodes: Set<String>
+    let emergencyDisabled: Bool
 }
 
 struct PartnerRuntimePolicySnapshot: Equatable, Codable, Sendable {
@@ -21,6 +48,23 @@ struct PartnerRuntimePolicySnapshot: Equatable, Codable, Sendable {
     let expiresAt: Date
     let rules: [PartnerFeatureRule]
     let sourceReference: String
+    let providerRules: [RemoteProviderRule]
+
+    init(version: Int, effectiveFrom: Date, expiresAt: Date, rules: [PartnerFeatureRule], sourceReference: String, providerRules: [RemoteProviderRule] = []) {
+        self.version = version; self.effectiveFrom = effectiveFrom; self.expiresAt = expiresAt
+        self.rules = rules; self.sourceReference = sourceReference; self.providerRules = providerRules
+    }
+
+    private enum CodingKeys: String, CodingKey { case version, effectiveFrom, expiresAt, rules, sourceReference, providerRules }
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        version = try values.decode(Int.self, forKey: .version)
+        effectiveFrom = try values.decode(Date.self, forKey: .effectiveFrom)
+        expiresAt = try values.decode(Date.self, forKey: .expiresAt)
+        rules = try values.decode([PartnerFeatureRule].self, forKey: .rules)
+        sourceReference = try values.decode(String.self, forKey: .sourceReference)
+        providerRules = try values.decodeIfPresent([RemoteProviderRule].self, forKey: .providerRules) ?? []
+    }
 }
 
 enum PartnerRuntimePolicyError: Error, Equatable, Sendable {
@@ -71,7 +115,10 @@ actor PartnerRuntimePolicyStore {
                  reasonCode: String, at: Date = .now) throws {
         guard snapshot.version > 0, snapshot.effectiveFrom < snapshot.expiresAt,
               !snapshot.sourceReference.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              Set(snapshot.rules.map(\.feature)).count == snapshot.rules.count else {
+              Set(snapshot.rules.map(\.feature)).count == snapshot.rules.count,
+              Set(snapshot.providerRules.map(\.providerID)).count == snapshot.providerRules.count,
+              snapshot.providerRules.allSatisfy(Self.validProviderRule),
+              snapshot.rules.allSatisfy(Self.validFeatureRule) else {
             throw PartnerRuntimePolicyError.invalidSnapshot
         }
         guard Self.validAuditValue(actor), Self.validAuditValue(reasonCode) else {
@@ -94,12 +141,22 @@ actor PartnerRuntimePolicyStore {
     }
 
     func isEnabled(_ feature: PartnerFeature, countryCode: String, category: String,
+                   languageCode: String = "", appVersion: String = "",
                    now: Date = .now) -> Bool {
         guard let current, current.effectiveFrom <= now, now < current.expiresAt,
               let rule = current.rules.first(where: { $0.feature == feature }), rule.enabled else { return false }
         let countryAllowed = rule.countryCodes.isEmpty || rule.countryCodes.contains(countryCode.uppercased())
         let categoryAllowed = rule.categories.isEmpty || rule.categories.contains(category.lowercased())
-        return countryAllowed && categoryAllowed
+        let languageAllowed = rule.languageCodes.isEmpty || rule.languageCodes.contains(languageCode.lowercased())
+        let versionAllowed = rule.minimumAppVersion.map { Self.compareVersions(appVersion, $0) >= 0 } ?? true
+        return countryAllowed && categoryAllowed && languageAllowed && versionAllowed
+    }
+
+    func providers(countryCode: String, now: Date = .now) -> [RemoteProviderRule] {
+        guard let current, current.effectiveFrom <= now, now < current.expiresAt else { return [] }
+        return current.providerRules.filter {
+            $0.enabled && !$0.emergencyDisabled && ($0.countryCodes.isEmpty || $0.countryCodes.contains(countryCode.uppercased()))
+        }.sorted { $0.priority == $1.priority ? $0.providerID < $1.providerID : $0.priority < $1.priority }
     }
 
     func snapshot() -> PartnerRuntimePolicySnapshot? { current }
@@ -143,6 +200,23 @@ actor PartnerRuntimePolicyStore {
     private static func validAuditValue(_ value: String) -> Bool {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return !trimmed.isEmpty && trimmed.count <= 128
+    }
+
+    private static func validProviderRule(_ rule: RemoteProviderRule) -> Bool {
+        !rule.providerID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && rule.priority >= 0 && (100...30_000).contains(rule.timeoutMilliseconds)
+    }
+
+    private static func validFeatureRule(_ rule: PartnerFeatureRule) -> Bool {
+        rule.minimumAppVersion.map { !$0.isEmpty && $0.split(separator: ".").allSatisfy { Int($0) != nil } } ?? true
+    }
+
+    private static func compareVersions(_ lhs: String, _ rhs: String) -> Int {
+        let left = lhs.split(separator: ".").map { Int($0) ?? 0 }, right = rhs.split(separator: ".").map { Int($0) ?? 0 }
+        for index in 0..<max(left.count, right.count) {
+            let l = index < left.count ? left[index] : 0, r = index < right.count ? right[index] : 0
+            if l != r { return l < r ? -1 : 1 }
+        }
+        return 0
     }
 }
 
@@ -197,4 +271,63 @@ actor PartnerCostQuotaLedger {
 
     func usage() -> (calls: Int, cost: Decimal) { (calls, cost) }
     func auditTrail() -> [PartnerQuotaAuditEvent] { audit }
+}
+
+enum ProviderCallOutcome: String, Codable, Sendable { case succeeded, failed, rateLimited, cancelled }
+
+struct ProviderCostUsage: Equatable, Sendable {
+    let providerID: String
+    let requestCount: Int
+    let allowedCount: Int
+    let deniedCount: Int
+    let rateLimitedCount: Int
+    let failureCount: Int
+    let cacheHitCount: Int
+    let estimatedCost: LedgerMoney
+    var failureRate: Decimal { requestCount == 0 ? 0 : Decimal(failureCount) / Decimal(requestCount) }
+    var cacheEffectiveness: Decimal { requestCount == 0 ? 0 : Decimal(cacheHitCount) / Decimal(requestCount) }
+}
+
+/// Central non-AI API budget gate. It reuses the exact-money quota ledger and stores no payload or user identifier.
+actor CostQuotaManager {
+    private struct MutableUsage {
+        var requests = 0, allowed = 0, denied = 0, rateLimited = 0, failures = 0, cacheHits = 0
+        var cost = Decimal.zero
+        var observed: Set<String> = []
+    }
+    private let ledgers: [String: PartnerCostQuotaLedger]
+    private let currencies: [String: String]
+    private var usage: [String: MutableUsage] = [:]
+
+    init(policiesByProvider: [String: PartnerQuotaPolicy]) {
+        ledgers = policiesByProvider.mapValues { PartnerCostQuotaLedger(policy: $0) }
+        currencies = policiesByProvider.mapValues { $0.maximumCost.currencyCode.uppercased() }
+    }
+
+    func reserve(providerID: String, operationID: String, estimatedCost: LedgerMoney, cacheHit: Bool = false, at: Date = .now) async -> PartnerQuotaDecision {
+        guard let ledger = ledgers[providerID] else { return .denied(.invalidPolicy) }
+        var value = usage[providerID, default: MutableUsage()]
+        let observationKey = "reserve:\(operationID)"
+        if value.observed.contains(observationKey) { return await ledger.reserve(operationID: operationID, estimatedCost: estimatedCost, at: at) }
+        value.observed.insert(observationKey); value.requests += 1
+        if cacheHit { value.cacheHits += 1; value.allowed += 1; usage[providerID] = value; return .allowed }
+        let decision = await ledger.reserve(operationID: operationID, estimatedCost: estimatedCost, at: at)
+        switch decision { case .allowed: value.allowed += 1; value.cost += estimatedCost.amount; case .denied: value.denied += 1 }
+        usage[providerID] = value
+        return decision
+    }
+
+    func recordOutcome(providerID: String, operationID: String, outcome: ProviderCallOutcome) {
+        var value = usage[providerID, default: MutableUsage()]
+        guard value.observed.insert("outcome:\(operationID)").inserted else { return }
+        if outcome == .failed { value.failures += 1 }
+        if outcome == .rateLimited { value.rateLimited += 1; value.failures += 1 }
+        usage[providerID] = value
+    }
+
+    func snapshot(providerID: String) -> ProviderCostUsage? {
+        guard let currency = currencies[providerID] else { return nil }
+        let value = usage[providerID, default: MutableUsage()]
+        return .init(providerID: providerID, requestCount: value.requests, allowedCount: value.allowed, deniedCount: value.denied, rateLimitedCount: value.rateLimited, failureCount: value.failures, cacheHitCount: value.cacheHits, estimatedCost: .init(amount: value.cost, currencyCode: currency))
+    }
 }

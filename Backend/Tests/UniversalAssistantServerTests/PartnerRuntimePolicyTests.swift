@@ -97,4 +97,51 @@ struct PartnerRuntimePolicyTests {
         #expect(await ledger.reserve(operationID: "wrong-currency", estimatedCost: .init(amount: 1, currencyCode: "EUR"), at: now) == .denied(.invalidPolicy))
         #expect(await ledger.usage().calls == 0)
     }
+    @Test func costQuotaManagerTracksOperationalSignals() async {
+        let now = Date()
+        let policy = PartnerQuotaPolicy(policyID: "weather", version: 1, scopeID: "weather", periodStart: now.addingTimeInterval(-1), periodEnd: now.addingTimeInterval(100), maximumCalls: 2, maximumCost: .init(amount: Decimal(string: "0.20")!, currencyCode: "USD"))
+        let manager = CostQuotaManager(policiesByProvider: ["weather": policy])
+        let cost = LedgerMoney(amount: Decimal(string: "0.10")!, currencyCode: "USD")
+        #expect(await manager.reserve(providerID: "weather", operationID: "cached", estimatedCost: cost, cacheHit: true, at: now) == .allowed)
+        #expect(await manager.reserve(providerID: "weather", operationID: "cached", estimatedCost: cost, cacheHit: true, at: now) == .allowed)
+        #expect(await manager.reserve(providerID: "weather", operationID: "network", estimatedCost: cost, at: now) == .allowed)
+        await manager.recordOutcome(providerID: "weather", operationID: "network", outcome: .rateLimited)
+        await manager.recordOutcome(providerID: "weather", operationID: "network", outcome: .rateLimited)
+        let usage = await manager.snapshot(providerID: "weather")
+        #expect(usage?.requestCount == 2)
+        #expect(usage?.allowedCount == 2)
+        #expect(usage?.cacheHitCount == 1)
+        #expect(usage?.rateLimitedCount == 1)
+        #expect(usage?.failureCount == 1)
+        #expect(usage?.estimatedCost.amount == Decimal(string: "0.10")!)
+        #expect(usage?.failureRate == Decimal(string: "0.5")!)
+        #expect(usage?.cacheEffectiveness == Decimal(string: "0.5")!)
+    }
+
+    @Test func remoteConfigControlsProvidersAndFeatureTargeting() async throws {
+        let now = Date(), store = try PartnerRuntimePolicyStore(fileURL: storeURL())
+        let snapshot = PartnerRuntimePolicySnapshot(version: 1, effectiveFrom: now.addingTimeInterval(-1), expiresAt: now.addingTimeInterval(100), rules: [
+            .init(feature: .partnerFeeds, enabled: true, countryCodes: ["UA"], categories: ["grocery"], languageCodes: ["uk"], minimumAppVersion: "2.1.0")
+        ], sourceReference: "signed-config", providerRules: [
+            .init(providerID: "priority", enabled: true, priority: 1, timeoutMilliseconds: 800, countryCodes: ["UA"], emergencyDisabled: false),
+            .init(providerID: "later", enabled: true, priority: 5, timeoutMilliseconds: 2_000, countryCodes: [], emergencyDisabled: false),
+            .init(providerID: "killed", enabled: true, priority: 0, timeoutMilliseconds: 500, countryCodes: ["UA"], emergencyDisabled: true)
+        ])
+        try await store.install(snapshot, actor: "admin", reasonCode: "rollout", at: now)
+        #expect(await store.providers(countryCode: "UA", now: now).map(\.providerID) == ["priority", "later"])
+        #expect(await store.providers(countryCode: "DE", now: now).map(\.providerID) == ["later"])
+        #expect(await store.isEnabled(.partnerFeeds, countryCode: "UA", category: "grocery", languageCode: "uk", appVersion: "2.1.1", now: now))
+        #expect(!(await store.isEnabled(.partnerFeeds, countryCode: "UA", category: "grocery", languageCode: "en", appVersion: "2.1.1", now: now)))
+        #expect(!(await store.isEnabled(.partnerFeeds, countryCode: "UA", category: "grocery", languageCode: "uk", appVersion: "2.0.9", now: now)))
+    }
+
+    @Test func unsafeRemoteTimeoutFailsClosed() async throws {
+        let now = Date(), store = try PartnerRuntimePolicyStore(fileURL: storeURL())
+        let invalid = PartnerRuntimePolicySnapshot(version: 1, effectiveFrom: now.addingTimeInterval(-1), expiresAt: now.addingTimeInterval(100), rules: [], sourceReference: "bad", providerRules: [
+            .init(providerID: "provider", enabled: true, priority: 1, timeoutMilliseconds: 99, countryCodes: [], emergencyDisabled: false)
+        ])
+        await #expect(throws: PartnerRuntimePolicyError.invalidSnapshot) {
+            try await store.install(invalid, actor: "admin", reasonCode: "invalid", at: now)
+        }
+    }
 }
