@@ -1,22 +1,22 @@
 {
   "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
   "requirement_ids": [
-    "MS-1144...MS-1190"
+    "MS-1192...MS-1267"
   ],
   "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "47 owner-test queue, immutable build, delivery selection, privacy and result workflow requirements reconciled",
+  "integration_depth": "76 feasibility, stable-path, limit-conservation and owner-clarity requirements reconciled",
   "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
   "last_failure_signature": null,
-  "material_change": "MS-1144–1190 mapped to OWNER_TEST_QUEUE, OwnerTestDeliveryPolicy/Registry and behavioral evidence without issuing an unneeded build. MS-1191 and all earlier final gates remain open.",
+  "material_change": "MS-1192–1267 mapped to typed FeasibilityPathRegistry, registry/status artifacts and behavioral evidence. Final feasibility/path/limit/owner audits MS-1268–1271 remain open with every prior global gate.",
   "frozen_baseline_commit": "2353a38",
-  "dependency": "No external dependency blocks MS-1192+ feasibility governance; no Jobs Marketplace work selected.",
+  "dependency": "No external dependency blocks MS-1272+; Jobs Marketplace remains explicitly excluded from current work.",
   "unresolved_verification_steps": [
-    "504 canonical requirements remain unreconciled",
-    "Continue from MS-1192+ without Jobs Marketplace",
-    "Retain MS-1191 and every other final completion gate until actual global reconciliation"
+    "428 canonical requirements remain unreconciled",
+    "Continue from MS-1272+ without Jobs Marketplace",
+    "Retain MS-1268–1271 and all prior final gates until actual completion"
   ],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-1192-PLUS"
+  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-1272-PLUS"
 }
