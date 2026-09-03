@@ -593,3 +593,48 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-473 | VERIFIED_LOCAL | ContextualPermissionPolicy requests no permission at launch and only the exact capability-triggered permission; permission tests | c34533b |
 | MS-474 | VERIFIED_LOCAL | account deletion and subscription management expose direct legitimate system/provider flows without obscuring cancellation; account/entitlement tests | 1045668 |
 | MS-475 | VERIFIED_LOCAL | UI/result models use verified availability/freshness and contain no synthetic scarcity countdown or urgency state; commerce presentation tests | 94e56d9 |
+| MS-476 | VERIFIED_LOCAL | production domains are covered by behavior-focused Swift Testing/XCTest suites and backend tests; full regression gate | fab773a |
+| MS-477 | VERIFIED_LOCAL | LocalCommandEngine tests validate intent, entity, constraint, date/language and exact canonical command routing | fab773a |
+| MS-478 | VERIFIED_LOCAL | concrete HTTP/provider adapter suites validate request construction, decoding, authentication and truthful failure mapping | 928f150 |
+| MS-479 | VERIFIED_LOCAL | iOS integration-boundary and backend route/webhook suites exercise normalized provider/server contracts | 928f150 |
+| MS-480 | VERIFIED_LOCAL | explicit suites cover timeout, cancellation, malformed/auth/rate/outage, stale and partial-failure paths | 928f150 |
+| MS-481 | VERIFIED_LOCAL | critical home/result/permission/quick-launch interaction policies and SwiftUI-facing states have executable workflow tests | 58447af |
+| MS-482 | VERIFIED_LOCAL | parser throughput, provider concurrency/critical path, cache and product latency metrics have bounded performance tests | 7a6cd05 |
+| MS-483 | VERIFIED_LOCAL | canonical scenario and domain tests assert typed outcomes, constraints, safety and persistence rather than symbol existence or count alone | fab773a |
+| MS-484 | VERIFIED_LOCAL | chaos fanout test uses a provider that never resumes and verifies bounded timeout/cancellation | 928f150 |
+| MS-485 | VERIFIED_LOCAL | late provider response is cancelled and cannot leak into the completed aggregate | 928f150 |
+| MS-486 | VERIFIED_LOCAL | simultaneous backend/provider outage returns typed failure while preserving verified local partial results | 928f150 |
+| MS-487 | VERIFIED_LOCAL | mid-request network loss follows the same bounded cancellation/partial-result contract without hanging | 928f150 |
+| MS-488 | VERIFIED_LOCAL | LocationValidator rejects suspicious jumps and accepts later accurate recovery evidence; location tests | d7a0dfc |
+| MS-489 | VERIFIED_LOCAL | multi-provider simultaneous failure is isolated and does not suppress available verified alternatives | 928f150 |
+| MS-490 | VERIFIED_LOCAL | new command cancels obsolete command work and stale completion cannot publish a result | 928f150 |
+| MS-491 | VERIFIED_LOCAL | bounded optional-AI failures/timeouts produce immediate deterministic fallback with no recursive attempt; fallback tests | ca92a6f |
+| MS-492 | VERIFIED_LOCAL | missing target app resolves through typed web/App Store/system fallback without claiming app execution | eb698bd |
+| MS-493 | VERIFIED_LOCAL | microphone/location/contacts/calendar/reminders/notifications denial paths remain stable, truthful and typed-input capable; permission tests | c34533b |
+| MS-494 | VERIFIED_LOCAL | capability, provider, persistence, policy and presentation code remains separated into scoped production components; engineering audit | fab773a |
+| MS-495 | VERIFIED_LOCAL | unrelated domains are owned by separate engines/actors and AssistantViewModel delegates rather than implementing provider/domain logic | fab773a |
+| MS-496 | VERIFIED_LOCAL | shared bounded fanout, authentication, freshness and fallback abstractions prevent copied provider control flow; adapter tests | 928f150 |
+| MS-497 | VERIFIED_LOCAL | user-facing core strings use five-language LocalizedStrings/policy mappings and localization layout tests detect missing labels | c34533b |
+| MS-498 | VERIFIED_LOCAL | mutable runtime state is instance-scoped or actor-isolated; no unbounded mutable singleton owns command/provider state; concurrency tests | fab773a |
+| MS-499 | VERIFIED_LOCAL | exact «Хочу кави» routes to place search and follows concise result policy; canonical scenario and place tests | fab773a |
+| MS-500 | VERIFIED_LOCAL | exact pharmacy-along-route command routes to route-aware search backed by validated active-route context; canonical/context tests | fab773a |
+| MS-501 | VERIFIED_LOCAL | exact tomorrow-dentist command routes to reversible calendar creation with EventKit boundary; canonical/calendar tests | fab773a |
+| MS-502 | VERIFIED_LOCAL | exact dentist reschedule command has calendar-update priority over service discovery; canonical/calendar tests | fab773a |
+| MS-503 | VERIFIED_LOCAL | exact dentist cancellation routes to calendar deletion rather than generic service/cancel intent; canonical/calendar tests | fab773a |
+| MS-504 | VERIFIED_LOCAL | exact undo phrase routes to typed reversible undo and action history protects unrelated actions; canonical/history tests | fab773a |
+| MS-505 | VERIFIED_LOCAL | exact call-Mum command routes to contact resolution and consequential call handoff; canonical/device-router tests | fab773a |
+| MS-506 | VERIFIED_LOCAL | exact Oleg message command routes to compose flow without claiming delivery; canonical/messaging tests | fab773a |
+| MS-507 | VERIFIED_LOCAL | exact navigate-home command routes to validated saved-place/navigation action; canonical/navigation tests | fab773a |
+| MS-508 | VERIFIED_LOCAL | exact Baldinini collection command routes to fashion discovery with brand extraction and truthful offer results; canonical/fashion tests | fab773a |
+| MS-509 | VERIFIED_LOCAL | exact Baldinini size command preserves brand and size as hard product constraints; canonical/parser/commerce tests | fab773a |
+| MS-510 | VERIFIED_LOCAL | exact four-store basket command routes to grocery comparison using verified comparable totals; canonical/grocery tests | fab773a |
+| MS-511 | VERIFIED_LOCAL | exact maximum-two-store split command routes to grocery optimizer whose exhaustive search enforces the store cap; canonical/grocery tests | fab773a |
+| MS-512 | VERIFIED_LOCAL | exact cheapest-taxi command routes to deterministic taxi comparison with verified price/ETA only; canonical/ride tests | fab773a |
+| MS-513 | VERIFIED_LOCAL | exact maximum-wait taxi command routes to taxi search and retains typed hard wait constraint for provider comparison; canonical/ride tests | 8ecf360 |
+| MS-514 | VERIFIED_LOCAL | exact tow request routes to typed towTruck local-service category and truthful contact/action result; canonical/service tests | fab773a |
+| MS-515 | VERIFIED_LOCAL | exact Lviv arrival-deadline request routes to travel planning with hard deadline handling; canonical/travel tests | fab773a |
+| MS-516 | VERIFIED_LOCAL | exact 112 command is typed emergency risk and automated tests validate confirmation/handoff without placing a call | fab773a |
+| MS-517 | VERIFIED_LOCAL | exact recorder command routes to start action while permission and recorder state remain production-controlled; canonical/audio tests | fab773a |
+| MS-518 | VERIFIED_LOCAL | exact open-second command retains ordinal and resolves only fresh bounded prior results; canonical/context tests | fab773a |
+| MS-519 | VERIFIED_LOCAL | exact show-route command routes to native route presentation/action rather than generic show | fab773a |
+| MS-520 | VERIFIED_LOCAL | dentist+Sensodyne+departure compound command routes to typed multi-step coordination; canonical/coordination tests | fab773a |
