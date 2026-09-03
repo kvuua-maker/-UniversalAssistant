@@ -959,3 +959,56 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-946 | READY_FOR_LIVE_VERIFICATION | validated Viber public share handoff is locally tested; installed-app physical resolution is queued | 19248bb |
 | MS-947 | READY_FOR_LIVE_VERIFICATION | Signal correctly falls back to system share without history/send claim; physical installed/absent behavior is queued | 19248bb |
 | MS-948 | VERIFIED_LOCAL | provider capability matrix distinguishes find/open/compose/send/call/history/App Intent/deep-link/API per messenger and marks no fake send | 19248bb |
+
+
+| MS-949 | VERIFIED_LOCAL | AppleSystemDomainAudit enumerates every canonical Apple domain with deepest public behavior and explicit limitation; coverage tests | 762c336 |
+| MS-950 | VERIFIED_LOCAL | all locally legitimate EventKit, Contacts, MapKit, PhotoKit, Files, Spotlight, camera, messaging and media paths are implemented/reused; audit tests | 762c336 |
+| MS-951 | VERIFIED_LOCAL | Clock capability investigation records no general public timer/alarm creation API for this target and checks exposed mechanisms | 762c336 |
+| MS-952 | VERIFIED_LOCAL | clock requests return truthful unavailable state and never fabricate timer/alarm completion; system-domain tests | 762c336 |
+| MS-953 | READY_FOR_LIVE_VERIFICATION | MusicKit catalog/playback production adapter and local tests are complete; account/entitlement/device execution is queued under MS-953-955 | 762c336 |
+| MS-954 | READY_FOR_LIVE_VERIFICATION | bounded regional Apple podcast API adapter and exact HTTPS episode handoff are local; live catalog response is queued under MS-953-955 | 762c336 |
+| MS-955 | READY_FOR_LIVE_VERIFICATION | public system camera capture and fail-closed unavailable behavior are local; physical capture/cancel is queued under MS-953-955 | 762c336 |
+| MS-956 | VERIFIED_LOCAL | authorized Files source participates in universal personal search with exact URL/provenance; personal-search behavioral tests | 59e1cee |
+| MS-957 | VERIFIED_LOCAL | authorized Photos source participates with real asset identity and permission boundaries; personal-search behavioral tests | 59e1cee |
+| MS-958 | VERIFIED_LOCAL | Contacts source is selected for plausible person/contact queries and retains exact source ID; personal-search behavioral tests | 59e1cee |
+| MS-959 | VERIFIED_LOCAL | Calendar source is selected for event/record queries and retains exact event provenance; personal-search behavioral tests | 59e1cee |
+| MS-960 | VERIFIED_LOCAL | Reminders source is selected for reminder/list queries and retains exact object identity; personal-search behavioral tests | 59e1cee |
+| MS-961 | VERIFIED_LOCAL | assistant-owned notes source participates locally without AI/backend dependency; personal-search behavioral tests | 59e1cee |
+| MS-962 | VERIFIED_LOCAL | permitted shopping/system list sources participate without claiming private stores; personal-search behavioral tests | 59e1cee |
+| MS-963 | VERIFIED_LOCAL | authorized connected email source is normalized into personal-search results with provider provenance; personal-search behavioral tests | 59e1cee |
+| MS-964 | VERIFIED_LOCAL | provider-neutral connected-service source contract admits only supplied authorized services; personal-search behavioral tests | 59e1cee |
+| MS-965 | VERIFIED_LOCAL | UniversalPersonalSearchEngine coordinates typed local and remote personal sources; personal-search behavioral tests | 59e1cee |
+| MS-966 | VERIFIED_LOCAL | PersonalSearchSourceRouter infers only plausible sources and avoids unnecessary sensitive fanout; personal-search behavioral tests | 59e1cee |
+| MS-967 | VERIFIED_LOCAL | dentist-record journey routes plausible repositories concurrently and excludes irrelevant sources; personal-search behavioral tests | 59e1cee |
+| MS-968 | VERIFIED_LOCAL | document journey searches Files plus connected email and preserves per-result provenance; personal-search behavioral tests | 59e1cee |
+| MS-969 | VERIFIED_LOCAL | photo journey preserves date/location constraints through the authorized Photos path; personal-search behavioral tests | 59e1cee |
+| MS-970 | VERIFIED_LOCAL | one sufficiently clear result yields its exact typed open action/reference; personal-search behavioral tests | 59e1cee |
+| MS-971 | VERIFIED_LOCAL | ambiguous results are deterministically ranked and capped at three without auto-open; personal-search behavioral tests | 59e1cee |
+| MS-972 | VERIFIED_LOCAL | local sources execute on-device first and no external AI is required; personal-search behavioral tests | 59e1cee |
+| MS-973 | VERIFIED_LOCAL | remote sources receive only the minimal query and bounded limit for a plausible category; personal-search behavioral tests | 59e1cee |
+| MS-974 | VERIFIED_LOCAL | each result retains source kind, real source-object ID, open reference and freshness; personal-search behavioral tests | 59e1cee |
+| MS-975 | VERIFIED_LOCAL | remote freshness is typed live/cached/unknown and never silently promoted; personal-search behavioral tests | 59e1cee |
+| MS-976 | VERIFIED_LOCAL | one source failure returns truthful partial coverage plus verified results from other sources; personal-search behavioral tests | 59e1cee |
+| MS-977 | VERIFIED_LOCAL | official CarPlay eligibility/category/managed-entitlement audit is persisted with authoritative source and fail-closed policy tests | cafba35 |
+| MS-978 | READY_FOR_LIVE_VERIFICATION | all pre-entitlement policy gates are local; category-specific scene cannot legitimately be selected until owner category and Apple entitlement in MS-978-979 queue | cafba35 |
+| MS-979 | READY_FOR_LIVE_VERIFICATION | driver-safe exact-category template policy is local; physical approved CarPlay UX execution remains in MS-978-979 queue | cafba35 |
+| MS-980 | NOT_APPLICABLE_VERIFIED | HealthKit is explicitly excluded by default and no entitlement/data path exists absent a concrete owner-approved requirement; policy tests | cafba35 |
+| MS-981 | VERIFIED_LOCAL | PlatformEligibilityPolicy independently fails closed for unapproved health, finance, identity and CarPlay sensitive domains; tests | cafba35 |
+| MS-982 | VERIFIED_LOCAL | IntegrationVerificationPolicy requires the canonical real-execution evidence level for each external adapter/provider/device capability; executable governance tests/artifact audit | 6ec7080 |
+| MS-983 | VERIFIED_LOCAL | E3 mock/internal evidence cannot promote an external capability to live verified; executable governance tests/artifact audit | 6ec7080 |
+| MS-984 | VERIFIED_LOCAL | an adapter/type alone is rejected without production behavior plus required evidence; executable governance tests/artifact audit | 6ec7080 |
+| MS-985 | VERIFIED_LOCAL | maximum-depth audit rejects a deep-link-only claim when a deeper official mechanism is applicable and feasible; executable governance tests/artifact audit | 6ec7080 |
+| MS-986 | VERIFIED_LOCAL | provider capabilities requiring authorization remain live-unverified until actual authorized execution evidence exists; executable governance tests/artifact audit | 6ec7080 |
+| MS-987 | VERIFIED_LOCAL | read/search live status requires actual controlled provider/account result evidence, while local readiness remains separate; executable governance tests/artifact audit | 6ec7080 |
+| MS-988 | VERIFIED_LOCAL | write live status requires actual confirmed external mutation evidence and never fake success; executable governance tests/artifact audit | 6ec7080 |
+| MS-989 | VERIFIED_LOCAL | delete/cancel live status requires actual supported mutation/read-back evidence where canonical; executable governance tests/artifact audit | 6ec7080 |
+| MS-990 | VERIFIED_LOCAL | round-trip live status requires real create/write then retrieval/state verification where appropriate; executable governance tests/artifact audit | 6ec7080 |
+| MS-991 | VERIFIED_LOCAL | physical Apple behavior requires E5 signed-device evidence rather than simulator inference; executable governance tests/artifact audit | 6ec7080 |
+| MS-992 | VERIFIED_LOCAL | device-only capabilities cannot be marked live verified before the required device test; executable governance tests/artifact audit | 6ec7080 |
+| MS-993 | VERIFIED_LOCAL | queued external blockers require exact dependency, owner, local evidence, action and expected result; executable governance tests/artifact audit | 6ec7080 |
+| MS-994 | VERIFIED_LOCAL | external dependency never lowers local implementation/test/security/error-handling duty; executable governance tests/artifact audit | 6ec7080 |
+| MS-995 | VERIFIED_LOCAL | persistent live queue preserves the exact resume action after a dependency becomes available; executable governance tests/artifact audit | 6ec7080 |
+| MS-996 | VERIFIED_LOCAL | live verification records require provider/device/account execution evidence tied to the requirement; executable governance tests/artifact audit | 6ec7080 |
+| MS-997 | VERIFIED_LOCAL | evidence allowlist rejects passwords, tokens, secrets and unnecessary personal content; executable governance tests/artifact audit | 6ec7080 |
+| MS-998 | VERIFIED_LOCAL | failure-path contracts/tests require real errors to remain typed failures rather than synthetic success; executable governance tests/artifact audit | 6ec7080 |
+| MS-999 | VERIFIED_LOCAL | REAL_DEVICE_TEST_MATRIX and live queue enumerate connected accounts, messengers, Apple domains, personal search and CarPlay checks; executable governance tests/artifact audit | 6ec7080 |
