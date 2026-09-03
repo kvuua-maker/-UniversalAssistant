@@ -463,3 +463,22 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-358 | VERIFIED_LOCAL | PartnerProfileService.report persists categorized evidence as a review signal without automatic guilt/state change; reportDoesNotAutomaticallyConvictAndSuspensionRequiresAuditedActorReason | 1689274 |
 | MS-359 | VERIFIED_LOCAL | onboarding/profile suspension stops active state and MonetizableHandoffGate rejects suspended partners; offboarding/profile tests | 1689274 |
 | MS-360 | VERIFIED_LOCAL | critical onboarding/profile transitions and data changes append ordered actor/reason/time audit events; onboarding/profile tests | 1689274 |
+
+## Slice 19 — MS-361–374
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-361 | VERIFIED_LOCAL | CostQuotaManager is the central actor gate for non-AI provider API policies and reuses PartnerCostQuotaLedger exact-money enforcement; costQuotaManagerTracksOperationalSignals | 069b18a |
+| MS-362 | VERIFIED_LOCAL | ProviderCostUsage exposes provider request/allowed/denied counts, quota decisions and Decimal estimated cost without payload or user identifiers; operational-signals test | 069b18a |
+| MS-363 | VERIFIED_LOCAL | typed rateLimited outcomes are idempotently counted per provider operation; operational-signals test | 069b18a |
+| MS-364 | VERIFIED_LOCAL | ProviderCostUsage derives deterministic Decimal failureRate from deduplicated outcomes; operational-signals test | 069b18a |
+| MS-365 | VERIFIED_LOCAL | cacheHit reservations bypass billable ledger consumption while recording cacheEffectiveness and remaining idempotent; operational-signals test | 069b18a |
+| MS-366 | VERIFIED_LOCAL | exact call/cost caps, operation deduplication, cache bypass and remotely ordered provider policy form bounded bill controls; quota and remote-config tests | 069b18a |
+| MS-367 | VERIFIED_LOCAL | quota denial is a typed execution gate only and cannot manufacture or modify provider facts; verified-result components retain source/freshness truth contracts; full regression | 069b18a |
+| MS-368 | VERIFIED_LOCAL | PartnerRuntimePolicyStore persists versioned, expiring, auditable remote configuration with rollback and backward-compatible decoding; runtime-policy tests | 069b18a |
+| MS-369 | VERIFIED_LOCAL | RemoteProviderRule.enabled filters providers without binary changes and fails closed when policy is absent/expired; remote-config test | 069b18a |
+| MS-370 | VERIFIED_LOCAL | provider priority is remotely configured and deterministically ordered with provider-ID tie break; remote-config test | 069b18a |
+| MS-371 | VERIFIED_LOCAL | provider timeout is remotely configurable only inside validated 100...30000 ms safety bounds; unsafeRemoteTimeoutFailsClosed | 069b18a |
+| MS-372 | VERIFIED_LOCAL | provider and feature rules support normalized country allowlists and fail-closed regional rollout; remote-config test | 069b18a |
+| MS-373 | VERIFIED_LOCAL | emergencyDisabled removes a provider even when its normal enabled flag is true; remote-config test | 069b18a |
+| MS-374 | VERIFIED_LOCAL | typed feature rules target country, category, language and minimum semantic app version with versioned persistence; feature-targeting test | 069b18a |
