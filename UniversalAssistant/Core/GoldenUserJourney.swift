@@ -1,7 +1,7 @@
 import Foundation
 
 enum GoldenJourneyVerification: String, Codable, Sendable { case executableLocal, readyForLiveVerification }
-enum GoldenJourneyExpectedStatus: String, Codable, Sendable { case pass, readyForLiveVerification }
+enum GoldenJourneyExpectedStatus: String, Codable, Sendable { case pass, fail, readyForLiveVerification }
 
 struct GoldenJourneyDefinition: Identifiable, Equatable, Codable, Sendable {
     let id: String
@@ -57,7 +57,7 @@ struct GoldenJourneyRunner: Sendable {
                      parsedEntities: command.entities, providerOrSource: journey.requiredCapabilities.joined(separator: "+"),
                      actualResultOrAction: action, latencyMilliseconds: milliseconds, taps: command.intent == .unknown ? 1 : 0,
                      confirmations: command.risk == .consequential ? 1 : 0,
-                     status: failure == nil ? (journey.verification == .executableLocal ? .pass : .readyForLiveVerification) : .readyForLiveVerification,
+                     status: failure == nil ? (journey.verification == .executableLocal ? .pass : .readyForLiveVerification) : .fail,
                      failureReason: failure)
     }
 }

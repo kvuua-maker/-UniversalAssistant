@@ -22,6 +22,20 @@ import Testing
         #expect(live.allSatisfy { !$0.truthAndSourceRequirement.isEmpty && !$0.failureBehavior.isEmpty })
     }
 
+    @Test func localIntentMismatchIsRecordedAsFailNotLiveReady() {
+        let journey = GoldenJourneyDefinition(
+            id: "GJ-FAIL-EVIDENCE", input: "Відкрий Telegram", language: .uk,
+            expectedIntent: .weather, requiredCapabilities: ["weather"],
+            truthAndSourceRequirement: "verified weather", sideEffectRule: "read-only",
+            expectedUIResult: "weather card", failureBehavior: "record fail",
+            evidenceTest: "GoldenUserJourneyAcceptanceTests", verification: .executableLocal,
+            manualBaselineSteps: 2, genericAIBaselineSteps: 3
+        )
+        let execution = GoldenJourneyRunner().execute(journey)
+        #expect(execution.status == .fail)
+        #expect(execution.failureReason == "intent_mismatch")
+    }
+
     @Test func journeyMetricsAndBaselinesAreExecutableAndBounded() {
         let executions = GoldenUserJourneyCatalog.journeys.map(GoldenJourneyRunner().execute)
         let noExtraQuestionRate = Double(executions.filter { $0.taps == 0 }.count) / Double(executions.count)
