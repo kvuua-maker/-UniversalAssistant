@@ -1,22 +1,23 @@
 {
   "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
   "requirement_ids": [
-    "MS-1343...MS-1454"
+    "MS-1461...MS-1508",
+    "MS-1510"
   ],
   "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "112 binding definition, capability/evidence, acceptance, failure/data and scope-governance requirements explicitly reconciled",
+  "integration_depth": "49 explicit action/voice/provider/commerce/payment requirements reconciled; seven provider-live requirements remain queued",
   "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
   "last_failure_signature": null,
-  "material_change": "MS-1343–1454 now have explicit per-ID typed component/test/commit mapping. MS-1455–1459 and every earlier final completion gate remain open; Jobs Marketplace remains excluded.",
+  "material_change": "MS-1461–1508 and superseded MS-1510 now have explicit production/test/commit evidence. MS-1479–1485 remain READY_FOR_LIVE_VERIFICATION with one exact authorized-provider queue contract; MS-1509 and all global/final gates remain open.",
   "frozen_baseline_commit": "2353a38",
-  "dependency": "No external dependency blocks MS-1460+ local reconciliation.",
+  "dependency": "Authorized provider accounts are needed only for MS-1479–1485 live execution; they do not block MS-1511+ local reconciliation.",
   "unresolved_verification_steps": [
-    "357 inventory requirements remain NOT_IMPLEMENTED, including deliberately open global gates and later slices",
-    "Continue from MS-1460+ without Jobs Marketplace",
-    "Retain MS-1455–1459 and every prior final audit gate until actual global completion"
+    "309 inventory requirements remain NOT_IMPLEMENTED, including deliberately open global gates and later canonical-source requirements",
+    "Continue contiguously from MS-1511+ without Jobs Marketplace",
+    "Retain MS-1455–1460, MS-1509 and every prior final completion gate until actual global completion"
   ],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-1460-PLUS"
+  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-1511-PLUS"
 }
