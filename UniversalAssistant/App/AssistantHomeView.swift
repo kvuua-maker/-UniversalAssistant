@@ -49,9 +49,9 @@ struct AssistantHomeView: View {
                 }
             }
             .tabItem { Label("home", systemImage: "house") }
-            ContentUnavailableView("my_tasks", systemImage: "checklist")
+            MyTasksView(items: model.personalTasks)
                 .tabItem { Label("my_tasks", systemImage: "checklist") }
-            ContentUnavailableView("favorites", systemImage: "star")
+            FavoritesView(favorites: model.favorites)
                 .tabItem { Label("favorites", systemImage: "star") }
         }
     }

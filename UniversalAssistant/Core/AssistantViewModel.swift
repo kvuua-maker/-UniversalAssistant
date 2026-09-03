@@ -11,6 +11,8 @@ final class AssistantViewModel {
     private(set) var resultState: AssistantResultState = .idle
     private(set) var shouldOfferSettings = false
     private(set) var interactionDecision: InteractionDecision?
+    private(set) var personalTasks: [PersonalTaskItem] = []
+    private(set) var favorites: [FavoriteReference] = []
     let recorder = AudioRecorderController()
     private let commandEngine: any CommandParsing
     private let interactionEngine: any InteractionDeciding
