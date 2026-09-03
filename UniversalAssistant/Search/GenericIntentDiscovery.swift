@@ -164,8 +164,10 @@ struct GenericUnknownRequestCoordinator: Sendable {
     }
     private func score(_ e: GenericSourceEvidence) -> Double { Double([.officialPrimary: 6, .government: 6, .authorizedFeed: 5, .structuredMarketplace: 4, .reputableSecondary: 3, .generalWeb: 2][e.kind]!) + e.confidence }
     private func compose(_ entities: [GenericEntity], partial: Bool, aiInvocationCount: Int) throws -> DeterministicResult {
-        let facts = entities.prefix(10).enumerated().map { index, entity in ResultFact(id: entity.id, label: entity.title, value: entity.facts.values.first ?? entity.entityType, state: .verified, source: "\(entity.evidence.kind.rawValue):\(entity.evidence.url.host ?? "source")", observedAt: entity.evidence.retrievedAt, priority: 100 - index) }
-        let actions = entities.prefix(10).map { ResultAction(id: $0.id, title: "Відкрити", kind: .open, destination: $0.actionURL) }
+        let shortlist = Array(entities.prefix(3))
+        let facts = shortlist.enumerated().map { index, entity in ResultFact(id: entity.id, label: entity.title, value: entity.facts.values.first ?? entity.entityType, state: .verified, source: "\(entity.evidence.kind.rawValue):\(entity.evidence.url.host ?? "source")", observedAt: entity.evidence.retrievedAt, priority: 100 - index) }
+        var actions = shortlist.map { ResultAction(id: $0.id, title: "Відкрити", kind: .open, destination: $0.actionURL) }
+        if entities.count > shortlist.count { actions.append(.init(id: "show-more", title: "Показати ще", kind: .showMore, destination: nil)) }
         let result = try DeterministicResultComposer().compose(primaryAnswer: "Знайдено перевірені результати", facts: facts, actions: actions, warnings: partial ? ["Частина джерел недоступна"] : [])
         return .init(primaryAnswer: result.primaryAnswer, facts: result.facts, actions: result.actions, warnings: result.warnings, aiInvocationCount: aiInvocationCount)
     }

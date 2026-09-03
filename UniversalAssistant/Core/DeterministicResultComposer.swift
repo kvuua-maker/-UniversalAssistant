@@ -5,7 +5,7 @@ struct ResultFact: Identifiable, Equatable, Codable, Sendable {
     let id: String; let label: String; let value: String?; let state: ResultFactState
     let source: String?; let observedAt: Date?; let priority: Int
 }
-enum ResultActionKind: String, Codable, Sendable { case open, navigate, purchaseHandoff, retry, clarify }
+enum ResultActionKind: String, Codable, Sendable { case open, navigate, purchaseHandoff, retry, clarify, showMore }
 struct ResultAction: Identifiable, Equatable, Codable, Sendable {
     let id: String; let title: String; let kind: ResultActionKind; let destination: URL?
 }
@@ -29,7 +29,7 @@ struct DeterministicResultComposer: Sendable {
             case .unknown, .unavailable: return fact.value == nil
             }
         }) else { throw ResultComposerError.unverifiedValue }
-        guard actions.allSatisfy({ $0.kind == .clarify || $0.kind == .retry || $0.destination?.scheme != nil }) else {
+        guard actions.allSatisfy({ $0.kind == .clarify || $0.kind == .retry || $0.kind == .showMore || $0.destination?.scheme != nil }) else {
             throw ResultComposerError.invalidAction
         }
         let ordered = facts.enumerated().sorted {
