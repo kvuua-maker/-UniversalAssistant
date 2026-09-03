@@ -5,6 +5,7 @@ import CoreSpotlight
 import UniformTypeIdentifiers
 import SwiftUI
 import UIKit
+import Vision
 
 struct PhotoSearchCriteria: Sendable {
     let dateRange: Range<Date>?
@@ -82,6 +83,52 @@ struct PhotoKitLibrarySearch: PhotoLibrarySearching {
             }
             return output
         }.value
+    }
+}
+
+struct PhotoSemanticLabel: Equatable, Sendable { let name: String; let confidence: Float }
+protocol PhotoAssetImageLoading: Sendable { func imageData(localIdentifier: String) async throws -> Data }
+protocol PhotoSemanticLabeling: Sendable { func labels(imageData: Data) async throws -> [PhotoSemanticLabel] }
+
+struct PhotoKitAssetImageLoader: PhotoAssetImageLoading {
+    func imageData(localIdentifier: String) async throws -> Data {
+        guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject else { throw CocoaError(.fileNoSuchFile) }
+        return try await withCheckedThrowingContinuation { continuation in
+            let options = PHImageRequestOptions(); options.isNetworkAccessAllowed = false; options.deliveryMode = .highQualityFormat
+            PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, info in
+                if let error = info?[PHImageErrorKey] as? Error { continuation.resume(throwing: error) }
+                else if let data { continuation.resume(returning: data) }
+                else { continuation.resume(throwing: CocoaError(.fileReadUnknown)) }
+            }
+        }
+    }
+}
+
+struct VisionPhotoSemanticLabeler: PhotoSemanticLabeling {
+    func labels(imageData: Data) async throws -> [PhotoSemanticLabel] {
+        try await Task.detached(priority: .userInitiated) {
+            let request = VNClassifyImageRequest(); try VNImageRequestHandler(data: imageData).perform([request])
+            return (request.results ?? []).filter { $0.confidence >= 0.2 }.prefix(12).map { .init(name: $0.identifier, confidence: $0.confidence) }
+        }.value
+    }
+}
+
+struct PhotoSemanticSearchEngine: Sendable {
+    let library: any PhotoLibrarySearching; let loader: any PhotoAssetImageLoading; let labeler: any PhotoSemanticLabeling
+    func search(_ query: String, criteria: PhotoSearchCriteria = .init(), limit: Int = 5) async -> [PhotoAssetReference] {
+        guard [.permitted, .limited].contains(library.authorization()) else { return [] }
+        let needle = query.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        let candidates = await library.search(criteria, limit: min(max(limit * 4, 8), 20))
+        return await withTaskGroup(of: (Int, PhotoAssetReference)?.self) { group in
+            for (index, asset) in candidates.enumerated() { group.addTask {
+                guard let data = try? await loader.imageData(localIdentifier: asset.localIdentifier),
+                      let labels = try? await labeler.labels(imageData: data),
+                      labels.contains(where: { $0.name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(needle) }) else { return nil }
+                return (index, asset)
+            } }
+            var matches: [(Int, PhotoAssetReference)] = []; for await value in group { if let value { matches.append(value) } }
+            return matches.sorted { $0.0 < $1.0 }.prefix(max(1, min(limit, 10))).map { $0.1 }
+        }
     }
 }
 
