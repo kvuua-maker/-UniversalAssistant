@@ -707,6 +707,40 @@
       "created_at": "2026-09-03T11:14:00+02:00",
       "last_checked": "2026-09-03T11:14:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-704-LIVE-SIGN-IN-WITH-APPLE",
+      "service_provider": "Apple Sign in with Apple authorization and UniversalAssistant backend token verification",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner Apple Developer team must enable Sign in with Apple for the production App ID, configure server verification keys/audience, and provide a signed physical-device build plus controlled Apple ID.",
+      "dependency_owner": "Owner/Apple Developer account administrator and device tester",
+      "local_evidence": [
+        "UniversalAssistant/Persistence/AppleAccountSession.swift",
+        "UniversalAssistantTests/AppleAccountSessionTests.swift",
+        "commit 6c1c9a1"
+      ],
+      "required_live_action": "Configure production identifiers/keys, complete Apple authorization on a signed iPhone, verify nonce/code/token server-side, relaunch and check credential state, revoke access and verify fail-closed sign-out/account cleanup.",
+      "expected_result": "Only an authentic Apple authorization establishes the account session; persisted state restores safely, revocation invalidates it, and local-first operation remains available without fake login success.",
+      "created_at": "2026-09-03T11:55:00+02:00",
+      "last_checked": "2026-09-03T11:55:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-729-MS-730-MS-731-MS-732-LIVE-STOREKIT",
+      "service_provider": "Apple StoreKit 2, App Store sandbox and App Store Server Notifications/verification",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner Apple Developer/App Store Connect account must create approved subscription products, agreements and sandbox tester; server notification endpoint requires deployed HTTPS service and Apple credentials.",
+      "dependency_owner": "Owner/App Store Connect administrator and deployment operator",
+      "local_evidence": [
+        "UniversalAssistant/Persistence/SubscriptionEntitlement.swift",
+        "UniversalAssistantTests/SubscriptionEntitlementTests.swift",
+        "commit 1045668"
+      ],
+      "required_live_action": "Configure real product IDs and server notification endpoint; on signed build purchase, cancel, expire, enter billing retry/grace where available, refund/revoke, change product and restore; verify signed transaction/server notification state and cross-device entitlement read-back.",
+      "expected_result": "Only verified StoreKit/App Store transactions change entitlement; price/period/terms come from StoreKit, restore works, lifecycle states update correctly, and unavailable/invalid verification never grants Premium.",
+      "created_at": "2026-09-03T11:58:00+02:00",
+      "last_checked": "2026-09-03T11:58:00+02:00",
+      "completion_evidence": null
     }
   ]
 }

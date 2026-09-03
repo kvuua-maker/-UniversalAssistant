@@ -795,3 +795,66 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-672 | VERIFIED_LOCAL | release configurations, metadata/privacy/permission/screenshot/review/TestFlight readiness artifacts and release checklist are locally prepared and audited | 401ee00 |
 | MS-673 | VERIFIED_LOCAL | release state and live queue explicitly keep signing, TestFlight and App Store submission/review incomplete until owner/Apple execution; release audit | 401ee00 |
 | MS-674 | VERIFIED_LOCAL | Xcode project contains no watchOS target/product and canonical project scope keeps Apple Watch excluded from V1; project build audit | 5898cd5 |
+
+| MS-676 | VERIFIED_LOCAL | canonical inventory preserves every numbered requirement with explicit allowed status/evidence fields; strict importer rejects missing IDs/evidence | 27da423 |
+| MS-677 | VERIFIED_LOCAL | golden-journey friction metrics and interaction policy remove narration, redundant confirmation and unnecessary taps while preserving safety; UX tests | aabe915 |
+| MS-678 | VERIFIED_LOCAL | provider fanout/chaos tests cover timeout, cancellation, network/backend loss and prove external failure cannot permanently block UI/local work | 928f150 |
+| MS-679 | VERIFIED_LOCAL | IntegrationDepthAuditor and provider matrices verify higher-priority avenues before accepting each fallback-active provider; audit tests | 6ec7080 |
+| MS-680 | VERIFIED_LOCAL | ARCHITECTURE documents API ingress, adapters, auth, database/cache, durable jobs, notifications, config, partner portal, observability and operations topology | 8e9f92c |
+| MS-681 | VERIFIED_LOCAL | backend responsibilities are separated into scoped actors/services/files for auth, partners, ledger, jobs, APNs, config and observability; architecture tests | 8e9f92c |
+| MS-682 | VERIFIED_LOCAL | request processing remains stateless while durable account/job/ledger/partner state uses designated stores/queues with restart tests | 8e9f92c |
+| MS-683 | VERIFIED_LOCAL | ServerMain exposes stable health/readiness contract and backend tests verify healthy response/schema | 8e9f92c |
+| MS-684 | VERIFIED_LOCAL | operational/provider health models distinguish database/cache/queue/provider degradation for selective failure isolation; health tests | 069b18a |
+| MS-685 | VERIFIED_LOCAL | ProactiveWatchEngine schedules recurring product/price/ticket/travel checks through durable server jobs | d6c79b7 |
+| MS-686 | VERIFIED_LOCAL | DurableJobQueue persists queued work across actor/process reconstruction and has restart behavioral tests | d6c79b7 |
+| MS-687 | VERIFIED_LOCAL | durable jobs carry logical idempotency keys and completed-state deduplication so retries do not duplicate actions/notifications | d6c79b7 |
+| MS-688 | VERIFIED_LOCAL | DurableJobQueue applies capped attempts and deterministic bounded backoff/jitter policy; retry tests | d6c79b7 |
+| MS-689 | VERIFIED_LOCAL | repeatedly failing durable work transitions to persisted dead-letter state and stops retrying forever; job tests | d6c79b7 |
+| MS-690 | VERIFIED_LOCAL | logically identical queued/completed jobs and notifications deduplicate by stable identity/collapse key; queue/notification tests | d6c79b7 |
+| MS-691 | VERIFIED_LOCAL | proactive rules/jobs carry expiry and obsolete work is cancelled rather than executed after validity; expiration tests | d6c79b7 |
+| MS-692 | VERIFIED_LOCAL | proactive jobs persist source rule/event/product/ticket linkage supporting exact cancellation/reschedule updates; linkage tests | d6c79b7 |
+| MS-693 | VERIFIED_LOCAL | APNSDelivery implements explicit server-originated APNs payload/request architecture with secure credential boundary and truthful response mapping; APNs tests | f3553f6 |
+| MS-694 | VERIFIED_LOCAL | APNSDeviceTokenRegistry handles register/refresh/invalidate/logout/removal and multiple devices durably and idempotently; token tests | 02866ec |
+| MS-695 | VERIFIED_LOCAL | NotificationPolicy checks global and category preferences before enqueue/delivery; preference tests | f3553f6 |
+| MS-696 | VERIFIED_LOCAL | notification event/collapse identity suppresses duplicate meaningful-change alerts; notification tests | f3553f6 |
+| MS-697 | VERIFIED_LOCAL | APNs/local notification payloads enforce expiration TTL and reject stale delivery; expiration tests | f3553f6 |
+| MS-698 | VERIFIED_LOCAL | APNs payload carries collapse/thread identifiers so newer state replaces obsolete alerts; payload tests | f3553f6 |
+| MS-699 | VERIFIED_LOCAL | NotificationObservability persists bounded redacted enqueue/send/provider-response metadata without message content/secrets; observability tests | f3553f6 |
+| MS-700 | VERIFIED_LOCAL | notification payload/action routing preserves exact source/action context identifier instead of generic-home-only launch; APNs routing tests | f3553f6 |
+| MS-701 | VERIFIED_LOCAL | local Calendar/Reminder scheduling uses EventKit/local notification mechanisms without unnecessary server dependency; reminder tests | ddbccca |
+| MS-702 | VERIFIED_LOCAL | AccountPolicy explicitly selects optional local-first V1 account with account required only for sync/server/entitlement capabilities | 6a8e0e4 |
+| MS-703 | VERIFIED_LOCAL | app launches and executes local device capabilities before/without account creation; account policy and local-domain tests | 6a8e0e4 |
+| MS-704 | READY_FOR_LIVE_VERIFICATION | AppleAccountSession implements nonce-bound authorization, persistence, credential-state/revocation handling and local tests; production Apple capability/device/server verification is queued | 6c1c9a1 |
+| MS-705 | VERIFIED_LOCAL | AccountDataLifecycle deterministically merges local anonymous data into signed-in ownership using stable IDs/tombstones without duplication/loss; merge tests | 242dfda |
+| MS-706 | VERIFIED_LOCAL | logout removes server jobs/tokens/provider sessions according to policy while preserving or deleting local/cloud data predictably; lifecycle tests | 242dfda |
+
+| MS-707 | VERIFIED_LOCAL | Sign in with Apple delegates recovery/account ownership to Apple credential state and contains no invented password/reset flow; session tests | 6c1c9a1 |
+| MS-708 | VERIFIED_LOCAL | account/device token and CloudKit models support multiple iPhones with shared preferences plus device-specific tokens/capabilities; multi-device tests | 242dfda |
+| MS-709 | VERIFIED_LOCAL | LocalStore documents and implements actor-isolated versioned JSON persistence appropriate to current local typed state | f866914 |
+| MS-710 | VERIFIED_LOCAL | preferences, aliases, context and pending local state read/write through LocalStore without mandatory network round trips; persistence tests | f866914 |
+| MS-711 | VERIFIED_LOCAL | LocalStore runs versioned transactional migrations and representative legacy fixtures verify upgrade/rollback safety | f866914 |
+| MS-712 | VERIFIED_LOCAL | corrupt/read-failed local records are quarantined/recovered with typed error and safe defaults without silent broad data loss; corruption tests | f866914 |
+| MS-713 | VERIFIED_LOCAL | safe pending offline operations persist durable identity/state and reconcile idempotently when connectivity returns; persistence/sync tests | f866914 |
+| MS-714 | VERIFIED_LOCAL | consequential purchase/booking/order operations are never blindly queued offline and require current provider validation/confirmation; safety tests | 27ad853 |
+| MS-715 | VERIFIED_LOCAL | OFFLINE_CAPABILITY_MATRIX classifies each major capability FULL_OFFLINE/PARTIAL_OFFLINE/ONLINE_REQUIRED with exact degraded behavior; artifact tests | 6ec7080 |
+| MS-716 | VERIFIED_LOCAL | typed result states distinguish unavailable live facts from functioning local capabilities instead of global broken state; offline/UI tests | 94e56d9 |
+| MS-717 | VERIFIED_LOCAL | PROVIDER_CAPABILITY_MATRIX records search/details/price/stock/ETA/availability/auth/book/purchase/deep-link/App Intent/region/source capabilities | 6ec7080 |
+| MS-718 | VERIFIED_LOCAL | provider matrix and IntegrationDepthAuditor prohibit generic “integrated” status and require exact implemented capability depth | 6ec7080 |
+| MS-719 | VERIFIED_LOCAL | capability registry resolves provider mechanism by explicit capability, region, version and auth state rather than global provider label; registry tests | 762c336 |
+| MS-720 | VERIFIED_LOCAL | API_CONTRACT defines versioned typed iPhone/backend and internal service request/response/error/idempotency contracts; contract tests | 8e9f92c |
+| MS-721 | VERIFIED_LOCAL | concrete adapters/webhooks validate Codable/schema/version/status fields and reject malformed payloads without crashes/fake success; adapter tests | 928f150 |
+| MS-722 | VERIFIED_LOCAL | API versioning preserves compatible optional evolution and isolates explicit breaking versions; compatibility tests | 8e9f92c |
+| MS-723 | VERIFIED_LOCAL | API compatibility matrix maps supported iOS configurations to backend API/features and release gates | 7917983 |
+| MS-724 | VERIFIED_LOCAL | AppVersionSupportPolicy provides configurable supported/degraded/update-required states with rollback-safe remote policy; policy tests | 7917983 |
+| MS-725 | VERIFIED_LOCAL | Xcode configuration and architecture explicitly select iOS 18 minimum from required APIs/maintenance scope | 5898cd5 |
+| MS-726 | VERIFIED_LOCAL | device/real-test matrices record framework and hardware limitations without claiming unavailable Action Button/device coverage | 6ec7080 |
+| MS-727 | VERIFIED_LOCAL | SubscriptionEntitlement uses StoreKit 2 product/transaction architecture and never trusts hardcoded local purchase success | 1045668 |
+| MS-728 | VERIFIED_LOCAL | typed entitlement policy separates Free/Premium/business capabilities from UI visibility; Family remains NOT_APPLICABLE until owner enables it | 1045668 |
+| MS-729 | READY_FOR_LIVE_VERIFICATION | legitimate StoreKit purchase path uses verified Product display price/period/terms and transaction verification; App Store product/sandbox execution queued | 1045668 |
+| MS-730 | READY_FOR_LIVE_VERIFICATION | StoreKit sync/restore production path and local tests are complete; real sandbox purchase restoration is queued | 1045668 |
+| MS-731 | READY_FOR_LIVE_VERIFICATION | subscription state model handles renewal/expiration/grace/billing-retry/revocation/refund/product changes; real App Store lifecycle execution queued | 1045668 |
+| MS-732 | READY_FOR_LIVE_VERIFICATION | server entitlement contract requires verified signed App Store transaction/notification rather than client boolean; deployed Apple server verification queued | 1045668 |
+| MS-733 | VERIFIED_LOCAL | downgrade policy preserves user-owned notes/lists/aliases/data and changes capability access without destructive deletion; entitlement tests | 1045668 |
+| MS-734 | VERIFIED_LOCAL | expiration disables only gated capabilities while core launch/local state remain valid and uncorrupted; entitlement tests | 1045668 |
+| MS-735 | VERIFIED_LOCAL | paywall presentation is invoked only for a genuinely gated requested capability and never interrupts unrelated local/system commands; entitlement/UI tests | 1045668 |
+| MS-736 | VERIFIED_LOCAL | subscription UI uses factual StoreKit metadata, transparent management/restore and no urgency/dark-pattern state; presentation tests | 1045668 |
