@@ -1,22 +1,22 @@
 {
   "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
   "requirement_ids": [
-    "MS-1098...MS-1141"
+    "MS-1144...MS-1190"
   ],
   "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "44 execution-state, attempt-memory, anti-stall and evidence-status governance requirements reconciled",
+  "integration_depth": "47 owner-test queue, immutable build, delivery selection, privacy and result workflow requirements reconciled",
   "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
   "last_failure_signature": null,
-  "material_change": "MS-1098–1141 mapped to machine-valid dashboard/heartbeat/attempt-ledger/watchdog/test evidence. Final anti-stall/efficiency audits MS-1142/1143 remain open with all other completion gates.",
+  "material_change": "MS-1144–1190 mapped to OWNER_TEST_QUEUE, OwnerTestDeliveryPolicy/Registry and behavioral evidence without issuing an unneeded build. MS-1191 and all earlier final gates remain open.",
   "frozen_baseline_commit": "2353a38",
-  "dependency": "No external dependency blocks MS-1144+; no Jobs Marketplace work selected.",
+  "dependency": "No external dependency blocks MS-1192+ feasibility governance; no Jobs Marketplace work selected.",
   "unresolved_verification_steps": [
-    "551 canonical requirements remain unreconciled",
-    "Continue from MS-1144+ without Jobs Marketplace",
-    "Retain MS-1142/1143 and all other final audit gates until global completion"
+    "504 canonical requirements remain unreconciled",
+    "Continue from MS-1192+ without Jobs Marketplace",
+    "Retain MS-1191 and every other final completion gate until actual global reconciliation"
   ],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-1144-PLUS"
+  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-1192-PLUS"
 }
