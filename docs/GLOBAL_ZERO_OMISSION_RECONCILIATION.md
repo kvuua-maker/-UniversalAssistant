@@ -656,3 +656,30 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-536 | VERIFIED_LOCAL | partner fraud controls detect fake/duplicate/self-referral/manipulation signals, require review and never auto-convict; fraud tests | 61523e2 |
 | MS-537 | VERIFIED_LOCAL | in-app account deletion coordinator and provider deletion boundary expose explicit deletion flow with partial-failure reporting; lifecycle tests | c38d23d |
 | MS-538 | VERIFIED_LOCAL | backend cleanup removes account jobs, APNs tokens and provider connections while retention policy handles lawful bounded residuals; cleanup/retention tests | c38d23d |
+| MS-539 | VERIFIED_LOCAL | cold/warm launch metrics, evidence-based budgets and release checklist gate launch responsiveness review; performance tests | 7a6cd05 |
+| MS-540 | VERIFIED_LOCAL | voice-to-command latency is measured without transcript content and physical audio timing remains explicitly queued; performance tests | 7a6cd05 |
+| MS-541 | VERIFIED_LOCAL | bounded fanout tests exercise timeout, cancellation, late response, outage and truthful fallback; chaos tests | 928f150 |
+| MS-542 | VERIFIED_LOCAL | resource policy bounds concurrency/cache, reacts to memory pressure and records battery-sensitive operational review gates; resource tests | ffd98a9 |
+| MS-543 | VERIFIED_LOCAL | never-returning provider, cancellation and replacement-command tests prove no permanent spinner/UI wait; chaos/result-state tests | 928f150 |
+| MS-544 | VERIFIED_LOCAL | full regression and failure-path suites are release gates; reproducible critical failure prevents a green release checklist | 928f150 |
+| MS-545 | VERIFIED_LOCAL | Golden journey tap/question metrics and direct-action policy identify removable friction while preserving safety confirmation | aabe915 |
+| MS-546 | VERIFIED_LOCAL | source timestamp/freshness/knowledge models and cross-domain tests reject unverified live facts as current | 94e56d9 |
+| MS-547 | VERIFIED_LOCAL | Development iPhone simulator application, Share Extension and tests build successfully from the committed Xcode project | 5898cd5 |
+| MS-548 | VERIFIED_LOCAL | simulator launch/test host completes without crash or blocking startup permission requests; application lifecycle tests | 5898cd5 |
+| MS-549 | VERIFIED_LOCAL | Ukrainian, Russian, English, German and French parser, voice corpus and UI localization breadth is executable | aabe915 |
+| MS-550 | VERIFIED_LOCAL | 100 golden journeys plus exact MS-499–520 scenario matrix exercise core command flows and typed outcomes | fab773a |
+| MS-551 | VERIFIED_LOCAL | production Apple domains use public framework/App Intent/URL/handoff mechanisms and prohibited API audit is green | 762c336 |
+| MS-552 | VERIFIED_LOCAL | contextual permission policy, denied states, Settings recovery and typed fallback are behavior-tested | 7a6cd05 |
+| MS-553 | VERIFIED_LOCAL | backend/network/provider failures time out, isolate partial results and never freeze the command surface | 928f150 |
+| MS-554 | VERIFIED_LOCAL | integration depth auditor and capability matrix require a concrete adapter/path or evidence-backed unsupported fallback per major integration | 6ec7080 |
+| MS-555 | VERIFIED_LOCAL | INTEGRATION_STATUS records accurate local/live/blocker status and is checked against capability evidence governance | 6ec7080 |
+| MS-556 | VERIFIED_LOCAL | evidence governance rejects mock-only/fake production routes and generic completion without E3 behavioral evidence | 27da423 |
+| MS-557 | VERIFIED_LOCAL | IntegrationFallbackPolicy selects the deepest legitimate direct, official handoff, web or unavailable result without fake success | eb698bd |
+| MS-558 | VERIFIED_LOCAL | explicit tests cover slow/failed providers, network loss, late cancellation, obsolete work and responsive partial UI | 928f150 |
+| MS-559 | VERIFIED_LOCAL | InteractionDecisionEngine and voice-output policy execute unambiguous commands without narration or unnecessary confirmation | ffd98a9 |
+| MS-560 | VERIFIED_LOCAL | price/stock/availability/ticket/booking/taxi/location facts require verified source and valid freshness across normalized domains | 94e56d9 |
+| MS-561 | VERIFIED_LOCAL | automated iOS and backend regression gates execute behavior-focused suites and pass at this checkpoint | 5898cd5 |
+| MS-562 | VERIFIED_LOCAL | REAL_DEVICE_TEST_MATRIX and persistent live queue enumerate every physical-only capability, action and expected result without simulator promotion | 6ec7080 |
+| MS-563 | VERIFIED_LOCAL | provider matrix/live queue record exact credential, approval, account, device and owner dependencies instead of hiding them | 6ec7080 |
+| MS-564 | VERIFIED_LOCAL | Xcode configurations, release metadata, privacy/permission artifacts, TestFlight matrix, review notes and blocker queue are locally prepared and audited | 401ee00 |
+| MS-565 | VERIFIED_LOCAL | release state/checklist explicitly says signing, TestFlight and App Store owner actions are incomplete; no publication claim exists | 401ee00 |
