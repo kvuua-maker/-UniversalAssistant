@@ -528,6 +528,19 @@
       "created_at": "2026-09-02T21:46:00+02:00",
       "last_checked": "2026-09-02T21:46:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-409-MS-410-MS-411-MS-412-MS-413-MS-414-MS-415-MS-416-MS-417-MS-418-MS-419-MS-420-MS-421-MS-422-LIVE-DEVICE-MATRIX",
+      "service_provider": "Signed physical iPhone and Apple system frameworks",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner-accessible signed physical iPhone with controlled microphone/speech, GPS, Action Button where supported, Contacts, Calendar, Reminders, phone/message handoff, notifications, network transitions and representative installed/missing third-party apps.",
+      "dependency_owner": "Owner/device tester and Apple Developer account owner",
+      "local_evidence": ["REAL_DEVICE_TEST_MATRIX.md", "UniversalAssistant/Core/ContextualPermissionPolicy.swift", "UniversalAssistant/Voice/VoiceInputController.swift", "UniversalAssistant/Location/AccurateLocationEngine.swift", "UniversalAssistant/Integrations/UniversalDeviceCommandRouter.swift", "UniversalAssistantTests/AccessibilityAudioPermissionTests.swift", "full iOS regression 434 tests on 2026-09-03"],
+      "required_live_action": "Execute matrix rows on a signed physical iPhone: grant/deny/restrict each permission; speak realistic mixed-language commands; move through good/poor/suspicious GPS; invoke configured Action Button where available; create controlled Contacts/Calendar/Reminders actions; cancel phone/message handoffs; deliver local/push notifications; open installed deep links and verify missing-app fallback; transition Wi-Fi/cellular/offline.",
+      "expected_result": "Each public production path reports the authoritative device state, denial never loops or crashes, consequential completion is never inferred from handoff, missing apps and network changes degrade truthfully, and no simulator result is promoted to physical verification.",
+      "created_at": "2026-09-03T10:01:51+02:00",
+      "last_checked": "2026-09-03T10:01:51+02:00",
+      "completion_evidence": null
     }
   ]
 }
