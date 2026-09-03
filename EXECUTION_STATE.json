@@ -1,22 +1,22 @@
 {
   "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
   "requirement_ids": [
-    "MS-949...MS-999"
+    "MS-1005...MS-1022"
   ],
   "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "51 Apple system, personal search, CarPlay/sensitive-data and real-execution governance requirements reconciled",
+  "integration_depth": "18 Share Extension, explicit clipboard, Safari handoff, scanner/OCR and vCard requirements reconciled",
   "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
   "last_failure_signature": null,
-  "material_change": "MS-949–999 mapped to concrete production/policy/test evidence. Apple physical MS-953–955 and owner/Apple-gated CarPlay MS-978–979 remain exact live queue items. MS-675, MS-919/920 and MS-1000 final gates remain active.",
+  "material_change": "MS-1005–1022 mapped to production target/routing/test evidence. Clipboard MS-1010–1012 is VERIFIED_LOCAL; exact physical Share MS-1005–1009, Safari MS-1013–1014 and scanner MS-1015–1022 checks remain queued. Global gates MS-675, MS-919/920, MS-1000–1004 remain active.",
   "frozen_baseline_commit": "2353a38",
-  "dependency": "No external dependency blocks MS-1001+; Apple device/account/entitlement executions remain isolated in the live queue.",
+  "dependency": "No external dependency blocks MS-1023+; signed App Group/camera/device observation remains isolated in exact live queue items.",
   "unresolved_verification_steps": [
-    "678 canonical requirements remain unreconciled",
-    "Continue active global audit from MS-1001+ while retaining MS-675, MS-919/920 and MS-1000 final gates",
-    "Execute exact Apple/CarPlay live contracts only when owner/device/entitlement resources exist"
+    "660 canonical requirements remain unreconciled",
+    "Continue from MS-1023+ while retaining all final global gates",
+    "Execute Share/Safari/scanner physical checks only when signed device/provisioning fixtures exist"
   ],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-1001-PLUS"
+  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-1023-PLUS"
 }

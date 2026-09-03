@@ -1012,3 +1012,23 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-997 | VERIFIED_LOCAL | evidence allowlist rejects passwords, tokens, secrets and unnecessary personal content; executable governance tests/artifact audit | 6ec7080 |
 | MS-998 | VERIFIED_LOCAL | failure-path contracts/tests require real errors to remain typed failures rather than synthetic success; executable governance tests/artifact audit | 6ec7080 |
 | MS-999 | VERIFIED_LOCAL | REAL_DEVICE_TEST_MATRIX and live queue enumerate connected accounts, messengers, Apple domains, personal search and CarPlay checks; executable governance tests/artifact audit | 6ec7080 |
+
+
+| MS-1005 | READY_FOR_LIVE_VERIFICATION | embedded ShareExtension target and App Group envelope path compile and link; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
+| MS-1006 | READY_FOR_LIVE_VERIFICATION | share loader accepts bounded URL/webpage/text/vCard/image/document typed inputs; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
+| MS-1007 | READY_FOR_LIVE_VERIFICATION | shared envelope feeds the existing typed action router instead of a parallel engine; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
+| MS-1008 | READY_FOR_LIVE_VERIFICATION | extension performs bounded one-item ingestion and defers heavy work to the host; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
+| MS-1009 | READY_FOR_LIVE_VERIFICATION | structured item kind/payload/source/time context survives exact one-time host consumption; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
+| MS-1010 | VERIFIED_LOCAL | public clipboard capability audit selects explicit UIPasteboard user invocation only; production/routing behavioral tests | b837945 |
+| MS-1011 | VERIFIED_LOCAL | SystemUserInitiatedClipboardReader supports explicit URL/text command reads and typed unavailable error; production/routing behavioral tests | b837945 |
+| MS-1012 | VERIFIED_LOCAL | no launch/background polling exists and tests invoke clipboard only through the explicit method; production/routing behavioral tests | b837945 |
+| MS-1013 | READY_FOR_LIVE_VERIFICATION | Safari audit selects the useful Share Extension path and avoids a duplicative web extension; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
+| MS-1014 | READY_FOR_LIVE_VERIFICATION | shared Safari URL/page context reaches the existing host action path; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
+| MS-1015 | READY_FOR_LIVE_VERIFICATION | VisionKit DataScanner production controller supports QR/EAN/UPC/Code128; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
+| MS-1016 | READY_FOR_LIVE_VERIFICATION | validated QR URL/vCard/ticket semantics map only to compatible typed actions; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
+| MS-1017 | READY_FOR_LIVE_VERIFICATION | barcode path validates GTIN before product-evidence discovery; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
+| MS-1018 | READY_FOR_LIVE_VERIFICATION | invalid/unknown barcode never becomes an invented product identity; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
+| MS-1019 | READY_FOR_LIVE_VERIFICATION | VNDocumentCameraViewController production coordinator captures user-scanned pages; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
+| MS-1020 | READY_FOR_LIVE_VERIFICATION | captured document pages feed local Vision OCR and typed save/document output; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
+| MS-1021 | READY_FOR_LIVE_VERIFICATION | only validated extracted dates/merchant/amount/action fields feed subsequent actions; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
+| MS-1022 | READY_FOR_LIVE_VERIFICATION | vCard validation uses Contacts and presents the system user-confirmed new-contact UI; production/routing behavioral tests; physical execution is in the exact Share/Scanner live queue | b837945 |
