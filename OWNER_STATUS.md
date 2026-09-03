@@ -22,4 +22,4 @@ No blocker for the next local core. Provider live execution remains separately c
 
 ## NEXT
 
-Continue evidence reconciliation from MS-183 through the remaining V12/V13 requirements, implementing and testing every local gap. MS-174 is locally complete and queued solely for an authorized live Silpo OAuth query.
+Continue contiguous evidence reconciliation from MS-921+; MS-675 and MS-919/920 remain open until their global completion gates are actually satisfied.

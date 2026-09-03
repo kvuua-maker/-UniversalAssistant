@@ -256,21 +256,90 @@
       "completion_evidence": null
     },
     {
-      "requirement_id": "MS-879-893-911-917-LIVE-LOCAL-CONTENT",
-      "service_provider": "Physical iPhone Photos, Files providers and Core Spotlight",
+      "requirement_id": "MS-913-LIVE-PHOTOS",
+      "service_provider": "Physical iPhone Photos/PhotoKit",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
-      "missing_dependency": "A signed build on a physical supported iPhone with controlled non-sensitive Photos assets/albums/locations, controlled document-provider files, and system Spotlight enabled.",
+      "missing_dependency": "A signed build on a physical supported iPhone with controlled non-sensitive assets carrying known date, location and album metadata, and owner-controlled full/limited/denied Photos authorization states.",
       "dependency_owner": "Owner/device tester",
       "local_evidence": [
         "UniversalAssistant/Search/AppleLocalContentSources.swift",
         "UniversalAssistantTests/AppleLocalContentSourcesTests.swift",
-        "Config/Production.xcconfig",
-        "REAL_DEVICE_TEST_MATRIX.md"
+        "8557f2d"
       ],
-      "required_live_action": "Exercise full, limited, denied and changed Photos access; find/open controlled assets by date, coordinate radius and album; import controlled files from at least local and one available provider, search/open the exact URL, revoke access; index/remove an assistant-owned Spotlight item; repeat local search offline and record latency.",
-      "expected_result": "Only currently permitted real assets/files appear, limited and revoked access are honored without stale pointers, exact system opens work, Spotlight contains only assistant-owned items, offline search succeeds, and measured latency is recorded without fabricated values.",
+      "required_live_action": "Exercise full, limited, denied and changed Photos access; find and open controlled assets by date, coordinate radius, album and an on-device Vision semantic label.",
+      "expected_result": "Only currently permitted real assets appear; exact PhotoKit identifiers open; limited/revoked access and semantic no-match remain truthful.",
       "created_at": "2026-09-02T15:27:00+02:00",
-      "last_checked": "2026-09-02T15:27:00+02:00",
+      "last_checked": "2026-09-03T12:30:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-914-LIVE-FILES",
+      "service_provider": "Physical iPhone Files/document providers",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "A signed build on a physical supported iPhone with controlled files in On My iPhone and one configured document provider.",
+      "dependency_owner": "Owner/device tester",
+      "local_evidence": [
+        "UniversalAssistant/Search/AppleLocalContentSources.swift",
+        "UniversalAssistantTests/AppleLocalContentSourcesTests.swift",
+        "d814576"
+      ],
+      "required_live_action": "Select controlled files through the system picker, search and open their exact security-scoped URLs, then revoke/remove authorization and repeat.",
+      "expected_result": "Only explicitly selected existing files appear, provider URLs open exactly, access is balanced, and revoked/missing files do not produce stale success.",
+      "created_at": "2026-09-02T15:27:00+02:00",
+      "last_checked": "2026-09-03T12:30:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-915-LIVE-APP-ACTIONS",
+      "service_provider": "Physical iPhone with representative installed applications",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "A signed build on a physical supported iPhone with current representative system/third-party apps and their exposed public App Intents, App Shortcuts, Universal Links or schemes.",
+      "dependency_owner": "Owner/device tester",
+      "local_evidence": [
+        "UniversalAssistant/Integrations/UniversalDeviceCommandRouter.swift",
+        "UniversalAssistantTests/UniversalDeviceCommandRouterTests.swift",
+        "762c336"
+      ],
+      "required_live_action": "Execute representative exact app launch and contextual actions using the deepest exposed public mechanism, including an absent-app case.",
+      "expected_result": "Supported actions reach the exact public target without narration; absent/unsupported capability returns the documented truthful fallback and never simulates success.",
+      "created_at": "2026-09-02T15:27:00+02:00",
+      "last_checked": "2026-09-03T12:30:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-916-LIVE-LOCAL-SEARCH-LATENCY",
+      "service_provider": "Physical iPhone local-content corpus",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "A signed release-like build on a physical supported iPhone with a controlled representative Contacts/Calendar/Reminders/Photos/Files corpus and offline mode available.",
+      "dependency_owner": "Owner/device tester",
+      "local_evidence": [
+        "UniversalAssistant/Search/LocaliPhoneSearchEngine.swift",
+        "UniversalAssistantTests/LocaliPhoneSearchEngineTests.swift",
+        "PERFORMANCE_BUDGET.md",
+        "68862b5"
+      ],
+      "required_live_action": "Measure cold and warm local-search latency over the controlled corpus while online and offline, recording device model, OS, corpus size and observed percentiles.",
+      "expected_result": "Results remain correct/offline-capable and measured latency satisfies the canonical budget or records exact evidence requiring remediation; no simulator timing is promoted to live evidence.",
+      "created_at": "2026-09-02T15:27:00+02:00",
+      "last_checked": "2026-09-03T12:30:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-917-LIVE-REGION-VERSION-CAPABILITY",
+      "service_provider": "Physical iPhone/app region-version matrix",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner/device tester access to representative supported iOS/app versions and region/account combinations exposing materially different public capabilities.",
+      "dependency_owner": "Owner/device tester",
+      "local_evidence": [
+        "PROVIDER_CAPABILITY_MATRIX.md",
+        "REAL_DEVICE_TEST_MATRIX.md",
+        "UniversalAssistant/Commerce/ProviderCapabilityRegistry.swift",
+        "6ec7080"
+      ],
+      "required_live_action": "Run representative capability discovery/routing under each available region/version/account combination and compare actual exposed actions with registry decisions.",
+      "expected_result": "Routing enables only capabilities actually exposed in that combination, selects the documented fallback otherwise, and records exact observed evidence without global support claims.",
+      "created_at": "2026-09-02T15:27:00+02:00",
+      "last_checked": "2026-09-03T12:30:00+02:00",
       "completion_evidence": null
     },
     {

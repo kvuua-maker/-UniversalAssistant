@@ -1,22 +1,22 @@
 {
   "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
   "requirement_ids": [
-    "MS-851...MS-878"
+    "MS-879...MS-918"
   ],
   "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "28 iPhone universal command, device routing and local-search requirements reconciled",
+  "integration_depth": "40 Photos, Files, Spotlight, local-search and device requirements reconciled",
   "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
-  "current_exit_state": "VERIFIED_LOCAL",
+  "current_exit_state": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
   "last_failure_signature": null,
-  "material_change": "MS-851–878 mapped to concrete router/local repository/action/test evidence; MS-859–860 and MS-864–869 remain READY_FOR_LIVE_VERIFICATION through the existing installed-app physical queue. MS-675 remains active.",
+  "material_change": "MS-879–918 mapped to concrete PhotoKit/Vision, Files, Core Spotlight, local-search, routing and behavioral evidence. Only MS-913–917 remain READY_FOR_LIVE_VERIFICATION as five exact queue items. MS-675 and global gates MS-919/920 remain active.",
   "frozen_baseline_commit": "2353a38",
-  "dependency": "No external dependency blocks the next local reconciliation slice.",
+  "dependency": "No external dependency blocks MS-921+; physical Photos/Files/apps/latency/region-version execution remains isolated in the live queue.",
   "unresolved_verification_steps": [
-    "797 canonical requirements remain unreconciled",
-    "Continue active MS-675 from MS-879+",
-    "Execute physical installed-app checks only when signed device/apps exist"
+    "757 canonical requirements remain unreconciled",
+    "Continue active MS-675 from MS-921+ while retaining MS-919/920 as global completion gates",
+    "Execute MS-913–917 physical checks only when signed device/data/apps/matrix access exist"
   ],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-675-MS-879-PLUS"
+  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-675-MS-921-PLUS"
 }

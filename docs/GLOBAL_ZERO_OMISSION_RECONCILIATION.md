@@ -887,3 +887,45 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-876 | VERIFIED_LOCAL | assistant-owned notes repository participates in fast local search without backend/AI; local-search tests | 5898cd5 |
 | MS-877 | VERIFIED_LOCAL | permitted reminders/shopping lists and assistant-owned lists are searchable/openable through local repositories; local-search tests | 5898cd5 |
 | MS-878 | VERIFIED_LOCAL | structured bounded action history supports yesterday/last/open-last retrieval without retaining raw sensitive transcript; history/context tests | b289278 |
+
+
+| MS-879 | VERIFIED_LOCAL | PhotoKitLibrarySearch uses the public Photos authorization API and queries only real accessible PHAsset images; authorization/search tests | d814576 |
+| MS-880 | VERIFIED_LOCAL | PhotoSearchCriteria and PhotoKit fetch predicate enforce real half-open creation-date ranges; metadata criteria tests | d814576 |
+| MS-881 | VERIFIED_LOCAL | PhotoKit search applies CLLocation coordinate/radius filtering against real asset location metadata; criteria and source tests | d814576 |
+| MS-882 | VERIFIED_LOCAL | exact album title resolves permitted collection membership and filters assets by real identifiers; PhotoKit source tests | d814576 |
+| MS-883 | VERIFIED_LOCAL | results preserve only legitimately exposed creation date, coordinate, album and local identifier metadata; source tests | d814576 |
+| MS-884 | VERIFIED_LOCAL | bounded on-device Vision classification searches only currently permitted PhotoKit assets and fails closed for denied/unreadable inputs; semantic behavior tests | 8557f2d |
+| MS-885 | VERIFIED_LOCAL | authorization maps full and limited distinctly and both gate only the assets PhotoKit exposes; authorization/semantic tests | 8557f2d |
+| MS-886 | VERIFIED_LOCAL | missing, unreadable, unclassified or nonmatching assets return no result rather than inferred/fabricated success; semantic denial/failure tests | 8557f2d |
+| MS-887 | VERIFIED_LOCAL | photo results retain exact PhotoKit local identifiers for the legitimate system open/detail path; source identity tests | d814576 |
+| MS-888 | VERIFIED_LOCAL | AuthorizedDocumentPicker is the public Files/provider entry and returns only user-selected URLs; file-source tests | d814576 |
+| MS-889 | VERIFIED_LOCAL | file source has no global filesystem traversal and searches only explicit authorized references; isolation test | d814576 |
+| MS-890 | VERIFIED_LOCAL | AuthorizedFileSearchSource balances security-scoped access, verifies existence and performs bounded filename search; behavioral tests | d814576 |
+| MS-891 | VERIFIED_LOCAL | a permitted file result carries the exact selected URL as its open reference; exact-open test | d814576 |
+| MS-892 | VERIFIED_LOCAL | CoreSpotlightAssistantIndexer indexes/removes only assistant-owned typed local results under scoped domain identifiers | d814576 |
+| MS-893 | VERIFIED_LOCAL | Spotlight adapter never queries or claims access to other apps private indexes; architecture and source audit | d814576 |
+| MS-894 | VERIFIED_LOCAL | settings/system actions route only through documented public capability records and truthful unsupported fallback; router tests | 762c336 |
+| MS-895 | VERIFIED_LOCAL | device search commands resolve through the typed LocaliPhoneSearchEngine/device routing layer; router/search tests | 68862b5 |
+| MS-896 | VERIFIED_LOCAL | independent permitted local sources execute concurrently and merge into one report; concurrency test | 68862b5 |
+| MS-897 | VERIFIED_LOCAL | deterministic ranking uses relevance, exact match, source preference, recency and stable tie breaks; ranking test | 68862b5 |
+| MS-898 | VERIFIED_LOCAL | result list is bounded and clearResult opens only a sole or sufficiently separated match; shortlist tests | 68862b5 |
+| MS-899 | VERIFIED_LOCAL | structured recent-result context supports typed second/this/open/show followups without raw transcript storage; context tests | b289278 |
+| MS-900 | VERIFIED_LOCAL | personal search is on-device over authorized repositories and privacy-safe local references; privacy/search tests | 68862b5 |
+| MS-901 | VERIFIED_LOCAL | local device search coordinator has no AI dependency and operates with permitted local sources alone; no-AI tests | 68862b5 |
+| MS-902 | VERIFIED_LOCAL | source fanout is concurrent, index/search output bounded and no network wait is introduced on local path; concurrency/performance tests | 68862b5 |
+| MS-903 | VERIFIED_LOCAL | PrivacySafeLocalSearchIndex stores typed local references for permitted assistant sources only; index tests | 68862b5 |
+| MS-904 | VERIFIED_LOCAL | local index supports incremental upsert and scoped source removal rather than mandatory full rebuild; incremental tests | 68862b5 |
+| MS-905 | VERIFIED_LOCAL | permission loss removes the affected source references and prevents stale indexed results; permission-change test | 68862b5 |
+| MS-906 | VERIFIED_LOCAL | local source/index execution contains no network dependency and remains available offline; engine tests | 68862b5 |
+| MS-907 | VERIFIED_LOCAL | installed-app launch uses public local URL/App Intent/shortcut routing without backend dependency; router tests | 762c336 |
+| MS-908 | VERIFIED_LOCAL | unsupported device actions produce exact capability limitation/fallback rather than technical dumps or fake success; router tests | 762c336 |
+| MS-909 | VERIFIED_LOCAL | Apple domain audit explicitly records public-API boundaries and prohibits private Siri/system-control claims; governance tests | 762c336 |
+| MS-910 | VERIFIED_LOCAL | universal voice/text device routing maximizes public iOS capabilities while preserving explicit platform limits; routing tests | 762c336 |
+| MS-911 | VERIFIED_LOCAL | REAL_DEVICE_TEST_MATRIX contains Photos, Files, Spotlight, local latency and representative app-action scenarios with exact identifiers | 6ec7080 |
+| MS-912 | VERIFIED_LOCAL | automated suites cover local concurrency/ranking/permissions/indexing plus Photos/files production boundaries and failure behavior | 8557f2d |
+| MS-913 | READY_FOR_LIVE_VERIFICATION | local PhotoKit/Vision implementation and tests are complete; exact full/limited/denied physical Photos execution is queued as MS-913-LIVE-PHOTOS | 8557f2d |
+| MS-914 | READY_FOR_LIVE_VERIFICATION | local system picker/security-scoped implementation and tests are complete; physical provider execution is queued as MS-914-LIVE-FILES | d814576 |
+| MS-915 | READY_FOR_LIVE_VERIFICATION | public app-action routing and automated tests are complete; representative installed-app execution is queued as MS-915-LIVE-APP-ACTIONS | 762c336 |
+| MS-916 | READY_FOR_LIVE_VERIFICATION | bounded concurrent local search is locally tested; physical release-like latency measurement is queued as MS-916-LIVE-LOCAL-SEARCH-LATENCY | 68862b5 |
+| MS-917 | READY_FOR_LIVE_VERIFICATION | typed region/version capability routing and matrices are local; physical combinations are queued as MS-917-LIVE-REGION-VERSION-CAPABILITY | 6ec7080 |
+| MS-918 | VERIFIED_LOCAL | iPhone universal command/search scope is integrated into the production device router, capability registry and M12 evidence | 68862b5 |
