@@ -34,6 +34,10 @@ The project source of truth is the complete, indivisible combination of:
    - SHA-256: `9e90bffe15f8f008bb71185449df579120b0fe94b89bc2f34ee3f73243dc8e7d`
    - Owner-mandated evidence-first targeted audit accepted on 2026-09-02.
    - Requires minimal partner customer/inbox/catalog/transaction/connector completion by reuse of M9/commerce/appointment infrastructure; explicitly excludes a second CRM, ERP, accounting, POS, warehouse, marketing or AI call-centre platform.
+10. `docs/GENERAL_UNKNOWN_INTENT_DISCOVERY_ANSWER_ACTION_ADDENDUM.md`
+   - SHA-256: `5f3f4f051ee4758a7e6981c1d33b2d12354fc74987ebcb99b94635070cb266fe`
+   - 29 lines / 4,535 bytes; owner-mandated canonical unknown-intent discovery/answer/action policy accepted on 2026-09-03.
+   - Requires specialized-capability precedence followed by deterministic generic discovery, bounded AI only for residual ambiguity/synthesis, native verified results, truthful actions, existing safety gates and honest limitation.
 
 All accepted addenda augment the Master Spec and do not remove or weaken it. Every requirement retains an evidence-backed zero-omission status; documentation, interfaces, mocks and external dependencies alone never establish completion. Later explicit supersession rules inside the Master Spec take precedence over earlier conflicting wording, subject to safety, law, current platform/provider truth, privacy and security.
 
