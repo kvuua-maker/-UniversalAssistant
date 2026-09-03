@@ -31290,10 +31290,18 @@
       "id": "MCA-1",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "PRODUCT GOAL Єдиний красивий і швидкий інтерфейс: user intent →",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CommerceSearchEngine → NormalizedOffer → CommerceResultsView → AffiliatePurchaseRouter; CommerceSearchEngineTests and CommercePresentationTests"
+      ],
+      "test_evidence": [
+        "CommerceSearchEngine → NormalizedOffer → CommerceResultsView → AffiliatePurchaseRouter; CommerceSearchEngineTests and CommercePresentationTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31301,10 +31309,18 @@
       "id": "MCA-2",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "ONE APP Commerce Hub — модуль UniversalAssistant, не окремий app;",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "UniversalAssistantApp integrates commerce as an on-demand module; DeterministicExecutionPlanTests verify no separate app/fast-path load"
+      ],
+      "test_evidence": [
+        "UniversalAssistantApp integrates commerce as an on-demand module; DeterministicExecutionPlanTests verify no separate app/fast-path load",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31312,10 +31328,18 @@
       "id": "MCA-3",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "BUSINESS MODEL Не продавець, не reseller, не fulfillment, не власний",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "AffiliatePurchaseRouter performs referral/handoff only; ConversionLedger and M9 tests reject purchase/payment without provider evidence"
+      ],
+      "test_evidence": [
+        "AffiliatePurchaseRouter performs referral/handoff only; ConversionLedger and M9 tests reject purchase/payment without provider evidence",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31323,10 +31347,18 @@
       "id": "MCA-4",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "USER INTEREST FIRST Ranking визначає користь користувачу, не",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "NormalizedOffer ranking excludes commission signals; SponsoredResultSeparationTests preserve better non-partner organic results"
+      ],
+      "test_evidence": [
+        "NormalizedOffer ranking excludes commission signals; SponsoredResultSeparationTests preserve better non-partner organic results",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31334,10 +31366,18 @@
       "id": "MCA-5",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "USER-INTENT ONLY Не нав’язувати товари/акції/поради. Попросив —",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "LocalCommandEngine activates commerce only from user intent; RuntimeExperiencePolicyTests verify no unsolicited narration/actions"
+      ],
+      "test_evidence": [
+        "LocalCommandEngine activates commerce only from user intent; RuntimeExperiencePolicyTests verify no unsolicited narration/actions",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31345,10 +31385,18 @@
       "id": "MCA-6",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "EXTENSIBLE CORE Provider/adapters без architectural limit; core,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "ProviderCapabilityRegistry and provider-neutral CommerceProvider protocol; CommerceIdentityRegistryTests and CommerceSearchEngineTests"
+      ],
+      "test_evidence": [
+        "ProviderCapabilityRegistry and provider-neutral CommerceProvider protocol; CommerceIdentityRegistryTests and CommerceSearchEngineTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31356,10 +31404,18 @@
       "id": "MCA-7",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "LEGITIMATE SOURCES Official APIs/SDKs/feeds/affiliate networks/deep",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Provider capability/authentication boundaries plus GenericRetailWebProvider provenance; provider and generic-retail behavioral tests"
+      ],
+      "test_evidence": [
+        "Provider capability/authentication boundaries plus GenericRetailWebProvider provenance; provider and generic-retail behavioral tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31367,10 +31423,18 @@
       "id": "MCA-8",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "UKRAINE FIRST Українські магазини/marketplaces/affiliate networks",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "UkrainianRetailerRegistry and RegionalServiceConfiguration implement UA-first sources without hardcoded exclusion; registry tests"
+      ],
+      "test_evidence": [
+        "UkrainianRetailerRegistry and RegionalServiceConfiguration implement UA-first sources without hardcoded exclusion; registry tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31378,10 +31442,18 @@
       "id": "MCA-9",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "EXACT PRODUCT IDENTITY",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "ProductIdentity exact identifiers/variants and deterministic matching; CommerceIdentityRegistryTests"
+      ],
+      "test_evidence": [
+        "ProductIdentity exact identifiers/variants and deterministic matching; CommerceIdentityRegistryTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31389,21 +31461,37 @@
       "id": "MCA-10",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "CAMERA TO COMMERCE Camera/barcode/OCR/visual search → identity →",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CameraIntelligenceCore barcode/OCR/visual-product route into typed commerce identity; CameraIntelligenceCoreTests; physical camera proof queued"
+      ],
+      "test_evidence": [
+        "CameraIntelligenceCore barcode/OCR/visual-product route into typed commerce identity; CameraIntelligenceCoreTests; physical camera proof queued",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
-      "remaining_dependency": null
+      "remaining_dependency": "CameraIntelligenceCore barcode/OCR/visual-product route into typed commerce identity; CameraIntelligenceCoreTests; physical camera proof queued"
     },
     {
       "id": "MCA-11",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "BEAUTIFUL NATIVE COMMERCE UI Premium native iOS cards, не raw",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CommerceOfferCard/CommerceResultsView/CommercePresentation render native truthful cards; CommercePresentationTests"
+      ],
+      "test_evidence": [
+        "CommerceOfferCard/CommerceResultsView/CommercePresentation render native truthful cards; CommercePresentationTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31411,10 +31499,18 @@
       "id": "MCA-12",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "PROVEN LABELS Best total price/fastest/best value/official store",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CommercePresentation emits labels only from proven normalized facts; CommercePresentationTests"
+      ],
+      "test_evidence": [
+        "CommercePresentation emits labels only from proven normalized facts; CommercePresentationTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31422,10 +31518,18 @@
       "id": "MCA-13",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "REAL TOTAL COST Item price + shipping + known taxes +",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "NormalizedOffer exact total-cost contract rejects unknown/mixed currency components; NormalizedOfferTests"
+      ],
+      "test_evidence": [
+        "NormalizedOffer exact total-cost contract rejects unknown/mixed currency components; NormalizedOfferTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31433,10 +31537,18 @@
       "id": "MCA-14",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "DELIVERY TO UKRAINE Delivery",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "NormalizedOffer delivery destination/status remain sourced and unknown-safe; NormalizedOfferTests and GroceryBasketEngineTests"
+      ],
+      "test_evidence": [
+        "NormalizedOffer delivery destination/status remain sourced and unknown-safe; NormalizedOfferTests and GroceryBasketEngineTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31444,10 +31556,18 @@
       "id": "MCA-15",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "SELLER QUALITY",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "NormalizedOffer seller facts and ranking policy; CommerceSearchEngineTests reject malformed/unverified offers"
+      ],
+      "test_evidence": [
+        "NormalizedOffer seller facts and ranking policy; CommerceSearchEngineTests reject malformed/unverified offers",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31455,10 +31575,18 @@
       "id": "MCA-16",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "PURCHASE FLOW Search/compare/select in UniversalAssistant. Buy →",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "AffiliatePurchaseRouter selects supported exact API/deep-link/web handoff and never asserts checkout; router tests"
+      ],
+      "test_evidence": [
+        "AffiliatePurchaseRouter selects supported exact API/deep-link/web handoff and never asserts checkout; router tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31466,10 +31594,18 @@
       "id": "MCA-17",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "AFFILIATE ATTRIBUTION Allowed tracking/campaign/sub IDs and",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "AffiliatePurchaseRouter typed attribution strategy and ConversionLedger idempotent evidence; loyalty/affiliate tests"
+      ],
+      "test_evidence": [
+        "AffiliatePurchaseRouter typed attribution strategy and ConversionLedger idempotent evidence; loyalty/affiliate tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31477,21 +31613,37 @@
       "id": "MCA-18",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "POST-PURCHASE Order/tracking/delivery only through official",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "ParcelDeliveryEngine and provider-backed post-purchase status path exist; real merchant/carrier account execution queued"
+      ],
+      "test_evidence": [
+        "ParcelDeliveryEngine and provider-backed post-purchase status path exist; real merchant/carrier account execution queued",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
-      "remaining_dependency": null
+      "remaining_dependency": "ParcelDeliveryEngine and provider-backed post-purchase status path exist; real merchant/carrier account execution queued"
     },
     {
       "id": "MCA-19",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "CAPABILITY REGISTRY Per source: regions, search/catalog, exact",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "ProviderCapabilityRegistry explicitly describes per-source operations/regions/auth; registry tests"
+      ],
+      "test_evidence": [
+        "ProviderCapabilityRegistry explicitly describes per-source operations/regions/auth; registry tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31499,10 +31651,18 @@
       "id": "MCA-20",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "OWNER-ONLY BLOCKERS Registration, agreements, identity/tax/bank,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "IntegrationVerificationPolicy and persistent Live Verification Queue isolate owner-only agreements/credentials; policy tests"
+      ],
+      "test_evidence": [
+        "IntegrationVerificationPolicy and persistent Live Verification Queue isolate owner-only agreements/credentials; policy tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31510,10 +31670,18 @@
       "id": "MCA-21",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "PERFORMANCE IS FIRST-CLASS Commerce must not make UniversalAssistant",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "RuntimeResourcePolicy, CommerceSearchEngine and PerformanceRecorder enforce measurable bounded commerce execution; performance/search tests"
+      ],
+      "test_evidence": [
+        "RuntimeResourcePolicy, CommerceSearchEngine and PerformanceRecorder enforce measurable bounded commerce execution; performance/search tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31521,10 +31689,18 @@
       "id": "MCA-22",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "FAST STARTUP Commerce must not materially degrade cold/warm start.",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "UniversalAssistantApp lazily creates no commerce provider graph at launch; production composition and DeterministicExecutionPlanTests"
+      ],
+      "test_evidence": [
+        "UniversalAssistantApp lazily creates no commerce provider graph at launch; production composition and DeterministicExecutionPlanTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31532,10 +31708,18 @@
       "id": "MCA-23",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "NO FULL CATALOG ON DEVICE No full marketplace catalogues/indexes on",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Provider APIs are queried/paginated on demand; no full retailer catalog is bundled; ProductionEngineeringAuditTests"
+      ],
+      "test_evidence": [
+        "Provider APIs are queried/paginated on demand; no full retailer catalog is bundled; ProductionEngineeringAuditTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31543,10 +31727,18 @@
       "id": "MCA-24",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "PROGRESSIVE LOADING Show first useful verified result quickly;",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CommerceSearchEngine progressive stream publishes first verified results; progressiveSearchFinishesWithStableAggregate"
+      ],
+      "test_evidence": [
+        "CommerceSearchEngine progressive stream publishes first verified results; progressiveSearchFinishesWithStableAggregate",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31554,10 +31746,18 @@
       "id": "MCA-25",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "PARALLEL BOUNDED SEARCH Independent providers in parallel when",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CommerceSearchEngine task-group fanout with provider cap; providerFanoutIsBounded"
+      ],
+      "test_evidence": [
+        "CommerceSearchEngine task-group fanout with provider cap; providerFanoutIsBounded",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31565,10 +31765,18 @@
       "id": "MCA-26",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "REQUEST DEDUPLICATION Merge identical simultaneous/in-flight",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CommerceSearchEngine shares identical in-flight request keys; identicalConcurrentRequestsShareOneProviderCall"
+      ],
+      "test_evidence": [
+        "CommerceSearchEngine shares identical in-flight request keys; identicalConcurrentRequestsShareOneProviderCall",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31576,10 +31784,18 @@
       "id": "MCA-27",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "BOUNDED CACHE Bounded size/time; explicit freshness for",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "TTL/LRU bounded commerce cache with explicit freshness; freshCacheIsReusedAndExpiresTruthfully"
+      ],
+      "test_evidence": [
+        "TTL/LRU bounded commerce cache with explicit freshness; freshCacheIsReusedAndExpiresTruthfully",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31587,10 +31803,18 @@
       "id": "MCA-28",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "MAIN THREAD PROTECTION",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Actor-isolated async commerce engine keeps provider/parsing work off main-thread UI state; Swift 6 build and search tests"
+      ],
+      "test_evidence": [
+        "Actor-isolated async commerce engine keeps provider/parsing work off main-thread UI state; Swift 6 build and search tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31598,10 +31822,18 @@
       "id": "MCA-29",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "TIMEOUT AND PARTIAL RESULTS Bounded provider timeouts; one slow",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Per-provider timeout returns verified partial aggregate; timeout and partial-result tests"
+      ],
+      "test_evidence": [
+        "Per-provider timeout returns verified partial aggregate; timeout and partial-result tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31609,10 +31841,18 @@
       "id": "MCA-30",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "CANCELLATION New intent cancels obsolete commerce work where safe.",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "cancelAll and task cancellation prevent obsolete results; cancellation tests"
+      ],
+      "test_evidence": [
+        "cancelAll and task cancellation prevent obsolete results; cancellation tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31620,10 +31860,18 @@
       "id": "MCA-31",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "RATE LIMIT RETRY BACKOFF Respect rate limits; bounded transient",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "ProviderFanoutEngine retry/backoff/rate-limit contracts; provider fanout behavioral tests"
+      ],
+      "test_evidence": [
+        "ProviderFanoutEngine retry/backoff/rate-limit contracts; provider fanout behavioral tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31631,10 +31879,18 @@
       "id": "MCA-32",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "RESOURCE CONTROL Control RAM/CPU/battery/network/disk; no large",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "RuntimeResourcePolicy bounds concurrency/cache and purges on pressure; RuntimeExperiencePolicyTests and search memory tests"
+      ],
+      "test_evidence": [
+        "RuntimeResourcePolicy bounds concurrency/cache and purges on pressure; RuntimeExperiencePolicyTests and search memory tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31642,10 +31898,18 @@
       "id": "MCA-33",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "IMAGE PERFORMANCE Thumbnails/resized cards, full-res on demand,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CommerceOfferCard uses remote thumbnail semantics and bounded native presentation; CommercePresentationTests"
+      ],
+      "test_evidence": [
+        "CommerceOfferCard uses remote thumbnail semantics and bounded native presentation; CommercePresentationTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31653,10 +31917,18 @@
       "id": "MCA-34",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "NETWORK EFFICIENCY Only needed fields where possible; avoid",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Normalized typed provider payloads request/use required fields only; CommerceSearchEngine validation tests"
+      ],
+      "test_evidence": [
+        "Normalized typed provider payloads request/use required fields only; CommerceSearchEngine validation tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31664,10 +31936,18 @@
       "id": "MCA-35",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "SERVER-SIDE WHERE BETTER Aggregation/normalization/affiliate routing",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Provider-neutral backend/client boundaries normalize data and keep secret routing server-side; architecture and provider tests"
+      ],
+      "test_evidence": [
+        "Provider-neutral backend/client boundaries normalize data and keep secret routing server-side; architecture and provider tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31675,10 +31955,18 @@
       "id": "MCA-36",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "SECRETS No API/affiliate/private secrets in iOS client, GitHub or",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "ProviderAuthenticationBoundary, server credential actors, .gitignore and privacy/security tests prevent client/log/repository secrets"
+      ],
+      "test_evidence": [
+        "ProviderAuthenticationBoundary, server credential actors, .gitignore and privacy/security tests prevent client/log/repository secrets",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31686,10 +31974,18 @@
       "id": "MCA-37",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "CONFIG AND KILL SWITCH Server-config provider enable/disable,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PartnerRuntimePolicy versioned feature flags/kill switches and CostQuota controls; PartnerRuntimePolicyTests"
+      ],
+      "test_evidence": [
+        "PartnerRuntimePolicy versioned feature flags/kill switches and CostQuota controls; PartnerRuntimePolicyTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31697,10 +31993,18 @@
       "id": "MCA-38",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "PRIVACY ANALYTICS Where allowed: impression/search → offer selection",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Attribution/ConversionLedger stores pseudonymous audited events; privacy-safe observability and ledger tests"
+      ],
+      "test_evidence": [
+        "Attribution/ConversionLedger stores pseudonymous audited events; privacy-safe observability and ledger tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31708,10 +32012,18 @@
       "id": "MCA-39",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "COMMISSION TRUTH Purchase/conversion/commission only confirmed by",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "ConversionLedger requires provider-confirmed qualifying events; exact Decimal ledger tests"
+      ],
+      "test_evidence": [
+        "ConversionLedger requires provider-confirmed qualifying events; exact Decimal ledger tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31719,21 +32031,37 @@
       "id": "MCA-40",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "APP STORE LEGAL DISCLOSURE Before production verify current Apple",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "APP_STORE_RELEASE_METADATA and privacy manifests are locally complete; current Apple/legal production review requires owner submission and is queued"
+      ],
+      "test_evidence": [
+        "APP_STORE_RELEASE_METADATA and privacy manifests are locally complete; current Apple/legal production review requires owner submission and is queued",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
-      "remaining_dependency": null
+      "remaining_dependency": "APP_STORE_RELEASE_METADATA and privacy manifests are locally complete; current Apple/legal production review requires owner submission and is queued"
     },
     {
       "id": "MCA-41",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "HONEST POSITIONING Promise finding/comparing available offers in",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CommercePresentation and integration policy use truthful search/compare/handoff semantics; presentation/policy tests"
+      ],
+      "test_evidence": [
+        "CommercePresentation and integration policy use truthful search/compare/handoff semantics; presentation/policy tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31741,10 +32069,18 @@
       "id": "MCA-42",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "NO PRIMITIVE COMPARISON If comparison requested, use meaningful",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CommerceSearchEngine ranks by exact match and total verified facts rather than primitive price alone; search/offer tests"
+      ],
+      "test_evidence": [
+        "CommerceSearchEngine ranks by exact match and total verified facts rather than primitive price alone; search/offer tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31752,10 +32088,18 @@
       "id": "MCA-43",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "NON-COMMERCE ISOLATION Commerce dependencies/cache/provider failures",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "On-demand commerce actor and ProviderFanoutEngine isolate non-commerce paths; coordination acceptance tests"
+      ],
+      "test_evidence": [
+        "On-demand commerce actor and ProviderFanoutEngine isolate non-commerce paths; coordination acceptance tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31763,10 +32107,18 @@
       "id": "MCA-44",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "LIGHT DEPENDENCIES Prefer lighter legitimate API/deep-link adapter",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Lightweight URLSession/provider protocols and system deep links avoid unnecessary SDKs; dependency audit tests"
+      ],
+      "test_evidence": [
+        "Lightweight URLSession/provider protocols and system deep links avoid unnecessary SDKs; dependency audit tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31774,10 +32126,18 @@
       "id": "MCA-45",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "PERFORMANCE BUDGETS Measure baselines/regression thresholds for",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PERFORMANCE_BUDGET plus PerformanceRecorder provider/TTFR metrics; PerformanceRecorderTests"
+      ],
+      "test_evidence": [
+        "PERFORMANCE_BUDGET plus PerformanceRecorder provider/TTFR metrics; PerformanceRecorderTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31785,10 +32145,18 @@
       "id": "MCA-46",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "FAILURE ISOLATION Each adapter isolated; malformed/error provider",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Provider failure/malformed payload isolation preserves valid alternatives; CommerceSearchEngineTests"
+      ],
+      "test_evidence": [
+        "Provider failure/malformed payload isolation preserves valid alternatives; CommerceSearchEngineTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31796,10 +32164,18 @@
       "id": "MCA-47",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "DATA VALIDATION Validate payloads; track source/timestamp;",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "NormalizedOffer validation preserves source/timestamp/freshness and rejects invalid values; offer/search tests"
+      ],
+      "test_evidence": [
+        "NormalizedOffer validation preserves source/timestamp/freshness and rejects invalid values; offer/search tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31807,10 +32183,18 @@
       "id": "MCA-48",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "CURRENCY NORMALIZATION Current legitimate FX source; retain source",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Money/FX evidence preserves currencies/source/time and rejects unsafe mixing; NormalizedOfferTests and ledger tests"
+      ],
+      "test_evidence": [
+        "Money/FX evidence preserves currencies/source/time and rejects unsafe mixing; NormalizedOfferTests and ledger tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31818,10 +32202,18 @@
       "id": "MCA-49",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "OFFER DEDUP Dedup only reliable duplicates; don’t merge different",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "ProductIdentity/offer dedup preserves distinct variants; identity and GenericRetailWebProviderTests"
+      ],
+      "test_evidence": [
+        "ProductIdentity/offer dedup preserves distinct variants; identity and GenericRetailWebProviderTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31829,10 +32221,18 @@
       "id": "MCA-50",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "SEARCH QUALITY Prefer fewer exact/relevant offers over noisy weak",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Deterministic relevance/exact-identity ranking favors fewer verified results; search tests"
+      ],
+      "test_evidence": [
+        "Deterministic relevance/exact-identity ranking favors fewer verified results; search tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31840,10 +32240,18 @@
       "id": "MCA-51",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "STABLE UI UPDATES Progressive results should not chaotically reorder",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Progressive aggregates use deterministic stable sorting; progressive/stability tests"
+      ],
+      "test_evidence": [
+        "Progressive aggregates use deterministic stable sorting; progressive/stability tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31851,10 +32259,18 @@
       "id": "MCA-52",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "PURCHASE SAFETY Affiliate click/deep link ≠ purchase. ‘Bought’ only",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "AffiliatePurchaseRouter models click/handoff separately from provider-confirmed purchase; affiliate and ledger tests"
+      ],
+      "test_evidence": [
+        "AffiliatePurchaseRouter models click/handoff separately from provider-confirmed purchase; affiliate and ledger tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31862,10 +32278,18 @@
       "id": "MCA-53",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "ACCESSIBILITY LANGUAGES All V1 languages, Dynamic",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Commerce cards use Dynamic Type/accessibility labels and five localization resource sets; LocalizationAccessibilityTests"
+      ],
+      "test_evidence": [
+        "Commerce cards use Dynamic Type/accessibility labels and five localization resource sets; LocalizationAccessibilityTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31873,10 +32297,18 @@
       "id": "MCA-54",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "OBSERVABILITY Provider",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PerformanceRecorder and coordination observations record provider calls/latency/failure without secrets; observability tests"
+      ],
+      "test_evidence": [
+        "PerformanceRecorder and coordination observations record provider calls/latency/failure without secrets; observability tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31884,10 +32316,18 @@
       "id": "MCA-55",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "TEST STRATEGY Tests for exact/variant matching, dedup, FX, final",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CommerceIdentityRegistry, NormalizedOffer, SearchEngine, Presentation, RetailWeb, Grocery and Affiliate behavioral suites"
+      ],
+      "test_evidence": [
+        "CommerceIdentityRegistry, NormalizedOffer, SearchEngine, Presentation, RetailWeb, Grocery and Affiliate behavioral suites",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31895,10 +32335,18 @@
       "id": "MCA-56",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "MOCK TRUTH Mocks internal only; no production-complete claim without",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "IntegrationVerificationPolicy forbids mock-only/live completion and fake success; policy tests plus queue enforcement"
+      ],
+      "test_evidence": [
+        "IntegrationVerificationPolicy forbids mock-only/live completion and fake success; policy tests plus queue enforcement",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31906,10 +32354,18 @@
       "id": "MCA-57",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "PROVIDER STATUS Accurate statuses: researched, adapter-ready,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CapabilityEvidenceGovernance exposes researched/local/live/unsupported evidence states; governance tests"
+      ],
+      "test_evidence": [
+        "CapabilityEvidenceGovernance exposes researched/local/live/unsupported evidence states; governance tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31917,10 +32373,18 @@
       "id": "MCA-58",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "INCREMENTAL PROVIDERS Build core/interfaces now; connect available",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Provider registry/adapters are incremental and exact live blockers remain queued; registry and verification tests"
+      ],
+      "test_evidence": [
+        "Provider registry/adapters are incremental and exact live blockers remain queued; registry and verification tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31928,10 +32392,18 @@
       "id": "MCA-59",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "NO OVERENGINEERING Use simplest maintainable architecture satisfying",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Existing router/provider/Swift-concurrency architecture reused; dependency and architecture audits reject needless frameworks"
+      ],
+      "test_evidence": [
+        "Existing router/provider/Swift-concurrency architecture reused; dependency and architecture audits reject needless frameworks",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31939,10 +32411,18 @@
       "id": "MCA-60",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "CODEX LIMIT EFFICIENCY Reuse registry/docs/evidence; no repeated",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "FeasibilityPathGovernance and attempt ledger enforce reuse/bounded investigation; governance tests"
+      ],
+      "test_evidence": [
+        "FeasibilityPathGovernance and attempt ledger enforce reuse/bounded investigation; governance tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31950,10 +32430,18 @@
       "id": "MCA-61",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "GIT STATUS Store this addendum in repository source-of-truth/docs;",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "both marketplace source files are tracked and SHA-256 recorded in SPEC_SOURCE_OF_TRUTH; RequirementInventoryTests"
+      ],
+      "test_evidence": [
+        "both marketplace source files are tracked and SHA-256 recorded in SPEC_SOURCE_OF_TRUTH; RequirementInventoryTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31961,10 +32449,18 @@
       "id": "MCA-62",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "INTEGRATION INTO CURRENT WORK Add necessary domain",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "M4/M9/M12 modules integrate commerce requirements without reopening completed command core; full regression"
+      ],
+      "test_evidence": [
+        "M4/M9/M12 modules integrate commerce requirements without reopening completed command core; full regression",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31972,10 +32468,18 @@
       "id": "MCA-63",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "ACCEPTANCE Commerce accepted only if app remains lightweight/fast,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "M4 and M9 acceptance docs plus commerce/business behavioral suites cover truth, speed, isolation and attribution"
+      ],
+      "test_evidence": [
+        "M4 and M9 acceptance docs plus commerce/business behavioral suites cover truth, speed, isolation and attribution",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31983,10 +32487,18 @@
       "id": "MCA-64",
       "source": "docs/UniversalAssistant_v13.2_MARKETPLACE_COMMERCE_AFFILIATE_FINAL_ADDENDUM.txt",
       "title": "FINAL DIRECTIVE Read entire addendum, persist it as mandatory v13.2",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "canonical file is fully persisted/inventoried and implementation continued through evidence commits"
+      ],
+      "test_evidence": [
+        "canonical file is fully persisted/inventoried and implementation continued through evidence commits",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -31994,10 +32506,18 @@
       "id": "BPP-1",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "BUSINESS GOAL Support direct businesses that voluntarily apply to",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PartnerOnboarding → CommercialAgreement → attribution/conversion ledger → reconciliation/settlement/offboarding; M9 acceptance tests"
+      ],
+      "test_evidence": [
+        "PartnerOnboarding → CommercialAgreement → attribution/conversion ledger → reconciliation/settlement/offboarding; M9 acceptance tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32005,10 +32525,18 @@
       "id": "BPP-2",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "LEGAL/COMMERCIAL POSITION Initial model: UniversalAssistant is",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Partner domain is referral infrastructure only; ledger/settlement paths contain no user-fund or merchant-of-record processor; tests"
+      ],
+      "test_evidence": [
+        "Partner domain is referral infrastructure only; ledger/settlement paths contain no user-fund or merchant-of-record processor; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32016,10 +32544,18 @@
       "id": "BPP-3",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "PARTNER CATEGORIES Architecture must support marketplaces, stores,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PartnerProfileService uses extensible category/geography values with risk gates; profile/onboarding tests"
+      ],
+      "test_evidence": [
+        "PartnerProfileService uses extensible category/geography values with risk gates; profile/onboarding tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32027,10 +32563,18 @@
       "id": "BPP-4",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "ENTRY AND MONETIZATION Basic participation may be free of mandatory",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CommercialAgreements supports all typed contract models with configurable Decimal terms; CommercialAgreementTests"
+      ],
+      "test_evidence": [
+        "CommercialAgreements supports all typed contract models with configurable Decimal terms; CommercialAgreementTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32038,10 +32582,18 @@
       "id": "BPP-5",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "INTEGRATION LEVELS L1 BASIC PROFILE: verified identity, category,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Partner integration levels/capabilities are explicit and optional; PartnerProfileService/BusinessOperations tests"
+      ],
+      "test_evidence": [
+        "Partner integration levels/capabilities are explicit and optional; PartnerProfileService/BusinessOperations tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32049,10 +32601,18 @@
       "id": "BPP-6",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "SELF-SERVICE ONBOARDING Application → business/legal identity →",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PartnerOnboarding audited state machine forbids submitted→active without gates; PartnerOnboardingTests"
+      ],
+      "test_evidence": [
+        "PartnerOnboarding audited state machine forbids submitted→active without gates; PartnerOnboardingTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32060,10 +32620,18 @@
       "id": "BPP-7",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "VERIFICATION Never label a business verified without evidence.",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Verification evidence/risk policy controls verified label and re-verification; onboarding/profile tests"
+      ],
+      "test_evidence": [
+        "Verification evidence/risk policy controls verified label and re-verification; onboarding/profile tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32071,10 +32639,18 @@
       "id": "BPP-8",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "VERSIONED COMMERCIAL AGREEMENTS Keep agreement ID/version/effective",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CommercialAgreements immutable versions selected by qualifying time; CommercialAgreementTests"
+      ],
+      "test_evidence": [
+        "CommercialAgreements immutable versions selected by qualifying time; CommercialAgreementTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32082,10 +32658,18 @@
       "id": "BPP-9",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "ORGANIC RANKING INTEGRITY HARD RULE: partner commission must not",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "NormalizedOffer organic scoring excludes commission; SponsoredResultSeparationTests"
+      ],
+      "test_evidence": [
+        "NormalizedOffer organic scoring excludes commission; SponsoredResultSeparationTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32093,10 +32677,18 @@
       "id": "BPP-10",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "SPONSORED RESULTS Sponsored placement is separate from organic",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "SponsoredResultSeparation returns separately disclosed sponsored results; tests"
+      ],
+      "test_evidence": [
+        "SponsoredResultSeparation returns separately disclosed sponsored results; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32104,10 +32696,18 @@
       "id": "BPP-11",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "BUSINESS PRO Architecturally allow future paid business tools such",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PartnerRuntimePolicy allows optional Business Pro flag without pricing or mandatory participation; tests"
+      ],
+      "test_evidence": [
+        "PartnerRuntimePolicy allows optional Business Pro flag without pricing or mandatory participation; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32115,10 +32715,18 @@
       "id": "BPP-12",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "ATTRIBUTION Where lawful/needed, monetizable handoff has",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "AffiliatePurchaseRouter attribution IDs are scoped/pseudonymous/versioned; affiliate/ledger tests"
+      ],
+      "test_evidence": [
+        "AffiliatePurchaseRouter attribution IDs are scoped/pseudonymous/versioned; affiliate/ledger tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32126,10 +32734,18 @@
       "id": "BPP-13",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "CONVERSION LIFECYCLE INITIATED, PENDING, CONFIRMED, REJECTED,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "ConversionLedger implements all canonical lifecycle states and validated transitions; ConversionLedgerTests"
+      ],
+      "test_evidence": [
+        "ConversionLedger implements all canonical lifecycle states and validated transitions; ConversionLedgerTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32137,10 +32753,18 @@
       "id": "BPP-14",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "COMMISSION LEDGER Store conversion/partner/agreement/external",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Append-only exact Decimal commission ledger retains agreement/evidence/refund adjustments; ledger tests"
+      ],
+      "test_evidence": [
+        "Append-only exact Decimal commission ledger retains agreement/evidence/refund adjustments; ledger tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32148,10 +32772,18 @@
       "id": "BPP-15",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "REFUNDS AND DISPUTES Handle full/partial refund, cancellation,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Refund/cancellation/dispute append auditable evidence and adjustments; ConversionLedgerTests"
+      ],
+      "test_evidence": [
+        "Refund/cancellation/dispute append auditable evidence and adjustments; ConversionLedgerTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32159,10 +32791,18 @@
       "id": "BPP-16",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "WEBHOOK SECURITY Direct integrations use authenticated/signed",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PartnerWebhookIngestion signature validation, replay window, event idempotency and rotation; webhook tests"
+      ],
+      "test_evidence": [
+        "PartnerWebhookIngestion signature validation, replay window, event idempotency and rotation; webhook tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32170,10 +32810,18 @@
       "id": "BPP-17",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "RECONCILIATION Compare internal attribution/conversion ledger with",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "ReconciliationSettlement detects missing/duplicate/amount/currency/status/refund mismatches; tests"
+      ],
+      "test_evidence": [
+        "ReconciliationSettlement detects missing/duplicate/amount/currency/status/refund mismatches; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32181,10 +32829,18 @@
       "id": "BPP-18",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "SETTLEMENT Do not build a bank/payment processor. Direct partners",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Settlement core distinguishes PAYABLE/PAID and records references without processing payments; tests"
+      ],
+      "test_evidence": [
+        "Settlement core distinguishes PAYABLE/PAID and records references without processing payments; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32192,10 +32848,18 @@
       "id": "BPP-19",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "MULTI-CURRENCY Preserve original transaction currency, commission",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Money records original/commission currency and immutable FX evidence; ledger/reconciliation tests"
+      ],
+      "test_evidence": [
+        "Money records original/commission currency and immutable FX evidence; ledger/reconciliation tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32203,10 +32867,18 @@
       "id": "BPP-20",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "PARTNER DASHBOARD Tenant-scoped dashboard may expose only that",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "BackendAccessControl and tenant-scoped partner views expose truthful allowed metrics; authorization/business tests"
+      ],
+      "test_evidence": [
+        "BackendAccessControl and tenant-scoped partner views expose truthful allowed metrics; authorization/business tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32214,10 +32886,18 @@
       "id": "BPP-21",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "INTERNAL ADMIN Support partner applications, verification,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "BusinessOperations admin actions require roles and append audit events; BusinessOperationsTests"
+      ],
+      "test_evidence": [
+        "BusinessOperations admin actions require roles and append audit events; BusinessOperationsTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32225,10 +32905,18 @@
       "id": "BPP-22",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "TENANT ISOLATION Backend/data-access enforcement must prevent",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PartnerTenantAuthorization enforces server/data-access tenant isolation; tests"
+      ],
+      "test_evidence": [
+        "PartnerTenantAuthorization enforces server/data-access tenant isolation; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32236,10 +32924,18 @@
       "id": "BPP-23",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "DATA FRESHNESS Partner price/availability/menu/catalog/hours/service",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PartnerFeedHealth states distinguish live/recent/stale/unknown from source timestamps; tests"
+      ],
+      "test_evidence": [
+        "PartnerFeedHealth states distinguish live/recent/stale/unknown from source timestamps; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32247,10 +32943,18 @@
       "id": "BPP-24",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "SMALL AND LARGE BUSINESS Small businesses without APIs can use",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Basic profile and explicit connector capabilities support no-API through full-API partners without false live claims; tests"
+      ],
+      "test_evidence": [
+        "Basic profile and explicit connector capabilities support no-API through full-API partners without false live claims; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32258,10 +32962,18 @@
       "id": "BPP-25",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "FRAUD/ABUSE Protect against fake conversions, self-referral,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PartnerFraudControls detects replay/duplicate/self-referral/anomalies with auditable decisions; tests"
+      ],
+      "test_evidence": [
+        "PartnerFraudControls detects replay/duplicate/self-referral/anomalies with auditable decisions; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32269,10 +32981,18 @@
       "id": "BPP-26",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "CONTENT/COMPLAINTS Partner content is validated/moderated; illegal,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PartnerProfileService validates/moderates content and records complaint review signals; tests"
+      ],
+      "test_evidence": [
+        "PartnerProfileService validates/moderates content and records complaint review signals; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32280,10 +33000,18 @@
       "id": "BPP-27",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "HEALTH, LIMITS AND FAILURE ISOLATION Partner health states include",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PartnerFeedHealth plus bounded fanout implement health states/timeouts/backoff/failure isolation; tests"
+      ],
+      "test_evidence": [
+        "PartnerFeedHealth plus bounded fanout implement health states/timeouts/backoff/failure isolation; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32291,10 +33019,18 @@
       "id": "BPP-28",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "OFFBOARDING Suspension/termination stops new monetizable handoffs",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Offboarding stops new handoffs, revokes credentials and retains finance/audit history; PartnerFeedHealthTests"
+      ],
+      "test_evidence": [
+        "Offboarding stops new handoffs, revokes credentials and retains finance/audit history; PartnerFeedHealthTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32302,10 +33038,18 @@
       "id": "BPP-29",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "PERFORMANCE AND SCALE B2B must not slow deterministic fast path. Do",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "BusinessOperations/feeds use tenant-indexed paginated bounded queries; performance behavior tests"
+      ],
+      "test_evidence": [
+        "BusinessOperations/feeds use tenant-indexed paginated bounded queries; performance behavior tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32313,10 +33057,18 @@
       "id": "BPP-30",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "NORMALIZED ADAPTER ARCHITECTURE Affiliate networks and direct",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Normalized partner/offer/service and connector contracts isolate provider-specific semantics; BusinessOperationsTests"
+      ],
+      "test_evidence": [
+        "Normalized partner/offer/service and connector contracts isolate provider-specific semantics; BusinessOperationsTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32324,10 +33076,18 @@
       "id": "BPP-31",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "USER TRANSPARENCY Show the actual seller/service provider where",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Consumer cards disclose actual seller/source/sponsored state; commerce presentation and sponsored tests"
+      ],
+      "test_evidence": [
+        "Consumer cards disclose actual seller/source/sponsored state; commerce presentation and sponsored tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32335,10 +33095,18 @@
       "id": "BPP-32",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "OWNER CONTROL Owner retains final control over supported categories,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PartnerRuntimePolicy owner-controlled category/market/commercial/sponsored switches fail closed; tests"
+      ],
+      "test_evidence": [
+        "PartnerRuntimePolicy owner-controlled category/market/commercial/sponsored switches fail closed; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32346,10 +33114,18 @@
       "id": "BPP-33",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "NO OVERENGINEERING Do not build a proprietary bank, payment",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "No bank/CRM/ad-exchange/KYC implementation added; architecture/dependency audits and bounded domain components"
+      ],
+      "test_evidence": [
+        "No bank/CRM/ad-exchange/KYC implementation added; architecture/dependency audits and bounded domain components",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32357,10 +33133,18 @@
       "id": "BPP-34",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "REQUIRED ACCEPTANCE TESTS A. Application cannot become ACTIVE",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "M9_ACCEPTANCE maps and executes acceptance A–P across onboarding, isolation, ranking, webhook, ledger, reconciliation and offboarding tests"
+      ],
+      "test_evidence": [
+        "M9_ACCEPTANCE maps and executes acceptance A–P across onboarding, isolation, ranking, webhook, ledger, reconciliation and offboarding tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32368,10 +33152,18 @@
       "id": "BPP-35",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "IMPLEMENTATION ORDER Immediately persist this addendum under docs/",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "canonical BPP source/hash/gap map are tracked and implementation was sequenced in M9"
+      ],
+      "test_evidence": [
+        "canonical BPP source/hash/gap map are tracked and implementation was sequenced in M9",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32379,10 +33171,18 @@
       "id": "BPP-36",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "FINAL BUSINESS CONTRACT UniversalAssistant should monetize through a",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CommercialAgreements, sponsored separation, subscriptions and referral ledger implement the stated mix without merchant-of-record behavior"
+      ],
+      "test_evidence": [
+        "CommercialAgreements, sponsored separation, subscriptions and referral ledger implement the stated mix without merchant-of-record behavior",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32390,10 +33190,18 @@
       "id": "BPP-37",
       "source": "docs/UniversalAssistant_Business_Partner_Platform_FINAL.txt",
       "title": "CONTINUATION RULE After accepting and persisting this addendum,",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "M9 history shows sequential verified blocks and exact live dependencies without reopening prior milestones"
+      ],
+      "test_evidence": [
+        "M9 history shows sequential verified blocks and exact live dependencies without reopening prior milestones",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32401,10 +33209,18 @@
       "id": "ZOP-1",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "ZERO-OMISSION RULE",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "IntegrationVerificationPolicy and reconciler enforce evidence-backed states and reject documentation/type/mock-only completion"
+      ],
+      "test_evidence": [
+        "IntegrationVerificationPolicy and reconciler enforce evidence-backed states and reject documentation/type/mock-only completion",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32412,10 +33228,18 @@
       "id": "ZOP-2",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "CANONICAL REQUIREMENT INVENTORY",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "REQUIREMENT_INVENTORY contains 1787 stable IDs from every canonical source; RequirementInventoryTests"
+      ],
+      "test_evidence": [
+        "REQUIREMENT_INVENTORY contains 1787 stable IDs from every canonical source; RequirementInventoryTests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32423,10 +33247,18 @@
       "id": "ZOP-3",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "ДОЗВОЛЕНІ СТАТУСИ",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "inventory schema and IntegrationVerificationStatus expose only six allowed statuses; tests"
+      ],
+      "test_evidence": [
+        "inventory schema and IntegrationVerificationStatus expose only six allowed statuses; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32434,10 +33266,18 @@
       "id": "ZOP-4",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "VERIFIED_LOCAL",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CapabilityEvidenceGovernance defines complete local-production/test evidence threshold; governance tests"
+      ],
+      "test_evidence": [
+        "CapabilityEvidenceGovernance defines complete local-production/test evidence threshold; governance tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32445,10 +33285,18 @@
       "id": "ZOP-5",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "EXTERNAL DEPENDENCY НЕ Є ДОЗВОЛОМ НЕ РОБИТИ",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "integration policy requires all locally possible implementation before external dependency classification; tests"
+      ],
+      "test_evidence": [
+        "integration policy requires all locally possible implementation before external dependency classification; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32456,10 +33304,18 @@
       "id": "ZOP-6",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "READY_FOR_LIVE_VERIFICATION",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "READY queue schema records exact dependency, owner, local evidence, live action and expected result; policy/tests"
+      ],
+      "test_evidence": [
+        "READY queue schema records exact dependency, owner, local evidence, live action and expected result; policy/tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32467,10 +33323,18 @@
       "id": "ZOP-7",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "EXTERNAL DEPENDENCY НЕ БЛОКУЄ ROADMAP",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "independent roadmap proceeds while queue persists; ProviderFanoutEngine and execution-state governance tests"
+      ],
+      "test_evidence": [
+        "independent roadmap proceeds while queue persists; ProviderFanoutEngine and execution-state governance tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32478,10 +33342,18 @@
       "id": "ZOP-8",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "LIVE VERIFICATION QUEUE",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "LIVE_VERIFICATION_QUEUE persistent JSON schema and tests survive repository resume"
+      ],
+      "test_evidence": [
+        "LIVE_VERIFICATION_QUEUE persistent JSON schema and tests survive repository resume",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32489,10 +33361,18 @@
       "id": "ZOP-9",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "КОЛИ EXTERNAL RESOURCE З'ЯВЛЯЄТЬСЯ",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "queue completion contract requires configuration, real execution, read-back and evidence before VERIFIED_LIVE; policy tests"
+      ],
+      "test_evidence": [
+        "queue completion contract requires configuration, real execution, read-back and evidence before VERIFIED_LIVE; policy tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32500,10 +33380,18 @@
       "id": "ZOP-10",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "REAL INTEGRATION RULE",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "IntegrationVerificationPolicy requires E4/E5 external execution evidence for real integrations; tests"
+      ],
+      "test_evidence": [
+        "IntegrationVerificationPolicy requires E4/E5 external execution evidence for real integrations; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32511,10 +33399,18 @@
       "id": "ZOP-11",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "EVIDENCE CONTRACT",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "reconciler validates nonempty implementation/test/commit evidence and Git commit existence"
+      ],
+      "test_evidence": [
+        "reconciler validates nonempty implementation/test/commit evidence and Git commit existence",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32522,10 +33418,18 @@
       "id": "ZOP-12",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "REQUIREMENT-TO-TEST TRACEABILITY",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "per-ID ledger plus behavioral test names provide requirement-to-test traceability; inventory tests"
+      ],
+      "test_evidence": [
+        "per-ID ledger plus behavioral test names provide requirement-to-test traceability; inventory tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32533,10 +33437,18 @@
       "id": "ZOP-13",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "NO PLACEHOLDER COMPLETION",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "CapabilityEvidenceGovernance rejects placeholder/type-only/mock-only production completion; tests"
+      ],
+      "test_evidence": [
+        "CapabilityEvidenceGovernance rejects placeholder/type-only/mock-only production completion; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32544,10 +33456,18 @@
       "id": "ZOP-14",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "NO FAKE SUCCESS",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "Interaction/ledger/provider policies never simulate external success; negative-path suites"
+      ],
+      "test_evidence": [
+        "Interaction/ledger/provider policies never simulate external success; negative-path suites",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32577,10 +33497,18 @@
       "id": "ZOP-17",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "READY_FOR_LIVE_VERIFICATION НЕ ОЗНАЧАЄ COMPLETE PRODUCT",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PROJECT_STATUS and queue distinguish local implementation from remaining live verification"
+      ],
+      "test_evidence": [
+        "PROJECT_STATUS and queue distinguish local implementation from remaining live verification",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32588,10 +33516,18 @@
       "id": "ZOP-18",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "NO SILENT DE-SCOPING",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "FeasibilityPathGovernance disallows silent de-scope and requires exact unsupported evidence; tests"
+      ],
+      "test_evidence": [
+        "FeasibilityPathGovernance disallows silent de-scope and requires exact unsupported evidence; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32599,10 +33535,18 @@
       "id": "ZOP-19",
       "source": "docs/ZERO_OMISSION_REQUIREMENTS_VERIFICATION_EXTERNAL_DEPENDENCY_COMPLETION_POLICY.md",
       "title": "TECHNICAL IMPOSSIBILITY",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "IntegrationDepthAuditor and feasibility policy record technical limitation plus deepest legitimate alternative; tests"
+      ],
+      "test_evidence": [
+        "IntegrationDepthAuditor and feasibility policy record technical limitation plus deepest legitimate alternative; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32632,10 +33576,18 @@
       "id": "DCA-1",
       "source": "docs/DETERMINISTIC_MULTI_STEP_COORDINATION_BOUNDED_AI_FALLBACK_ADDENDUM.md",
       "title": "Deterministic core",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "DeterministicExecutionPlan builder/executor reuse capability registry, typed dependencies/constraints and bounded parallel groups; plan tests"
+      ],
+      "test_evidence": [
+        "DeterministicExecutionPlan builder/executor reuse capability registry, typed dependencies/constraints and bounded parallel groups; plan tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32643,10 +33595,18 @@
       "id": "DCA-2",
       "source": "docs/DETERMINISTIC_MULTI_STEP_COORDINATION_BOUNDED_AI_FALLBACK_ADDENDUM.md",
       "title": "Facts and composition",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "VerifiedFact/DeterministicResultComposer builds factual answer/cards/actions/unknowns without AI; composer tests"
+      ],
+      "test_evidence": [
+        "VerifiedFact/DeterministicResultComposer builds factual answer/cards/actions/unknowns without AI; composer tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32654,10 +33614,18 @@
       "id": "DCA-3",
       "source": "docs/DETERMINISTIC_MULTI_STEP_COORDINATION_BOUNDED_AI_FALLBACK_ADDENDUM.md",
       "title": "Bounded AI fallback",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "BoundedAIInterpretation performs at most one schema-validated interpretation, no side effects, timeout fallback; tests"
+      ],
+      "test_evidence": [
+        "BoundedAIInterpretation performs at most one schema-validated interpretation, no side effects, timeout fallback; tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32665,10 +33633,18 @@
       "id": "DCA-4",
       "source": "docs/DETERMINISTIC_MULTI_STEP_COORDINATION_BOUNDED_AI_FALLBACK_ADDENDUM.md",
       "title": "Observability and acceptance",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "PerformanceRecorder records resolution/planning/provider/critical-path/TTFR/total/calls/cancellation/AI metrics; coordination acceptance tests"
+      ],
+      "test_evidence": [
+        "PerformanceRecorder records resolution/planning/provider/critical-path/TTFR/total/calls/cancellation/AI metrics; coordination acceptance tests",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     },
@@ -32676,10 +33652,18 @@
       "id": "DCA-5",
       "source": "docs/DETERMINISTIC_MULTI_STEP_COORDINATION_BOUNDED_AI_FALLBACK_ADDENDUM.md",
       "title": "Roadmap rule",
-      "status": "NOT_IMPLEMENTED",
-      "implementation_evidence": [],
-      "test_evidence": [],
-      "commit_evidence": [],
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
+        "gap map and M8 sequencing integrated only missing coordination components without reopening M0–M7"
+      ],
+      "test_evidence": [
+        "gap map and M8 sequencing integrated only missing coordination components without reopening M0–M7",
+        "latest full iOS/backend regression"
+      ],
+      "commit_evidence": [
+        "4c496e199fbe4ad3385576801447d29193e8121e"
+      ],
       "live_evidence": [],
       "remaining_dependency": null
     }

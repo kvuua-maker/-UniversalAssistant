@@ -1,22 +1,26 @@
 {
-  "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
+  "current_task_id": "GLOBAL-ZERO-OMISSION-FINAL-GATES-AUDIT",
   "requirement_ids": [
-    "MS-1581...MS-1642"
+    "MS-675 and 32 remaining Master Spec final gates",
+    "ZOP-15",
+    "ZOP-16",
+    "ZOP-20",
+    "ZOP-21"
   ],
-  "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
+  "selected_path": "Strict remaining-gate audit after complete per-ID reconciliation of every non-gate canonical requirement.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "62 performance/account/entitlement/system/media/governance requirements explicitly reconciled with physical/provider gates separated",
+  "integration_depth": "1750/1787 requirements explicitly reconciled; only 37 global/final/continuation gates remain open",
   "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
-  "current_exit_state": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
+  "current_exit_state": "IN_PROGRESS",
   "last_failure_signature": null,
-  "material_change": "MS-1581–1642 now have per-ID evidence. Oldest-device performance, Apple account deletion, subscribed media and physical camera/system/emergency paths remain exact READY_FOR_LIVE_VERIFICATION items; MS-1643 and all global gates remain open.",
-  "frozen_baseline_commit": "2353a38",
-  "dependency": "Physical devices, Apple/provider accounts and controlled live execution affect only queued items; no blocker for MS-1644+.",
+  "material_change": "MS-1644–1660 and all MCA/BPP/DCA plus non-final ZOP requirements now have per-ID production/test/commit evidence; three addendum live-only executions are queued exactly.",
+  "frozen_baseline_commit": "4c496e1",
+  "dependency": "Physical camera-commerce, post-purchase provider read-back and App Store/legal review remain queued; no blocker for local final audits.",
   "unresolved_verification_steps": [
-    "177 inventory requirements remain NOT_IMPLEMENTED",
-    "Continue from MS-1644+; MS-1643 remains open as a global directive gate",
-    "Perform strict remaining-ID audit after all canonical sources are traversed"
+    "37 intentional global/final gates remain NOT_IMPLEMENTED",
+    "Run strict final audit and full regression before closing any completion gate",
+    "Keep physical/provider-only items READY_FOR_LIVE_VERIFICATION"
   ],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-1644-PLUS"
+  "next_task_id": "GLOBAL-ZERO-OMISSION-FINAL-GATES"
 }

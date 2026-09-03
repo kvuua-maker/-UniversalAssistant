@@ -11,12 +11,13 @@ SOURCES = [
     ROOT / "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
     ROOT / "docs/M10_ZERO_OMISSION_AUDIT.md",
     ROOT / "docs/M11_ZERO_OMISSION_ACCEPTANCE.md",
+    ROOT / "docs/CANONICAL_ADDENDUM_REQUIREMENT_RECONCILIATION.md",
 ]
 ALLOWED = {
     "VERIFIED_LOCAL", "READY_FOR_LIVE_VERIFICATION",
     "VERIFIED_LIVE", "NOT_APPLICABLE_VERIFIED",
 }
-ROW = re.compile(r"^\|\s*(MS-\d+)\s*\|\s*([A-Z_]+)\s*\|\s*(.*?)\s*\|(?:\s*(.*?)\s*\|)?$")
+ROW = re.compile(r"^\|\s*((?:MS|MCA|BPP|ZOP|DCA)-\d+)\s*\|\s*([A-Z_]+)\s*\|\s*(.*?)\s*\|(?:\s*(.*?)\s*\|)?$")
 
 def git(*args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
@@ -28,9 +29,13 @@ def verified_commit(value: str | None, source: Path) -> str:
     return git("rev-parse", candidate)
 
 def queue_covers(requirement_id: str, queue: dict) -> bool:
-    target = int(requirement_id.split("-")[1])
+    prefix, raw_target = requirement_id.split("-", 1)
+    target = int(raw_target)
     for item in queue["items"]:
-        numbers = [int(value) for value in re.findall(r"(?<=-)\d+", item["requirement_id"])]
+        queue_id = item["requirement_id"]
+        if not queue_id.startswith(prefix + "-"):
+            continue
+        numbers = [int(value) for value in re.findall(r"(?<=-)\d+", queue_id)]
         if target in numbers:
             return True
         if len(numbers) == 2 and numbers[0] <= target <= numbers[1]:
@@ -66,7 +71,7 @@ def main() -> None:
             record["commit_evidence"] = [verified_commit(commit, source)]
             record["remaining_dependency"] = evidence if status == "READY_FOR_LIVE_VERIFICATION" else None
             imported.add(requirement_id)
-    expected = {f"MS-{value}" for value in range(1, 675)} | {f"MS-{value}" for value in range(676, 919)} | {f"MS-{value}" for value in range(921, 949)} | {f"MS-{value}" for value in range(949, 1000)} | {f"MS-{value}" for value in range(1005, 1023)} | {f"MS-{value}" for value in range(1023, 1077)} | {f"MS-{value}" for value in range(1077, 1088)} | {f"MS-{value}" for value in range(1098, 1142)} | {f"MS-{value}" for value in range(1144, 1191)} | {f"MS-{value}" for value in range(1192, 1268)} | {f"MS-{value}" for value in range(1272, 1343)} | {f"MS-{value}" for value in range(1343, 1455)} | {f"MS-{value}" for value in range(1461, 1509)} | {"MS-1510"} | {f"MS-{value}" for value in range(1511, 1581)} | {f"MS-{value}" for value in range(1581, 1643)} | {f"MS-{value}" for value in range(1644, 1661)}
+    expected = {f"MS-{value}" for value in range(1, 675)} | {f"MS-{value}" for value in range(676, 919)} | {f"MS-{value}" for value in range(921, 949)} | {f"MS-{value}" for value in range(949, 1000)} | {f"MS-{value}" for value in range(1005, 1023)} | {f"MS-{value}" for value in range(1023, 1077)} | {f"MS-{value}" for value in range(1077, 1088)} | {f"MS-{value}" for value in range(1098, 1142)} | {f"MS-{value}" for value in range(1144, 1191)} | {f"MS-{value}" for value in range(1192, 1268)} | {f"MS-{value}" for value in range(1272, 1343)} | {f"MS-{value}" for value in range(1343, 1455)} | {f"MS-{value}" for value in range(1461, 1509)} | {"MS-1510"} | {f"MS-{value}" for value in range(1511, 1581)} | {f"MS-{value}" for value in range(1581, 1643)} | {f"MS-{value}" for value in range(1644, 1661)} | {f"MCA-{value}" for value in range(1, 65)} | {f"BPP-{value}" for value in range(1, 38)} | {f"ZOP-{value}" for value in list(range(1, 15)) + list(range(17, 20))} | {f"DCA-{value}" for value in range(1, 6)}
     if imported != expected:
         missing = sorted(expected - imported)
         unexpected = sorted(imported - expected)

@@ -1,18 +1,18 @@
 {
   "current_block": "GLOBAL-ZERO-OMISSION-AUDIT",
-  "current_action": "reconcile-ms-1644-plus-and-remaining-sources",
+  "current_action": "strict-final-gates-and-remaining-id-audit",
   "status": "IN_PROGRESS",
-  "last_measurable_progress": "2026-09-03T13:36:00+02:00",
-  "attempt_path_id": "global-audit-v16",
-  "last_commit": "1e82d6a",
+  "last_measurable_progress": "2026-09-03T14:00:00+02:00",
+  "attempt_path_id": "global-audit-v17",
+  "last_commit": "4c496e1",
   "blocker": null,
   "evidence": {
-    "reconciled_requirements": "1610 explicit Master Spec IDs excluding active final gates, through MS-1642",
-    "inventory_counts": "1422 VERIFIED_LOCAL; 175 READY_FOR_LIVE_VERIFICATION; 13 NOT_APPLICABLE_VERIFIED; 177 NOT_IMPLEMENTED",
-    "target_tests": "performance/account/entitlement/system/media production and behavioral evidence mapped; latest simulator build passed",
+    "reconciled_requirements": "1750 explicit IDs across Master Spec and all four generated addendum inventories",
+    "inventory_counts": "1558 VERIFIED_LOCAL; 178 READY_FOR_LIVE_VERIFICATION; 14 NOT_APPLICABLE_VERIFIED; 37 intentional global/final gates NOT_IMPLEMENTED",
+    "target_tests": "3 environment/inventory tests and 17 representative commerce/coordination tests passed",
     "full_regression": "92 backend tests/25 suites passed; last full iOS 469 tests/100 suites",
-    "completed_task": "GLOBAL-RECONCILIATION-MS-1581-1642",
+    "completed_task": "MS-1644–1660 plus MCA/BPP/DCA/non-final-ZOP per-ID reconciliation",
     "verification_type": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
-    "next_task": "MS-1644+ and strict remaining-ID audit; global gates stay open"
+    "next_task": "strict final-gate audit; close only gates whose completion conditions are actually satisfied"
   }
 }

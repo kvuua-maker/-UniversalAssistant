@@ -22,4 +22,4 @@ No blocker for the next local core. Provider live execution remains separately c
 
 ## NEXT
 
-Continue reconciliation from MS-1644+ and remaining canonical sources without Jobs Marketplace; every final-audit gate remains open until actually satisfied.
+Run the strict final-gate and remaining-ID audit; close only conditions proven by full evidence. Jobs Marketplace remains excluded.

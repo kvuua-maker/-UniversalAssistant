@@ -1030,6 +1030,59 @@
       "created_at": "2026-09-03T13:35:00+02:00",
       "last_checked": "2026-09-03T13:35:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "MCA-10-LIVE-CAMERA-COMMERCE",
+      "service_provider": "Physical iPhone Camera/Vision and configured commerce sources",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "A signed physical iPhone with camera permission and an available live product source are required solely for real scan-to-current-offer execution.",
+      "dependency_owner": "Owner/device tester and configured commerce provider",
+      "local_evidence": [
+        "CameraIntelligenceCore.swift",
+        "CameraIntelligenceCoreTests",
+        "ProductIdentity and CommerceSearchEngine behavioral tests"
+      ],
+      "required_live_action": "Scan controlled barcode/text/product imagery on a signed device, verify resolved identity, retrieve current sourced offers, and confirm truthful unknown behavior for unresolved variants.",
+      "expected_result": "Physical capture routes to the exact normalized identity and only verified fresh provider facts appear; unsupported identity remains unknown.",
+      "created_at": "2026-09-03T14:00:00+02:00",
+      "last_checked": "2026-09-03T14:00:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "MCA-18-LIVE-POST-PURCHASE",
+      "service_provider": "Owner-authorized merchant/order and carrier accounts",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "An authorized merchant order account/API and real carrier tracking event are required solely for external post-purchase read-back.",
+      "dependency_owner": "Owner and selected merchant/carrier administrators",
+      "local_evidence": [
+        "AffiliatePurchaseRouter.swift",
+        "ParcelDeliveryEngine.swift",
+        "ParcelProviderAdapters.swift",
+        "affiliate and parcel behavioral tests"
+      ],
+      "required_live_action": "Create a controlled provider-side order through the approved handoff, read official order/tracking states, and verify cancellation/refund/delivery updates without inferring purchase from the click.",
+      "expected_result": "Only official provider evidence advances order/tracking state; handoff alone never becomes purchase or delivery success.",
+      "created_at": "2026-09-03T14:00:00+02:00",
+      "last_checked": "2026-09-03T14:00:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "MCA-40-LIVE-APP-STORE-LEGAL",
+      "service_provider": "Apple App Store Connect and owner legal/compliance review",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner Apple Developer access and current jurisdiction-specific legal/commercial approval are required solely for submission-time policy verification.",
+      "dependency_owner": "Owner, legal/compliance representative and App Store administrator",
+      "local_evidence": [
+        "docs/APP_STORE_RELEASE_METADATA.md",
+        "PrivacyInfo.xcprivacy",
+        "RELEASE_CHECKLIST.md",
+        "PrivacyComplianceTests"
+      ],
+      "required_live_action": "Review current App Review, external purchase/referral, affiliate disclosure and privacy requirements; submit the signed build and record App Review/legal outcome.",
+      "expected_result": "Store metadata and in-app disclosures match the actual referral model and current Apple/legal rules; no unapproved merchant-of-record claim exists.",
+      "created_at": "2026-09-03T14:00:00+02:00",
+      "last_checked": "2026-09-03T14:00:00+02:00",
+      "completion_evidence": null
     }
   ]
 }
