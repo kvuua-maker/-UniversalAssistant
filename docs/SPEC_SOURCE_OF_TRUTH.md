@@ -49,6 +49,12 @@ The project source of truth is the complete, indivisible combination of:
    - Owner-provided inline legacy Jobs sections 1–95 mapped 95/95 to the authoritative numbered Jobs canon on 2026-09-03.
    - Only LEGACY-03 source priority is superseded, strictly by JOBS-007–009; every non-conflicting legacy requirement remains preserved.
 
+
+13. `docs/UniversalAssistant_Loyalty_Discount_Attribution_Commission_Integrity_FINAL_NUMBERED.txt`
+   - SHA-256: `d08375c5fabc74cc493ebb2fd5f6a25cd48a857fb117504ab82240e21e005dc4`
+   - 127 independently tracked `LOYALTY-ID` requirements accepted on 2026-09-03.
+   - Preserves customer benefit and UA revenue as separate states; partner-specific unknown behavior remains fail-closed and queued for live verification.
+
 All accepted addenda augment the Master Spec and do not remove or weaken it. Every requirement retains an evidence-backed zero-omission status; documentation, interfaces, mocks and external dependencies alone never establish completion. Later explicit supersession rules inside the Master Spec take precedence over earlier conflicting wording, subject to safety, law, current platform/provider truth, privacy and security.
 
 Both canonical files were read completely and copied byte-for-byte from the owner-provided attachments on 2026-09-01. Their hashes were verified after persistence.

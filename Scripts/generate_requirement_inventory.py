@@ -54,6 +54,15 @@ def main():
         title = next((value.strip() for value in lines[index + 1:] if value.strip() and not value.startswith("JOBS-")), requirement_id)
         prior = existing.get(requirement_id, {})
         records.append({"id": requirement_id, "source": str(jobs.relative_to(ROOT)), "title": title, "status": prior.get("status", "NOT_IMPLEMENTED"), "implementation_evidence": prior.get("implementation_evidence", []), "test_evidence": prior.get("test_evidence", []), "commit_evidence": prior.get("commit_evidence", []), "live_evidence": prior.get("live_evidence", []), "remaining_dependency": prior.get("remaining_dependency")})
+    loyalty = ROOT / "docs/UniversalAssistant_Loyalty_Discount_Attribution_Commission_Integrity_FINAL_NUMBERED.txt"
+    loyalty_lines = loyalty.read_text().splitlines()
+    for index, line in enumerate(loyalty_lines):
+        match = re.fullmatch(r"LOYALTY-(\d{3}) \[[A-Z_]+\]", line.strip())
+        if not match: continue
+        requirement_id = f"LOYALTY-{int(match.group(1)):03d}"
+        title = next((value.strip() for value in loyalty_lines[index + 1:] if value.strip() and not value.startswith("LOYALTY-")), requirement_id)
+        prior = existing.get(requirement_id, {})
+        records.append({"id": requirement_id, "source": str(loyalty.relative_to(ROOT)), "title": title, "status": prior.get("status", "NOT_IMPLEMENTED"), "implementation_evidence": prior.get("implementation_evidence", []), "test_evidence": prior.get("test_evidence", []), "commit_evidence": prior.get("commit_evidence", []), "live_evidence": prior.get("live_evidence", []), "remaining_dependency": prior.get("remaining_dependency")})
     coordination = ROOT / "docs/DETERMINISTIC_MULTI_STEP_COORDINATION_BOUNDED_AI_FALLBACK_ADDENDUM.md"
     for index, title in enumerate(["Deterministic core", "Facts and composition", "Bounded AI fallback", "Observability and acceptance", "Roadmap rule"], 1):
         requirement_id = f"DCA-{index}"

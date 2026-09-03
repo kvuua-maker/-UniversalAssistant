@@ -1,19 +1,19 @@
 {
-  "current_task_id": "JOBS-MARKETPLACE-COMPLETION",
+  "current_task_id": "LOYALTY-COMMISSION-INTEGRITY-COMPLETION",
   "requirement_ids": [
-    "JOBS-001 through JOBS-097",
-    "all 1884 canonical requirement IDs"
+    "LOYALTY-001 through LOYALTY-127",
+    "all 2011 canonical requirement IDs"
   ],
-  "selected_path": "Per-ID Jobs reconciliation with production behavioral/golden evidence and exact live-only queue.",
+  "selected_path": "Existing Loyalty/Personal Price Core extended with typed stacking, checkout attribution and commission integrity.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "1884/1884 reconciled: 1686 VERIFIED_LOCAL, 184 READY_FOR_LIVE_VERIFICATION, 14 NOT_APPLICABLE_VERIFIED; Jobs 97/97",
-  "acceptance_contract_ref": "docs/JOBS_REQUIREMENT_RECONCILIATION.md",
+  "integration_depth": "2011/2011 reconciled: 1790 VERIFIED_LOCAL, 207 READY_FOR_LIVE_VERIFICATION, 14 NOT_APPLICABLE_VERIFIED; Loyalty 127/127",
+  "acceptance_contract_ref": "docs/LOYALTY_REQUIREMENT_RECONCILIATION.md",
   "required_evidence_level": "E3 local; E4/E5/E6 retained for queued external execution",
   "current_exit_state": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
   "last_failure_signature": null,
-  "material_change": "Jobs production core, policy safeguards, deterministic discovery, 15 golden journeys, 97-ID evidence ledger and three exact live contracts completed locally.",
+  "material_change": "Typed economic separation, stacking policy, checkout attribution, exact commission basis/refund adjustment, account isolation and 25 behavioral tests.",
   "frozen_baseline_commit": "a923914",
-  "dependency": "Only 62 exact external live actions remain; Jobs adds payment, authorized provider/ATS and physical interview device verification.",
+  "dependency": "Only 63 exact external live actions remain; Loyalty adds provider-specific account/terms/checkout/refund verification.",
   "unresolved_verification_steps": [
     "Execute matching LIVE_VERIFICATION_QUEUE items only when the named owner/device/provider dependency becomes available",
     "Never promote an external capability to VERIFIED_LIVE without E4/E5/E6 read-back evidence"

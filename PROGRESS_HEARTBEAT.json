@@ -1,17 +1,17 @@
 {
-  "current_block": "JOBS-MARKETPLACE-COMPLETION",
+  "current_block": "LOYALTY-COMMISSION-INTEGRITY-COMPLETION",
   "current_action": "local completion verified; external live actions remain queued",
   "status": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
-  "last_measurable_progress": "2026-09-03T12:50:35Z",
+  "last_measurable_progress": "2026-09-03T13:05:41Z",
   "attempt_path_id": "jobs-final-regression-v1",
-  "last_commit": "9a652bd",
+  "last_commit": "328b34b",
   "blocker": null,
   "evidence": {
-    "reconciled_requirements": "1884/1884 canonical IDs including 97/97 JOBS IDs",
-    "inventory_counts": "1686 VERIFIED_LOCAL; 184 READY_FOR_LIVE_VERIFICATION; 14 NOT_APPLICABLE_VERIFIED; 0 NOT_IMPLEMENTED; 0 IMPLEMENTED_UNVERIFIED",
-    "target_tests": "Jobs and global executable audits validate IDs, evidence commits, queue contracts, source hashes, production symbols and behavioral/golden coverage",
-    "full_regression": "486 iOS tests/106 suites and 109 backend tests/27 suites passed, 0 failures",
-    "completed_task": "JOBS Marketplace local completion and GLOBAL ZERO-OMISSION reconciliation",
+    "reconciled_requirements": "2011/2011 including LOYALTY-001 through LOYALTY-127",
+    "inventory_counts": "1790 VERIFIED_LOCAL; 207 READY_FOR_LIVE_VERIFICATION; 14 NOT_APPLICABLE_VERIFIED; 0 NOT_IMPLEMENTED; 0 IMPLEMENTED_UNVERIFIED",
+    "target_tests": "25 Loyalty behavioral tests and executable 127-ID audit",
+    "full_regression": "501 iOS tests/106 suites and 109 backend tests/27 suites passed, 0 failures",
+    "completed_task": "Loyalty / Discount / Attribution / Commission Integrity local completion",
     "verification_type": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
     "next_task": "execute exact live queue items only when dependencies become available"
   }

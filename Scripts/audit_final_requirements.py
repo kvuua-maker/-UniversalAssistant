@@ -6,10 +6,10 @@ INV = json.loads((ROOT / "REQUIREMENT_INVENTORY.json").read_text())
 QUEUE = json.loads((ROOT / "LIVE_VERIFICATION_QUEUE.json").read_text())
 expected = ([f"MS-{i}" for i in range(1, 1661)] + [f"MCA-{i}" for i in range(1, 65)] +
             [f"BPP-{i}" for i in range(1, 38)] + [f"ZOP-{i}" for i in range(1, 22)] +
-            [f"JOBS-{i:03d}" for i in range(1, 98)] + [f"DCA-{i}" for i in range(1, 6)])
+            [f"JOBS-{i:03d}" for i in range(1, 98)] + [f"LOYALTY-{i:03d}" for i in range(1, 128)] + [f"DCA-{i}" for i in range(1, 6)])
 rows = INV["requirements"]
 ids = [r["id"] for r in rows]
-assert INV["requirement_count"] == 1884 == len(rows)
+assert INV["requirement_count"] == 2011 == len(rows)
 assert ids == expected, "canonical IDs are missing, duplicated, reordered or unexpected"
 assert not [r for r in rows if r["status"] in {"NOT_IMPLEMENTED", "IMPLEMENTED_UNVERIFIED"}]
 allowed = set(INV["allowed_statuses"])
@@ -58,6 +58,7 @@ canonical_hashes = {
     "BUSINESS_PLATFORM_COMPETITIVE_GAP_AUDIT.md": "9e90bffe15f8f008bb71185449df579120b0fe94b89bc2f34ee3f73243dc8e7d",
     "GENERAL_UNKNOWN_INTENT_DISCOVERY_ANSWER_ACTION_ADDENDUM.md": "5f3f4f051ee4758a7e6981c1d33b2d12354fc74987ebcb99b94635070cb266fe",
     "UniversalAssistant_Jobs_Marketplace_FINAL_CLEAR_NUMBERED.txt": "4b46941d2c6d6930c328a726e5ee1d3c9d56c178aad9fe596d6913e5e33ca7b7",
+    "UniversalAssistant_Loyalty_Discount_Attribution_Commission_Integrity_FINAL_NUMBERED.txt": "d08375c5fabc74cc493ebb2fd5f6a25cd48a857fb117504ab82240e21e005dc4",
 }
 for name, expected_hash in canonical_hashes.items():
     actual = hashlib.sha256((ROOT / "docs" / name).read_bytes()).hexdigest()
