@@ -1088,3 +1088,16 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-1074 | VERIFIED_LOCAL | behavioral tests cover canonical email/product/ticket/parcel/appointment graph compositions; behavioral production-path tests | 2737995 |
 | MS-1075 | VERIFIED_LOCAL | graph never derives execution arguments from opaque free text or provider magic; behavioral production-path tests | 2737995 |
 | MS-1076 | VERIFIED_LOCAL | capability-based registration lets new adapters join compatible flows without scenario rewrites; behavioral production-path tests | 2737995 |
+
+
+| MS-1077 | VERIFIED_LOCAL | GOLDEN_USER_JOURNEYS and GoldenUserJourneyCatalog define 100 distinct production acceptance records across 20 high-frequency families and five languages; catalog tests | aabe915 |
+| MS-1078 | READY_FOR_LIVE_VERIFICATION | 35 local records pass executable paths and 65 provider/device records are explicitly separated; completing all 100 end-to-end records remains queued as MS-1078-LIVE-GOLDEN-JOURNEY-COUNT | aabe915 |
+| MS-1079 | VERIFIED_LOCAL | GoldenJourneyExecution records recognized text, intent/entities, source, result/action, measured latency, taps, confirmations, typed status and failure reason; runner tests | 858c4e4 |
+| MS-1080 | READY_FOR_LIVE_VERIFICATION | local journeys use production parser/plan plus domain behavioral suites; the 65 safe real provider/device actions remain queued as MS-1080-LIVE-GOLDEN-REAL-ACTIONS | aabe915 |
+| MS-1081 | VERIFIED_LOCAL | executable runner measures no-extra-question rate, Time-to-Action and tap/confirmation counts; metric test | aabe915 |
+| MS-1082 | VERIFIED_LOCAL | every journey definition records a positive realistic manual app/service-find-action baseline step count; baseline test | aabe915 |
+| MS-1083 | VERIFIED_LOCAL | representative definitions record generic-AI-plus-real-action baseline steps only where comparison applies; baseline test | aabe915 |
+| MS-1084 | VERIFIED_LOCAL | golden acceptance contract rejects unnecessary-step disadvantage absent compensating verified value and exposes comparable metrics | aabe915 |
+| MS-1085 | VERIFIED_LOCAL | safe unambiguous fast-path families target one trigger/phrase with zero extra tap while preserving required confirmation; runner tests | aabe915 |
+| MS-1086 | VERIFIED_LOCAL | every execution now yields explicit pass, fail or ready-for-live status; local mismatch is behavior-tested as fail rather than misclassified live-ready | 858c4e4 |
+| MS-1087 | VERIFIED_LOCAL | runner emits privacy-conscious completion, clarification/tap, latency, fallback and live/local separation inputs without raw diagnostic persistence | 858c4e4 |
