@@ -99,4 +99,33 @@ struct PerformanceRecorderTests {
         #expect(PerformanceBudgetEvaluator().evaluate(budget, measured: nil) == .unavailable)
         #expect(!PerformanceBudgetEvaluator().releaseGate(budgets: [budget], measurements: [:]))
     }
+
+    @Test func privacySafeProductMetricsAggregateRequiredOperationalSignals() async throws {
+        let metrics = PrivacySafeProductMetrics()
+        for event in [
+            ProductMetricEvent(kind: .featureUsage, featureID: "weather"),
+            ProductMetricEvent(kind: .featureUsage, featureID: "weather"),
+            ProductMetricEvent(kind: .providerLatency, featureID: "weather", duration: .milliseconds(40)),
+            ProductMetricEvent(kind: .connectorFailure, featureID: "weather"),
+            ProductMetricEvent(kind: .connectorFallback, featureID: "weather"),
+            ProductMetricEvent(kind: .crashSignal), ProductMetricEvent(kind: .coldLaunch, duration: .milliseconds(700)),
+            ProductMetricEvent(kind: .voiceToCommand, duration: .milliseconds(120)),
+            ProductMetricEvent(kind: .commandToAction, duration: .milliseconds(80)),
+            ProductMetricEvent(kind: .memoryPressure)
+        ] { await metrics.record(try #require(event)) }
+        let snapshot = await metrics.snapshot()
+        #expect(snapshot.featureUsage["weather"] == 2)
+        #expect(snapshot.counts[.connectorFailure] == 1)
+        #expect(snapshot.counts[.connectorFallback] == 1)
+        #expect(snapshot.counts[.crashSignal] == 1)
+        #expect(snapshot.counts[.memoryPressure] == 1)
+        #expect(snapshot.durationTotals[.voiceToCommand] == .milliseconds(120))
+        #expect(snapshot.durationTotals[.commandToAction] == .milliseconds(80))
+    }
+
+    @Test func productTelemetryRejectsUnboundedOrPrivateDimensions() {
+        #expect(ProductMetricEvent(kind: .featureUsage, featureID: "raw command with spaces") == nil)
+        #expect(ProductMetricEvent(kind: .providerLatency, duration: .milliseconds(-1)) == nil)
+        #expect(ProductMetricEvent(kind: .featureUsage, featureID: String(repeating: "a", count: 65)) == nil)
+    }
 }

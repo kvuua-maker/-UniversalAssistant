@@ -143,6 +143,59 @@ actor CoordinationObservabilityRecorder {
     func snapshot() -> [CoordinationObservation] { observations }
 }
 
+enum ProductMetricKind: String, Codable, CaseIterable, Sendable {
+    case featureUsage
+    case commandLatency
+    case providerLatency
+    case connectorFailure
+    case connectorFallback
+    case crashSignal
+    case coldLaunch
+    case warmLaunch
+    case voiceToCommand
+    case commandToAction
+    case memoryPressure
+}
+
+/// Privacy-safe product telemetry. Dimensions are bounded enums/registered
+/// feature identifiers; raw commands, URLs, payloads and user identifiers are
+/// intentionally absent from the contract.
+struct ProductMetricEvent: Equatable, Codable, Sendable {
+    let kind: ProductMetricKind
+    let featureID: String?
+    let duration: Duration?
+    let recordedAt: Date
+
+    init?(kind: ProductMetricKind, featureID: String? = nil, duration: Duration? = nil, recordedAt: Date = .now) {
+        let normalized = featureID?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard normalized.map({ !$0.isEmpty && $0.count <= 64 && $0.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" } }) ?? true,
+              duration.map({ $0 >= .zero }) ?? true else { return nil }
+        self.kind = kind; self.featureID = normalized; self.duration = duration; self.recordedAt = recordedAt
+    }
+}
+
+struct ProductMetricsSnapshot: Equatable, Sendable {
+    let counts: [ProductMetricKind: Int]
+    let featureUsage: [String: Int]
+    let durationTotals: [ProductMetricKind: Duration]
+}
+
+actor PrivacySafeProductMetrics {
+    private var counts: [ProductMetricKind: Int] = [:]
+    private var featureUsage: [String: Int] = [:]
+    private var durationTotals: [ProductMetricKind: Duration] = [:]
+
+    func record(_ event: ProductMetricEvent) {
+        counts[event.kind, default: 0] += 1
+        if event.kind == .featureUsage, let feature = event.featureID { featureUsage[feature, default: 0] += 1 }
+        if let duration = event.duration { durationTotals[event.kind, default: .zero] += duration }
+    }
+
+    func snapshot() -> ProductMetricsSnapshot {
+        .init(counts: counts, featureUsage: featureUsage, durationTotals: durationTotals)
+    }
+}
+
 enum PerformanceBudgetMetric: String, Codable, CaseIterable, Sendable {
     case coldLaunch, warmLaunch, actionButtonToListening, endOfSpeechToLocalParse
     case firstNetworkResult, normalRAM, selectedCPU, selectedBattery

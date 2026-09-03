@@ -9,6 +9,7 @@ final class AssistantViewModel {
     var voiceInputEnabled = true
     private(set) var statusText = AppText.value("ready")
     private(set) var resultState: AssistantResultState = .idle
+    private(set) var shouldOfferSettings = false
     private(set) var interactionDecision: InteractionDecision?
     let recorder = AudioRecorderController()
     private let commandEngine: any CommandParsing
@@ -40,15 +41,20 @@ final class AssistantViewModel {
         } else {
             Task {
                 await voiceInput.start()
-                isListening = voiceInput.state == .listening
-                statusText = switch voiceInput.state {
+                applyVoiceState(voiceInput.state)
+            }
+        }
+    }
+
+    func applyVoiceState(_ state: VoiceInputState) {
+        isListening = state == .listening
+        shouldOfferSettings = state == .denied
+        statusText = switch state {
                 case .listening: AppText.value("listening")
                 case .denied: AppText.value("microphone_denied")
                 case .unavailable: AppText.value("speech_unavailable")
                 case .failed: AppText.value("listening_failed")
                 default: AppText.value("ready")
-                }
-            }
         }
     }
 

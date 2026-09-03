@@ -21,6 +21,11 @@ struct AssistantHomeView: View {
                     ))
                     .accessibilityIdentifier("assistant.voice-input-toggle")
                     Text(model.statusText).font(.headline).accessibilityIdentifier("assistant.status")
+                    if model.shouldOfferSettings,
+                       let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                        Link("settings", destination: settingsURL)
+                            .accessibilityIdentifier("assistant.permission-settings")
+                    }
                     RecordingStatusPill(state: model.recorder.state)
                     CompactResultCard(state: model.resultState, onReportIssue: {
                         Task { await model.reportWrongResult() }

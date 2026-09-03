@@ -22,6 +22,16 @@ struct AccessibilityAudioPermissionTests {
         #expect(policy.decision(for: .locationTask(.navigation), reducedLocationAccuracy: true) == .temporaryPreciseLocation)
     }
 
+    @Test func deniedVoicePermissionOffersOneConciseSettingsRecoveryWithoutRetry() {
+        let model = AssistantViewModel()
+        model.applyVoiceState(.denied)
+        #expect(!model.isListening)
+        #expect(model.shouldOfferSettings)
+        #expect(model.statusText == AppText.value("microphone_denied"))
+        model.applyVoiceState(.unavailable)
+        #expect(!model.shouldOfferSettings)
+    }
+
     @Test func recorderPausesOnCallOrBluetoothRouteChange() async {
         let backend = RecorderBackendSpy()
         let controller = AudioRecorderController(backend: backend,
