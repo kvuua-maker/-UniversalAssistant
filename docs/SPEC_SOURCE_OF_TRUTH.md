@@ -39,6 +39,11 @@ The project source of truth is the complete, indivisible combination of:
    - 29 lines / 4,535 bytes; owner-mandated canonical unknown-intent discovery/answer/action policy accepted on 2026-09-03.
    - Requires specialized-capability precedence followed by deterministic generic discovery, bounded AI only for residual ambiguity/synthesis, native verified results, truthful actions, existing safety gates and honest limitation.
 
+11. `docs/UniversalAssistant_Jobs_Marketplace_FINAL_CLEAR_NUMBERED.txt`
+   - SHA-256: `4b46941d2c6d6930c328a726e5ee1d3c9d56c178aad9fe596d6913e5e33ca7b7`
+   - 296 lines / 20,668 bytes; copied byte-for-byte from the owner attachment on 2026-09-03.
+   - Adds 97 independently tracked `JOBS-ID` requirements and preserves OUR JOBS FIRST → active commercial partners → legitimate external fallback only when insufficient.
+
 All accepted addenda augment the Master Spec and do not remove or weaken it. Every requirement retains an evidence-backed zero-omission status; documentation, interfaces, mocks and external dependencies alone never establish completion. Later explicit supersession rules inside the Master Spec take precedence over earlier conflicting wording, subject to safety, law, current platform/provider truth, privacy and security.
 
 Both canonical files were read completely and copied byte-for-byte from the owner-provided attachments on 2026-09-01. Their hashes were verified after persistence.

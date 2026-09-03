@@ -1,0 +1,296 @@
+UNIVERSALASSISTANT — JOBS MARKETPLACE / EMPLOYMENT CORE
+FINAL CLEARLY NUMBERED ZERO-OMISSION CANONICAL ADDENDUM
+
+ВАЖЛИВО: КОЖЕН ПУНКТ НИЖЧЕ — ОКРЕМА ПЕРЕВІРЮВАНА ВИМОГА.
+Codex не має права пропустити жоден JOBS-ID.
+
+JOBS-001
+UNIVERSALASSISTANT — JOBS MARKETPLACE / EMPLOYMENT CORE
+
+JOBS-002
+STRICT EXECUTION AUTHORITY
+
+JOBS-003
+Це mandatory canonical source-of-truth для Jobs. Не змінюй owner-approved бізнес-модель, source priority, monetization, moderation, privacy або scope. Не вигадуй API/OAuth/affiliate/commercial agreements. Не будуй full HRM/ATS/payroll. Спочатку evidence-backed audit фактичного repo, потім БЕЗ повторного audit одразу реалізуй усі PARTIAL/MISSING локальні gaps.
+
+JOBS-004
+Reuse: Business Partner Platform, Business Account, Mini-CRM, Business Inbox, Partner Connector Layer, Universal Action Graph, Connected Accounts, Calendar, Smart Departure, Notifications, General Unknown Intent/Generic Discovery, payments/balance/ledger, RemoteConfig, CostQuotaManager, audit/evidence/state, privacy/security, identity/business verification, persistence/backend, documents/files. Не створюй дублікати.
+
+JOBS-005
+PRODUCT / MONEY
+
+JOBS-006
+Jobs — вертикаль UniversalAssistant, не окрема програма. Один business/FOP/company = один Business Account; Jobs не потребує повторної реєстрації. Інші сервіси не роблять Jobs безкоштовним. CANDIDATE CORE = FREE: search, profile, CV, applications, Job Watch, invitations, normal communication, interview, offer/hire. EMPLOYER PAYS: (A) prepaid vacancy publication entitlements; (B) prepaid promotion/Hot/Boost; (C) paid candidate-database search; (D) paid contact/invitation entitlements; (E) Enterprise ATS/API/feed tier. Standard employer = PREPAID/ENTITLEMENT. Не роби default pay-after-hire, SMB post-pay, debt або subjective qualified-application billing. Enterprise post-pay only explicit contract/credit policy. Reuse existing payment ledger. payment confirmed → entitlement credited → service consumes exactly once → auditable balance. Idempotent, no silent negative balance.
+
+JOBS-007
+SOURCE POLICY — OUR JOBS FIRST
+
+JOBS-008
+Priority: 1. DIRECT UNIVERSALASSISTANT JOBS EMPLOYERS. 2. ACTIVE VERIFIED COMMERCIAL/REVENUE JOB PARTNERS. 3. LEGITIMATE EXTERNAL JOB FALLBACK only when 1–2 are insufficient for the actual request.
+
+JOBS-009
+Canonical: OUR/REVENUE JOBS FIRST → EXTERNAL LEGITIMATE FALLBACK ONLY WHEN INSUFFICIENT. External fallback exists so a candidate is not left without useful results while our database grows. It must not displace sufficient relevant own/commercial results. Sufficiency != count>0. Evaluate hard constraints, relevance, active state, freshness, location/remote, salary, schedule/employment and canonical result-count policy. Typed source: DIRECT_PAID_EMPLOYER / COMMERCIAL_PARTNER / EXTERNAL_FALLBACK_NO_VERIFIED_REVENUE. Never claim revenue for fallback without evidence.
+
+JOBS-010
+EXHAUSTIVE UKRAINIAN SOURCE AUDIT
+
+JOBS-011
+At implementation time research ALL significant Ukrainian job sources, not only owner examples. Mandatory examples to check: Work.ua, robota.ua, Jobs.ua, Jooble, plus every other materially significant Ukrainian job board/platform/official employment source found.
+
+JOBS-012
+For EACH provider record: provider; official mechanism; auth; permitted use/display; fields; freshness; quotas; commercial status; attribution; failure behavior; implementation status; evidence source/date.
+
+JOBS-013
+Integration hierarchy: official API → official feed/XML/ATS → documented partner/commercial integration → officially permitted structured access → permitted web discovery → exact external handoff. Always use deepest officially permitted path. No private API, Terms/CAPTCHA bypass, invented endpoint/OAuth/affiliate/revenue.
+
+JOBS-014
+If key/approval/contract is required: implement adapter + credential boundary locally; real authorized verification → LIVE_VERIFICATION_QUEUE. Mock != live. If only handoff exists: CTA “Відкрити вакансію”, not “Відгукнутися”. Opening a page != submitted application. One source fails → continue other legitimate sources. Partial valid results → use. Blocked page != vacancy absent. Never fabricate vacancy, salary, freshness, application or revenue.
+
+JOBS-015
+EMPLOYER VERIFICATION / MODERATION
+
+JOBS-016
+Reuse existing business verification. VERIFIED EMPLOYER only with evidence. Vacancy states: DRAFT/PENDING_MODERATION/ACTIVE/NEEDS_REVIEW/REJECTED/SUSPENDED/CLOSED/EXPIRED. Flow: verified business → Jobs entitlement → create → Publish → automated risk/policy check → ACTIVE or REVIEW/REJECTED. Payment != permission to publish prohibited content. Normal vacancies should not require manual review. Check required fields, duplicates/spam, impersonation, blocked identities/domains, phishing/malicious links, candidate-payment demands, scam/fraud, illegal/prohibited work, materially misleading salary/conditions, required licenses, suspicious post-approval changes. Reserved entitlement rejected before paid publication delivery → restore/release per explicit Jobs Terms. Technical pre-delivery failure → restore/refund per terms. All auditable. Material edit triggers re-review; minor safe edit may remain active.
+
+JOBS-017
+COMPLAINT != GUILT. “Мене не взяли”, “вибрали іншого”, “не відповіли”, subjective dislike do not auto-ban. Typed complaints: SERVICE_FEEDBACK, OUTDATED, MISLEADING_TERMS, SALARY_MISMATCH, IMPERSONATION, PAYMENT_REQUEST, PHISHING, FRAUD, ILLEGAL_ACTIVITY, HARASSMENT/POLICY, REVIEW_REQUIRED. complaint → classification → evidence/risk → proportionate action. High-risk credible evidence may temporarily suspend affected vacancy pending review. Enforcement typed/auditable with appeal where appropriate.
+
+JOBS-018
+CANDIDATE / VACANCY DATA
+
+JOBS-019
+Employment Profile: candidate ID; multiple roles; location; remote/hybrid/onsite; desired salary/range/currency/period; employment type; schedule; experience; skills; languages; licenses/certifications; explicitly provided work authorization where appropriate; availability; typed constraints. Never infer credentials.
+
+JOBS-020
+Candidate database is built ONLY from consenting UniversalAssistant users; never scrape/copy other candidate databases. Visibility PRIVATE/DISCOVERABLE. Private excluded. Discoverable exposes only permitted professional fields. Payment never overrides privacy; phone/email/full CV/home address/docs remain restricted until candidate-controlled disclosure.
+
+JOBS-021
+Support multiple CVs, PDF/DOCX where safe existing infrastructure supports them. Vacancy CV_OPTIONAL/CV_REQUIRED. Required blocks submission without selected CV. Show exact data/CV before submit. Application = immutable snapshot of consented profile facts, CV/version, screening answers, vacancy/version, consent, timestamp, source/attribution. Later profile edits do not rewrite it.
+
+JOBS-022
+Vacancy typed: IDs, role, description, location, remote mode, salary min/max/currency/period/gross-net-unknown/fixed-variable, employment/schedule/experience, MUST_HAVE/PREFERRED, languages/licenses, positions, CV requirement, screening, application method, timestamps, source/commercial semantics, status, audit. Salary: separate guaranteed/base/range from bonus; no speculative bonus as guaranteed; no silent gross/net or hourly/monthly conversion. MUST_HAVE hard; PREFERRED ranking only. Screening bounded/job-relevant: MUST_HAVE/PREFERRED/INFORMATIONAL.
+
+JOBS-023
+SEARCH / MATCHING
+
+JOBS-024
+Natural-language search → typed constraints. Primary matching deterministic: role+location+remote+salary+employment+schedule+experience+MUST_HAVE+preferences. AI may assist semantic interpretation only; never invent credentials/experience/salary/availability. Ranking: hard constraints first, then relevance/freshness/salary/location/schedule/experience/verification. Paid promotion cannot bypass hard constraints and must be disclosed where required.
+
+JOBS-025
+Candidate application: show disclosure → explicit confirmation → snapshot → real submission confirmation. Internal apply → Business Inbox. External ATS → verified handoff + attribution where supported. Employer candidate search is paid and only DISCOVERABLE profiles. Employer invitation/contact requires paid entitlement and candidate consent. Decline keeps restricted data private.
+
+JOBS-026
+Reuse Business Inbox; no new messenger. Reuse Calendar/Appointment/Smart Departure for interviews; no proprietary video. Lifecycle: SUBMITTED/RECEIVED/VIEWED/INTERVIEW_PROPOSED/INTERVIEW_SCHEDULED/OFFER/HIRED plus REJECTED/WITHDRAWN/CLOSED/EXPIRED/CANCELLED/FAILED as applicable. Validate/audit transitions.
+
+JOBS-027
+WATCHES / CONNECTORS / ATTRIBUTION
+
+JOBS-028
+Candidate Job Watch reuses watch/notification architecture and follows OUR JOBS FIRST + external fallback. Fresh active matches only; dedup; pause/edit/delete. Employer candidate watch optional paid; discoverable only; no restricted contacts; no auto-contact.
+
+JOBS-029
+Reuse Partner Connector Layer for ATS/feed: vacancy create/update/close/expire, salary/status, application handoff/status where supported. Require capability declarations, idempotency, dedup, source IDs, partial failure, health, audit, stale detection, retry/backoff.
+
+JOBS-030
+Commercial provider registry: provider ID, commercial model/status, effective/expiry, territory, capabilities, handoff, tracking, revenue event, reconciliation, branding/display/privacy rules, evidence. Do not hardcode any named provider as paying without active evidence. Preserve supported source/vacancy/referral/click/application IDs; no fabricated revenue or prohibited attribution manipulation.
+
+JOBS-031
+Promotion prepaid, ACTIVE compliant vacancy only; stops with entitlement/budget/vacancy eligibility. No double-charge for retries/duplicate events/pre-delivery failures. Define exact entitlement consumption event.
+
+JOBS-032
+FRESHNESS / FRAUD / PRIVACY
+
+JOBS-033
+Vacancies require published/updated/verified where relevant/expires timestamps. Expired/closed not active. Dedup internal IDs or external source+ID plus safe fingerprints; do not merge genuinely different vacancies. Detect candidate-payment scams, fake employers, phishing, malicious files, data harvesting, salary deception, approved-content replacement, database scraping/contact harvesting/credential sharing. Do not request identity documents by default or expose them in candidate search. Region-aware employment policy; do not normalize prohibited discriminatory constraints. Support locale/currency/timezone/remote; no precise candidate home address exposure. Candidate withdrawal/rejection/offer/hire supported only to Jobs-needed scope; no payroll. Talent-pool retention requires separate consent where applicable. Reuse canonical retention/deletion/block/report/appeal/privacy architecture.
+
+JOBS-034
+AI / SAFETY / PERFORMANCE
+
+JOBS-035
+Core Jobs works without AI. AI optional and never source of employment truth. Generic Action Graph cannot bypass Jobs consent or auto-spray applications. Apply DO, DON’T NARRATE and RESULT-FIRST. Reuse CostQuotaManager/RemoteConfig. Use bounded/indexed/paged retrieval; no whole-corpus memory loading; no expensive AI-first search. Reuse admin/observability with privacy-safe metrics only.
+
+JOBS-036
+OUT OF SCOPE
+
+JOBS-037
+NO payroll, timesheets, vacations, sick leave, HR document workflow, performance reviews, LMS, full HRIS, full enterprise ATS replacement, background-check business, proprietary video conferencing, unrelated employee management, mass cold outreach.
+
+JOBS-038
+REQUIRED EVIDENCE AUDIT
+
+JOBS-039
+Before implementation matrix at minimum: Business Account reuse; Jobs entitlements; employer verification; vacancy model; Employment Profile; discoverability; CV; application snapshot; screening; matching; candidate search; employer search; contact consent; Inbox; interview; watches; lifecycle; moderation; complaints; fraud/enforcement; exhaustive Ukrainian source integration; commercial registry; external fallback; ATS/feed; attribution; privacy/retention; admin/observability. Allowed: ALREADY_IMPLEMENTED / PARTIAL / MISSING / NOT_APPLICABLE_VERIFIED / LIVE_VERIFICATION_REQUIRED. A similarly named class is not evidence.
+
+JOBS-040
+REQUIRED BEHAVIORAL COVERAGE
+
+JOBS-041
+At minimum test: existing Business Account no re-registration; candidate core free; employer paid entitlements; multiple candidate roles/CVs; private vs discoverable; no contact leak; CV optional/required; immutable application snapshot; MUST_HAVE vs PREFERRED; screening; salary semantics; publication entitlement exactly once; retry no double-charge; rejected pre-publication entitlement treatment; normal/review/rejected moderation; material edit re-review; complaint “not hired” no ban; salary mismatch review; candidate-payment scam high-risk; unsupported complaint no guilt; vacancy expiry/close; natural-language search; deterministic no-AI matching; AI cannot invent credential; disclosure before apply; internal Inbox; external handoff not false submit; paid employer search; invitation consent; interview/calendar; Job Watch dedup; ATS/feed dedup/close/partial failure; commercial attribution; promotion hard constraints; retention/block/report; quota/idempotency; persistence/restart.
+
+JOBS-042
+Source-specific tests: - own/revenue sources sufficient → external fallback NOT invoked; - own/revenue sources absent/insufficient → external fallback invoked; - noncommercial fallback clearly marked; - commercial provider expired → removed from commercial priority; - provider API unavailable → next legitimate mechanism/source; - source with required missing credentials → local implementation + live queue, not fake success; - external result with only handoff → truthful CTA; - duplicate vacancy across own/commercial/external sources resolved without losing source truth.
+
+JOBS-043
+GOLDEN JOURNEYS
+
+JOBS-044
+A. Candidate: “Знайди роботу водієм у Києві від 50 000 грн без нічних
+
+JOBS-045
+змін.” B. Same query with sufficient own Jobs results → no external fallback. C. Same query with insufficient own/commercial results → legitimate Ukrainian external fallback. D. Optional-CV application. E. Required-CV application. F. Existing Business Account creates paid vacancy → moderation → ACTIVE. G. Paid employer candidate search → discoverable profile only. H. Paid invitation → candidate accepts/declines privacy-safely. I. Job Watch. J. Interview → Calendar/Smart Departure where permitted. K. Complaint “мене не взяли” → no automatic ban. L. Credible candidate-payment scam → protective review. M. ACTIVE commercial external provider → attribution. N. External fallback with no verified revenue → useful result, no false revenue claim. O. Provider unavailable → continue other legitimate sources.
+
+JOBS-046
+COMPLETION GATE
+
+JOBS-047
+Do NOT declare complete because a Jobs screen/struct/search/mock exists. Completion requires evidence-backed end-to-end locally available paths for: one Business Account; employer verification; prepaid entitlement; vacancy creation/moderation/publication; Employment Profile; discoverability; CV; matching; candidate search/application; employer candidate search; paid invitation/contact; Inbox; interview; watches; lifecycle; complaints/fraud; exhaustive Ukrainian provider audit; OUR JOBS FIRST + insufficient-results fallback; ATS/feed; commercial attribution; privacy; persistence; tests; evidence. External-only requirements → precise LIVE_VERIFICATION_QUEUE.
+
+JOBS-048
+EXECUTION ORDER
+
+JOBS-049
+1. Do not interrupt unsafe current ZERO-OMISSION checkpoint.
+
+JOBS-050
+2. At clean checkpoint persist this exact addendum canonically and
+
+JOBS-051
+record hash/evidence.
+
+JOBS-052
+3. Evidence-backed audit.
+
+JOBS-053
+4. Immediately implement all PARTIAL/MISSING locally available gaps; no
+
+JOBS-054
+second audit loop.
+
+JOBS-055
+5. Add behavioral tests + golden journeys.
+
+JOBS-056
+6. Targeted tests.
+
+JOBS-057
+7. Full iOS/backend regression.
+
+JOBS-058
+8. Fix until green.
+
+JOBS-059
+9. Evidence/state/inventory.
+
+JOBS-060
+10. Exact live-only queue entries.
+
+JOBS-061
+11. Atomic commit/push.
+
+JOBS-062
+12. Verify HEAD == origin/main and clean tree.
+
+JOBS-063
+13. Return to factual unfinished global ZERO-OMISSION checkpoint and
+
+JOBS-064
+continue.
+
+JOBS-065
+FINAL NON-NEGOTIABLE RULES
+
+JOBS-066
+1. Candidate core Jobs is free.
+
+JOBS-067
+2. Employer pays; standard services prepaid/entitlement-based.
+
+JOBS-068
+3. One Business Account; no second Jobs registration.
+
+JOBS-069
+4. Own direct Jobs employers first.
+
+JOBS-070
+5. Active commercial partners second.
+
+JOBS-071
+6. Legitimate external Ukrainian fallback only when first two are
+
+JOBS-072
+insufficient.
+
+JOBS-073
+7. External fallback may be non-monetized; never lie about revenue.
+
+JOBS-074
+8. Exhaustively audit significant Ukrainian job sources at
+
+JOBS-075
+implementation time.
+
+JOBS-076
+9. No API/commercial evidence = do not invent it.
+
+JOBS-077
+10. Candidate DB only from consenting UniversalAssistant users.
+
+JOBS-078
+11. Employer payment never overrides candidate privacy.
+
+JOBS-079
+12. Complaint != guilt.
+
+JOBS-080
+13. Payment != permission to publish fraud.
+
+JOBS-081
+14. AI != employment truth.
+
+JOBS-082
+15. No full HRM/ATS/payroll scope expansion.
+
+JOBS-083
+16. One failed source != stop search.
+
+JOBS-084
+17. Never claim application/interview/hire/verification/revenue without
+
+JOBS-085
+evidence.
+
+JOBS-086
+18. After Jobs completion return to global ZERO-OMISSION. === LEGACY PRESERVATION ===
+
+JOBS-087
+Preserve the complete behavior of the prior legacy Jobs Marketplace addendum sections 1–95. Before coding, build a legacy 1–95 → current JOBS-ID coverage map; completion requires 95/95 mapped with zero silent omissions. === SOURCE PRIORITY ===
+
+JOBS-088
+Replace the older absolute REVENUE-ELIGIBLE-SOURCES-ONLY rule only at the point of conflict with the newer owner decision: search direct UniversalAssistant Jobs employers first, active verified commercial/revenue partners second, and legitimate external Ukrainian job sources only when the first two are insufficient for the user’s actual hard constraints and useful-result threshold. === UKRAINIAN PROVIDERS ===
+
+JOBS-089
+At implementation time perform an exhaustive current audit of significant Ukrainian job sources, including Work.ua, robota.ua, Jobs.ua, Jooble and all other materially significant sources found; verify each source’s official API/feed/ATS/partner/permitted-web/handoff path and never invent an integration. === FALLBACK TRUTH ===
+
+JOBS-090
+External non-monetized fallback is permitted only after own/commercial results are insufficient; label/source it truthfully, do not claim revenue, and use only officially permitted access or exact handoff. === EXECUTION ===
+
+JOBS-091
+Do not stop after the evidence audit. Immediately implement every locally available PARTIAL/MISSING gap, run targeted behavioral tests and golden journeys, full regression, update evidence/state/live queue, atomic commit/push, verify HEAD equals origin/main and clean tree, then return to the factual global ZERO-OMISSION checkpoint.
+
+JOBS-092
+Before coding, produce a table LEGACY_SECTION | CURRENT_JOBS_ID(S) | STATUS | PRODUCTION_EVIDENCE | TEST_EVIDENCE | COMMIT_EVIDENCE | NOTES for legacy sections exactly 1–95.
+
+JOBS-093
+Allowed legacy status: PRESERVED, PRESERVED_AND_EXTENDED, SUPERSEDED_BY_NEWER_OWNER_DECISION, NOT_APPLICABLE_VERIFIED. SUPERSEDED requires the exact newer owner rule and may supersede only the conflicting part.
+
+JOBS-094
+Produce a second evidence table JOBS_ID | STATUS | PRODUCTION_EVIDENCE | TEST_EVIDENCE | COMMIT_EVIDENCE | LIVE_QUEUE_ITEM. Every JOBS-ID in this file must appear exactly once.
+
+JOBS-095
+Allowed current status: ALREADY_IMPLEMENTED, PARTIAL, MISSING, NOT_APPLICABLE_VERIFIED, LIVE_VERIFICATION_REQUIRED.
+
+JOBS-096
+Do not declare completion with any unmapped legacy section, missing JOBS-ID, locally available PARTIAL/MISSING gap, failed targeted test, failed regression, unrecorded live-only dependency, unpushed commit, dirty working tree, or HEAD differing from origin/main.
+
+JOBS-097
+After Jobs completion, return to the factual unfinished global ZERO-OMISSION reconciliation point and continue.
