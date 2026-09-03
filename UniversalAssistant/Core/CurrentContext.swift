@@ -91,7 +91,7 @@ struct CurrentContext: Equatable, Codable, Sendable {
 
     mutating func resolve(_ command: StructuredCommand, now: Date = .now) -> String? {
         expireStale(at: now)
-        guard command.intent == .contextualSelection, let ordinal = command.constraints.ordinal,
+        guard [.contextualSelection, .open, .show].contains(command.intent), let ordinal = command.constraints.ordinal,
               resultEntities.indices.contains(ordinal - 1) else { return nil }
         selectedEntity = resultEntities[ordinal - 1]
         return selectedEntity?.displayName

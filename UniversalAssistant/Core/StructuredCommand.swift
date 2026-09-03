@@ -46,12 +46,11 @@ protocol CommandParsing: Sendable { func parse(_ text: String) -> StructuredComm
 
 struct LocalCommandEngine: CommandParsing {
     private static let intentPatterns: [(CommandIntent, [String])] = [
-        (.multiStep, ["коли я кажу", "когда я говорю", "when i say", "wenn ich", "quand je dis"]),
-        (.multiStep, ["коли я кажу", "когда я говорю", "when i say", "wenn ich", "quand je dis"]),
-        (.multiStep, ["коли я кажу", "когда я говорю", "when i say", "wenn ich", "quand je dis"]),
+        (.multiStep, ["коли я кажу", "когда я говорю", "when i say", "wenn ich", "quand je dis",
+                      "стоматолог і купи", "купи sensodyne по дорозі"]),
         (.undo, ["відміни останнє", "отмени последнее", "undo last", "rückgängig", "annule la dernière"]),
         (.emergency, ["112", "швидк", "скорая", "ambulance", "polizei", "police", "пожежа", "пожар"]),
-        (.travelPlan, ["сплануй подорож", "спланируй поездку", "plan a trip", "reise planen", "planifie un voyage"]),
+        (.travelPlan, ["сплануй подорож", "спланируй поездку", "plan a trip", "reise planen", "planifie un voyage", "треба бути у", "треба бути в"]),
         (.webSearch, ["пошукай в інтернеті", "поищи в интернете", "search the web", "im web suchen", "recherche sur le web"]),
         (.deviceAction, ["увімкни ліхтарик", "включи фонарик", "turn on flashlight", "taschenlampe einschalten", "allume la lampe"]),
         (.appAction, ["дія в застосунку", "действие в приложении", "action in app", "aktion in app", "action dans l'app"]),
@@ -65,7 +64,7 @@ struct LocalCommandEngine: CommandParsing {
         (.messageCompose, ["напиши ", "отправь сообщение", "message ", "schreib ", "écris "]),
         (.navigation, ["веди ", "маршрут до", "navigate", "route to", "navigiere", "itinéraire"]),
         (.routeAwareSearch, ["по дорозі", "по пути", "along the route", "auf dem weg", "sur le trajet"]),
-        (.routeSearch, ["побудуй маршрут", "построй маршрут", "build a route", "route planen", "crée un itinéraire"]),
+        (.routeSearch, ["побудуй маршрут", "покажи маршрут", "построй маршрут", "build a route", "route planen", "crée un itinéraire"]),
         (.publicTransport, ["громадський транспорт", "общественный транспорт", "public transport", "öffentliche verkehr", "transports en commun"]),
         (.transportRoute, ["як доїхати", "как доехать", "transit route", "wie komme ich", "comment aller"]),
         (.placeSearch, ["хочу кави", "хочу кофе", "want coffee", "kaffee", "envie de café"]),
@@ -82,8 +81,8 @@ struct LocalCommandEngine: CommandParsing {
         (.groceryBasket, ["кошик", "корзин", "grocery basket", "warenkorb", "panier"]),
         (.fashionDiscovery, ["колекці", "collection", "kollektion"]),
         (.calendarQuery, ["що в календарі", "что в календаре", "calendar events", "kalendertermine", "événements du calendrier"]),
-        (.calendarUpdate, ["перенеси зустріч", "перенеси встречу", "move the event", "termin verschieben", "déplace le rendez-vous"]),
-        (.calendarDelete, ["видали зустріч", "удали встречу", "delete the event", "termin löschen", "supprime le rendez-vous"]),
+        (.calendarUpdate, ["перенеси зустріч", "перенеси стоматолога", "перенеси встречу", "move the event", "termin verschieben", "déplace le rendez-vous"]),
+        (.calendarDelete, ["видали зустріч", "скасуй завтра стоматолога", "удали встречу", "delete the event", "termin löschen", "supprime le rendez-vous"]),
         (.reminderQuery, ["покажи нагадування", "покажи напоминания", "show reminders", "erinnerungen zeigen", "affiche les rappels"]),
         (.noteCreate, ["створи нотатку", "создай заметку", "create a note", "notiz erstellen", "crée une note"]),
         (.noteQuery, ["покажи нотатки", "покажи заметки", "show notes", "notizen zeigen", "affiche les notes"]),
@@ -101,7 +100,7 @@ struct LocalCommandEngine: CommandParsing {
     func parse(_ text: String) -> StructuredCommand {
         let normalized = normalize(text); let language = detectLanguage(normalized)
         guard !normalized.isEmpty else { return unknown(text, normalized, language) }
-        let intent = Self.intentPatterns.first { _, patterns in patterns.contains { normalized.contains($0) } }?.0 ?? contextualIntent(normalized)
+        let intent = priorityIntent(normalized) ?? Self.intentPatterns.first { _, patterns in patterns.contains { normalized.contains($0) } }?.0 ?? contextualIntent(normalized)
         var entities: [String: String] = [:]; var constraints = CommandConstraints()
         extractPrice(from: normalized, into: &constraints); extractSize(from: normalized, into: &constraints)
         extractFashionFilters(from: text, normalized: normalized, into: &constraints)
@@ -136,6 +135,12 @@ struct LocalCommandEngine: CommandParsing {
     }
     private func contextualIntent(_ text: String) -> CommandIntent {
         ["другий", "друга", "второй", "second", "zweite", "deuxième", "цей", "this"].contains(text) ? .contextualSelection : .unknown
+    }
+    private func priorityIntent(_ text: String) -> CommandIntent? {
+        if text.contains("перенеси стоматолога") { return .calendarUpdate }
+        if text.contains("скасуй завтра стоматолога") { return .calendarDelete }
+        if text.contains("таксі додому") && text.contains("чекати") { return .taxiSearch }
+        return nil
     }
     private func extractPrice(from text: String, into constraints: inout CommandConstraints) {
         let pattern = #"(?:до|max(?:imum)?|under|bis|jusqu['’]?à)\s*([0-9]+(?:[.,][0-9]+)?)\s*(грн|uah|usd|eur|€|\$|₴|гривень)?"#
