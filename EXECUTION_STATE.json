@@ -1,16 +1,21 @@
 {
   "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
-  "requirement_ids": ["MS-539...MS-565"],
-  "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
+  "requirement_ids": [
+    "MS-566..."
+  ],
+  "selected_path": "Continue strict contiguous per-ID production/test/commit evidence reconciliation after verified General Unknown Intent core.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "27 performance, release, integration, UX, truth and definition-of-done requirements reconciled",
-  "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
+  "integration_depth": "General unknown-intent production path VERIFIED_LOCAL; 28 targeted, 465 iOS and 92 backend tests green.",
+  "acceptance_contract_ref": "docs/GENERAL_UNKNOWN_INTENT_DISCOVERY_GAP_AUDIT.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "MS-539–565 mapped existing executable performance/failure/truth/integration evidence and kept every physical, signing, TestFlight and publication action explicitly separate.",
+  "material_change": "Added extensible typed GenericIntent, configurable generic HTTPS discovery/retrieval, structured extraction, privacy-minimized query, semantic cache, source/freshness/conflict resolution, deterministic no-AI coordination, native truthful result actions, bounded AI observability and ten executable golden journeys.",
   "frozen_baseline_commit": "2353a38",
-  "dependency": "No external dependency blocks the next local reconciliation slice.",
-  "unresolved_verification_steps": ["1108 canonical requirements remain unreconciled", "Physical-device, signing, TestFlight and App Store submission checks remain in LIVE_VERIFICATION_QUEUE"],
+  "dependency": "Live generic endpoint verification is queued and does not block local reconciliation.",
+  "unresolved_verification_steps": [
+    "Continue contiguous reconciliation from MS-566+",
+    "Execute queued generic web discovery live verification when owner-approved endpoint and credential exist"
+  ],
   "next_task_id": "GLOBAL-ZERO-OMISSION-MS-566-PLUS"
 }
