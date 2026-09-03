@@ -929,3 +929,33 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-916 | READY_FOR_LIVE_VERIFICATION | bounded concurrent local search is locally tested; physical release-like latency measurement is queued as MS-916-LIVE-LOCAL-SEARCH-LATENCY | 68862b5 |
 | MS-917 | READY_FOR_LIVE_VERIFICATION | typed region/version capability routing and matrices are local; physical combinations are queued as MS-917-LIVE-REGION-VERSION-CAPABILITY | 6ec7080 |
 | MS-918 | VERIFIED_LOCAL | iPhone universal command/search scope is integrated into the production device router, capability registry and M12 evidence | 68862b5 |
+
+
+| MS-921 | VERIFIED_LOCAL | ConnectedAccountsHub provides one typed provider-neutral account surface over the existing authentication/Keychain boundary; hub tests | e015ba8 |
+| MS-922 | VERIFIED_LOCAL | provider descriptors expose discoverable service category, capabilities, connection requirements and non-secret status; hub tests | e015ba8 |
+| MS-923 | VERIFIED_LOCAL | connection records and provider contracts retain exact capability depth instead of reducing all accounts to a generic connected flag; depth tests | e015ba8 |
+| MS-924 | VERIFIED_LOCAL | requested scopes must equal the provider minimum and credentials containing unrequested scopes are rejected; scope test | e015ba8 |
+| MS-925 | VERIFIED_LOCAL | disconnect invokes supported provider revocation before isolated Keychain/local metadata deletion; disconnect test | e015ba8 |
+| MS-926 | VERIFIED_LOCAL | health distinguishes connected, expiring/reauthorization, signed-out, unavailable and isolated provider errors across restart; health tests | e015ba8 |
+| MS-927 | READY_FOR_LIVE_VERIFICATION | official Gmail REST production client, OAuth boundary and tests are complete; authorized provider execution remains in MS-927-934-LIVE-GMAIL | e7ac66d |
+| MS-928 | READY_FOR_LIVE_VERIFICATION | bounded Gmail query search with exact provider IDs and schema validation is local; real controlled-account search is queued | e7ac66d |
+| MS-929 | READY_FOR_LIVE_VERIFICATION | raw RFC 2822 retrieval and parsing path is local; actual controlled-message retrieval/read-back is queued | e7ac66d |
+| MS-930 | READY_FOR_LIVE_VERIFICATION | attachment ID retrieval and base64url decoding are local; actual controlled attachment execution is queued | e7ac66d |
+| MS-931 | READY_FOR_LIVE_VERIFICATION | official Gmail draft creation contract and response validation are local; real draft create/read-back is queued | e7ac66d |
+| MS-932 | READY_FOR_LIVE_VERIFICATION | confirmed Gmail reply path makes no request before safety approval; actual send/read-back is queued | e7ac66d |
+| MS-933 | READY_FOR_LIVE_VERIFICATION | confirmed typed label/archive/trash mutations and failure mapping are local; actual provider state mutation is queued | e7ac66d |
+| MS-934 | READY_FOR_LIVE_VERIFICATION | all locally possible Gmail implementation/tests are complete; the explicitly required authorized real-execution matrix is queued | e7ac66d |
+| MS-935 | VERIFIED_LOCAL | EmailProvider is provider-neutral and Connected Accounts can add other official providers without duplicating email logic; abstraction tests | e7ac66d |
+| MS-936 | VERIFIED_LOCAL | Apple Mail capability audit truthfully limits third-party access to compose/handoff and never claims general inbox/history API access | e7ac66d |
+| MS-937 | READY_FOR_LIVE_VERIFICATION | universal email query/result routing is locally implemented with provenance; controlled connected-account end-to-end search is queued | e7ac66d |
+| MS-938 | READY_FOR_LIVE_VERIFICATION | exact Gmail message/thread/attachment identifiers feed typed follow-up actions locally; real email-to-action journey is queued | e7ac66d |
+| MS-939 | READY_FOR_LIVE_VERIFICATION | ticket-email query and attachment path is locally behavior-tested; controlled real ticket retrieval remains queued | e7ac66d |
+| MS-940 | READY_FOR_LIVE_VERIFICATION | invoice-email date/query/attachment path is locally behavior-tested; controlled real invoice retrieval remains queued | e7ac66d |
+| MS-941 | VERIFIED_LOCAL | public Messages/iMessage and major messenger capability investigation is recorded in typed production evidence and provider matrix | 19248bb |
+| MS-942 | VERIFIED_LOCAL | messaging architecture explicitly exposes no SMS/iMessage inbox/history access and never fabricates received messages; tests | 19248bb |
+| MS-943 | READY_FOR_LIVE_VERIFICATION | MessageUI compose is the deepest public system action with user-controlled send; physical composer observation is queued | 19248bb |
+| MS-944 | READY_FOR_LIVE_VERIFICATION | validated encoded WhatsApp click-to-chat handoff is locally tested; installed-app physical resolution is queued | 19248bb |
+| MS-945 | READY_FOR_LIVE_VERIFICATION | validated exact Telegram username-context handoff is locally tested; installed-app physical resolution is queued | 19248bb |
+| MS-946 | READY_FOR_LIVE_VERIFICATION | validated Viber public share handoff is locally tested; installed-app physical resolution is queued | 19248bb |
+| MS-947 | READY_FOR_LIVE_VERIFICATION | Signal correctly falls back to system share without history/send claim; physical installed/absent behavior is queued | 19248bb |
+| MS-948 | VERIFIED_LOCAL | provider capability matrix distinguishes find/open/compose/send/call/history/App Intent/deep-link/API per messenger and marks no fake send | 19248bb |

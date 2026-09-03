@@ -343,7 +343,7 @@
       "completion_evidence": null
     },
     {
-      "requirement_id": "MS-927-940-LIVE-GMAIL",
+      "requirement_id": "MS-927-934-LIVE-GMAIL",
       "service_provider": "Google OAuth and Gmail API authorized test account",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
       "missing_dependency": "Owner-provided Google OAuth client configuration, consent-screen/test-user approval and a controlled Gmail test account with safe fixture messages and attachments.",
@@ -353,14 +353,31 @@
         "UniversalAssistantTests/GmailEmailProviderTests.swift",
         "UniversalAssistant/Services/ProviderAuthenticationBoundary.swift"
       ],
-      "required_live_action": "Authorize only the scopes required for the selected capability; search controlled messages, retrieve raw content and attachment, create/read back a draft, confirm and send a reply, modify labels/archive/trash a disposable message, then disconnect and verify token revocation/deletion.",
-      "expected_result": "Every operation changes or returns the actual controlled Gmail account state, IDs/content match read-back, unconfirmed side effects do not execute, expiry requires reauthorization, and no token/message content appears in logs or repository.",
+      "required_live_action": "Authorize minimum Gmail scopes; execute controlled search, raw retrieval, attachment retrieval, draft creation/read-back, confirmed reply and confirmed label/archive/trash mutation; disconnect and verify revocation.",
+      "expected_result": "Actual Gmail IDs/content and state match read-back; unconfirmed mutations make no request; expired/revoked auth fails truthfully; no token or message content enters logs/repository.",
       "created_at": "2026-09-02T15:39:00+02:00",
-      "last_checked": "2026-09-02T15:39:00+02:00",
+      "last_checked": "2026-09-03T12:45:00+02:00",
       "completion_evidence": null
     },
     {
-      "requirement_id": "MS-941-948-LIVE-MESSAGING",
+      "requirement_id": "MS-937-940-LIVE-GMAIL-JOURNEYS",
+      "service_provider": "Google OAuth and Gmail API authorized test account",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Owner-provided Google OAuth client configuration, consent-screen/test-user approval and a controlled Gmail test account with safe fixture messages and attachments.",
+      "dependency_owner": "Owner/Google Cloud administrator",
+      "local_evidence": [
+        "UniversalAssistant/Email/GmailEmailProvider.swift",
+        "UniversalAssistantTests/GmailEmailProviderTests.swift",
+        "UniversalAssistant/Services/ProviderAuthenticationBoundary.swift"
+      ],
+      "required_live_action": "Using controlled messages, run universal email search, follow a found email into its exact permitted action, retrieve a known travel ticket attachment, and retrieve a known July electricity invoice.",
+      "expected_result": "Each journey returns the actual controlled message/attachment with Gmail provenance and exact IDs; absent or unmatched data remains unknown and no action is fabricated.",
+      "created_at": "2026-09-02T15:39:00+02:00",
+      "last_checked": "2026-09-03T12:45:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "MS-943-947-LIVE-MESSAGING",
       "service_provider": "Physical iPhone MessageUI and installed WhatsApp, Telegram, Viber and Signal",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
       "missing_dependency": "A signed build on a physical iPhone capable of sending a controlled SMS/iMessage and with representative messenger apps installed in the test region/version.",
@@ -370,10 +387,10 @@
         "UniversalAssistantTests/MessagingIntegrationTests.swift",
         "PROVIDER_CAPABILITY_MATRIX.md"
       ],
-      "required_live_action": "Open the system composer and cancel/send a controlled message; open WhatsApp and Telegram exact recipients with encoded draft text; open Viber share; verify Signal system-share fallback; inspect currently exposed App Intents/Shortcuts and repeat with each app absent.",
-      "expected_result": "Only the exact supported draft/context opens, final send remains user-controlled, cancellation is truthful, absence produces a short fallback, and no history/private API access is claimed or attempted.",
+      "required_live_action": "On a signed physical iPhone, open the system SMS/iMessage composer and supported WhatsApp/Telegram/Viber/Signal public handoffs with controlled recipients/context, then repeat each installed-app route with its app absent.",
+      "expected_result": "Every supported path opens the exact public composer/context with user-controlled final send; absent/unsupported apps use the truthful fallback; no inbox/history or automatic-send success is claimed.",
       "created_at": "2026-09-02T15:50:00+02:00",
-      "last_checked": "2026-09-02T15:50:00+02:00",
+      "last_checked": "2026-09-03T12:45:00+02:00",
       "completion_evidence": null
     },
     {

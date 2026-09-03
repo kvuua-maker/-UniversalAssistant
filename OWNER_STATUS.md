@@ -22,4 +22,4 @@ No blocker for the next local core. Provider live execution remains separately c
 
 ## NEXT
 
-Continue contiguous evidence reconciliation from MS-921+; MS-675 and MS-919/920 remain open until their global completion gates are actually satisfied.
+Continue contiguous evidence reconciliation from MS-949+; MS-675 and MS-919/920 remain open until their global completion gates are actually satisfied.
