@@ -1,16 +1,16 @@
 {
   "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
-  "requirement_ids": ["MS-361...MS-374"],
+  "requirement_ids": ["MS-375...MS-380"],
   "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "14 CostQuotaManager, RemoteConfig, provider-control and feature-flag requirements reconciled",
+  "integration_depth": "6 Ukraine and international regionalization requirements reconciled",
   "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL",
   "last_failure_signature": null,
-  "material_change": "MS-361–374 reconciliation extended the existing M9 runtime policy and exact quota ledger with non-AI provider telemetry, bounded remote provider controls and country/language/app-version feature targeting.",
-  "frozen_baseline_commit": "069b18a",
+  "material_change": "MS-375–380 added a thin typed country registry over existing retailer, transport, emergency, currency and locale components without duplicating provider logic.",
+  "frozen_baseline_commit": "1a48751",
   "dependency": "No external dependency blocks the next local reconciliation slice.",
-  "unresolved_verification_steps": ["1186 canonical requirements remain unreconciled", "Existing provider-specific live operations remain in LIVE_VERIFICATION_QUEUE"],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-375-PLUS"
+  "unresolved_verification_steps": ["1180 canonical requirements remain unreconciled", "Existing provider-specific live operations remain in LIVE_VERIFICATION_QUEUE"],
+  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-381-PLUS"
 }

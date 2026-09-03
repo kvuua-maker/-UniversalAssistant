@@ -482,3 +482,14 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-372 | VERIFIED_LOCAL | provider and feature rules support normalized country allowlists and fail-closed regional rollout; remote-config test | 069b18a |
 | MS-373 | VERIFIED_LOCAL | emergencyDisabled removes a provider even when its normal enabled flag is true; remote-config test | 069b18a |
 | MS-374 | VERIFIED_LOCAL | typed feature rules target country, category, language and minimum semantic app version with versioned persistence; feature-targeting test | 069b18a |
+
+## Slice 20 — MS-375–380
+
+| ID | Status | Implementation / behavioral evidence | Commit |
+| --- | --- | --- | --- |
+| MS-375 | VERIFIED_LOCAL | RegionalServiceProfile UA binds Ukrainian retailers, rides, tickets, emergency services, UAH and metric units as service capabilities rather than localization alone; ukraineIsAFullServiceMarketNotOnlyALocale | 1a48751 |
+| MS-376 | VERIFIED_LOCAL | country-keyed RegionalServiceRegistry includes typed UA, DE and US profiles and returns unknown for unsupported regions; countrySelectionChangesProvidersEmergencyCurrencyAndUnits | 1a48751 |
+| MS-377 | VERIFIED_LOCAL | regional profiles expose retailer provider IDs while reusing UkrainianRetailerRegistry as the source and allow different country sets; regional tests | 1a48751 |
+| MS-378 | VERIFIED_LOCAL | regional profiles select distinct ride and ticket provider IDs per country without embedding routing in UI; regional tests | 1a48751 |
+| MS-379 | VERIFIED_LOCAL | typed country profiles select emergency service numbers/semantics and preserve user-initiated-call-only safety; regional and UkraineEmergencyPlanner tests | 1a48751 |
+| MS-380 | VERIFIED_LOCAL | profiles select ISO currency and metric/US-customary units while existing SafeMoneyComparison forbids implicit cross-currency comparison; regional and locale-safety tests | 1a48751 |
