@@ -9,6 +9,7 @@ struct ProductionEngineeringAuditTests {
             "ARCHITECTURE.md", "ROLLBACK.md", "THREAT_MODEL.md",
             "UniversalAssistant/PrivacyInfo.xcprivacy", "ADR/0005-api-versioning-webhooks.md", "OFFLINE_CAPABILITY_MATRIX.md",
             "docs/M10_LOCALIZATION_ACCESSIBILITY_QA.md", "INCIDENT_RESPONSE.md", "PERFORMANCE_BUDGET.md", "RELEASE_CHECKLIST.md",
+            "docs/APP_STORE_RELEASE_METADATA.md",
             ".github/workflows/ci.yml", "Backend/Sources/UniversalAssistantServer/DurableJobQueue.swift",
             "Backend/Sources/UniversalAssistantServer/APNSDelivery.swift",
             "Backend/Sources/UniversalAssistantServer/ServerDataMigration.swift",
@@ -23,5 +24,16 @@ struct ProductionEngineeringAuditTests {
         }
         let queue = try String(contentsOf: root.appendingPathComponent("LIVE_VERIFICATION_QUEUE.json"), encoding: .utf8)
         #expect(try JSONSerialization.jsonObject(with: Data(queue.utf8)) is [String: Any])
+    }
+
+    @Test func appStoreDraftCoversTruthfulSubmissionInputsWithoutClaimingPublication() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        let draft = try String(contentsOf: root.appendingPathComponent("docs/APP_STORE_RELEASE_METADATA.md"), encoding: .utf8)
+        for required in ["Name candidates", "Description draft", "Privacy disclosure inventory", "Permission usage descriptions", "Screenshot plan", "Public URLs", "App Review notes draft", "Review test-account strategy", "Release gates"] {
+            #expect(draft.contains(required), "Missing App Store preparation section: \(required)")
+        }
+        #expect(draft.contains("not proof of TestFlight distribution"))
+        #expect(draft.contains("Do not use fabricated prices"))
+        #expect(draft.contains("never source control"))
     }
 }
