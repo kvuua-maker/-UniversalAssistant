@@ -1,22 +1,22 @@
 {
   "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
   "requirement_ids": [
-    "MS-1192...MS-1267"
+    "MS-1272...MS-1342"
   ],
   "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "76 feasibility, stable-path, limit-conservation and owner-clarity requirements reconciled",
+  "integration_depth": "71 exact-capability feasibility, atomic-task, frozen-baseline, depth and diagnosis governance requirements reconciled",
   "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
   "last_failure_signature": null,
-  "material_change": "MS-1192–1267 mapped to typed FeasibilityPathRegistry, registry/status artifacts and behavioral evidence. Final feasibility/path/limit/owner audits MS-1268–1271 remain open with every prior global gate.",
+  "material_change": "MS-1272–1342 mapped to typed feasibility/task/depth/owner-test evidence. MS-1268–1271 and every prior final completion gate remain open; Jobs Marketplace remains out of current scope.",
   "frozen_baseline_commit": "2353a38",
-  "dependency": "No external dependency blocks MS-1272+; Jobs Marketplace remains explicitly excluded from current work.",
+  "dependency": "No external dependency blocks MS-1343+ definition/evidence governance.",
   "unresolved_verification_steps": [
-    "428 canonical requirements remain unreconciled",
-    "Continue from MS-1272+ without Jobs Marketplace",
-    "Retain MS-1268–1271 and all prior final gates until actual completion"
+    "357 canonical requirements remain unreconciled",
+    "Continue from MS-1343+ without Jobs Marketplace",
+    "Retain every global/final audit gate until its actual completion pass"
   ],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-1272-PLUS"
+  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-1343-PLUS"
 }
