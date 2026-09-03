@@ -540,3 +540,31 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-420 | READY_FOR_LIVE_VERIFICATION | missing-app fallback is truthful locally; physical absence queued | 01378bd |
 | MS-421 | READY_FOR_LIVE_VERIFICATION | offline/timeout/partial failure locally tested; physical network transitions queued | 01378bd |
 | MS-422 | READY_FOR_LIVE_VERIFICATION | permission-state paths locally tested; physical combinations queued | 01378bd |
+| MS-423 | VERIFIED_LOCAL | TestFlight/device preparation is captured in REAL_DEVICE_TEST_MATRIX, OWNER_TEST_QUEUE and RELEASE_CHECKLIST without claiming distribution; governance tests | 6ec7080 |
+| MS-424 | VERIFIED_LOCAL | device-diversity matrix covers supported iPhone sizes, OS versions and capability combinations for later physical execution; matrix audit | 6ec7080 |
+| MS-425 | VERIFIED_LOCAL | executable GoldenUserJourney corpus includes substantial Ukrainian commands across 21 journey families; corpus acceptance tests | aabe915 |
+| MS-426 | VERIFIED_LOCAL | executable GoldenUserJourney corpus includes substantial Russian commands across 21 journey families; corpus acceptance tests | aabe915 |
+| MS-427 | VERIFIED_LOCAL | executable GoldenUserJourney corpus includes substantial English commands across 21 journey families; corpus acceptance tests | aabe915 |
+| MS-428 | VERIFIED_LOCAL | executable GoldenUserJourney corpus includes substantial German commands across 21 journey families; corpus acceptance tests | aabe915 |
+| MS-429 | VERIFIED_LOCAL | executable GoldenUserJourney corpus includes substantial French commands across 21 journey families; corpus acceptance tests | aabe915 |
+| MS-430 | VERIFIED_LOCAL | mixed Ukrainian/Russian and mixed-language brand commands are parsed by deterministic routing; language/corpus tests | aabe915 |
+| MS-431 | VERIFIED_LOCAL | corpus and structured parser exercise names, addresses, brands and product models without fixed retailer routing; parser tests | aabe915 |
+| MS-432 | VERIFIED_LOCAL | colloquial and imperfect command variants remain executable corpus cases; corpus acceptance tests | aabe915 |
+| MS-433 | VERIFIED_LOCAL | concrete provider adapters and bounded fanout tests verify normal successful normalized responses | 928f150 |
+| MS-434 | VERIFIED_LOCAL | provider fanout/adapters distinguish an empty verified result from connector failure; empty-response tests | 928f150 |
+| MS-435 | VERIFIED_LOCAL | malformed provider payloads fail schema/decoding validation without fabricated results; adapter tests | 928f150 |
+| MS-436 | VERIFIED_LOCAL | provider timeout is bounded, cancelled and surfaced as typed partial failure; fanout timeout tests | 928f150 |
+| MS-437 | VERIFIED_LOCAL | rate-limit responses map to typed unavailable/retry-aware failure without blocking alternatives; adapter tests | 928f150 |
+| MS-438 | VERIFIED_LOCAL | provider outage remains isolated and available verified alternatives are returned; partial-failure tests | 928f150 |
+| MS-439 | VERIFIED_LOCAL | authorized and credential-required/unauthorized states are explicit at adapter boundaries; authentication tests | c38d23d |
+| MS-440 | VERIFIED_LOCAL | fallback activates only on typed provider failure and returns concise truthful unavailable/partial state; fanout tests | 928f150 |
+| MS-441 | VERIFIED_LOCAL | unavailable credentials retain complete runtime injection boundary, explicit CREDENTIAL_REQUIRED status and persistent live queue while independent work continues; governance tests | c38d23d |
+| MS-442 | VERIFIED_LOCAL | partner-approval dependencies preserve implemented adapter/fallback contracts and exact live action in persistent queue; provider matrix audit | 6ec7080 |
+| MS-443 | VERIFIED_LOCAL | authentication contracts prohibit CAPTCHA/2FA bypass and expose legitimate user/provider handoff only; security/auth tests | c38d23d |
+| MS-444 | VERIFIED_LOCAL | provider-specific request/response logic is isolated behind typed adapter protocols and normalized domains; adapter tests | 928f150 |
+| MS-445 | VERIFIED_LOCAL | versioned backend route and webhook contracts preserve ordinary client compatibility; ADR-0005 and API contract tests | 8e9f92c |
+| MS-446 | VERIFIED_LOCAL | LocalStore executes versioned transactional migrations with rollback-safe validation and migration regression tests | f866914 |
+| MS-447 | VERIFIED_LOCAL | entitlements, privacy manifest, permission use and release gates encode App Store-compliant public integration paths; release audit | e0dd6a3 |
+| MS-448 | VERIFIED_LOCAL | platform-sensitive system integrations are mapped to current public Apple framework boundaries in Apple-system-domain audit | 762c336 |
+| MS-449 | VERIFIED_LOCAL | capability registry selects the closest legitimate public mechanism or truthful handoff/unavailable result when direct execution is unavailable; routing tests | 762c336 |
+| MS-450 | VERIFIED_LOCAL | repository platform audit and production integrations use public framework APIs only; prohibited-path scan | 762c336 |
