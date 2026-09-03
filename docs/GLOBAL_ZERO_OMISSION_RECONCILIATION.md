@@ -769,3 +769,29 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-647 | VERIFIED_LOCAL | SponsoredOrganicSeparation keeps best organic result available independently of campaign/commission and renders sponsored separately; ranking tests | 168f2df |
 | MS-648 | VERIFIED_LOCAL | sponsored retrieval is secondary/isolated and cannot delay or replace the deterministic organic result critical path; separation/performance tests | 168f2df |
 | MS-649 | VERIFIED_LOCAL | CostQuotaManager checks are bounded/actor-local and simple local/system commands bypass remote cost quota dependency; runtime/performance tests | 069b18a |
+
+| MS-650 | VERIFIED_LOCAL | ProviderHealthMonitor/observability records bounded latency, failure and availability signals used by routing/fanout to isolate unhealthy providers; health/fanout tests | 928f150 |
+| MS-651 | VERIFIED_LOCAL | provider/job policies implement failure thresholds, bounded backoff and circuit-open degradation so repeated failures do not hammer dependencies; failure-policy tests | 928f150 |
+| MS-652 | VERIFIED_LOCAL | provider and durable-job retries are bounded with capped backoff/jitter and timeout, while useful partial results return without a long stall; chaos/job tests | d6c79b7 |
+| MS-653 | VERIFIED_LOCAL | consequential booking/order/purchase retries require idempotency/status evidence; unsafe unknown completion fails closed rather than blindly resubmitting; lifecycle tests | 27ad853 |
+| MS-654 | VERIFIED_LOCAL | privacy-safe performance/provider/notification observability captures typed failure metadata and correlation IDs without requiring users to export technical logs; observability tests | 7a6cd05 |
+| MS-655 | VERIFIED_LOCAL | telemetry/logging allowlists redact tokens, secrets, content and unnecessary precise location; repository and privacy tests | c38d23d |
+| MS-656 | VERIFIED_LOCAL | DataRetentionPolicy and account lifecycle define bounded category retention, deletion and lawful residual handling with persistent audit evidence; retention tests | c38d23d |
+| MS-657 | VERIFIED_LOCAL | local store remains primary and CloudKit sync is optional; unavailable cloud yields local operation plus queued reconciliation; sync tests | 242dfda |
+| MS-658 | VERIFIED_LOCAL | CloudKit transport/reconciler execute asynchronously outside the main interaction path with bounded batches and failure isolation; sync tests | 242dfda |
+| MS-659 | VERIFIED_LOCAL | SyncReconciler uses stable record IDs, versions and tombstones to merge conflicts without replaying actions or duplicating records; conflict tests | 242dfda |
+| MS-660 | VERIFIED_LOCAL | Home/interaction policy preserves voice/text direct action, compact results and minimal confirmations; golden UX and friction tests | 58447af |
+| MS-661 | VERIFIED_LOCAL | application, Share Extension and test targets compile/link successfully in Development simulator; 466-test full Xcode run | ca50a5b |
+| MS-662 | VERIFIED_LOCAL | app lifecycle and chaos/result-state suites prove launch, cancellation, provider loss and replacement cannot leave a permanent spinner or known critical crash; full regression | 928f150 |
+| MS-663 | VERIFIED_LOCAL | InteractionDecisionEngine implements DO, DON’T NARRATE and compact acknowledgement only after appropriate completed action; interaction tests | ffd98a9 |
+| MS-664 | VERIFIED_LOCAL | Ukrainian, Russian, English, German and French command corpus/localized UI surfaces are complete and behavior-tested; localization/corpus tests | aabe915 |
+| MS-665 | VERIFIED_LOCAL | cross-domain fact models require source timestamp/freshness and reject unverified live price, stock, availability, booking, ticket, quote/ETA and location claims; truth tests | 94e56d9 |
+| MS-666 | VERIFIED_LOCAL | INTEGRATION_STATUS and capability matrix record implemented path, exact fallback or external dependency for every major integration; governance tests | 6ec7080 |
+| MS-667 | VERIFIED_LOCAL | IntegrationDepthAuditor verifies the deepest locally legitimate fallback and records why higher paths are unavailable; fallback/audit tests | 6ec7080 |
+| MS-668 | VERIFIED_LOCAL | explicit suites cover slow/failing provider, cancellation, network/backend loss, poor GPS, missing app, denied permission and AI failure with graceful outcomes; full regression | 928f150 |
+| MS-669 | VERIFIED_LOCAL | REAL_DEVICE_TEST_MATRIX lists physical-only behaviors with exact setup/action/expected result and prevents simulator evidence from becoming VERIFIED_LIVE; matrix tests | 6ec7080 |
+| MS-670 | VERIFIED_LOCAL | privacy manifest, contextual permission policy, Keychain/runtime secrets, redacted logging, data map and deletion/auth boundaries satisfy local security evidence gates; security/privacy tests | c38d23d |
+| MS-671 | VERIFIED_LOCAL | tenant-isolated business backend, verified onboarding, organic/sponsored separation, remote config and exact cost/quota policy are implemented without consumer fast-path dependency; M9 tests | 069b18a |
+| MS-672 | VERIFIED_LOCAL | release configurations, metadata/privacy/permission/screenshot/review/TestFlight readiness artifacts and release checklist are locally prepared and audited | 401ee00 |
+| MS-673 | VERIFIED_LOCAL | release state and live queue explicitly keep signing, TestFlight and App Store submission/review incomplete until owner/Apple execution; release audit | 401ee00 |
+| MS-674 | VERIFIED_LOCAL | Xcode project contains no watchOS target/product and canonical project scope keeps Apple Watch excluded from V1; project build audit | 5898cd5 |
