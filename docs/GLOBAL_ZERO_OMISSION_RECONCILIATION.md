@@ -1657,3 +1657,26 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-1640 | VERIFIED_LOCAL | FeasibilityPathGovernance, evidence governance, bounded retry/attempt ledger, actual Git/tool inspection and connector-on-demand policy enforce outcome-oriented safe execution without repeated work or credential inference; governance tests and this audited workflow | 7a75f8e |
 | MS-1641 | VERIFIED_LOCAL | FeasibilityPathGovernance, evidence governance, bounded retry/attempt ledger, actual Git/tool inspection and connector-on-demand policy enforce outcome-oriented safe execution without repeated work or credential inference; governance tests and this audited workflow | 7a75f8e |
 | MS-1642 | VERIFIED_LOCAL | FeasibilityPathGovernance, evidence governance, bounded retry/attempt ledger, actual Git/tool inspection and connector-on-demand policy enforce outcome-oriented safe execution without repeated work or credential inference; governance tests and this audited workflow | 7a75f8e |
+
+
+## MS-1644–1660 environment/source-of-truth reconciliation
+
+| Requirement | Status | Production/test evidence | Commit |
+|---|---|---|---|
+| MS-1644 | VERIFIED_LOCAL | observed FF146-I host; docs/V13_2_ENVIRONMENT_REVALIDATION.md; DevelopmentEnvironmentPolicyTests prove development infrastructure is absent from app runtime | HEAD |
+| MS-1645 | VERIFIED_LOCAL | observed arm64 and macOS 26.3.1; environment revalidation evidence | HEAD |
+| MS-1646 | VERIFIED_LOCAL | observed Xcode 26.6 build 17F113 and successful project build/test execution | HEAD |
+| MS-1647 | VERIFIED_LOCAL | observed authenticated Codex CLI 0.152.1; no reinstall or global mutation performed | HEAD |
+| MS-1648 | VERIFIED_LOCAL | active remote development workflow plus DevelopmentEnvironmentPolicyTests proving no application runtime dependency | HEAD |
+| MS-1649 | NOT_APPLICABLE_VERIFIED | later explicit owner instruction supersedes the historical path with /Users/Shared/UniversalAssistantRemote; environment evidence records the exact override | HEAD |
+| MS-1650 | VERIFIED_LOCAL | existing main repository and exact SSH origin inspected; no repository replacement/history rewrite | HEAD |
+| MS-1651 | VERIFIED_LOCAL | authenticated git ls-remote origin HEAD succeeded through existing SSH configuration; no new credential requested | HEAD |
+| MS-1652 | VERIFIED_LOCAL | ordinary status/commit/push workflow uses Git over SSH and does not require gh | HEAD |
+| MS-1653 | VERIFIED_LOCAL | repository state/history inspected before work; atomic verified commit/push workflow and clean-tree checks are evidenced in Git history | HEAD |
+| MS-1654 | VERIFIED_LOCAL | existing author name/email verified non-empty without copying private values; existing identity reused | HEAD |
+| MS-1655 | VERIFIED_LOCAL | .gitignore secret rules plus DevelopmentEnvironmentPolicyTests commonSecretBearingFilesAreIgnored and repository security evidence | HEAD |
+| MS-1656 | VERIFIED_LOCAL | project-local execution under non-root user; no system ownership/security/global-shell mutation | HEAD |
+| MS-1657 | VERIFIED_LOCAL | no VPS access or dependency; DevelopmentEnvironmentPolicyTests rejects the prohibited VPS address in runtime code | HEAD |
+| MS-1658 | VERIFIED_LOCAL | DevelopmentEnvironmentPolicyTests developmentInfrastructureIsNotAnApplicationRuntimeDependency scans production Swift sources | HEAD |
+| MS-1659 | VERIFIED_LOCAL | autonomous sequential implementation/build/test/evidence/commit history and persistent execution state | HEAD |
+| MS-1660 | VERIFIED_LOCAL | canonical spec is tracked, hashed in SPEC_SOURCE_OF_TRUTH and fully represented by stable inventory IDs; RequirementInventoryTests | HEAD |
