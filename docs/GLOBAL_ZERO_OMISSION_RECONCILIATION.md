@@ -858,3 +858,32 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-734 | VERIFIED_LOCAL | expiration disables only gated capabilities while core launch/local state remain valid and uncorrupted; entitlement tests | 1045668 |
 | MS-735 | VERIFIED_LOCAL | paywall presentation is invoked only for a genuinely gated requested capability and never interrupts unrelated local/system commands; entitlement/UI tests | 1045668 |
 | MS-736 | VERIFIED_LOCAL | subscription UI uses factual StoreKit metadata, transparent management/restore and no urgency/dark-pattern state; presentation tests | 1045668 |
+
+| MS-851 | VERIFIED_LOCAL | LocaliPhoneSearchEngine provides the dedicated typed iPhone command/local-search layer over permitted repositories; engine tests | 5898cd5 |
+| MS-852 | VERIFIED_LOCAL | LocalCommandEngine/UniversalDeviceCommandRouter use the same voice/text entry for device and external capability routing; router tests | 762c336 |
+| MS-853 | VERIFIED_LOCAL | quick launch enters listening directly and interaction policy executes unambiguous device commands without narration; quick-launch/UI tests | 58447af |
+| MS-854 | VERIFIED_LOCAL | AppCapabilityRegistry and IntegrationDepthAuditor require deepest public Apple/App Intent/link/SDK/provider mechanism per system action; audit tests | 762c336 |
+| MS-855 | VERIFIED_LOCAL | capability evidence governance rejects placeholder/shallow completion when a locally feasible production path lacks E3 behavior evidence | 27da423 |
+| MS-856 | VERIFIED_LOCAL | device router selects exact supported context/action before generic launch and only then falls back truthfully; routing tests | 762c336 |
+| MS-857 | VERIFIED_LOCAL | unsupported capability state requires documented checked mechanisms and exact limitation/fallback evidence; governance tests | 6ec7080 |
+| MS-858 | VERIFIED_LOCAL | PROVIDER_CAPABILITY_MATRIX/INTEGRATION_STATUS record mechanism, support, limitation and deepest implemented behavior per device/app capability | 6ec7080 |
+| MS-859 | READY_FOR_LIVE_VERIFICATION | public system-app launch routes are locally implemented/tested; representative signed-device execution remains in MS-859-869 live queue | 762c336 |
+| MS-860 | READY_FOR_LIVE_VERIFICATION | third-party official scheme/link launch routing is locally complete; installed-app signed-device execution remains queued | 762c336 |
+| MS-861 | VERIFIED_LOCAL | AppCapabilityRegistry normalizes localized names, aliases and pronunciation variants to deterministic exact candidates; registry tests | 762c336 |
+| MS-862 | VERIFIED_LOCAL | ambiguous equal app-name candidates produce one typed clarification while a unique candidate opens directly; router tests | 762c336 |
+| MS-863 | VERIFIED_LOCAL | InteractionDecisionEngine returns silent execution for unambiguous open-app command and no “found/opening” narration; interaction tests | ffd98a9 |
+| MS-864 | READY_FOR_LIVE_VERIFICATION | device router prefers typed exact chat/route/product/search/media context over launch; installed-app deep-action execution remains queued | 762c336 |
+| MS-865 | READY_FOR_LIVE_VERIFICATION | App Intent capability discovery/registry contract is implemented; actual representative third-party exposed intents remain queued by app/device/version | 762c336 |
+| MS-866 | READY_FOR_LIVE_VERIFICATION | App Shortcut capability routing/fallback is implemented; actual installed-app shortcut discovery/execution remains queued | 762c336 |
+| MS-867 | READY_FOR_LIVE_VERIFICATION | documented URL-scheme registry and validation are implemented; physical installed-app resolution remains queued | 762c336 |
+| MS-868 | READY_FOR_LIVE_VERIFICATION | exact Universal Link validation/routing is implemented before generic launch; physical app/browser resolution remains queued | 762c336 |
+| MS-869 | READY_FOR_LIVE_VERIFICATION | official SDK/API/OAuth capability records select deeper device-service actions where supported; account/app live execution remains queued | 762c336 |
+| MS-870 | VERIFIED_LOCAL | Apple system-domain audit and routers prohibit private APIs, accessibility abuse, screen automation and jailbreak-style control | 762c336 |
+| MS-871 | VERIFIED_LOCAL | LocaliPhoneSearchEngine routes natural requests concurrently to deepest permitted local sources and exposes exact object actions | 5898cd5 |
+| MS-872 | VERIFIED_LOCAL | authorized Contacts/EventKit/Photos/app-owned store/Spotlight/files repositories are typed local source adapters with explicit permissions | 5898cd5 |
+| MS-873 | VERIFIED_LOCAL | LocalContactResolver performs natural exact/alias contact search and returns permitted contact action target; contact tests | 26e9264 |
+| MS-874 | VERIFIED_LOCAL | EventKit calendar repository supports title/person/date/time constrained local event search; calendar tests | ddbccca |
+| MS-875 | VERIFIED_LOCAL | ReminderService searches permitted reminders/lists and exposes exact typed reminder records; reminder tests | ddbccca |
+| MS-876 | VERIFIED_LOCAL | assistant-owned notes repository participates in fast local search without backend/AI; local-search tests | 5898cd5 |
+| MS-877 | VERIFIED_LOCAL | permitted reminders/shopping lists and assistant-owned lists are searchable/openable through local repositories; local-search tests | 5898cd5 |
+| MS-878 | VERIFIED_LOCAL | structured bounded action history supports yesterday/last/open-last retrieval without retaining raw sensitive transcript; history/context tests | b289278 |
