@@ -568,3 +568,28 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-448 | VERIFIED_LOCAL | platform-sensitive system integrations are mapped to current public Apple framework boundaries in Apple-system-domain audit | 762c336 |
 | MS-449 | VERIFIED_LOCAL | capability registry selects the closest legitimate public mechanism or truthful handoff/unavailable result when direct execution is unavailable; routing tests | 762c336 |
 | MS-450 | VERIFIED_LOCAL | repository platform audit and production integrations use public framework APIs only; prohibited-path scan | 762c336 |
+| MS-451 | VERIFIED_LOCAL | Apple system-domain integration audit prohibits jailbreak-style mechanisms and exposes public capability or truthful fallback only; audit tests | 762c336 |
+| MS-452 | VERIFIED_LOCAL | cross-app actions use App Intents, public URL schemes, share/compose controllers or user handoff, never screen scraping/automation; routing tests | 762c336 |
+| MS-453 | VERIFIED_LOCAL | APP_STORE_RELEASE_METADATA provides owner-selectable truthful name candidates without claiming availability; artifact audit test | 401ee00 |
+| MS-454 | VERIFIED_LOCAL | release metadata contains a capability-bounded description draft that distinguishes deterministic, optional-AI and provider-dependent behavior; artifact audit test | 401ee00 |
+| MS-455 | VERIFIED_LOCAL | release metadata privacy inventory maps local data, contextual permissions, telemetry, credentials and commercial disclosure to current production paths; artifact audit test | 401ee00 |
+| MS-456 | VERIFIED_LOCAL | production configurations contain capability-specific permission descriptions and release metadata defines rejection rules for vague/unused permission copy; configuration/audit tests | 401ee00 |
+| MS-457 | VERIFIED_LOCAL | screenshot plan covers canonical local flows, truthful unavailable states, themes and accessibility while prohibiting fabricated live facts; artifact audit test | 401ee00 |
+| MS-458 | VERIFIED_LOCAL | support/privacy HTTPS URL ownership, content and approval requirements are explicit without submitting placeholders; artifact audit test | 401ee00 |
+| MS-459 | VERIFIED_LOCAL | App Review notes draft explains permissions, public APIs, deterministic/AI behavior, consequential safety and truthful handoffs; artifact audit test | 401ee00 |
+| MS-460 | VERIFIED_LOCAL | RELEASE_CHECKLIST gates configurations, privacy, CI, device matrix, signing, metadata, commerce disclosure and factual claims | e0dd6a3 |
+| MS-461 | VERIFIED_LOCAL | release governance leaves signing/TestFlight/App Store as owner actions while all local engineering continues independently; release checklist audit | 401ee00 |
+| MS-462 | VERIFIED_LOCAL | project/configuration/release artifacts are prepared for later legitimate TestFlight signing without claiming distribution; production engineering audit | 401ee00 |
+| MS-463 | VERIFIED_LOCAL | review-account strategy requires dedicated least-privilege staging accounts, secure review-channel delivery, expiry/revocation and no fake success; artifact audit test | 401ee00 |
+| MS-464 | VERIFIED_LOCAL | Development xcconfig and target configuration are explicit and buildable; configuration build evidence | b0d0fc2 |
+| MS-465 | VERIFIED_LOCAL | Staging xcconfig and isolated target configuration are explicit and buildable; M2 staging build evidence | b0d0fc2 |
+| MS-466 | VERIFIED_LOCAL | Production xcconfig and production/share identifiers are explicit without embedded credentials; configuration audit | b0d0fc2 |
+| MS-467 | VERIFIED_LOCAL | device credentials use Keychain and backend secrets use runtime environment/secure storage boundaries, with repository secret scan | c38d23d |
+| MS-468 | VERIFIED_LOCAL | primary orb, input, results and actions expose meaningful VoiceOver labels/combined semantics; localization accessibility tests | c34533b |
+| MS-469 | VERIFIED_LOCAL | UI uses semantic text styles and accessibility-size layouts without a fixed Dynamic Type ceiling; localization accessibility tests | c34533b |
+| MS-470 | VERIFIED_LOCAL | primary microphone/action controls provide at least 44-point hit targets and meaningful accessible names; accessibility tests | c34533b |
+| MS-471 | VERIFIED_LOCAL | subscription presentation uses factual StoreKit-derived product/entitlement states and no coercive upgrade path; entitlement tests | 1045668 |
+| MS-472 | VERIFIED_LOCAL | sponsored results are structurally separate and require localized disclosure before rendering; sponsored separation tests | 168f2df |
+| MS-473 | VERIFIED_LOCAL | ContextualPermissionPolicy requests no permission at launch and only the exact capability-triggered permission; permission tests | c34533b |
+| MS-474 | VERIFIED_LOCAL | account deletion and subscription management expose direct legitimate system/provider flows without obscuring cancellation; account/entitlement tests | 1045668 |
+| MS-475 | VERIFIED_LOCAL | UI/result models use verified availability/freshness and contain no synthetic scarcity countdown or urgency state; commerce presentation tests | 94e56d9 |
