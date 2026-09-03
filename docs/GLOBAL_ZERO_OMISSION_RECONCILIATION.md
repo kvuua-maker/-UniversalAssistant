@@ -643,3 +643,16 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-523 | VERIFIED_LOCAL | context stores typed entities/routes/tasks/service state and explicit key-value preferences with provenance instead of conversational prose; context tests | 8e7a96c |
 | MS-524 | VERIFIED_LOCAL | durable presentation/account preferences are written only through explicit settings/policy APIs; inferred command behavior is not persisted; configuration tests | ffd98a9 |
 | MS-525 | VERIFIED_LOCAL | context and telemetry models have no inferred demographic/sensitive-attribute fields and external payload is field-allowlisted; privacy/context tests | 8e7a96c |
+| MS-526 | VERIFIED_LOCAL | AccountPolicy and allowance ledger implement configurable registered-Free entitlements and reset rules without duplicated feature pricing logic; policy tests | 6a8e0e4 |
+| MS-527 | VERIFIED_LOCAL | verified StoreKit entitlement state gates Premium capabilities and configurable product identifiers; entitlement tests | 1045668 |
+| MS-528 | NOT_APPLICABLE_VERIFIED | production account/entitlement taxonomy intentionally contains no Family tier and canonical owner approval has not enabled it; policy tests | 6a8e0e4 |
+| MS-529 | VERIFIED_LOCAL | sponsored/business commercial models, campaigns and ledgers remain separate from commission-independent consumer organic ranking; separation tests | 168f2df |
+| MS-530 | VERIFIED_LOCAL | subscription price/period comes from verified StoreKit product metadata and product policy/configuration, never a final hardcoded price; entitlement tests | 1045668 |
+| MS-531 | VERIFIED_LOCAL | deterministic fast paths and multi-module coordination assert zero AI invocations; bounded fallback is optional and owner-cost metadata remains observable | 27ad853 |
+| MS-532 | VERIFIED_LOCAL | CostQuotaManager exposes exact Decimal non-AI provider cost, currency, requests, failures, rate limits and cache hits; runtime-policy tests | 069b18a |
+| MS-533 | VERIFIED_LOCAL | runtime-key HMAC bearer authentication validates signature, audience, expiry and scoped claims before creating a backend principal; authentication tests | 3bac3e3 |
+| MS-534 | VERIFIED_LOCAL | tenant data access enforces role, permission and exact partner scope server-side with audited denials; isolation tests | 81d4161 |
+| MS-535 | VERIFIED_LOCAL | principal-scoped ingress rate limiter bounds requests per window while provider quotas and webhook limits add layered abuse control; limiter tests | 3bac3e3 |
+| MS-536 | VERIFIED_LOCAL | partner fraud controls detect fake/duplicate/self-referral/manipulation signals, require review and never auto-convict; fraud tests | 61523e2 |
+| MS-537 | VERIFIED_LOCAL | in-app account deletion coordinator and provider deletion boundary expose explicit deletion flow with partial-failure reporting; lifecycle tests | c38d23d |
+| MS-538 | VERIFIED_LOCAL | backend cleanup removes account jobs, APNs tokens and provider connections while retention policy handles lawful bounded residuals; cleanup/retention tests | c38d23d |
