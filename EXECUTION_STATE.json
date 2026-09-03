@@ -1,22 +1,22 @@
 {
   "current_task_id": "GLOBAL-ZERO-OMISSION-RECONCILIATION",
   "requirement_ids": [
-    "MS-1511...MS-1580"
+    "MS-1581...MS-1642"
   ],
   "selected_path": "Strict explicit per-ID evidence importer with Git and live-queue validation.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "70 explicit interaction/UI/task/watch/affiliate requirements reconciled; four partner-live requirements remain queued",
+  "integration_depth": "62 performance/account/entitlement/system/media/governance requirements explicitly reconciled with physical/provider gates separated",
   "acceptance_contract_ref": "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
   "required_evidence_level": "E3",
   "current_exit_state": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
   "last_failure_signature": null,
-  "material_change": "MS-1511–1580 now have explicit production/test/commit evidence. Real gaps closed with typed persistent My Tasks/Favorites, Settings/Appearance/Voice preferences and AffiliateProgramRegistry. MS-1572–1574/1577 are exact live queue items; all final gates remain open.",
+  "material_change": "MS-1581–1642 now have per-ID evidence. Oldest-device performance, Apple account deletion, subscribed media and physical camera/system/emergency paths remain exact READY_FOR_LIVE_VERIFICATION items; MS-1643 and all global gates remain open.",
   "frozen_baseline_commit": "2353a38",
-  "dependency": "Owner-approved public partner assets/accounts are needed only for program application and earning live verification; no blocker for MS-1581+.",
+  "dependency": "Physical devices, Apple/provider accounts and controlled live execution affect only queued items; no blocker for MS-1644+.",
   "unresolved_verification_steps": [
-    "239 inventory requirements remain NOT_IMPLEMENTED, including deliberate global gates and later canonical-source IDs",
-    "Continue contiguously from MS-1581+ without Jobs Marketplace",
-    "Retain every global/final/live completion gate until actual conditions are met"
+    "177 inventory requirements remain NOT_IMPLEMENTED",
+    "Continue from MS-1644+; MS-1643 remains open as a global directive gate",
+    "Perform strict remaining-ID audit after all canonical sources are traversed"
   ],
-  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-1581-PLUS"
+  "next_task_id": "GLOBAL-ZERO-OMISSION-MS-1644-PLUS"
 }

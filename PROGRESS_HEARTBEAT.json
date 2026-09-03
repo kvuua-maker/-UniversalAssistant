@@ -1,19 +1,18 @@
 {
   "current_block": "GLOBAL-ZERO-OMISSION-AUDIT",
-  "current_action": "reconcile-ms-1581-plus-no-jobs-marketplace",
+  "current_action": "reconcile-ms-1644-plus-and-remaining-sources",
   "status": "IN_PROGRESS",
-  "last_measurable_progress": "2026-09-03T13:31:00+02:00",
+  "last_measurable_progress": "2026-09-03T13:36:00+02:00",
   "attempt_path_id": "global-audit-v16",
   "last_commit": "1e82d6a",
   "blocker": null,
   "evidence": {
-    "reconciled_requirements": "1548 explicit Master Spec IDs excluding active final gates, through MS-1580",
-    "inventory_counts": "1374 VERIFIED_LOCAL; 161 READY_FOR_LIVE_VERIFICATION; 13 NOT_APPLICABLE_VERIFIED; 239 NOT_IMPLEMENTED",
-    "new_production": "My Tasks/Favorites, persistent Settings/Appearance/Voice and AffiliateProgramRegistry",
-    "target_tests": "4 PersonalHub + 12 presentation/runtime + 2 affiliate registry tests passed; production simulator build passed",
-    "full_regression": "92 backend tests across 25 suites passed; last full iOS regression 469 tests across 100 suites",
-    "completed_task": "GLOBAL-RECONCILIATION-MS-1511-1580",
+    "reconciled_requirements": "1610 explicit Master Spec IDs excluding active final gates, through MS-1642",
+    "inventory_counts": "1422 VERIFIED_LOCAL; 175 READY_FOR_LIVE_VERIFICATION; 13 NOT_APPLICABLE_VERIFIED; 177 NOT_IMPLEMENTED",
+    "target_tests": "performance/account/entitlement/system/media production and behavioral evidence mapped; latest simulator build passed",
+    "full_regression": "92 backend tests/25 suites passed; last full iOS 469 tests/100 suites",
+    "completed_task": "GLOBAL-RECONCILIATION-MS-1581-1642",
     "verification_type": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
-    "next_task": "MS-1581+; final/live gates remain open"
+    "next_task": "MS-1644+ and strict remaining-ID audit; global gates stay open"
   }
 }
