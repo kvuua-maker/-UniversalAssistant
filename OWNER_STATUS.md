@@ -22,4 +22,4 @@ No blocker for the next local core. Provider live execution remains separately c
 
 ## NEXT
 
-Continue reconciliation from MS-1098+ without Jobs Marketplace; all final-audit gates remain open until actually satisfied.
+Continue reconciliation from MS-1144+ without Jobs Marketplace; all final-audit gates remain open until actually satisfied.

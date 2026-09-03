@@ -1101,3 +1101,49 @@ The complete canonical intent surface was traced from deterministic recognition 
 | MS-1085 | VERIFIED_LOCAL | safe unambiguous fast-path families target one trigger/phrase with zero extra tap while preserving required confirmation; runner tests | aabe915 |
 | MS-1086 | VERIFIED_LOCAL | every execution now yields explicit pass, fail or ready-for-live status; local mismatch is behavior-tested as fail rather than misclassified live-ready | 858c4e4 |
 | MS-1087 | VERIFIED_LOCAL | runner emits privacy-conscious completion, clarification/tap, latency, fallback and live/local separation inputs without raw diagnostic persistence | 858c4e4 |
+
+
+| MS-1098 | VERIFIED_LOCAL | atomic per-slice implementation/test/evidence/commit sequence is persisted in status and Git history; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1099 | VERIFIED_LOCAL | work is split into completed atomic blocks rather than unrelated unfinished big-bang changes; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1100 | VERIFIED_LOCAL | PROJECT_STATUS is the human-readable single current dashboard; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1101 | VERIFIED_LOCAL | dashboard fields are updated at each measurable checkpoint and schema-tested; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1102 | VERIFIED_LOCAL | PROGRESS_HEARTBEAT is machine-readable and decoded by the governance test; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1103 | VERIFIED_LOCAL | heartbeat changes only with measurable block/evidence progress; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1104 | VERIFIED_LOCAL | state records concrete tests, evidence, commits and next work as measurable progress; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1105 | VERIFIED_LOCAL | attempt policy rejects equivalent rewrites/reruns as completion evidence; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1106 | VERIFIED_LOCAL | ATTEMPT_LEDGER persists structured method/error/diagnosis/result records; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1107 | VERIFIED_LOCAL | failed method signatures persist for later resume; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1108 | VERIFIED_LOCAL | unchanged deterministic retry is prohibited by persisted attempt identity; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1109 | VERIFIED_LOCAL | same failure plus same method must stop pending material change; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1110 | VERIFIED_LOCAL | first failure requires recorded diagnosis before another attempt; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1111 | VERIFIED_LOCAL | retry requires substantive material input/configuration/code change; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1112 | VERIFIED_LOCAL | ledger schema records qualifying material changes; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1113 | VERIFIED_LOCAL | cosmetic changes are not accepted as material retry justification; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1114 | VERIFIED_LOCAL | post-failure execution requires prior persisted justification; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1115 | VERIFIED_LOCAL | missing justification prevents retry; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1116 | VERIFIED_LOCAL | subsequent attempt must record a new evidence-backed hypothesis; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1117 | VERIFIED_LOCAL | alternative method identity must actually differ; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1118 | VERIFIED_LOCAL | transient exception is separately classified; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1119 | VERIFIED_LOCAL | transient retry count/backoff must be bounded; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1120 | VERIFIED_LOCAL | credentials/schema/permission errors are deterministic not transient; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1121 | VERIFIED_LOCAL | authoritative limitation evidence terminates impossible paths; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1122 | VERIFIED_LOCAL | external blocker records exact dependency and resume action; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1123 | VERIFIED_LOCAL | external blocker does not stop independent roadmap work; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1124 | VERIFIED_LOCAL | locally solvable failures remain engineering work; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1125 | VERIFIED_LOCAL | watchdog detects lack of measurable progress after policy threshold; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1126 | VERIFIED_LOCAL | LONG_RUNNING healthy work is explicitly exempt from false stall; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1127 | VERIFIED_LOCAL | unchanged documentation reread is not progress; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1128 | VERIFIED_LOCAL | unchanged deterministic build rerun is prohibited; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1129 | VERIFIED_LOCAL | unchanged failing provider/API request is prohibited; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1130 | VERIFIED_LOCAL | unchanged install/config loop is prohibited; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1131 | VERIFIED_LOCAL | policy conserves bounded execution/time resources; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1132 | VERIFIED_LOCAL | DevelopmentStateWatchdog performs lightweight local state freshness/consistency inspection; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1133 | VERIFIED_LOCAL | watchdog is diagnostic and cannot mutate success or restart work; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1134 | VERIFIED_LOCAL | PROJECT_STATUS explicitly contains STALLED state; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1135 | VERIFIED_LOCAL | dashboard separates exact external blockers; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1136 | VERIFIED_LOCAL | dashboard records last measurable real progress; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1137 | VERIFIED_LOCAL | dashboard always records next block; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1138 | VERIFIED_LOCAL | resume state is reconstructed from heartbeat/ledger; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1139 | VERIFIED_LOCAL | failed paths survive sessions in ATTEMPT_LEDGER; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1140 | VERIFIED_LOCAL | typed attempt identity prevents claiming an unchanged method is new; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
+| MS-1141 | VERIFIED_LOCAL | status claims require implementation/test/commit or exact live evidence; ExecutionStateGovernanceTests and repository artifact audit | e0dd6a3 |
