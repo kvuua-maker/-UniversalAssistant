@@ -1,9 +1,11 @@
 import Foundation
 import Observation
+import OSLog
 
 @MainActor
 @Observable
 final class AssistantViewModel {
+    private static let voiceLogger = Logger(subsystem: "com.universalassistant.app", category: "VoicePipeline")
     var input = ""
     var isListening = false
     var voiceInputEnabled = true
@@ -35,6 +37,9 @@ final class AssistantViewModel {
         self.feedbackStore = feedbackStore
         self.compactResultDuration = compactResultDuration
         self.presentationPreferenceStore = presentationPreferenceStore
+        voiceInput.setEventHandler { [weak self] event in
+            self?.handleVoiceEvent(event)
+        }
         Task { [weak self] in
             guard let self else { return }
             if let value = try? await presentationPreferenceStore.load() { self.presentationPreferences = value }
@@ -65,6 +70,20 @@ final class AssistantViewModel {
                 case .unavailable: AppText.value("speech_unavailable")
                 case .failed: AppText.value("listening_failed")
                 default: AppText.value("ready")
+        }
+    }
+
+    func handleVoiceEvent(_ event: VoiceInputEvent) {
+        switch event {
+        case let .state(state):
+            applyVoiceState(state)
+        case let .transcript(transcript, isFinal):
+            input = transcript
+            Self.voiceLogger.notice("transcript_delivered_to_view_model length=\(transcript.count, privacy: .public) final=\(isFinal, privacy: .public)")
+            if isFinal, !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Self.voiceLogger.notice("transcript_delivered_to_router")
+                submit()
+            }
         }
     }
 

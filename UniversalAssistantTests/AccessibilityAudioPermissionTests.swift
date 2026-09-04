@@ -5,6 +5,19 @@ import Testing
 @MainActor
 @Suite("Accessibility, audio and contextual permissions")
 struct AccessibilityAudioPermissionTests {
+    @Test @MainActor func partialAndFinalVoiceTranscriptReachUIAndExistingRouter() {
+        let model = AssistantViewModel()
+        model.handleVoiceEvent(.state(.listening))
+        model.handleVoiceEvent(.transcript("відкрий календар", isFinal: false))
+        #expect(model.input == "відкрий календар")
+        #expect(model.isListening)
+
+        model.handleVoiceEvent(.state(.idle))
+        model.handleVoiceEvent(.transcript("відкрий календар", isFinal: true))
+        #expect(model.input.isEmpty)
+        #expect(model.resultState != .idle)
+    }
+
     @Test func voicePrivacyModeKeepsTypedInteractionWorking() {
         let model = AssistantViewModel()
         model.setVoiceInputEnabled(false)
