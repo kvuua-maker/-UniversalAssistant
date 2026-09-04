@@ -25,6 +25,19 @@ struct AudioRouteChangeEvidence: Equatable, Sendable {
     var diagnosticDescription: String {
         "reason=\(reasonName)(\(reasonRawValue)) previous_inputs=\(previousInputs) previous_outputs=\(previousOutputs) current_inputs=\(currentInputs) current_outputs=\(currentOutputs) input_available=\(inputAvailable)"
     }
+
+    var requiresVoiceCaptureStop: Bool {
+        guard inputAvailable, !currentInputs.isEmpty else { return true }
+        switch AVAudioSession.RouteChangeReason(rawValue: reasonRawValue) ?? .unknown {
+        case .newDeviceAvailable, .categoryChange, .override, .wakeFromSleep,
+             .routeConfigurationChange:
+            return false
+        case .oldDeviceUnavailable, .noSuitableRouteForCategory, .unknown:
+            return true
+        @unknown default:
+            return true
+        }
+    }
 }
 
 private extension AVAudioSession.RouteChangeReason {

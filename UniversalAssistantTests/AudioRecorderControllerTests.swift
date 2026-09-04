@@ -105,6 +105,39 @@ struct VoiceAudioCaptureLifecycleTests {
         #expect(evidence.diagnosticDescription.contains("input_available=true"))
     }
 
+    @Test func harmlessStartupCategoryChangeKeepsRecognitionActive() {
+        let evidence = AudioRouteChangeEvidence(
+            reasonRawValue: AVAudioSession.RouteChangeReason.categoryChange.rawValue,
+            reasonName: "categoryChange",
+            previousInputs: [], previousOutputs: ["Speaker:iPhone Speaker"],
+            currentInputs: ["BuiltInMic:iPhone Microphone"], currentOutputs: [],
+            inputAvailable: true
+        )
+        #expect(!evidence.requiresVoiceCaptureStop)
+    }
+
+    @Test func genuineInputLossRequiresSafeStop() {
+        let evidence = AudioRouteChangeEvidence(
+            reasonRawValue: AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue,
+            reasonName: "oldDeviceUnavailable",
+            previousInputs: ["BluetoothHFP:Headset"], previousOutputs: [],
+            currentInputs: [], currentOutputs: ["Speaker:iPhone Speaker"],
+            inputAvailable: false
+        )
+        #expect(evidence.requiresVoiceCaptureStop)
+    }
+
+    @Test func categoryChangeWithoutUsableInputStillRequiresSafeStop() {
+        let evidence = AudioRouteChangeEvidence(
+            reasonRawValue: AVAudioSession.RouteChangeReason.categoryChange.rawValue,
+            reasonName: "categoryChange",
+            previousInputs: ["BuiltInMic:iPhone Microphone"], previousOutputs: [],
+            currentInputs: [], currentOutputs: ["Speaker:iPhone Speaker"],
+            inputAvailable: true
+        )
+        #expect(evidence.requiresVoiceCaptureStop)
+    }
+
     @Test func speechPermissionCallbackSafelyResumesFromBackgroundQueue() async {
         let status = await VoiceInputController.awaitSpeechAuthorization { completion in
             DispatchQueue.global(qos: .default).async {

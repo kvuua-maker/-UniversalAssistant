@@ -244,7 +244,11 @@ final class VoiceInputController {
 
     func handleAudioRouteChanged(_ evidence: AudioRouteChangeEvidence) {
         LocalVoiceDiagnosticReport.shared.record("route_change", evidence.diagnosticDescription)
-        handleAudioRouteChanged()
+        if evidence.requiresVoiceCaptureStop {
+            handleAudioRouteChanged()
+        } else {
+            LocalVoiceDiagnosticReport.shared.record("route_change_ignored", "reason=\(evidence.reasonName) input_preserved=true")
+        }
     }
 
     nonisolated static func awaitSpeechAuthorization(
