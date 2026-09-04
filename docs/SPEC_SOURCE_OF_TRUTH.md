@@ -60,6 +60,11 @@ The project source of truth is the complete, indivisible combination of:
    - 168 independently tracked `PRIVACY-ID` requirements accepted on 2026-09-03.
    - Requires capability-preserving local-first, purpose-bound, consent-governed minimization and absolute NEVER_AI secret handling.
 
+15. `docs/UniversalAssistant_Universal_Audio_Device_Control_FINAL_NUMBERED.txt`
+   - SHA-256: `50b594e3027f9b1f6ed446f9222e534430e33566b8ad3cd2b0d45f13d4708a50`
+   - 147 independently tracked `AUDIO-ID` requirements accepted on 2026-09-04.
+   - Universal basic control uses only public/official mechanisms; deep control is model-evidenced, DSP is limited to permitted streams, and physical/provider claims remain live-only.
+
 All accepted addenda augment the Master Spec and do not remove or weaken it. Every requirement retains an evidence-backed zero-omission status; documentation, interfaces, mocks and external dependencies alone never establish completion. Later explicit supersession rules inside the Master Spec take precedence over earlier conflicting wording, subject to safety, law, current platform/provider truth, privacy and security.
 
 Both canonical files were read completely and copied byte-for-byte from the owner-provided attachments on 2026-09-01. Their hashes were verified after persistence.

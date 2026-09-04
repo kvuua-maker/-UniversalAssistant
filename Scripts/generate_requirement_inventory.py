@@ -72,6 +72,15 @@ def main():
         title = next((value.strip() for value in privacy_lines[index + 1:] if value.strip() and not value.startswith("PRIVACY-")), requirement_id)
         prior = existing.get(requirement_id, {})
         records.append({"id": requirement_id, "source": str(privacy.relative_to(ROOT)), "title": title, "status": prior.get("status", "NOT_IMPLEMENTED"), "implementation_evidence": prior.get("implementation_evidence", []), "test_evidence": prior.get("test_evidence", []), "commit_evidence": prior.get("commit_evidence", []), "live_evidence": prior.get("live_evidence", []), "remaining_dependency": prior.get("remaining_dependency")})
+    audio = ROOT / "docs/UniversalAssistant_Universal_Audio_Device_Control_FINAL_NUMBERED.txt"
+    audio_lines = audio.read_text().splitlines()
+    for index, line in enumerate(audio_lines):
+        match = re.fullmatch(r"AUDIO-(\d{3}) \[[A-Z_]+\]", line.strip())
+        if not match: continue
+        requirement_id = f"AUDIO-{int(match.group(1)):03d}"
+        title = next((value.strip() for value in audio_lines[index + 1:] if value.strip() and not value.startswith("AUDIO-")), requirement_id)
+        prior = existing.get(requirement_id, {})
+        records.append({"id": requirement_id, "source": str(audio.relative_to(ROOT)), "title": title, "status": prior.get("status", "NOT_IMPLEMENTED"), "implementation_evidence": prior.get("implementation_evidence", []), "test_evidence": prior.get("test_evidence", []), "commit_evidence": prior.get("commit_evidence", []), "live_evidence": prior.get("live_evidence", []), "remaining_dependency": prior.get("remaining_dependency")})
     coordination = ROOT / "docs/DETERMINISTIC_MULTI_STEP_COORDINATION_BOUNDED_AI_FALLBACK_ADDENDUM.md"
     for index, title in enumerate(["Deterministic core", "Facts and composition", "Bounded AI fallback", "Observability and acceptance", "Roadmap rule"], 1):
         requirement_id = f"DCA-{index}"

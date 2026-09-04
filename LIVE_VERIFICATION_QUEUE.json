@@ -1174,6 +1174,101 @@
       "created_at": "2026-09-03T15:16:00+02:00",
       "last_checked": "2026-09-03T15:16:00+02:00",
       "completion_evidence": null
+    },
+    {
+      "requirement_id": "AUDIO-025-AUDIO-106-AUDIO-111-AUDIO-124-LIVE-APPLE-ROUTES",
+      "service_provider": "Apple physical iPhone/iPad, AirPods/Beats, Bluetooth and AirPlay hardware",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Signed physical iPhone/iPad plus representative AirPods/Beats, Bluetooth speaker/headphones and AirPlay receiver",
+      "dependency_owner": "Owner/device tester and provider or manufacturer account owner",
+      "local_evidence": [
+        "UniversalAssistant/Audio/UniversalAudioDeviceControl.swift",
+        "UniversalAssistant/Audio/OfficialAudioProviderAdapters.swift",
+        "UniversalAssistant/Audio/SystemAudioRoutePicker.swift",
+        "UniversalAssistantTests/UniversalAudioDeviceControlTests.swift",
+        "docs/UNIVERSAL_AUDIO_DEVICE_CONTROL_AUDIT.md"
+      ],
+      "required_live_action": "Install signed build; select each route through system picker; exercise volume/media/interruption/disconnect/reconnect and observe route/battery where public readback exists.",
+      "expected_result": "Picker never claims selection before system readback; route/media/interruption state matches hardware; system-only AirPods settings remain handoff-only.",
+      "created_at": "2026-09-04T14:10:00+02:00",
+      "last_checked": "2026-09-04T14:10:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "AUDIO-030-AUDIO-031-AUDIO-032-AUDIO-107-AUDIO-125-LIVE-GOOGLE-CAST",
+      "service_provider": "Google Cast iOS Sender SDK and receiver",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Cast developer app ID, authorized receiver hardware/account and SDK integration approval/configuration",
+      "dependency_owner": "Owner/device tester and provider or manufacturer account owner",
+      "local_evidence": [
+        "UniversalAssistant/Audio/UniversalAudioDeviceControl.swift",
+        "UniversalAssistant/Audio/OfficialAudioProviderAdapters.swift",
+        "UniversalAssistant/Audio/SystemAudioRoutePicker.swift",
+        "UniversalAssistantTests/UniversalAudioDeviceControlTests.swift",
+        "docs/UNIVERSAL_AUDIO_DEVICE_CONTROL_AUDIT.md"
+      ],
+      "required_live_action": "Run discovery, connect/reconnect, play/pause/stop/seek/queue/software-volume and multi-sender state synchronization on current iOS.",
+      "expected_result": "Receiver and sender states agree; reconnect works; software volume works without claiming unsupported physical-button behavior.",
+      "created_at": "2026-09-04T14:10:00+02:00",
+      "last_checked": "2026-09-04T14:10:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "AUDIO-034-AUDIO-035-AUDIO-108-AUDIO-125-LIVE-SONOS",
+      "service_provider": "Sonos Control API",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Authorized Sonos developer client/OAuth account and representative supported players/groups",
+      "dependency_owner": "Owner/device tester and provider or manufacturer account owner",
+      "local_evidence": [
+        "UniversalAssistant/Audio/UniversalAudioDeviceControl.swift",
+        "UniversalAssistant/Audio/OfficialAudioProviderAdapters.swift",
+        "UniversalAssistant/Audio/SystemAudioRoutePicker.swift",
+        "UniversalAssistantTests/UniversalAudioDeviceControlTests.swift",
+        "docs/UNIVERSAL_AUDIO_DEVICE_CONTROL_AUDIT.md"
+      ],
+      "required_live_action": "Authorize, enumerate household/player groups, execute documented playback and volume commands, subscribe to events, revoke auth and repeat failure path.",
+      "expected_result": "Commands have authoritative event/readback, revoked auth becomes REAUTH_REQUIRED, and no content-service capability is claimed without approval.",
+      "created_at": "2026-09-04T14:10:00+02:00",
+      "last_checked": "2026-09-04T14:10:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "AUDIO-036-AUDIO-038-AUDIO-039-AUDIO-042-AUDIO-109-AUDIO-110-AUDIO-125-AUDIO-128-LIVE-DEEP-VENDORS",
+      "service_provider": "HEOS, B&O Mozart, BluOS, WiiM and other officially documented vendor families",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Representative exact model/firmware plus LAN/cloud credentials and any manufacturer/installer/MFi approval",
+      "dependency_owner": "Owner/device tester and provider or manufacturer account owner",
+      "local_evidence": [
+        "UniversalAssistant/Audio/UniversalAudioDeviceControl.swift",
+        "UniversalAssistant/Audio/OfficialAudioProviderAdapters.swift",
+        "UniversalAssistant/Audio/SystemAudioRoutePicker.swift",
+        "UniversalAssistantTests/UniversalAudioDeviceControlTests.swift",
+        "docs/UNIVERSAL_AUDIO_DEVICE_CONTROL_AUDIT.md"
+      ],
+      "required_live_action": "For each exact model row, run only officially documented discovery, status, playback, grouping and volume operations; record firmware and readback.",
+      "expected_result": "Each model proves only its documented matrix row; unsupported controls remain absent; disconnect/auth/firmware mismatch invalidates cached capabilities.",
+      "created_at": "2026-09-04T14:10:00+02:00",
+      "last_checked": "2026-09-04T14:10:00+02:00",
+      "completion_evidence": null
+    },
+    {
+      "requirement_id": "AUDIO-058-AUDIO-060-AUDIO-124-AUDIO-132-LIVE-MUSIC-PROVIDERS",
+      "service_provider": "Apple Music and other music-provider policy/account paths",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Real provider accounts, current commercial/developer approval and applicable device entitlements",
+      "dependency_owner": "Owner/device tester and provider or manufacturer account owner",
+      "local_evidence": [
+        "UniversalAssistant/Audio/UniversalAudioDeviceControl.swift",
+        "UniversalAssistant/Audio/OfficialAudioProviderAdapters.swift",
+        "UniversalAssistant/Audio/SystemAudioRoutePicker.swift",
+        "UniversalAssistantTests/UniversalAudioDeviceControlTests.swift",
+        "docs/UNIVERSAL_AUDIO_DEVICE_CONTROL_AUDIT.md"
+      ],
+      "required_live_action": "Verify permitted search/handoff/playback on each configured provider and re-check current voice/commercial/raw-audio terms before enabling any path.",
+      "expected_result": "Only contractually permitted capabilities activate; Spotify prohibited voice/DSP/content-ingestion paths remain blocked.",
+      "created_at": "2026-09-04T14:10:00+02:00",
+      "last_checked": "2026-09-04T14:10:00+02:00",
+      "completion_evidence": null
     }
   ]
 }

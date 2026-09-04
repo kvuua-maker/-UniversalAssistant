@@ -1,0 +1,448 @@
+UNIVERSALASSISTANT — UNIVERSAL AUDIO DEVICE CONTROL
+FINAL NUMBERED ZERO-OMISSION CANONICAL ADDENDUM
+
+Scope: speakers + headphones + earbuds + AirPods/Beats + Bluetooth/AirPlay/Cast/Wi‑Fi/multiroom/car audio; deterministic without AI, optional AI semantic layer.
+
+AUDIO-001 [AUTHORITY]
+Цей artifact є mandatory canonical source-of-truth для UNIVERSAL AUDIO DEVICE CONTROL: speakers, headphones, earbuds, AirPods/Beats, Wi‑Fi/Bluetooth/AirPlay/Cast/multiroom/car audio.
+
+AUDIO-002 [AUTHORITY]
+Це модуль UniversalAssistant, не окрема програма. Reuse existing audio routing, media, MusicKit, voice, Connected Accounts, Universal Action Graph, RemoteConfig, CostQuotaManager, Privacy, audit/evidence.
+
+AUDIO-003 [AUTHORITY]
+Не ламай жодну VERIFIED_LOCAL capability. Спочатку evidence-backed repo audit; потім одразу реалізуй усі локально доступні PARTIAL/MISSING gaps.
+
+AUDIO-004 [AUTHORITY]
+Не використовуй private APIs, reverse-engineered proprietary protocols, undocumented privileged entitlements або vendor restriction bypass.
+
+AUDIO-005 [AUTHORITY]
+UI, voice і AI можуть пропонувати лише capability, яку доказово дозволяє конкретний device/provider/model/firmware/account state.
+
+AUDIO-006 [EXHAUSTIVE_RESEARCH]
+Перед coding проведи актуальний exhaustive manufacturer/ecosystem audit; не обмежуйся брендами цього файла.
+
+AUDIO-007 [EXHAUSTIVE_RESEARCH]
+Обов'язково перевір Apple/AirPods/Beats/AirPlay, Google Cast, Sonos, Denon/Marantz/HEOS, Devialet, Bang & Olufsen, BluOS/Bluesound/OEM, Bose, Sony, JBL/Harman Kardon, Marshall, Sennheiser, Shokz, Ultimate Ears, Jabra, Bowers & Wilkins, Naim, Yamaha/MusicCast, WiiM/Linkplay, Cambridge Audio, KEF, Audio Pro, Samsung, LG та інші materially significant ecosystems.
+
+AUDIO-008 [EXHAUSTIVE_RESEARCH]
+Для кожного ecosystem/model family шукай строго: Apple public framework/system UI → official manufacturer iOS SDK/API → official cloud API → documented LAN/IP protocol → documented Bluetooth service → MFi/External Accessory approved protocol → official app handoff/deep link → system route/media control → unsupported.
+
+AUDIO-009 [EXHAUSTIVE_RESEARCH]
+Vendor app з EQ/ANC не є доказом third-party API. Потрібне окреме official evidence.
+
+AUDIO-010 [EXHAUSTIVE_RESEARCH]
+Для кожного family зафіксуй mechanism, models/firmware, auth, local/cloud, permissions/entitlements, commands, readback/events, limits, terms/commercial restrictions, background behavior, evidence URL/date.
+
+AUDIO-011 [EXHAUSTIVE_RESEARCH]
+Approval/API key/MFi/partner-only requirement: implement safe adapter boundary locally; real authorized test → LIVE_VERIFICATION_QUEUE.
+
+AUDIO-012 [EXHAUSTIVE_RESEARCH]
+Archived/deprecated API позначай ARCHIVED/DEPRECATED і не роби guaranteed foundation без explicit compatibility policy.
+
+AUDIO-013 [EXHAUSTIVE_RESEARCH]
+Unknown capability = UNKNOWN/UNSUPPORTED, never guessed.
+
+AUDIO-014 [CAPABILITY_REGISTRY]
+Створи/розшир SpeakerHeadphoneCapabilityRegistry як єдине джерело capability truth.
+
+AUDIO-015 [CAPABILITY_REGISTRY]
+Identity: route ID, vendor, model/family, firmware where available, transport, room/profile, provider account/household/group identity.
+
+AUDIO-016 [CAPABILITY_REGISTRY]
+Transports: LOCAL_DEVICE, WIRED, BLUETOOTH_SYSTEM_ROUTE, CORE_BLUETOOTH_ACCESSORY, MFI_EXTERNAL_ACCESSORY, AIRPLAY, GOOGLE_CAST, LAN_IP, CLOUD_API, CAR_AUDIO, PROVIDER_APP_HANDOFF.
+
+AUDIO-017 [CAPABILITY_REGISTRY]
+States: SUPPORTED_VERIFIED_LOCAL, SUPPORTED_LIVE_REQUIRED, SYSTEM_HANDOFF_ONLY, READ_ONLY, UNSUPPORTED_VERIFIED, UNKNOWN.
+
+AUDIO-018 [CAPABILITY_REGISTRY]
+Independent capabilities: route/select, connect/disconnect where allowed, volume/mute, play/pause/stop/next/previous/seek, queue, shuffle/repeat, metadata, source/input, grouping, group/per-device volume, battery/charging, codec read-only, EQ/bass/mid/treble, presets/loudness/balance, ANC, Transparency/Ambient/Adaptive, conversation/voice enhancement, spatial/head tracking, mic/sidetone, multipoint, lights, stereo/party, power/standby, firmware/status.
+
+AUDIO-019 [CAPABILITY_REGISTRY]
+Unsupported hardware control must not appear as active UI/AI/voice action.
+
+AUDIO-020 [CAPABILITY_REGISTRY]
+Invalidate capability cache on disconnect, firmware/model/provider change, auth revoke or policy/config change.
+
+AUDIO-021 [CAPABILITY_REGISTRY]
+Where authoritative readback/events exist, command-sent != confirmed state; verify state.
+
+AUDIO-022 [APPLE_SYSTEM]
+Use only Apple public route/volume mechanisms such as system route picker/MPVolumeView/AVRoutePickerView where applicable.
+
+AUDIO-023 [APPLE_SYSTEM]
+Do not simulate programmatic AirPlay/Bluetooth route selection if Apple only permits user-visible system picker.
+
+AUDIO-024 [APPLE_SYSTEM]
+Opening route picker is not proof user selected a specific route without readback.
+
+AUDIO-025 [APPLE_SYSTEM]
+Track route/interruption/connect/disconnect truthfully; physical route/volume behavior requires device live verification.
+
+AUDIO-026 [APPLE_SYSTEM]
+Do not pair/unpair ordinary Bluetooth audio through private Settings APIs.
+
+AUDIO-027 [APPLE_SYSTEM]
+Core Bluetooth may control only officially exposed/documented services; it is not universal access to proprietary EQ.
+
+AUDIO-028 [APPLE_SYSTEM]
+External Accessory/MFi integration only for manufacturer-approved protocols.
+
+AUDIO-029 [AIRPLAY_CAST]
+AirPlay: system discovery/selection, route/playback/multi-output only within public Apple capability; no implied hardware EQ.
+
+AUDIO-030 [AIRPLAY_CAST]
+Google Cast: use current official iOS Sender SDK; discovery, sessions/reconnect, remote media, play/pause/stop/seek/queue/status/metadata and software volume where allowed.
+
+AUDIO-031 [AIRPLAY_CAST]
+Cast UI/state must stay synchronized with receiver and other senders.
+
+AUDIO-032 [AIRPLAY_CAST]
+Do not assume physical iPhone volume buttons control Cast on current iOS; follow current Cast requirements.
+
+AUDIO-033 [AIRPLAY_CAST]
+No custom Cast channel to bypass receiver/vendor restrictions.
+
+AUDIO-034 [DEEP_ADAPTERS]
+Sonos: official Control API only; authorization, households, players/groups, transport, metadata/events, player/group volume/mute/grouping as actually supported.
+
+AUDIO-035 [DEEP_ADAPTERS]
+Sonos subscriptions/events synchronize state; avoid flooding volume commands; content-service-specific access requires required partner approval.
+
+AUDIO-036 [DEEP_ADAPTERS]
+HEOS/Denon/Marantz: official documented HEOS CLI/IP only for supported models/versions; players/groups/play state/now playing/volume/mute/queue/transport/play mode/sources/events where documented.
+
+AUDIO-037 [DEEP_ADAPTERS]
+HEOS parser must be forward-compatible with added fields; never invent EQ command absent from current official spec.
+
+AUDIO-038 [DEEP_ADAPTERS]
+Bang & Olufsen: verify Mozart Open API/ControlLink model-by-model; never transfer Mozart capabilities to unsupported products.
+
+AUDIO-039 [DEEP_ADAPTERS]
+BluOS: verify Custom Integration API, installer/partner access and OEM model scope; do not assume all functions public.
+
+AUDIO-040 [DEEP_ADAPTERS]
+Sony archived Audio Control API is not an active guaranteed foundation; audit current Sony mechanisms.
+
+AUDIO-041 [DEEP_ADAPTERS]
+Bose SoundTouch/legacy APIs remain model-scoped and must not be generalized to all Bose products.
+
+AUDIO-042 [DEEP_ADAPTERS]
+Devialet and every other deep adapter: implement only current official documented capabilities.
+
+AUDIO-043 [DEEP_ADAPTERS]
+JBL/Sony/Bose/Sennheiser/Marshall/Shokz/Jabra/UE/etc. vendor-app features are not third-party capabilities without official evidence.
+
+AUDIO-044 [HEADPHONES]
+Headphones/earbuds are first-class AudioDevice in the same architecture.
+
+AUDIO-045 [HEADPHONES]
+Universal layer: current route, system volume, permitted media controls, profiles and automations.
+
+AUDIO-046 [HEADPHONES]
+Hardware EQ/ANC/Transparency/Ambient/Adaptive/Conversation features/spatial/head tracking/mic/sidetone/multipoint/firmware/battery are capability-specific.
+
+AUDIO-047 [HEADPHONES]
+AirPods/Beats: distinguish Apple Settings/Control Center features from public third-party programmatic APIs. Headphone Accommodations/Transparency/Conversation Boost existing in iOS does not itself prove a setter API for our app.
+
+AUDIO-048 [HEADPHONES]
+If an AirPods/Beats setting is system-only, use truthful system handoff/guidance where possible; never claim UniversalAssistant changed it directly.
+
+AUDIO-049 [HEADPHONES]
+Other headphone brands: no reverse engineering of proprietary vendor app controls.
+
+AUDIO-050 [HEADPHONES]
+Wired/USB headphones remain routable/profile-capable even with no device-control API.
+
+AUDIO-051 [DSP]
+UniversalAudioDSP applies only to audio streams UniversalAssistant is legally and technically allowed to process.
+
+AUDIO-052 [DSP]
+DSP: EQ, bass/mid/treble abstraction, presets, loudness, balance, limiter, compressor, normalization, speech/vocal clarity, night profile and safe gain staging.
+
+AUDIO-053 [DSP]
+Hardware EQ and our-stream DSP are distinct capability types and must never be conflated.
+
+AUDIO-054 [DSP]
+No claim of system-wide EQ for arbitrary audio from other iOS apps.
+
+AUDIO-055 [DSP]
+If third-party raw stream is unavailable or terms prohibit modification, our DSP does not process it.
+
+AUDIO-056 [DSP]
+Bound gains, prevent clipping/runaway bass/sudden unsafe gain; provide flat/reset and reversible profiles.
+
+AUDIO-057 [DSP]
+DSP profiles are scoped to user+device/route+context; do not blindly apply to another model.
+
+AUDIO-058 [MUSIC_PROVIDER_POLICY]
+For Apple Music/MusicKit, Spotify, YouTube Music, Deezer, TIDAL, Amazon Music and others separately audit search/metadata, handoff, playback control, streaming, raw-audio access, DSP permission, voice and commercial restrictions.
+
+AUDIO-059 [MUSIC_PROVIDER_POLICY]
+Playback-control API does not imply raw-audio/DSP permission.
+
+AUDIO-060 [MUSIC_PROVIDER_POLICY]
+Spotify: re-check current Developer Policy before implementation; technical endpoints do not override policy.
+
+AUDIO-061 [MUSIC_PROVIDER_POLICY]
+Do not build Spotify voice-assistant control through Spotify developer tools while current policy prohibits voice-enabled SDAs.
+
+AUDIO-062 [MUSIC_PROVIDER_POLICY]
+Do not EQ/mix/remix/alter or ingest Spotify Content into AI/DSP where current Spotify policy prohibits it.
+
+AUDIO-063 [MUSIC_PROVIDER_POLICY]
+Do not build prohibited commercial Spotify streaming integration; use only currently permitted non-streaming/system/deep-link paths.
+
+AUDIO-064 [MUSIC_PROVIDER_POLICY]
+Provider content must not be sent to AI for analysis/training when provider terms prohibit it.
+
+AUDIO-065 [MUSIC_PROVIDER_POLICY]
+Provider restriction must be encoded in capability/policy registry, not bypassed.
+
+AUDIO-066 [PROFILES_AUTOMATION]
+Speaker/Headphone Profile: friendly name, model/family, room/use context, capabilities, preferred safe volume, supported hardware settings, DSP profile, last-seen state.
+
+AUDIO-067 [PROFILES_AUTOMATION]
+Support room/use profiles: kitchen, bedroom, outdoors, car, office, headphones and custom.
+
+AUDIO-068 [PROFILES_AUTOMATION]
+One device may have different user/context profiles; unknown identity never receives model-specific command.
+
+AUDIO-069 [PROFILES_AUTOMATION]
+Deterministic automation without AI: route connected→safe profile, configured night mode, car profile, speech/podcast profile, disconnect recovery.
+
+AUDIO-070 [PROFILES_AUTOMATION]
+Automation must be inspectable/editable/disableable/auditable and must never jump to unsafe volume.
+
+AUDIO-071 [PROFILES_AUTOMATION]
+Use bounded/ramped volume changes where appropriate.
+
+AUDIO-072 [NO_AI]
+Core Audio Device Control must work fully without external AI.
+
+AUDIO-073 [NO_AI]
+Without AI support native controls, sliders/toggles, presets, profiles, deterministic commands, automation, capability discovery/adapters and truthful fallback.
+
+AUDIO-074 [NO_AI]
+Commands like volume 35%, podcast mode, select kitchen, bass +2 when capability exists route through structured command engine.
+
+AUDIO-075 [NO_AI]
+Ambiguous device/room/action → at most one necessary clarification.
+
+AUDIO-076 [AI]
+AI Audio Interpreter is optional semantic layer, never a privileged controller.
+
+AUDIO-077 [AI]
+AI converts natural language to typed intent/parameters; execution is revalidated by Capability Registry + provider policy + safety bounds.
+
+AUDIO-078 [AI]
+AI may translate 'more bass but keep vocals clear' into bounded supported hardware-EQ or our-DSP action only.
+
+AUDIO-079 [AI]
+AI never invents model, firmware, capability, battery, EQ/ANC state or execution success.
+
+AUDIO-080 [AI]
+Reuse PRIVACY-001…168: credentials/tokens/secrets are NEVER_AI_PAYLOAD.
+
+AUDIO-081 [AI]
+If provider terms prohibit voice-assistant control, AI/voice path is disabled even if an endpoint technically exists.
+
+AUDIO-082 [AI]
+AI offline/failure must not block deterministic controls.
+
+AUDIO-083 [HEARING_SAFETY]
+Optional Personal Hearing/Sound Preference Profile is non-medical unless a separate validated regulatory path exists.
+
+AUDIO-084 [HEARING_SAFETY]
+May support preference calibration, L/R balance, speech clarity and safe-volume preferences on allowed paths.
+
+AUDIO-085 [HEARING_SAFETY]
+Do not label consumer preference test as medical diagnosis/audiogram/treatment.
+
+AUDIO-086 [HEARING_SAFETY]
+System-only Apple hearing accommodations remain system-only unless public API proves direct control.
+
+AUDIO-087 [HEARING_SAFETY]
+Safety: max-volume profiles, clipping limiter, bounded EQ, no sudden large volume jumps, interruption/disconnect recovery.
+
+AUDIO-088 [HEARING_SAFETY]
+Never override platform hearing protection or safety warnings.
+
+AUDIO-089 [UX]
+Native unified Audio Devices screen: current output, available system routes, connected devices, capability-driven controls, profiles and status.
+
+AUDIO-090 [UX]
+Show only controls actually supported for current device/path; distinguish Hardware Control, UniversalAssistant DSP, and System Setting/Handoff.
+
+AUDIO-091 [UX]
+Unsupported control is hidden or clearly unavailable with concise reason; no fake sliders.
+
+AUDIO-092 [UX]
+DO, DON'T NARRATE: clear allowed command executes directly; confirmation/readback shown minimally.
+
+AUDIO-093 [UX]
+Show source of truth when useful: System, Sonos, Cast, HEOS, vendor API, DSP.
+
+AUDIO-094 [UX]
+Connection/provider failure must preserve other available controls.
+
+AUDIO-095 [PRIVACY_SECURITY]
+Reuse PRIVACY-001…168 and central outbound/NEVER_AI gate; no new weaker credential path.
+
+AUDIO-096 [PRIVACY_SECURITY]
+Vendor/cloud tokens use secure credential boundaries; never logs, source, AI context or analytics.
+
+AUDIO-097 [PRIVACY_SECURITY]
+Local network/Bluetooth permissions requested only when capability needs them; denial yields truthful limited mode.
+
+AUDIO-098 [PRIVACY_SECURITY]
+Do not expose nearby device identifiers or household topology unnecessarily to AI/analytics.
+
+AUDIO-099 [PRIVACY_SECURITY]
+Third-party SDKs require privacy/data-flow audit and current manifest/disclosure handling.
+
+AUDIO-100 [FAILURE]
+Fail closed for unsupported/deauthorized deep command while preserving safe system/handoff/basic route control where available.
+
+AUDIO-101 [FAILURE]
+One vendor adapter failure must not disable universal system controls or other devices.
+
+AUDIO-102 [FAILURE]
+Auth expired → REAUTH_REQUIRED; network unavailable → unavailable/offline state; never stale success.
+
+AUDIO-103 [FAILURE]
+Do not silently downgrade to private/unsupported protocol to make command work.
+
+AUDIO-104 [FAILURE]
+Firmware/model mismatch invalidates unsupported cached capabilities.
+
+AUDIO-105 [TESTS]
+Test generic Bluetooth route: volume/playback/profile without fabricated deep EQ.
+
+AUDIO-106 [TESTS]
+Test AirPlay picker/readback and route loss.
+
+AUDIO-107 [TESTS]
+Test Google Cast discovery/session/reconnect/playback/software volume/state sync.
+
+AUDIO-108 [TESTS]
+Test Sonos authorization/groups/player+group volume/playback/events where adapter implemented.
+
+AUDIO-109 [TESTS]
+Test HEOS discovery/player/group/queue/state/events and forward-compatible parser where implemented.
+
+AUDIO-110 [TESTS]
+Test at least one deep-vendor adapter with verified capability and one unsupported capability.
+
+AUDIO-111 [TESTS]
+Test AirPods/Beats system-only setting is not falsely reported as directly changed.
+
+AUDIO-112 [TESTS]
+Test third-party headphone vendor app capability does not become our capability without official evidence.
+
+AUDIO-113 [TESTS]
+Test our DSP on owned/allowed audio path and prove it does not claim system-wide processing.
+
+AUDIO-114 [TESTS]
+Test flat/reset, clipping limiter, bounded bass/EQ and safe volume ramp.
+
+AUDIO-115 [TESTS]
+Test deterministic no-AI commands and AI semantic commands produce same typed action when equivalent.
+
+AUDIO-116 [TESTS]
+Test AI cannot bypass registry/provider policy or invent capability.
+
+AUDIO-117 [TESTS]
+Test Spotify-policy gate blocks prohibited voice/DSP/commercial path even if technical endpoint exists.
+
+AUDIO-118 [TESTS]
+Test provider auth revoke, network failure, disconnect, firmware/capability invalidation.
+
+AUDIO-119 [TESTS]
+Test profiles scoped correctly across two devices/rooms/users.
+
+AUDIO-120 [TESTS]
+Test automation never causes unsafe sudden volume.
+
+AUDIO-121 [TESTS]
+Test privacy: tokens/secrets absent from AI/logs/analytics.
+
+AUDIO-122 [TESTS]
+Test restart/persistence and no stale connected state.
+
+AUDIO-123 [TESTS]
+Test all touched existing audio/media/voice capabilities remain functional.
+
+AUDIO-124 [LIVE]
+Physical Bluetooth/AirPlay/headphone route, volume, interruptions, battery and device-specific behavior require exact LIVE_VERIFICATION_QUEUE entries.
+
+AUDIO-125 [LIVE]
+Vendor cloud/LAN/MFi/API behavior needing real hardware/account/approval goes to live queue after local adapter completion.
+
+AUDIO-126 [LIVE]
+Live item must state exact model/firmware, setup, action, expected readback and PASS/FAIL evidence.
+
+AUDIO-127 [LIVE]
+Mocks/simulator never close physical device/vendor capability claims.
+
+AUDIO-128 [LIVE]
+Maintain a model/provider live matrix so one successful device never proves an entire brand.
+
+AUDIO-129 [EVIDENCE]
+Every AUDIO-ID gets status ALREADY_IMPLEMENTED, PARTIAL, MISSING, NOT_APPLICABLE_VERIFIED or LIVE_VERIFICATION_REQUIRED.
+
+AUDIO-130 [EVIDENCE]
+Evidence requires production path + tests; class/interface existence is insufficient.
+
+AUDIO-131 [EVIDENCE]
+Maintain final manufacturer capability matrix with mechanism/evidence/date/status.
+
+AUDIO-132 [EVIDENCE]
+Maintain current policy matrix for music providers, especially voice/commercial/DSP restrictions.
+
+AUDIO-133 [EVIDENCE]
+All locally available PARTIAL/MISSING gaps must be implemented before completion.
+
+AUDIO-134 [REGRESSION_COMPLETION]
+After implementation run targeted audio tests, all touched media/voice/privacy tests, full iOS regression, backend regression and release build.
+
+AUDIO-135 [REGRESSION_COMPLETION]
+No previously VERIFIED_LOCAL capability may silently disappear/degrade.
+
+AUDIO-136 [REGRESSION_COMPLETION]
+Add new AUDIO requirements to global inventory and run executable ZERO-OMISSION audit.
+
+AUDIO-137 [REGRESSION_COMPLETION]
+Completion requires 100% AUDIO-ID evidence mapping, local gaps=0, NOT_IMPLEMENTED=0 and IMPLEMENTED_UNVERIFIED=0 for local scope, exact live queue, green regressions.
+
+AUDIO-138 [REGRESSION_COMPLETION]
+Atomic commit/push; HEAD == origin/main; working tree clean.
+
+AUDIO-139 [REGRESSION_COMPLETION]
+Do not declare manufacturer/device support broader than actually evidenced.
+
+AUDIO-140 [FINAL]
+FINAL: UNIVERSAL BASIC CONTROL WHERE iOS/PROTOCOL ALLOWS; DEEP CONTROL ONLY WHERE MANUFACTURER OFFICIALLY EXPOSES IT.
+
+AUDIO-141 [FINAL]
+FINAL: NO SYSTEM-WIDE EQ CLAIM FOR OTHER APPS; OUR DSP ONLY ON ALLOWED AUDIO PATHS.
+
+AUDIO-142 [FINAL]
+FINAL: VENDOR APP FEATURE != THIRD-PARTY API.
+
+AUDIO-143 [FINAL]
+FINAL: AI HAS NO EXTRA AUDIO PRIVILEGES.
+
+AUDIO-144 [FINAL]
+FINAL: PROVIDER TERMS/POLICY OVERRIDE TECHNICAL POSSIBILITY.
+
+AUDIO-145 [FINAL]
+FINAL: NO PRIVATE/REVERSE-ENGINEERED PROTOCOLS TO FAKE UNIVERSALITY.
+
+AUDIO-146 [FINAL]
+FINAL: WITHOUT AI THE MODULE REMAINS FULLY OPERABLE.
+
+AUDIO-147 [FINAL]
+FINAL: SAFETY, PRIVACY AND EXISTING VERIFIED CAPABILITIES MUST BE PRESERVED.
+
+
+
