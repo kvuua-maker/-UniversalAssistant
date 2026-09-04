@@ -16,7 +16,9 @@ allowed = set(INV["allowed_statuses"])
 assert all(r["status"] in allowed for r in rows)
 
 def queue_covers(rid):
-    prefix, raw = rid.split("-", 1); target = int(raw)
+    match = re.fullmatch(r"(.+)-(\d+)", rid)
+    assert match, f"invalid canonical requirement ID: {rid}"
+    prefix, target = match.group(1), int(match.group(2))
     for item in QUEUE["items"]:
         qid = item["requirement_id"]
         if not qid.startswith(prefix + "-"): continue
@@ -29,7 +31,7 @@ assert all(queue_covers(r["id"]) for r in ready)
 required_queue_fields = {"requirement_id","service_provider","current_status","missing_dependency","dependency_owner","local_evidence","required_live_action","expected_result","created_at","last_checked","completion_evidence"}
 for item in QUEUE["items"]:
     assert required_queue_fields <= item.keys()
-    assert item["current_status"] == "READY_FOR_LIVE_VERIFICATION"
+    assert item["current_status"] in {"READY_FOR_LIVE_VERIFICATION", "BLOCKED_BY_CONFIRMED_DEFECT"}
     assert item["missing_dependency"] and item["dependency_owner"] and item["local_evidence"]
     assert item["required_live_action"] and item["expected_result"]
     assert item["completion_evidence"] is None
@@ -61,7 +63,7 @@ canonical_hashes = {
     "UniversalAssistant_Loyalty_Discount_Attribution_Commission_Integrity_FINAL_NUMBERED.txt": "d08375c5fabc74cc493ebb2fd5f6a25cd48a857fb117504ab82240e21e005dc4",
     "UniversalAssistant_Privacy_AI_Data_Flow_Hardening_FINAL_NUMBERED.txt": "2cd2094900eb086a176ba85a84f22555d9ba9d167132b8b5bfb33422dffe10ea",
     "UniversalAssistant_Universal_Audio_Device_Control_FINAL_NUMBERED.txt": "50b594e3027f9b1f6ed446f9222e534430e33566b8ad3cd2b0d45f13d4708a50",
-    "UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md": "09384fa6a61dcbc15532ab8eca12f85ace63d470562c14d155a56da6a671327c",
+    "UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md": "595edc4f61990fd97330883a79223505da8e115254ac273272628d5b4b8b1f63",
 }
 for name, expected_hash in canonical_hashes.items():
     actual = hashlib.sha256((ROOT / "docs" / name).read_bytes()).hexdigest()

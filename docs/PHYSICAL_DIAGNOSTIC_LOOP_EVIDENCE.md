@@ -1,6 +1,6 @@
 # Physical Diagnostic Loop Evidence
 
-Date: 2026-09-05. Canonical IDs: LIVE-DIAG-001…078. Canonical artifact SHA-256: `09384fa6a61dcbc15532ab8eca12f85ace63d470562c14d155a56da6a671327c`.
+Date: 2026-09-05. Canonical IDs: LIVE-DIAG-001…078. Canonical artifact SHA-256: `595edc4f61990fd97330883a79223505da8e115254ac273272628d5b4b8b1f63`.
 
 ## Reused architecture and production path
 
@@ -34,4 +34,6 @@ Commands: `python3 Scripts/live_diagnostics.py --ssh root@178.105.32.46 latest`;
 
 ## Verification status
 
-Local: backend targeted/full, iOS targeted/full, reader, Linux release build, HTTPS/security probes, certificate renewal dry-run, production build/archive/signing, diff and preservation audit. Physical App Attest registration/assertion and automatic iPhone→VPS→reader delivery remain `READY_FOR_LIVE_VERIFICATION`; mocks do not close them. MS-800 remains blocked until the full physical voice → transcript → UI → router → visible-result chain passes.
+Local completion evidence: implementation commit `7e359211e49e834ceff062293916539213e6dc62`; iOS full regression 542/542; backend 112/112; reader 1/1; Linux release build; HTTPS/security probes; certificate renewal dry-run; and production Distribution Archive/export. UniversalAssistant 0.1.0 Build 11 was accepted by App Store Connect upload and entered Apple processing. Its exported IPA was verified with valid distribution signatures and production App Attest, APNs, CloudKit, Sign in with Apple, App Group, and `get-task-allow=false` entitlements for the app; the Share Extension retained its App Group and distribution identity.
+
+The 78 LIVE-DIAG requirements reconcile to 70 `VERIFIED_LOCAL` and eight `READY_FOR_LIVE_VERIFICATION`. Physical App Attest registration/assertion and automatic iPhone→VPS→reader delivery remain live-only; mocks do not close them. MS-800 remains blocked until the full physical voice → transcript → UI → router → visible-result chain passes.

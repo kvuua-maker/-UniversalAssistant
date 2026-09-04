@@ -8,7 +8,7 @@
     "VERIFIED_LIVE",
     "VERIFIED_LOCAL"
   ],
-  "requirement_count": 2326,
+  "requirement_count": 2404,
   "requirements": [
     {
       "id": "MS-1",
@@ -45514,6 +45514,1800 @@
       ],
       "commit_evidence": [
         "07df4ea"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-001",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Canonical authority and absolute preservation",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-002",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Audit first and reuse first",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-003",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Zero-omission stable requirement IDs",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-004",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Permanent physical diagnostic evidence channel",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-005",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Internal-only automatic upload",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-006",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Privacy and NEVER_AI enforcement",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-007",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Typed diagnostic session model",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-008",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "MS-800 voice marker completeness",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-009",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Generic foundation without mass instrumentation",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-010",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Automatic nonblocking upload",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-011",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Bounded offline queue",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-012",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Existing backend only",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-013",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Backend security controls",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-014",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Codex direct read-only reader",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-015",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Live plan integration",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-016",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Evidence-first diagnostic workflow",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-017",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Implementation-only fix authority",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-018",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Preservation gates",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-019",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Current MS-800 truth",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-020",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Required iOS/backend/reader tests",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-021",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Deterministic no-AI boundary",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-022",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "No new diagnostic provider cost",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-023",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Owner UX avoids manual log courier",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-024",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Truthful delivery state",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-025",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Hard-crash limitations",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-026",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Existing authentication reuse",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-027",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Bounded retention and deletion",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-028",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Diagnostic transport observability",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-029",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Preserve current fixes",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-030",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Local completion gate",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-031",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Final physical acceptance test",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Build 11 physical Internal TestFlight App Attest registration/assertion and automatic iPhone-to-VPS-to-SSH-reader delivery; MS-800 remains blocked until voice-to-visible-result passes"
+    },
+    {
+      "id": "LIVE-DIAG-032",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Strictly bounded self-directed fix loop",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-033",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "No unbounded autonomous releases",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-034",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Existing TestFlight and Apple state",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-035",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Backend deployment truth",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-036",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Internal-build environment fail-closed",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-037",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Versioned data contract",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-038",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Idempotent session identity",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-039",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Low-overhead realtime-safe diagnostics",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-040",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Voice regression preservation",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-041",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Final Git and evidence discipline",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-042",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Required final report",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-043",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Deployment preservation authority",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-044",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Owner-approved VPS endpoint and baseline",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-045",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Strict VPS preservation",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-046",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Data-volume storage",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-047",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Trusted HTTPS without domain",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-048",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Minimal public network exposure",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-049",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Apple App Attest authentication",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Build 11 physical Internal TestFlight App Attest registration/assertion and automatic iPhone-to-VPS-to-SSH-reader delivery; MS-800 remains blocked until voice-to-visible-result passes"
+    },
+    {
+      "id": "LIVE-DIAG-050",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "App Attest registration",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Build 11 physical Internal TestFlight App Attest registration/assertion and automatic iPhone-to-VPS-to-SSH-reader delivery; MS-800 remains blocked until voice-to-visible-result passes"
+    },
+    {
+      "id": "LIVE-DIAG-051",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "TestFlight production App Attest environment",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Build 11 physical Internal TestFlight App Attest registration/assertion and automatic iPhone-to-VPS-to-SSH-reader delivery; MS-800 remains blocked until voice-to-visible-result passes"
+    },
+    {
+      "id": "LIVE-DIAG-052",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Per-request App Attest assertions",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Build 11 physical Internal TestFlight App Attest registration/assertion and automatic iPhone-to-VPS-to-SSH-reader delivery; MS-800 remains blocked until voice-to-visible-result passes"
+    },
+    {
+      "id": "LIVE-DIAG-053",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Unsupported App Attest fails closed",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-054",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Minimal server endpoints",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-055",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Challenge and replay protection",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-056",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Privacy-safe diagnostic data model",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-057",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Automatic diagnostic delivery",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Build 11 physical Internal TestFlight App Attest registration/assertion and automatic iPhone-to-VPS-to-SSH-reader delivery; MS-800 remains blocked until voice-to-visible-result passes"
+    },
+    {
+      "id": "LIVE-DIAG-058",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Hard-crash reality",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-059",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Bounded VPS storage",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-060",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "SSH-local Codex reader only",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-061",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Automatic diagnostic workflow",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-062",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Implementation-only self-fix limit",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-063",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Continue current MS-800",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-064",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Trading infrastructure preservation",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-065",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Automated IP-certificate renewal",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-066",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Firewall and port policy",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-067",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Mandatory App Attest tests",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-068",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "HTTPS and backend security tests",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-069",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Preservation regression suite",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-070",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Server-only deployment secrets",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-071",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Git and server change discipline",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-072",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Bounded rollback",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-073",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Physical end-to-end acceptance",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Build 11 physical Internal TestFlight App Attest registration/assertion and automatic iPhone-to-VPS-to-SSH-reader delivery; MS-800 remains blocked until voice-to-visible-result passes"
+    },
+    {
+      "id": "LIVE-DIAG-074",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Continue MS-800 after loop verification",
+      "status": "READY_FOR_LIVE_VERIFICATION",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": "Build 11 physical Internal TestFlight App Attest registration/assertion and automatic iPhone-to-VPS-to-SSH-reader delivery; MS-800 remains blocked until voice-to-visible-result passes"
+    },
+    {
+      "id": "LIVE-DIAG-075",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Owner-only blocker boundaries",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-076",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Deployment final report",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-077",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Continuous execution order",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
+      ],
+      "live_evidence": [],
+      "remaining_dependency": null
+    },
+    {
+      "id": "LIVE-DIAG-078",
+      "source": "docs/UniversalAssistant_Physical_Device_Live_Diagnostic_Loop_FINAL_NUMBERED.md",
+      "title": "Final evidence-not-authority rule",
+      "status": "VERIFIED_LOCAL",
+      "implementation_evidence": [
+        "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
+        "Backend/Sources/UniversalAssistantServer/PhysicalDiagnostics.swift",
+        "Deployment/diagnostics/universalassistant-diagnostics.service",
+        "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
+      ],
+      "test_evidence": [
+        "UniversalAssistantTests/PhysicalDiagnosticDeliveryTests.swift",
+        "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
+        "Scripts/test_live_diagnostics.py",
+        "iOS 542/542; backend 112/112; reader 1/1; Linux release, HTTPS/security probes, renewal dry-run, Distribution Archive/export"
+      ],
+      "commit_evidence": [
+        "7e359211e49e834ceff062293916539213e6dc62"
       ],
       "live_evidence": [],
       "remaining_dependency": null
