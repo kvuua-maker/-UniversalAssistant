@@ -169,7 +169,7 @@ final class VoiceInputController {
         capture = VoiceAudioCaptureLifecycle(backend: captureBackend ?? AppleVoiceAudioCaptureBackend())
         audioEvents = AudioSessionEventMonitor(
             onInterruption: { [weak self] in self?.handleAudioInterruptionBegan() },
-            onRouteChange: { [weak self] in self?.handleAudioRouteChanged() })
+            onRouteChange: { [weak self] evidence in self?.handleAudioRouteChanged(evidence) })
     }
 
     func start(locale: Locale = .current) async {
@@ -241,6 +241,11 @@ final class VoiceInputController {
 
     func handleAudioInterruptionBegan() { stop(reason: .audioInterruption) }
     func handleAudioRouteChanged() { if state == .listening { stop(reason: .routeChange) } }
+
+    func handleAudioRouteChanged(_ evidence: AudioRouteChangeEvidence) {
+        LocalVoiceDiagnosticReport.shared.record("route_change", evidence.diagnosticDescription)
+        handleAudioRouteChanged()
+    }
 
     nonisolated static func awaitSpeechAuthorization(
         _ request: @escaping @Sendable (@escaping @Sendable (SFSpeechRecognizerAuthorizationStatus) -> Void) -> Void

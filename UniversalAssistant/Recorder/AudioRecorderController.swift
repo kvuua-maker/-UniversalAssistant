@@ -78,7 +78,7 @@ final class AudioRecorderController {
         self.permission = permission
         audioEvents = AudioSessionEventMonitor(
             onInterruption: { [weak self] in self?.handleAudioInterruptionBegan() },
-            onRouteChange: { [weak self] in self?.handleAudioRouteChanged() })
+            onRouteChange: { [weak self] _ in self?.handleAudioRouteChanged() })
     }
 
     func start() async {

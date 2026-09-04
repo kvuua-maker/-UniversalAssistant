@@ -89,6 +89,22 @@ private final class VoiceCaptureBackendSpy: VoiceAudioCaptureBackend {
 
 @MainActor
 struct VoiceAudioCaptureLifecycleTests {
+    @Test func routeChangeEvidenceIncludesReasonRoutesAndInputAvailability() {
+        let evidence = AudioRouteChangeEvidence(
+            reasonRawValue: 3,
+            reasonName: "categoryChange",
+            previousInputs: ["BuiltInMic:iPhone Microphone"],
+            previousOutputs: ["Speaker:iPhone Speaker"],
+            currentInputs: ["BuiltInMic:iPhone Microphone"],
+            currentOutputs: [],
+            inputAvailable: true
+        )
+        #expect(evidence.diagnosticDescription.contains("reason=categoryChange(3)"))
+        #expect(evidence.diagnosticDescription.contains("previous_inputs="))
+        #expect(evidence.diagnosticDescription.contains("current_inputs="))
+        #expect(evidence.diagnosticDescription.contains("input_available=true"))
+    }
+
     @Test func speechPermissionCallbackSafelyResumesFromBackgroundQueue() async {
         let status = await VoiceInputController.awaitSpeechAuthorization { completion in
             DispatchQueue.global(qos: .default).async {
