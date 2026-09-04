@@ -51,6 +51,27 @@ struct DiagnosticAssertionClientData: Codable, Equatable, Sendable {
     let diagnostic: PhysicalDiagnosticSession
 }
 struct ReceiptResponse: Content { let sessionID: UUID; let status: String; let receivedAt: Date }
+struct AppAttestBootstrapEvent: Content, Codable, Equatable, Sendable {
+    let sequence: Int
+    let marker: String
+    let attributes: [String: String]
+}
+struct AppAttestBootstrapFailureReport: Content, Codable, Equatable, Sendable {
+    let schema: Int
+    let reportID: UUID
+    let appVersion: String
+    let build: Int
+    let environment: String
+    let osVersion: String
+    let deviceClass: String
+    let startedAt: Date
+    let endedAt: Date
+    let failureStage: String
+    let errorDomain: String
+    let errorCode: Int
+    let events: [AppAttestBootstrapEvent]
+}
+struct BootstrapReceiptResponse: Content { let reportID: UUID; let status: String; let receivedAt: Date }
 
 enum DiagnosticServerError: Error {
     case invalidConfiguration, invalidSchema, forbiddenField, invalidChallenge, invalidAttestation
@@ -180,6 +201,77 @@ actor DiagnosticSessionStore {
     }
 }
 
+actor AppAttestBootstrapFailureStore {
+    static let topLevelKeys: Set<String> = ["schema", "reportID", "appVersion", "build", "environment", "osVersion",
+        "deviceClass", "startedAt", "endedAt", "failureStage", "errorDomain", "errorCode", "events"]
+
+    static func validateRawSchema(_ data: Data) throws {
+        guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any], Set(root.keys) == topLevelKeys,
+              let events = root["events"] as? [[String: Any]],
+              events.allSatisfy({ Set($0.keys) == ["sequence", "marker", "attributes"] }),
+              events.allSatisfy({ event in
+                  guard let attributes = event["attributes"] as? [String: Any] else { return false }
+                  return attributes.values.allSatisfy { $0 is String }
+              }) else { throw DiagnosticServerError.invalidSchema }
+    }
+
+    private let directory: URL
+    private let retention: TimeInterval
+    private let maximumRecords: Int
+    init(directory: URL, retention: TimeInterval = 7 * 86_400, maximumRecords: Int = 100) throws {
+        self.directory = directory; self.retention = retention; self.maximumRecords = maximumRecords
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    }
+
+    func put(_ report: AppAttestBootstrapFailureReport, now: Date = .now) throws -> Bool {
+        try validate(report)
+        try cleanup(now: now)
+        let file = directory.appendingPathComponent("\(report.reportID.uuidString.lowercased()).json")
+        let data = try JSONEncoder.canonical.encode(report)
+        if let existing = try? Data(contentsOf: file) {
+            guard existing == data else { throw DiagnosticServerError.duplicateConflict }
+            return false
+        }
+        try data.write(to: file, options: [.atomic, .completeFileProtection])
+        try cleanup(now: now)
+        return true
+    }
+
+    private func validate(_ report: AppAttestBootstrapFailureReport) throws {
+        let allowedMarkers: Set<String> = ["environment", "is_supported", "generate_key_invoked", "generate_key_succeeded",
+            "key_id_loaded", "key_id_persisted", "challenge_received", "attest_key_invoked", "attest_key_succeeded",
+            "registration_request_constructed", "registration_request_attempted", "registration_succeeded", "http_result", "bootstrap_failed"]
+        let allowedAttributes: Set<String> = ["value", "correlation", "stage", "error_domain", "error_code", "http_status"]
+        guard report.schema == 1, report.build >= 12, report.environment == "internal-testflight",
+              report.endedAt >= report.startedAt, report.failureStage.count <= 64,
+              report.errorDomain.count <= 128, report.events.count <= 30,
+              report.appVersion.count <= 32, report.osVersion.count <= 32, report.deviceClass.count <= 32,
+              report.errorDomain.allSatisfy({ $0.isLetter || $0.isNumber || ".-_".contains($0) }),
+              report.events.enumerated().allSatisfy({ $0.offset + 1 == $0.element.sequence }),
+              report.events.last?.marker == "bootstrap_failed" else { throw DiagnosticServerError.invalidSchema }
+        for event in report.events {
+            guard allowedMarkers.contains(event.marker), event.attributes.count <= 5,
+                  event.attributes.allSatisfy({ allowedAttributes.contains($0.key) && $0.value.count <= 128 }) else {
+                throw DiagnosticServerError.invalidSchema
+            }
+        }
+        let encoded = String(data: try JSONEncoder.canonical.encode(report), encoding: .utf8)?.lowercased() ?? ""
+        for forbidden in ["transcript", "audio", "password", "token", "secret", "contact", "message", "photo", "document", "location", "attestation", "keyid"] {
+            if encoded.contains("\"\(forbidden)") { throw DiagnosticServerError.forbiddenField }
+        }
+    }
+
+    private func cleanup(now: Date) throws {
+        let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.contentModificationDateKey])
+            .filter { $0.pathExtension == "json" }
+            .sorted { ((try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast) > ((try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast) }
+        for (index, file) in files.enumerated() {
+            let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+            if index >= maximumRecords || now.timeIntervalSince(modified) > retention { try? FileManager.default.removeItem(at: file) }
+        }
+    }
+}
+
 enum DiagnosticSchema {
     static let allowedVoiceMarkers: Set<String> = [
         "start_listening_invoked", "state_transition", "state_delivered_to_view_model", "speech_permission_before",
@@ -232,9 +324,11 @@ extension Application {
         let challenges = ChallengeStore()
         let registrations = try AppAttestRegistrationStore(directory: storageRoot.appendingPathComponent("attestation"))
         let diagnostics = try DiagnosticSessionStore(directory: storageRoot.appendingPathComponent("sessions"))
+        let bootstrapFailures = try AppAttestBootstrapFailureStore(directory: storageRoot.appendingPathComponent("bootstrap"))
         let verifier = ProductionAppAttestVerifier()
         let challengeRateLimit = PrincipalRateLimiter(policy: .init(maximumRequests: 20, window: 60))
         let ingestRateLimit = PrincipalRateLimiter(policy: .init(maximumRequests: 60, window: 60))
+        let bootstrapRateLimit = PrincipalRateLimiter(policy: .init(maximumRequests: 5, window: 60))
         routes.defaultMaxBodySize = "96kb"
 
         get("health") { _ in HealthResponse() }
@@ -258,6 +352,21 @@ extension Application {
             catch { throw Abort(.unauthorized) }
             try await registrations.register(.init(keyID: body.keyID, publicKey: result.publicKey.x963Representation, counter: 0, environment: "production", registeredAt: .now))
             return .init(status: "registered")
+        }
+        post("v1", "app-attest", "bootstrap-failure") { request async throws -> BootstrapReceiptResponse in
+            guard await bootstrapRateLimit.allow(subjectID: request.remoteAddress?.description ?? "unknown") else { throw Abort(.tooManyRequests) }
+            if let rawLength = request.headers.first(name: "content-length"), let length = Int(rawLength), length > 8_192 {
+                throw Abort(.payloadTooLarge)
+            }
+            guard let buffer = request.body.data else { throw Abort(.badRequest) }
+            let raw = Data(buffer.readableBytesView)
+            do { try AppAttestBootstrapFailureStore.validateRawSchema(raw) }
+            catch { throw Abort(.badRequest) }
+            let report = try request.content.decode(AppAttestBootstrapFailureReport.self)
+            do { _ = try await bootstrapFailures.put(report) }
+            catch DiagnosticServerError.invalidSchema { throw Abort(.badRequest) }
+            catch DiagnosticServerError.forbiddenField { throw Abort(.badRequest) }
+            return .init(reportID: report.reportID, status: "stored-unverified-bootstrap", receivedAt: .now)
         }
         post("v1", "diagnostics") { request async throws -> ReceiptResponse in
             guard await ingestRateLimit.allow(subjectID: request.remoteAddress?.description ?? "unknown") else { throw Abort(.tooManyRequests) }

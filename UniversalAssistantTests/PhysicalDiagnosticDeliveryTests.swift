@@ -47,6 +47,18 @@ struct PhysicalDiagnosticDeliveryTests {
         #expect(text.contains("MS-800-LIVE-VOICE-QA")); #expect(text.contains("recognition_callback"))
     }
 
+    @Test func appAttestBootstrapFailureReportsExactSafeStageWithoutKeyMaterial() async {
+        let suite = UserDefaults(suiteName: UUID().uuidString)!
+        let transport = RecordingBootstrapTransport()
+        let delivery = PhysicalDiagnosticDelivery(attest: FailingGenerateKeyAttest(), transport: transport, defaults: suite, enabled: { true })
+        await delivery.enqueue(sampleSession())
+        let report = transport.bootstrapReport
+        #expect(report?.contains("generate_key_invoked") == true)
+        #expect(report?.contains("DCErrorDomain") == true)
+        #expect(report?.contains("spoken words") == false)
+        #expect(report?.contains("private-key") == false)
+    }
+
     private func sampleSession() -> PhysicalDiagnosticSession {
         .init(schema: 1, sessionID: UUID(), liveTestID: "MS-800-LIVE-VOICE-QA", feature: "voice", appVersion: "0.1.0", build: 10,
               environment: "internal-testflight", osVersion: "26.6.1", deviceClass: "iPhone", startedAt: .now, endedAt: .now,
@@ -69,6 +81,23 @@ private struct SupportedAttest: AppAttestServicing {
 }
 private struct FailingTransport: DiagnosticHTTPTransport {
     func post<Request, Response>(_ path: String, body: Request, response: Response.Type) async throws -> Response where Request : Encodable, Response : Decodable {
-        throw PhysicalDiagnosticDeliveryError.httpFailure
+        throw PhysicalDiagnosticDeliveryError.httpFailure(statusCode: 503)
+    }
+}
+private struct FailingGenerateKeyAttest: AppAttestServicing {
+    let isSupported = true
+    func generateKey() async throws -> String { throw NSError(domain: "DCErrorDomain", code: 2) }
+    func attestKey(_ keyID: String, clientDataHash: Data) async throws -> Data { Data() }
+    func generateAssertion(_ keyID: String, clientDataHash: Data) async throws -> Data { Data() }
+}
+private final class RecordingBootstrapTransport: DiagnosticHTTPTransport, @unchecked Sendable {
+    private let lock = NSLock()
+    private var storedReport: String?
+    var bootstrapReport: String? { lock.withLock { storedReport } }
+    func post<Request, Response>(_ path: String, body: Request, response: Response.Type) async throws -> Response where Request: Encodable, Response: Decodable {
+        guard path == "v1/app-attest/bootstrap-failure" else { throw PhysicalDiagnosticDeliveryError.httpFailure(statusCode: 503) }
+        let report = String(data: try JSONEncoder.diagnostic.encode(body), encoding: .utf8)
+        lock.withLock { storedReport = report }
+        throw PhysicalDiagnosticDeliveryError.httpFailure(statusCode: 503)
     }
 }

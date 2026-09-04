@@ -23,4 +23,17 @@ class ReaderTests(unittest.TestCase):
             args.command="since"; args.timestamp="2026-09-04T20:30:00Z"; self.assertEqual([v["sessionID"] for v in MODULE.select(values,args)], ["two"])
             self.assertEqual(before, {p.name:p.read_bytes() for p in root.iterdir()})
 
+    def test_bootstrap_failure_is_visible_but_marked_pre_attestation_unverified(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary); (root / "sessions").mkdir(); (root / "bootstrap").mkdir()
+            report = {"reportID":"bootstrap-one", "build":12, "startedAt":"2026-09-05T00:00:00Z", "schema":1,
+                      "failureStage":"attest_key_invoked", "events":[]}
+            path = root / "bootstrap" / "bootstrap-one.json"; path.write_text(json.dumps(report)); before = path.read_bytes()
+            values = MODULE.records(root)
+            self.assertEqual(values[0]["feature"], "app-attest-bootstrap")
+            self.assertEqual(values[0]["authentication"], "pre-attestation-unverified")
+            args = Args(); args.build = 12
+            self.assertEqual(MODULE.select(values, args)[0]["sessionID"], "bootstrap-one")
+            self.assertEqual(path.read_bytes(), before)
+
 if __name__ == "__main__": unittest.main()

@@ -1277,7 +1277,7 @@
       "requirement_id": "LIVE-DIAG-049-LIVE-DIAG-050-LIVE-DIAG-051-LIVE-DIAG-052-LIVE-APP-ATTEST",
       "service_provider": "Apple App Attest and owner VPS diagnostic ingest",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
-      "missing_dependency": "A supported physical iPhone running Internal TestFlight Build 11 must complete production App Attest key generation, attestation registration and body-bound assertion against the deployed VPS",
+      "missing_dependency": "Build 11 proved challenge delivery but failed device-side before registration. A supported physical iPhone running Internal TestFlight Build 12 must deliver the new bounded bootstrap evidence so the exact App Attest failure stage/domain/code can be established without guessing; successful production registration/assertion remains live-only",
       "dependency_owner": "Owner physical-device tester and Apple App Attest service",
       "local_evidence": [
         "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
@@ -1285,8 +1285,8 @@
         "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
         "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
       ],
-      "required_live_action": "Install/update UniversalAssistant 0.1.0 Build 11 from Internal TestFlight, launch it, and perform the single current MS-800 microphone action without pressing Copy Diagnostics.",
-      "expected_result": "Apple production App Attest reports supported; the server accepts the one-time attestation for 9V5XXDXF3N.com.universalassistant.app and then accepts a fresh body-bound assertion with a monotonic counter; malformed, replayed or wrong-identity requests remain rejected.",
+      "required_live_action": "Install/update UniversalAssistant 0.1.0 Build 12 from Internal TestFlight, launch it, and press the main microphone once without pressing Copy Diagnostics.",
+      "expected_result": "If App Attest bootstrap still fails, the separate bounded endpoint stores one allowlisted Build 12 bootstrap report identifying the exact stage and safe error domain/code; if bootstrap succeeds, the server accepts production attestation for 9V5XXDXF3N.com.universalassistant.app and a fresh body-bound assertion. Neither outcome is inferred from mocks.",
       "created_at": "2026-09-05T00:40:00+02:00",
       "last_checked": "2026-09-05T00:40:00+02:00",
       "completion_evidence": null
@@ -1303,8 +1303,8 @@
         "Deployment/diagnostics/nginx-universalassistant.conf",
         "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
       ],
-      "required_live_action": "After the Build 11 microphone action, do not use the manual Copy Diagnostics control; leave the app online long enough for its asynchronous delivery attempt.",
-      "expected_result": "The session changes from queued/sending to a server-confirmed receipt without blocking or altering voice behavior, is stored once, and the SSH-only reader retrieves the matching Build 11 voice session.",
+      "required_live_action": "After the Build 12 microphone action, do not use the manual Copy Diagnostics control; leave the app online long enough for its asynchronous delivery attempt.",
+      "expected_result": "The SSH-only reader retrieves either the matching Build 12 authenticated voice session or its bounded pre-attestation bootstrap failure evidence; a normal diagnostic receipt is still required before automatic authenticated delivery can pass.",
       "created_at": "2026-09-05T00:40:00+02:00",
       "last_checked": "2026-09-05T00:40:00+02:00",
       "completion_evidence": null
@@ -1321,8 +1321,8 @@
         "Scripts/live_diagnostics.py",
         "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
       ],
-      "required_live_action": "Install Build 11 and press the main microphone once for MS-800; provide only the physical UI outcome, not copied diagnostics. Codex then runs the SSH reader independently.",
-      "expected_result": "VPS has one correctly identified privacy-safe Build 11 MS-800 session, forbidden content is absent, Codex retrieves it without owner log relay, and the diagnostic result does not itself auto-pass MS-800.",
+      "required_live_action": "Install Build 12 and press the main microphone once for MS-800; provide only the physical UI outcome, not copied diagnostics. Codex then runs the SSH reader independently.",
+      "expected_result": "VPS has one correctly identified privacy-safe Build 12 record (bootstrap evidence if registration fails, otherwise the authenticated MS-800 session), forbidden content is absent, and Codex retrieves it without owner log relay. Bootstrap evidence alone does not pass the full diagnostic loop or MS-800.",
       "created_at": "2026-09-05T00:40:00+02:00",
       "last_checked": "2026-09-05T00:40:00+02:00",
       "completion_evidence": null

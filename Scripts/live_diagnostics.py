@@ -2,13 +2,19 @@
 """Read-only UniversalAssistant physical diagnostic reader (local store or SSH)."""
 import argparse, json, pathlib, subprocess, sys
 
-DEFAULT_STORE = pathlib.Path("/mnt/HC_Volume_106589590/universalassistant-diagnostics/data/sessions")
+DEFAULT_STORE = pathlib.Path("/mnt/HC_Volume_106589590/universalassistant-diagnostics/data")
 
 def records(store):
     values = []
-    for path in store.glob("*.json"):
-        try: values.append(json.loads(path.read_text()))
-        except (OSError, ValueError): pass
+    directories = [store] if store.name in ("sessions", "bootstrap") or any(store.glob("*.json")) else [store / "sessions", store / "bootstrap"]
+    for directory in directories:
+        for path in directory.glob("*.json"):
+            try:
+                value = json.loads(path.read_text())
+                if "reportID" in value:
+                    value.update({"sessionID": value["reportID"], "feature": "app-attest-bootstrap", "result": "FAILURE", "authentication": "pre-attestation-unverified"})
+                values.append(value)
+            except (OSError, ValueError): pass
     return sorted(values, key=lambda item: item.get("startedAt", 0), reverse=True)
 
 def select(values, args):

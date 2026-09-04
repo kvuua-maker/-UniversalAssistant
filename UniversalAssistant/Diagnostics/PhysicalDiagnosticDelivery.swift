@@ -77,12 +77,47 @@ struct URLSessionDiagnosticTransport: DiagnosticHTTPTransport {
         request.httpMethod = "POST"; request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder.diagnostic.encode(body)
         let (data, urlResponse) = try await URLSession.shared.data(for: request)
-        guard let http = urlResponse as? HTTPURLResponse, (200..<300).contains(http.statusCode) else { throw PhysicalDiagnosticDeliveryError.httpFailure }
+        guard let http = urlResponse as? HTTPURLResponse else { throw PhysicalDiagnosticDeliveryError.httpFailure(statusCode: 0) }
+        guard (200..<300).contains(http.statusCode) else { throw PhysicalDiagnosticDeliveryError.httpFailure(statusCode: http.statusCode) }
         return try JSONDecoder.diagnostic.decode(Response.self, from: data)
     }
 }
 
-enum PhysicalDiagnosticDeliveryError: Error { case disabled, unsupported, invalidEndpoint, httpFailure, invalidChallenge }
+enum PhysicalDiagnosticDeliveryError: Error {
+    case disabled, unsupported, invalidEndpoint, invalidChallenge, keyPersistenceFailed
+    case httpFailure(statusCode: Int)
+}
+
+private struct AppAttestBootstrapEvent: Codable, Equatable, Sendable {
+    let sequence: Int
+    let marker: String
+    let attributes: [String: String]
+}
+private struct AppAttestBootstrapFailureReport: Codable, Sendable {
+    let schema: Int
+    let reportID: UUID
+    let appVersion: String
+    let build: Int
+    let environment: String
+    let osVersion: String
+    let deviceClass: String
+    let startedAt: Date
+    let endedAt: Date
+    let failureStage: String
+    let errorDomain: String
+    let errorCode: Int
+    let events: [AppAttestBootstrapEvent]
+}
+private struct BootstrapReceiptResponse: Codable { let reportID: UUID; let status: String; let receivedAt: Date }
+private struct AppAttestBootstrapTrace: Sendable {
+    let reportID = UUID()
+    let startedAt = Date()
+    private(set) var events: [AppAttestBootstrapEvent] = []
+
+    mutating func record(_ marker: String, _ attributes: [String: String] = [:]) {
+        events.append(.init(sequence: events.count + 1, marker: marker, attributes: attributes))
+    }
+}
 
 private struct ChallengeRequest: Codable { let operation: String }
 private struct ChallengeResponse: Codable { let challengeID: UUID; let challenge: String; let expiresAt: Date }
@@ -130,7 +165,7 @@ actor PhysicalDiagnosticDelivery {
     }
 
     func flush(now: Date = .now) async {
-        guard enabled(), !flushing, attest.isSupported else { return }
+        guard enabled(), !flushing else { return }
         flushing = true; defer { flushing = false }
         var queue = load(now: now)
         guard !queue.isEmpty else { return }
@@ -143,7 +178,7 @@ actor PhysicalDiagnosticDelivery {
                 let clientData = try JSONEncoder.diagnostic.encode(client)
                 let assertion = try await attest.generateAssertion(keyID, clientDataHash: Data(SHA256.hash(data: clientData)))
                 let receipt: ReceiptResponse = try await transport.post("v1/diagnostics", body: AssertionEnvelope(keyID: keyID, assertion: assertion.base64EncodedString(), clientData: clientData.base64EncodedString()), response: ReceiptResponse.self)
-                guard receipt.sessionID == item.session.sessionID, receipt.status == "delivered" else { throw PhysicalDiagnosticDeliveryError.httpFailure }
+                guard receipt.sessionID == item.session.sessionID, receipt.status == "delivered" else { throw PhysicalDiagnosticDeliveryError.httpFailure(statusCode: 0) }
                 queue.removeFirst(); save(queue); state = .delivered
             }
         } catch {
@@ -156,19 +191,68 @@ actor PhysicalDiagnosticDelivery {
     func pendingAttempts(now: Date = .now) -> [Int] { load(now: now).map(\.attempts) }
 
     private func ensureAttestedKey() async throws -> String {
-        guard attest.isSupported else { throw PhysicalDiagnosticDeliveryError.unsupported }
+        var trace = AppAttestBootstrapTrace()
+        trace.record("environment", ["value": "production"])
+        trace.record("is_supported", ["value": String(attest.isSupported)])
+        guard attest.isSupported else {
+            let error = PhysicalDiagnosticDeliveryError.unsupported
+            await sendBootstrapFailure(trace: trace, stage: "is_supported", error: error)
+            throw error
+        }
         if let key = defaults.string(forKey: keyIDKey), defaults.bool(forKey: registrationKey) { return key }
         let keyID: String
-        if let existing = defaults.string(forKey: keyIDKey) { keyID = existing }
-        else { keyID = try await attest.generateKey() }
-        defaults.set(keyID, forKey: keyIDKey)
-        let challenge: ChallengeResponse = try await transport.post("v1/app-attest/challenge", body: ChallengeRequest(operation: "attest"), response: ChallengeResponse.self)
-        guard let challengeData = Data(base64Encoded: challenge.challenge) else { throw PhysicalDiagnosticDeliveryError.invalidChallenge }
-        let attestation = try await attest.attestKey(keyID, clientDataHash: Data(SHA256.hash(data: challengeData)))
-        let response = try await transport.post("v1/app-attest/register", body: RegistrationRequest(challengeID: challenge.challengeID, keyID: keyID, attestation: attestation.base64EncodedString()), response: RegistrationResponse.self)
-        guard response.status == "registered" else { throw PhysicalDiagnosticDeliveryError.httpFailure }
-        defaults.set(true, forKey: registrationKey)
-        return keyID
+        do {
+            if let existing = defaults.string(forKey: keyIDKey) {
+                keyID = existing
+                trace.record("key_id_loaded")
+            } else {
+                trace.record("generate_key_invoked")
+                keyID = try await attest.generateKey()
+                trace.record("generate_key_succeeded")
+            }
+            defaults.set(keyID, forKey: keyIDKey)
+            guard defaults.string(forKey: keyIDKey) == keyID else { throw PhysicalDiagnosticDeliveryError.keyPersistenceFailed }
+            trace.record("key_id_persisted")
+            let challenge: ChallengeResponse = try await transport.post("v1/app-attest/challenge", body: ChallengeRequest(operation: "attest"), response: ChallengeResponse.self)
+            let correlation = String(SHA256.hash(data: Data(challenge.challengeID.uuidString.utf8)).compactMap { String(format: "%02x", $0) }.joined().prefix(16))
+            trace.record("challenge_received", ["correlation": correlation])
+            guard let challengeData = Data(base64Encoded: challenge.challenge) else { throw PhysicalDiagnosticDeliveryError.invalidChallenge }
+            trace.record("attest_key_invoked")
+            let attestation = try await attest.attestKey(keyID, clientDataHash: Data(SHA256.hash(data: challengeData)))
+            trace.record("attest_key_succeeded")
+            trace.record("registration_request_constructed")
+            trace.record("registration_request_attempted")
+            let response = try await transport.post("v1/app-attest/register", body: RegistrationRequest(challengeID: challenge.challengeID, keyID: keyID, attestation: attestation.base64EncodedString()), response: RegistrationResponse.self)
+            guard response.status == "registered" else { throw PhysicalDiagnosticDeliveryError.httpFailure(statusCode: 0) }
+            trace.record("registration_succeeded")
+            defaults.set(true, forKey: registrationKey)
+            return keyID
+        } catch {
+            let stage = trace.events.last?.marker ?? "bootstrap_started"
+            await sendBootstrapFailure(trace: trace, stage: stage, error: error)
+            throw error
+        }
+    }
+
+    private func sendBootstrapFailure(trace: AppAttestBootstrapTrace, stage: String, error: Error) async {
+        let nsError = error as NSError
+        var completed = trace
+        if case let PhysicalDiagnosticDeliveryError.httpFailure(statusCode) = error {
+            completed.record("http_result", ["stage": stage, "http_status": String(statusCode)])
+        }
+        completed.record("bootstrap_failed", ["stage": stage, "error_domain": nsError.domain, "error_code": String(nsError.code)])
+        let device = await MainActor.run { (UIDevice.current.systemVersion, UIDevice.current.model) }
+        let report = AppAttestBootstrapFailureReport(
+            schema: 1, reportID: completed.reportID,
+            appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
+            build: Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0") ?? 0,
+            environment: "internal-testflight", osVersion: device.0, deviceClass: device.1,
+            startedAt: completed.startedAt, endedAt: .now, failureStage: stage,
+            errorDomain: String(nsError.domain.prefix(128)), errorCode: nsError.code, events: completed.events)
+        do {
+            let receipt: BootstrapReceiptResponse = try await transport.post("v1/app-attest/bootstrap-failure", body: report, response: BootstrapReceiptResponse.self)
+            guard receipt.reportID == report.reportID, receipt.status == "stored-unverified-bootstrap" else { return }
+        } catch { }
     }
 
     private func load(now: Date) -> [Queued] {

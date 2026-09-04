@@ -43,6 +43,30 @@ struct PhysicalDiagnosticsTests {
         await #expect(throws: DiagnosticServerError.self) { try await store.advanceCounter(keyID: "key", to: 1) }
     }
 
+    @Test func bootstrapStoreAcceptsOnlyBoundedAllowlistedFailureMetadata() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = try AppAttestBootstrapFailureStore(directory: root, retention: 60, maximumRecords: 2)
+        let now = Date(timeIntervalSince1970: 1_000)
+        let valid = AppAttestBootstrapFailureReport(schema: 1, reportID: UUID(), appVersion: "0.1.0", build: 12,
+            environment: "internal-testflight", osVersion: "26.6.1", deviceClass: "iPhone", startedAt: now, endedAt: now,
+            failureStage: "attest_key_invoked", errorDomain: "DCErrorDomain", errorCode: 2,
+            events: [.init(sequence: 1, marker: "bootstrap_failed", attributes: ["stage": "attest_key_invoked", "error_code": "2"])])
+        #expect(try await store.put(valid))
+        #expect(try await !store.put(valid))
+        let forbidden = AppAttestBootstrapFailureReport(schema: 1, reportID: UUID(), appVersion: "0.1.0", build: 12,
+            environment: "internal-testflight", osVersion: "26.6.1", deviceClass: "iPhone", startedAt: now, endedAt: now,
+            failureStage: "attest_key_invoked", errorDomain: "DCErrorDomain", errorCode: 2,
+            events: [.init(sequence: 1, marker: "bootstrap_failed", attributes: ["transcript": "forbidden"])])
+        await #expect(throws: DiagnosticServerError.self) { _ = try await store.put(forbidden) }
+        let validData = try JSONEncoder.canonical.encode(valid)
+        try AppAttestBootstrapFailureStore.validateRawSchema(validData)
+        var object = try #require(JSONSerialization.jsonObject(with: validData) as? [String: Any])
+        object["arbitrary"] = "rejected"
+        let unknownFieldData = try JSONSerialization.data(withJSONObject: object)
+        #expect(throws: DiagnosticServerError.self) { try AppAttestBootstrapFailureStore.validateRawSchema(unknownFieldData) }
+    }
+
     private func sample() -> PhysicalDiagnosticSession {
         let now = Date(timeIntervalSince1970: 1_000)
         return .init(schema: 1, sessionID: UUID(), liveTestID: "MS-800-LIVE-VOICE-QA", feature: "voice", appVersion: "0.1.0",
