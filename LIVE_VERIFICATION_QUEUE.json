@@ -106,7 +106,7 @@
     {
       "requirement_id": "MS-800-LIVE-VOICE-QA",
       "service_provider": "Physical iPhone speech recognition",
-      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "current_status": "BLOCKED_BY_CONFIRMED_DEFECT",
       "missing_dependency": "Owner-accessible physical iPhone with microphone and Ukrainian/Russian speech recognition availability.",
       "dependency_owner": "Owner",
       "local_evidence": [
@@ -118,7 +118,7 @@
       "required_live_action": "Speak mixed Ukrainian/Russian phrases containing proper names, addresses, brands and colloquial pronunciation; verify transcript, clarification behavior, typed fallback and microphone opt-out.",
       "expected_result": "Recognized text preserves the intended entities or requests one minimal clarification; typed interaction remains fully usable when voice is denied or disabled.",
       "created_at": "2026-09-02T12:58:00+02:00",
-      "last_checked": "2026-09-02T12:58:00+02:00",
+      "last_checked": "2026-09-04T19:00:00+02:00",
       "completion_evidence": null
     },
     {

@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import Testing
 @testable import UniversalAssistant
@@ -58,5 +59,56 @@ struct AudioRecorderControllerTests {
         #expect(throws: AudioRecorderError.noRecording) { try controller.shareURL() }
         #expect(throws: AudioRecorderError.invalidState) { try controller.rename(to: "Name") }
         #expect(throws: AudioRecorderError.noRecording) { try controller.delete() }
+    }
+}
+
+
+@MainActor
+private final class VoiceCaptureBackendSpy: VoiceAudioCaptureBackend {
+    enum Failure: Error { case configured, tap, engine }
+    var events: [String] = []
+    var failure: Failure?
+
+    func configureSession() throws {
+        events.append("configure")
+        if failure == .configured { throw Failure.configured }
+    }
+
+    func installTap(_ receive: @escaping (AVAudioPCMBuffer) -> Void) throws {
+        events.append("installTap")
+        if failure == .tap { throw Failure.tap }
+    }
+
+    func startEngine() throws {
+        events.append("startEngine")
+        if failure == .engine { throw Failure.engine }
+    }
+
+    func stop() { events.append("stop") }
+}
+
+@MainActor
+struct VoiceAudioCaptureLifecycleTests {
+    @Test func configuresAndActivatesSessionBeforeInstallingInputTap() throws {
+        let backend = VoiceCaptureBackendSpy()
+        let lifecycle = VoiceAudioCaptureLifecycle(backend: backend)
+        try lifecycle.start { _ in }
+        #expect(backend.events == ["configure", "installTap", "startEngine"])
+    }
+
+    @Test func inputFormatOrEngineFailureCleansUpInsteadOfEscapingAsProcessCrash() {
+        let backend = VoiceCaptureBackendSpy()
+        backend.failure = .tap
+        let lifecycle = VoiceAudioCaptureLifecycle(backend: backend)
+        #expect(throws: VoiceCaptureBackendSpy.Failure.tap) { try lifecycle.start { _ in } }
+        #expect(backend.events == ["configure", "installTap", "stop"])
+    }
+
+    @Test func stoppingBeforeOrAfterCaptureIsIdempotentAtLifecycleBoundary() throws {
+        let backend = VoiceCaptureBackendSpy()
+        let lifecycle = VoiceAudioCaptureLifecycle(backend: backend)
+        lifecycle.stop()
+        lifecycle.stop()
+        #expect(backend.events == ["stop", "stop"])
     }
 }
