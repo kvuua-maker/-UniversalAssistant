@@ -9,7 +9,13 @@ Last audited: 2026-09-02.
 | Apple platform SDK frameworks | Xcode SDK selected by the checked-in project; minimum iOS 18 | SwiftUI, system capabilities and Apple service boundaries | Apple SDK agreement | Permission- and entitlement-gated system data; covered by the privacy manifest and capability-specific policy | Reviewed with every Xcode/iOS baseline change |
 | Swift standard library and Foundation | Swift 6 toolchain selected by Xcode/SwiftPM | App and backend language/runtime primitives | Toolchain/platform distribution terms | No additional third-party processor | Reviewed with every toolchain baseline change |
 
-There are no third-party runtime packages, SDKs, binary frameworks or copied media/catalog assets in the current repository. `Backend/Package.swift` has no external package declaration, and the Xcode targets have empty package-product dependency lists. Provider imagery is loaded only from runtime provider URLs and is never bundled as copied catalog content.
+There are no third-party runtime packages, SDKs, binary frameworks or copied provider/catalog media assets in the current repository. `Backend/Package.swift` has no external package declaration, and the Xcode targets have empty package-product dependency lists. Provider imagery is loaded only from runtime provider URLs and is never bundled as copied catalog content.
+
+## First-party bundled content
+
+| Asset | Provenance | Rights/use | SHA-256 |
+| --- | --- | --- | --- |
+| `UniversalAssistant/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png` | Generated specifically for UniversalAssistant with OpenAI image generation from the owner-approved purple/blue orb visual canon on 2026-09-04 | First-party project app icon; permitted for product and App Store distribution; no third-party marks or copied provider content | `b2ca19316a2ad5483b96bd4fe63ba97c373fb3d1a964d28d1526cc1f68e8c113` |
 
 ## Admission, pinning and update policy
 

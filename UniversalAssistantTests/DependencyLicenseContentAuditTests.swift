@@ -25,9 +25,12 @@ struct DependencyLicenseContentAuditTests {
         let mediaExtensions = Set(["png", "jpg", "jpeg", "gif", "webp", "mp3", "wav", "mp4"])
         let files = FileManager.default.enumerator(at: product, includingPropertiesForKeys: nil)?
             .compactMap { $0 as? URL } ?? []
-        #expect(files.filter { mediaExtensions.contains($0.pathExtension.lowercased()) }.isEmpty)
-
         let inventory = try String(contentsOf: root.appendingPathComponent("DEPENDENCIES.md"), encoding: .utf8)
+        let bundledMedia = files
+            .filter { mediaExtensions.contains($0.pathExtension.lowercased()) }
+            .map { $0.path.replacingOccurrences(of: root.path + "/", with: "") }
+        #expect(bundledMedia == ["UniversalAssistant/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"])
+        #expect(inventory.contains("b2ca19316a2ad5483b96bd4fe63ba97c373fb3d1a964d28d1526cc1f68e8c113"))
         for policy in ["reproducible exact version", "license compatibility", "privacy manifests", "provenance"] {
             #expect(inventory.contains(policy))
         }
