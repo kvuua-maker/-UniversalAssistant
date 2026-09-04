@@ -1233,7 +1233,7 @@
       "completion_evidence": null
     },
     {
-      "requirement_id": "AUDIO-036-AUDIO-038-AUDIO-039-AUDIO-042-AUDIO-109-AUDIO-110-AUDIO-125-AUDIO-128-LIVE-DEEP-VENDORS",
+      "requirement_id": "AUDIO-036-AUDIO-038-AUDIO-039-AUDIO-042-AUDIO-109-AUDIO-110-AUDIO-125-AUDIO-126-AUDIO-127-AUDIO-128-LIVE-DEEP-VENDORS",
       "service_provider": "HEOS, B&O Mozart, BluOS, WiiM and other officially documented vendor families",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
       "missing_dependency": "Representative exact model/firmware plus LAN/cloud credentials and any manufacturer/installer/MFi approval",

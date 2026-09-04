@@ -1,19 +1,19 @@
 {
-  "current_task_id": "PRIVACY-AI-DATA-FLOW-HARDENING-COMPLETION",
+  "current_task_id": "UNIVERSAL-AUDIO-DEVICE-CONTROL-COMPLETION",
   "requirement_ids": [
-    "PRIVACY-001 through PRIVACY-168",
-    "all 2179 canonical requirement IDs"
+    "AUDIO-001 through AUDIO-147",
+    "all 2326 canonical requirement IDs"
   ],
-  "selected_path": "Read-only data-flow audit, compatibility analysis, central typed outbound/NEVER_AI gate and bounded-AI production integration.",
+  "selected_path": "Public/official capability registry, system handoff, permitted provider adapters, safe owned-stream DSP, profiles and deterministic no-AI controls.",
   "feasibility_state": "PASS_SELECTED_PATH",
-  "integration_depth": "2179/2179 reconciled: 1943 VERIFIED_LOCAL, 222 READY_FOR_LIVE_VERIFICATION, 14 NOT_APPLICABLE_VERIFIED; Privacy 168/168",
-  "acceptance_contract_ref": "docs/PRIVACY_REQUIREMENT_RECONCILIATION.md",
+  "integration_depth": "2326/2326 reconciled: 2068 VERIFIED_LOCAL, 244 READY_FOR_LIVE_VERIFICATION, 14 NOT_APPLICABLE_VERIFIED; AUDIO 147/147",
+  "acceptance_contract_ref": "docs/AUDIO_REQUIREMENT_RECONCILIATION.md",
   "required_evidence_level": "E3 local; E4/E5/E6 retained for queued external execution",
   "current_exit_state": "VERIFIED_LOCAL_WITH_READY_FOR_LIVE_VERIFICATION",
   "last_failure_signature": null,
-  "material_change": "Capability-preserving typed classification, NEVER_AI, purpose/consent minimization, untrusted-content sanitization and scoped cache revocation; 11 targeted tests.",
-  "frozen_baseline_commit": "a923914",
-  "dependency": "Only 64 exact external live actions remain; Privacy adds physical/provider/SDK/App Store observation.",
+  "material_change": "Typed audio capability truth, policy enforcement, authoritative readback, scoped profiles, safe automation/DSP, public route picker and 16 targeted tests.",
+  "frozen_baseline_commit": "07df4ea",
+  "dependency": "Only exact physical Apple/audio hardware, Cast/Sonos/deep-vendor/music-provider live actions remain for AUDIO scope.",
   "unresolved_verification_steps": [
     "Execute matching LIVE_VERIFICATION_QUEUE items only when the named owner/device/provider dependency becomes available",
     "Never promote an external capability to VERIFIED_LIVE without E4/E5/E6 read-back evidence"
