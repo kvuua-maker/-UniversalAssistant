@@ -90,12 +90,19 @@ final class AppleVoiceAudioCaptureBackend: VoiceAudioCaptureBackend {
             throw VoiceAudioCaptureError.invalidInputFormat
         }
         LocalVoiceDiagnosticReport.shared.record("audio_tap_installed", "sample_rate=\(format.sampleRate) channels=\(format.channelCount)")
+        input.installTap(onBus: 0, bufferSize: 1_024, format: format,
+                         block: Self.makeTapHandler(receive))
+        tapInstalled = true
+    }
+
+    nonisolated static func makeTapHandler(
+        _ receive: @escaping @Sendable (AVAudioPCMBuffer) -> Void
+    ) -> AVAudioNodeTapBlock {
         let counter = VoiceBufferDiagnosticCounter()
-        input.installTap(onBus: 0, bufferSize: 1_024, format: format) { buffer, _ in
+        return { buffer, _ in
             counter.record(buffer)
             receive(buffer)
         }
-        tapInstalled = true
     }
 
     func startEngine() throws {

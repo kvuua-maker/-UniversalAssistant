@@ -87,8 +87,35 @@ private final class VoiceCaptureBackendSpy: VoiceAudioCaptureBackend {
     func stop() { events.append("stop") }
 }
 
+private final class VoiceTapInvocation: @unchecked Sendable {
+    let handler: AVAudioNodeTapBlock
+    let buffer: AVAudioPCMBuffer
+
+    init(handler: @escaping AVAudioNodeTapBlock, buffer: AVAudioPCMBuffer) {
+        self.handler = handler
+        self.buffer = buffer
+    }
+
+    func invoke() {
+        handler(buffer, AVAudioTime(sampleTime: 0, atRate: 44_100))
+    }
+}
+
 @MainActor
 struct VoiceAudioCaptureLifecycleTests {
+    @Test func realtimeTapCallbackHasNoMainActorExecutorRequirementAndDeliversBuffer() {
+        let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
+        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 64)!
+        buffer.frameLength = 64
+        let delivered = DispatchSemaphore(value: 0)
+        let handler = AppleVoiceAudioCaptureBackend.makeTapHandler { _ in delivered.signal() }
+        let invocation = VoiceTapInvocation(handler: handler, buffer: buffer)
+        DispatchQueue.global(qos: .userInitiated).async {
+            invocation.invoke()
+        }
+        #expect(delivered.wait(timeout: .now() + 2) == .success)
+    }
+
     @Test func routeChangeEvidenceIncludesReasonRoutesAndInputAvailability() {
         let evidence = AudioRouteChangeEvidence(
             reasonRawValue: 3,
