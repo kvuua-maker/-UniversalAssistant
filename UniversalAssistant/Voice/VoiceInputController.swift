@@ -11,7 +11,7 @@ enum VoiceAudioCaptureError: Error, Equatable {
 @MainActor
 protocol VoiceAudioCaptureBackend: AnyObject {
     func configureSession() throws
-    func installTap(_ receive: @escaping (AVAudioPCMBuffer) -> Void) throws
+    func installTap(_ receive: @escaping @Sendable (AVAudioPCMBuffer) -> Void) throws
     func startEngine() throws
     func stop()
 }
@@ -27,7 +27,7 @@ final class AppleVoiceAudioCaptureBackend: VoiceAudioCaptureBackend {
         try session.setActive(true, options: .notifyOthersOnDeactivation)
     }
 
-    func installTap(_ receive: @escaping (AVAudioPCMBuffer) -> Void) throws {
+    func installTap(_ receive: @escaping @Sendable (AVAudioPCMBuffer) -> Void) throws {
         let input = audioEngine.inputNode
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0 else {
@@ -56,7 +56,7 @@ final class AppleVoiceAudioCaptureBackend: VoiceAudioCaptureBackend {
 struct VoiceAudioCaptureLifecycle {
     let backend: any VoiceAudioCaptureBackend
 
-    func start(receive: @escaping (AVAudioPCMBuffer) -> Void) throws {
+    func start(receive: @escaping @Sendable (AVAudioPCMBuffer) -> Void) throws {
         do {
             try backend.configureSession()
             try backend.installTap(receive)
@@ -68,6 +68,18 @@ struct VoiceAudioCaptureLifecycle {
     }
 
     func stop() { backend.stop() }
+}
+
+private final class VoiceRecognitionRequestSink: @unchecked Sendable {
+    private let request: SFSpeechAudioBufferRecognitionRequest
+
+    init(_ request: SFSpeechAudioBufferRecognitionRequest) {
+        self.request = request
+    }
+
+    func append(_ buffer: AVAudioPCMBuffer) {
+        request.append(buffer)
+    }
 }
 
 @MainActor
@@ -91,20 +103,16 @@ final class VoiceInputController {
     func start(locale: Locale = .current) async {
         stop()
         state = .requestingPermission
-        guard await authorizationGranted() else { state = .denied; return }
+        guard await Self.authorizationGranted() else { state = .denied; return }
         guard let recognizer = SFSpeechRecognizer(locale: locale), recognizer.isAvailable else { state = .unavailable; return }
         self.recognizer = recognizer
         let request = SFSpeechAudioBufferRecognitionRequest(); request.shouldReportPartialResults = true
         self.request = request
+        let requestSink = VoiceRecognitionRequestSink(request)
         do {
-            try capture.start { [weak request] buffer in request?.append(buffer) }
+            try capture.start { buffer in requestSink.append(buffer) }
             state = .listening
-            task = recognizer.recognitionTask(with: request) { [weak self] result, error in
-                Task { @MainActor in
-                    if let result { self?.transcript = result.bestTranscription.formattedString }
-                    if error != nil || result?.isFinal == true { self?.stop() }
-                }
-            }
+            task = recognizer.recognitionTask(with: request, resultHandler: Self.makeRecognitionHandler(owner: self))
         } catch { stop(); state = .failed }
     }
 
@@ -117,9 +125,32 @@ final class VoiceInputController {
     func handleAudioInterruptionBegan() { stop() }
     func handleAudioRouteChanged() { if state == .listening { stop() } }
 
-    private func authorizationGranted() async -> Bool {
-        let speech = await withCheckedContinuation { continuation in SFSpeechRecognizer.requestAuthorization { continuation.resume(returning: $0) } }
+    nonisolated static func awaitSpeechAuthorization(
+        _ request: @escaping @Sendable (@escaping @Sendable (SFSpeechRecognizerAuthorizationStatus) -> Void) -> Void
+    ) async -> SFSpeechRecognizerAuthorizationStatus {
+        await withCheckedContinuation { continuation in
+            request { status in continuation.resume(returning: status) }
+        }
+    }
+
+    private nonisolated static func authorizationGranted() async -> Bool {
+        let speech = await awaitSpeechAuthorization { completion in
+            SFSpeechRecognizer.requestAuthorization(completion)
+        }
         guard speech == .authorized else { return false }
         return await AVAudioApplication.requestRecordPermission()
+    }
+
+    private nonisolated static func makeRecognitionHandler(
+        owner: VoiceInputController
+    ) -> @Sendable (SFSpeechRecognitionResult?, (any Error)?) -> Void {
+        { [weak owner] result, error in
+            let transcript = result?.bestTranscription.formattedString
+            let isFinished = error != nil || result?.isFinal == true
+            Task { @MainActor [weak owner] in
+                if let transcript { owner?.transcript = transcript }
+                if isFinished { owner?.stop() }
+            }
+        }
     }
 }

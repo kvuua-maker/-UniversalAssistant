@@ -74,7 +74,7 @@ private final class VoiceCaptureBackendSpy: VoiceAudioCaptureBackend {
         if failure == .configured { throw Failure.configured }
     }
 
-    func installTap(_ receive: @escaping (AVAudioPCMBuffer) -> Void) throws {
+    func installTap(_ receive: @escaping @Sendable (AVAudioPCMBuffer) -> Void) throws {
         events.append("installTap")
         if failure == .tap { throw Failure.tap }
     }
@@ -89,6 +89,15 @@ private final class VoiceCaptureBackendSpy: VoiceAudioCaptureBackend {
 
 @MainActor
 struct VoiceAudioCaptureLifecycleTests {
+    @Test func speechPermissionCallbackSafelyResumesFromBackgroundQueue() async {
+        let status = await VoiceInputController.awaitSpeechAuthorization { completion in
+            DispatchQueue.global(qos: .default).async {
+                completion(.authorized)
+            }
+        }
+        #expect(status == .authorized)
+    }
+
     @Test func configuresAndActivatesSessionBeforeInstallingInputTap() throws {
         let backend = VoiceCaptureBackendSpy()
         let lifecycle = VoiceAudioCaptureLifecycle(backend: backend)
