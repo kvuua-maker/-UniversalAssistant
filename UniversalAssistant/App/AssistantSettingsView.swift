@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct AssistantSettingsView: View {
     @Bindable var model: AssistantViewModel
@@ -19,6 +20,10 @@ struct AssistantSettingsView: View {
             Section("Voice & Interaction") {
                 Button("Voice responses: \(preferences.voiceOutput.rawValue)") { preferences.voiceOutput = preferences.voiceOutput == .contextual ? .screenOnly : .contextual; persist() }
                 Button(model.voiceInputEnabled ? "Disable voice input" : "Enable voice input") { model.setVoiceInputEnabled(!model.voiceInputEnabled) }
+                Button("Скопіювати діагностику") {
+                    UIPasteboard.general.string = model.voiceDiagnosticReport()
+                }
+                .accessibilityIdentifier("settings.copy-voice-diagnostics")
             }
             Section("Permissions") {
                 if let url = URL(string: UIApplication.openSettingsURLString) { Link("iPhone Permissions", destination: url) }

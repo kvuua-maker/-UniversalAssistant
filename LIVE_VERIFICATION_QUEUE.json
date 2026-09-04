@@ -115,12 +115,13 @@
         "UniversalAssistantTests/LocalizationAccessibilityTests.swift",
         "214 iOS tests across 52 suites passed on 2026-09-02",
         "Physical Build 2 crash 56A77EBB-DF1F-41F0-BC57-8E8AF508367F: binary UUID EF079917-083A-369C-9990-F3CA9F009B24 symbolicated to VoiceInputController.authorizationGranted TCC callback executor violation",
-        "Physical Build 3 retest: crash resolved and listening started, but transcript/UI/router did not advance; source control-flow confirmed VoiceInputController transcript/state had no event delivery path to AssistantViewModel"
+        "Physical Build 3 retest: crash resolved and listening started, but transcript/UI/router did not advance; source control-flow confirmed VoiceInputController transcript/state had no event delivery path to AssistantViewModel",
+        "Physical Build 4 retest: listening appeared briefly and returned to idle without user stop, transcript or routing; exact stop source remains under Build 5 local diagnostic instrumentation"
       ],
       "required_live_action": "Speak mixed Ukrainian/Russian phrases containing proper names, addresses, brands and colloquial pronunciation; verify transcript, clarification behavior, typed fallback and microphone opt-out.",
       "expected_result": "Recognized text preserves the intended entities or requests one minimal clarification; typed interaction remains fully usable when voice is denied or disabled.",
       "created_at": "2026-09-02T12:58:00+02:00",
-      "last_checked": "2026-09-04T21:00:00+03:00",
+      "last_checked": "2026-09-04T22:00:00+03:00",
       "completion_evidence": null
     },
     {

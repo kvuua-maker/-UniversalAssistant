@@ -10,8 +10,37 @@ enum VoiceInputEvent: Equatable, Sendable {
     case transcript(String, isFinal: Bool)
 }
 
+enum VoiceStopReason: String, Sendable {
+    case sessionRestart, externalRequest, userPressedStop, voiceDisabled, sceneInactive
+    case recognitionFinal, recognitionError, audioInterruption, routeChange, startFailure
+}
+
 private enum VoiceDiagnostic {
     static let logger = Logger(subsystem: "com.universalassistant.app", category: "VoicePipeline")
+}
+
+final class LocalVoiceDiagnosticReport: @unchecked Sendable {
+    static let shared = LocalVoiceDiagnosticReport()
+    private let lock = NSLock()
+    private var entries: [String] = []
+
+    func reset() {
+        lock.lock(); entries = []; lock.unlock()
+    }
+
+    func record(_ marker: String, _ details: String = "") {
+        lock.lock()
+        let sequence = entries.count + 1
+        entries.append("\(sequence). \(marker)\(details.isEmpty ? "" : " | \(details)")")
+        if entries.count > 200 { entries.removeFirst(entries.count - 200) }
+        lock.unlock()
+        VoiceDiagnostic.logger.notice("\(marker, privacy: .public) \(details, privacy: .public)")
+    }
+
+    func snapshot() -> String {
+        lock.lock(); defer { lock.unlock() }
+        return (["UniversalAssistant Local Voice Diagnostic", "No audio or transcript content recorded."] + entries).joined(separator: "\n")
+    }
 }
 
 private final class VoiceBufferDiagnosticCounter: @unchecked Sendable {
@@ -24,7 +53,7 @@ private final class VoiceBufferDiagnosticCounter: @unchecked Sendable {
         let current = count
         lock.unlock()
         if current == 1 || current.isMultiple(of: 100) {
-            VoiceDiagnostic.logger.notice("audio_buffer count=\(current, privacy: .public) frames=\(buffer.frameLength, privacy: .public)")
+            LocalVoiceDiagnosticReport.shared.record("audio_buffer_received", "count=\(current) frames=\(buffer.frameLength)")
         }
     }
 }
@@ -51,7 +80,7 @@ final class AppleVoiceAudioCaptureBackend: VoiceAudioCaptureBackend {
         try session.setCategory(.record, mode: .measurement, options: [.duckOthers, .allowBluetoothHFP])
         try session.setActive(true, options: .notifyOthersOnDeactivation)
         let input = session.currentRoute.inputs.first?.portType.rawValue ?? "none"
-        VoiceDiagnostic.logger.notice("audio_session_activated input=\(input, privacy: .public) sample_rate=\(session.sampleRate, privacy: .public)")
+        LocalVoiceDiagnosticReport.shared.record("audio_session_activated", "input=\(input) sample_rate=\(session.sampleRate)")
     }
 
     func installTap(_ receive: @escaping @Sendable (AVAudioPCMBuffer) -> Void) throws {
@@ -60,7 +89,7 @@ final class AppleVoiceAudioCaptureBackend: VoiceAudioCaptureBackend {
         guard format.sampleRate > 0, format.channelCount > 0 else {
             throw VoiceAudioCaptureError.invalidInputFormat
         }
-        VoiceDiagnostic.logger.notice("audio_tap_install sample_rate=\(format.sampleRate, privacy: .public) channels=\(format.channelCount, privacy: .public)")
+        LocalVoiceDiagnosticReport.shared.record("audio_tap_installed", "sample_rate=\(format.sampleRate) channels=\(format.channelCount)")
         let counter = VoiceBufferDiagnosticCounter()
         input.installTap(onBus: 0, bufferSize: 1_024, format: format) { buffer, _ in
             counter.record(buffer)
@@ -72,7 +101,7 @@ final class AppleVoiceAudioCaptureBackend: VoiceAudioCaptureBackend {
     func startEngine() throws {
         audioEngine.prepare()
         try audioEngine.start()
-        VoiceDiagnostic.logger.notice("audio_engine_started running=\(self.audioEngine.isRunning, privacy: .public)")
+        LocalVoiceDiagnosticReport.shared.record("audio_engine_started", "running=\(audioEngine.isRunning)")
     }
 
     func stop() {
@@ -105,6 +134,8 @@ struct VoiceAudioCaptureLifecycle {
 
 private final class VoiceRecognitionRequestSink: @unchecked Sendable {
     private let request: SFSpeechAudioBufferRecognitionRequest
+    private let lock = NSLock()
+    private var appendedCount = 0
 
     init(_ request: SFSpeechAudioBufferRecognitionRequest) {
         self.request = request
@@ -112,6 +143,10 @@ private final class VoiceRecognitionRequestSink: @unchecked Sendable {
 
     func append(_ buffer: AVAudioPCMBuffer) {
         request.append(buffer)
+        lock.lock(); appendedCount += 1; let current = appendedCount; lock.unlock()
+        if current == 1 || current.isMultiple(of: 100) {
+            LocalVoiceDiagnosticReport.shared.record("buffer_appended", "count=\(current)")
+        }
     }
 }
 
@@ -127,6 +162,8 @@ final class VoiceInputController {
     @ObservationIgnored private var audioEvents: AudioSessionEventMonitor?
     @ObservationIgnored private var eventHandler: (@MainActor @Sendable (VoiceInputEvent) -> Void)?
     @ObservationIgnored private var recognitionCallbackCount = 0
+    @ObservationIgnored private var partialResultCount = 0
+    @ObservationIgnored private var finalResultCount = 0
 
     init(captureBackend: (any VoiceAudioCaptureBackend)? = nil) {
         capture = VoiceAudioCaptureLifecycle(backend: captureBackend ?? AppleVoiceAudioCaptureBackend())
@@ -136,31 +173,39 @@ final class VoiceInputController {
     }
 
     func start(locale: Locale = .current) async {
-        stop()
+        stop(reason: .sessionRestart)
+        LocalVoiceDiagnosticReport.shared.reset()
+        recognitionCallbackCount = 0
+        partialResultCount = 0
+        finalResultCount = 0
+        LocalVoiceDiagnosticReport.shared.record("start_listening_invoked")
         setState(.requestingPermission)
         guard await Self.authorizationGranted() else { setState(.denied); return }
         guard let recognizer = SFSpeechRecognizer(locale: locale), recognizer.isAvailable else { setState(.unavailable); return }
-        VoiceDiagnostic.logger.notice("recognizer_ready locale=\(locale.identifier, privacy: .public) available=\(recognizer.isAvailable, privacy: .public)")
+        LocalVoiceDiagnosticReport.shared.record("recognizer_ready", "locale=\(locale.identifier) available=\(recognizer.isAvailable)")
         self.recognizer = recognizer
         let request = SFSpeechAudioBufferRecognitionRequest(); request.shouldReportPartialResults = true
-        VoiceDiagnostic.logger.notice("recognition_request_created partial_results=true")
+        LocalVoiceDiagnosticReport.shared.record("recognition_request_created", "partial_results=true")
         self.request = request
         let requestSink = VoiceRecognitionRequestSink(request)
         do {
             try capture.start { buffer in requestSink.append(buffer) }
             setState(.listening)
             task = recognizer.recognitionTask(with: request, resultHandler: Self.makeRecognitionHandler(owner: self))
-            VoiceDiagnostic.logger.notice("recognition_task_created")
+            LocalVoiceDiagnosticReport.shared.record("recognition_task_created")
         } catch {
-            VoiceDiagnostic.logger.error("voice_start_failed error_type=\(String(describing: type(of: error)), privacy: .public)")
-            stop(); setState(.failed)
+            LocalVoiceDiagnosticReport.shared.record("voice_start_failed", "error_type=\(String(describing: type(of: error)))")
+            stop(reason: .startFailure); setState(.failed)
         }
     }
 
-    func stop() {
-        VoiceDiagnostic.logger.notice("voice_stop_requested")
+    func stop(reason: VoiceStopReason = .externalRequest) {
+        LocalVoiceDiagnosticReport.shared.record("stop_invoked", "reason=\(reason.rawValue)")
+        let hadTask = task != nil
+        let hadRequest = request != nil
         task?.cancel(); task = nil; request?.endAudio(); request = nil
-        VoiceDiagnostic.logger.notice("recognition_task_cancelled end_audio_called=true")
+        LocalVoiceDiagnosticReport.shared.record("recognition_task_cancelled", "reason=\(reason.rawValue) had_task=\(hadTask)")
+        LocalVoiceDiagnosticReport.shared.record("end_audio_called", "reason=\(reason.rawValue) had_request=\(hadRequest)")
         capture.stop()
         if state == .listening || state == .requestingPermission { setState(.idle) }
     }
@@ -171,22 +216,31 @@ final class VoiceInputController {
 
     private func setState(_ newState: VoiceInputState) {
         state = newState
+        LocalVoiceDiagnosticReport.shared.record("state_transition", "state=\(String(describing: newState))")
         eventHandler?(.state(newState))
     }
 
-    private func receiveRecognition(transcript: String?, isFinal: Bool, hasError: Bool, errorType: String) {
+    private func receiveRecognition(transcript: String?, isFinal: Bool, hasError: Bool, errorDomain: String, errorCode: Int) {
         recognitionCallbackCount += 1
-        VoiceDiagnostic.logger.notice("recognition_callback count=\(self.recognitionCallbackCount, privacy: .public) has_text=\(transcript != nil, privacy: .public) final=\(isFinal, privacy: .public) error_type=\(errorType, privacy: .public)")
+        if transcript != nil {
+            if isFinal { finalResultCount += 1 } else { partialResultCount += 1 }
+        }
+        LocalVoiceDiagnosticReport.shared.record("recognition_callback", "count=\(recognitionCallbackCount) has_text=\(transcript != nil) final=\(isFinal) error_domain=\(errorDomain) error_code=\(errorCode) partial_count=\(partialResultCount) final_count=\(finalResultCount)")
         if let transcript {
             self.transcript = transcript
             eventHandler?(.transcript(transcript, isFinal: isFinal))
-            VoiceDiagnostic.logger.notice("transcript_delivered_to_ui length=\(transcript.count, privacy: .public) final=\(isFinal, privacy: .public)")
+            LocalVoiceDiagnosticReport.shared.record(isFinal ? "final_transcript" : "partial_transcript", "length=\(transcript.count)")
+            LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_ui", "length=\(transcript.count) final=\(isFinal)")
         }
-        if hasError || isFinal { stop() }
+        if hasError { stop(reason: .recognitionError) }
+        else if isFinal {
+            LocalVoiceDiagnosticReport.shared.record("recognition_task_finished", "reason=final_result")
+            stop(reason: .recognitionFinal)
+        }
     }
 
-    func handleAudioInterruptionBegan() { stop() }
-    func handleAudioRouteChanged() { if state == .listening { stop() } }
+    func handleAudioInterruptionBegan() { stop(reason: .audioInterruption) }
+    func handleAudioRouteChanged() { if state == .listening { stop(reason: .routeChange) } }
 
     nonisolated static func awaitSpeechAuthorization(
         _ request: @escaping @Sendable (@escaping @Sendable (SFSpeechRecognizerAuthorizationStatus) -> Void) -> Void
@@ -197,14 +251,15 @@ final class VoiceInputController {
     }
 
     private nonisolated static func authorizationGranted() async -> Bool {
-        VoiceDiagnostic.logger.notice("speech_permission_before=\(String(describing: SFSpeechRecognizer.authorizationStatus()), privacy: .public)")
+        LocalVoiceDiagnosticReport.shared.record("speech_permission_before", "state=\(String(describing: SFSpeechRecognizer.authorizationStatus()))")
         let speech = await awaitSpeechAuthorization { completion in
             SFSpeechRecognizer.requestAuthorization(completion)
         }
-        VoiceDiagnostic.logger.notice("speech_permission_after=\(String(describing: speech), privacy: .public)")
+        LocalVoiceDiagnosticReport.shared.record("speech_permission_after", "state=\(String(describing: speech))")
         guard speech == .authorized else { return false }
+        LocalVoiceDiagnosticReport.shared.record("microphone_permission_before", "state=\(String(describing: AVAudioApplication.shared.recordPermission))")
         let microphone = await AVAudioApplication.requestRecordPermission()
-        VoiceDiagnostic.logger.notice("microphone_permission_granted=\(microphone, privacy: .public)")
+        LocalVoiceDiagnosticReport.shared.record("microphone_permission", "granted=\(microphone)")
         return microphone
     }
 
@@ -215,9 +270,11 @@ final class VoiceInputController {
             let transcript = result?.bestTranscription.formattedString
             let isFinal = result?.isFinal == true
             let hasError = error != nil
-            let errorType = error.map { String(describing: type(of: $0)) } ?? "none"
+            let nsError = error as NSError?
+            let errorDomain = nsError?.domain ?? "none"
+            let errorCode = nsError?.code ?? 0
             Task { @MainActor [weak owner] in
-                owner?.receiveRecognition(transcript: transcript, isFinal: isFinal, hasError: hasError, errorType: errorType)
+                owner?.receiveRecognition(transcript: transcript, isFinal: isFinal, hasError: hasError, errorDomain: errorDomain, errorCode: errorCode)
             }
         }
     }

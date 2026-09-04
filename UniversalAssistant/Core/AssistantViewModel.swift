@@ -48,11 +48,11 @@ final class AssistantViewModel {
 
     func toggleListening() {
         guard voiceInputEnabled else {
-            voiceInput.stop(); isListening = false; statusText = AppText.value("voice_disabled")
+            voiceInput.stop(reason: .voiceDisabled); isListening = false; statusText = AppText.value("voice_disabled")
             return
         }
         if isListening {
-            voiceInput.stop(); isListening = false; input = voiceInput.transcript; statusText = AppText.value("ready")
+            voiceInput.stop(reason: .userPressedStop); isListening = false; input = voiceInput.transcript; statusText = AppText.value("ready")
         } else {
             Task {
                 await voiceInput.start()
@@ -76,15 +76,22 @@ final class AssistantViewModel {
     func handleVoiceEvent(_ event: VoiceInputEvent) {
         switch event {
         case let .state(state):
+            LocalVoiceDiagnosticReport.shared.record("state_delivered_to_view_model", "state=\(String(describing: state))")
             applyVoiceState(state)
         case let .transcript(transcript, isFinal):
             input = transcript
+            LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_view_model", "length=\(transcript.count) final=\(isFinal)")
             Self.voiceLogger.notice("transcript_delivered_to_view_model length=\(transcript.count, privacy: .public) final=\(isFinal, privacy: .public)")
             if isFinal, !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Self.voiceLogger.notice("transcript_delivered_to_router")
+                LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_router", "length=\(transcript.count)")
                 submit()
             }
         }
+    }
+
+    func voiceDiagnosticReport() -> String {
+        LocalVoiceDiagnosticReport.shared.snapshot()
     }
 
     func handleQuickLaunch() {
@@ -100,11 +107,11 @@ final class AssistantViewModel {
 
     func setVoiceInputEnabled(_ enabled: Bool) {
         voiceInputEnabled = enabled
-        if !enabled { voiceInput.stop(); isListening = false; statusText = AppText.value("voice_disabled") }
+        if !enabled { voiceInput.stop(reason: .voiceDisabled); isListening = false; statusText = AppText.value("voice_disabled") }
     }
 
     func handleSceneBecameInactive() {
-        voiceInput.stop()
+        voiceInput.stop(reason: .sceneInactive)
         isListening = false
         resultDismissTask?.cancel()
     }
