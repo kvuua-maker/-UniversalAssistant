@@ -1,0 +1,30 @@
+[Unit]
+Description=UniversalAssistant internal physical diagnostics
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=universalassistant
+Group=universalassistant
+Restart=on-failure
+RestartSec=5
+Environment=UA_SERVER_HOST=127.0.0.1
+Environment=UA_SERVER_PORT=8787
+Environment=UA_DIAGNOSTIC_STORAGE=/mnt/HC_Volume_106589590/universalassistant-diagnostics/data
+ExecStart=/mnt/HC_Volume_106589590/universalassistant-diagnostics/bin/UniversalAssistantServer
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/mnt/HC_Volume_106589590/universalassistant-diagnostics/data
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+MemoryMax=256M
+CPUQuota=50%
+TasksMax=128
+
+[Install]
+WantedBy=multi-user.target

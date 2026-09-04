@@ -1,6 +1,6 @@
 # Dependency Inventory and Policy
 
-Last audited: 2026-09-02.
+Last audited: 2026-09-05.
 
 ## Runtime inventory
 
@@ -8,8 +8,11 @@ Last audited: 2026-09-02.
 | --- | --- | --- | --- | --- | --- |
 | Apple platform SDK frameworks | Xcode SDK selected by the checked-in project; minimum iOS 18 | SwiftUI, system capabilities and Apple service boundaries | Apple SDK agreement | Permission- and entitlement-gated system data; covered by the privacy manifest and capability-specific policy | Reviewed with every Xcode/iOS baseline change |
 | Swift standard library and Foundation | Swift 6 toolchain selected by Xcode/SwiftPM | App and backend language/runtime primitives | Toolchain/platform distribution terms | No additional third-party processor | Reviewed with every toolchain baseline change |
+| Vapor | SwiftPM 4.122.1, pinned by `Backend/Package.resolved` | Existing `UniversalAssistantServer` HTTP transport, localhost binding and typed routes | MIT | Receives only schema-validated diagnostic metadata through the owner VPS; no analytics SDK or external processor | Security and release review required before updates |
+| Swift Crypto | SwiftPM 3.15.1, pinned by `Backend/Package.resolved` | Cross-platform cryptography and App Attest assertion verification | Apache-2.0 | Cryptographic processing is local to the owner VPS; no data recipient | Security and release review required before updates |
+| AppAttest (Ian Sampson) | Git revision `f4fc1ea12c712d6833905d9c11c73c1601ae4001`, pinned by `Backend/Package.resolved` | Server-side verification of Apple's App Attest certificate chain, nonce, app identity and assertions | MIT | Processes Apple attestation objects and public device-bound key state only; no transcript/audio/user content | Revision is fixed; re-audit before change |
 
-There are no third-party runtime packages, SDKs, binary frameworks or copied provider/catalog media assets in the current repository. `Backend/Package.swift` has no external package declaration, and the Xcode targets have empty package-product dependency lists. Provider imagery is loaded only from runtime provider URLs and is never bundled as copied catalog content.
+The iOS Xcode targets contain no third-party runtime package or binary framework. The backend uses only the three inventoried source packages above; all are reproducibly pinned. There are no copied provider/catalog media assets. Provider imagery is loaded only from runtime provider URLs and is never bundled as copied catalog content.
 
 ## First-party bundled content
 

@@ -78,6 +78,9 @@ final class AssistantViewModel {
         case let .state(state):
             LocalVoiceDiagnosticReport.shared.record("state_delivered_to_view_model", "state=\(String(describing: state))")
             applyVoiceState(state)
+            if state == .idle, let session = LocalVoiceDiagnosticReport.shared.completedSession() {
+                Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
+            }
         case let .transcript(transcript, isFinal):
             input = transcript
             LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_view_model", "length=\(transcript.count) final=\(isFinal)")
@@ -118,15 +121,20 @@ final class AssistantViewModel {
 
     func submit() {
         resultDismissTask?.cancel()
+        LocalVoiceDiagnosticReport.shared.record("router_received")
         let command = commandEngine.parse(input)
         let summary = ResultSummary(request: command.originalText, intent: command.intent, risk: command.risk)
         interactionDecision = interactionEngine.decide(for: command)
         input = ""
         if command.needsClarification {
+            LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=clarification")
             resultState = .clarification(summary)
             statusText = AppText.value("clarification_needed")
         } else {
+            LocalVoiceDiagnosticReport.shared.record("router_accepted")
+            LocalVoiceDiagnosticReport.shared.record("execution_started")
             resultState = .recognized(summary)
+            LocalVoiceDiagnosticReport.shared.record("visible_result")
             statusText = AppText.value("request_recognized")
             if interactionDecision?.pattern == .compactAcknowledgement {
                 let duration = compactResultDuration

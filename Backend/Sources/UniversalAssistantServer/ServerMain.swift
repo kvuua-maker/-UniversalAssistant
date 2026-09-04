@@ -1,8 +1,9 @@
 import Foundation
+import Vapor
 
 public enum HealthStatus: String, Codable, Sendable { case healthy, degraded }
 
-public struct HealthResponse: Codable, Equatable, Sendable {
+public struct HealthResponse: Content, Codable, Equatable, Sendable {
     public let status: HealthStatus
     public let version: String
     public init(status: HealthStatus = .healthy, version: String = "v1") {
@@ -13,10 +14,14 @@ public struct HealthResponse: Codable, Equatable, Sendable {
 
 @main
 struct UniversalAssistantServer {
-    static func main() {
-        let response = HealthResponse()
-        if let data = try? JSONEncoder().encode(response), let output = String(data: data, encoding: .utf8) {
-            print(output)
-        }
+    static func main() async throws {
+        let environment = try Environment.detect()
+        let app = try await Application.make(environment)
+        defer { Task { try await app.asyncShutdown() } }
+        app.http.server.configuration.hostname = Environment.get("UA_SERVER_HOST") ?? "127.0.0.1"
+        app.http.server.configuration.port = Int(Environment.get("UA_SERVER_PORT") ?? "8787") ?? 8787
+        let storage = Environment.get("UA_DIAGNOSTIC_STORAGE") ?? "/var/lib/universalassistant-diagnostics"
+        try app.configurePhysicalDiagnostics(storageRoot: URL(fileURLWithPath: storage, isDirectory: true))
+        try await app.execute()
     }
 }

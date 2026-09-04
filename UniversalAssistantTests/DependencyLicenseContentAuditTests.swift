@@ -12,10 +12,13 @@ struct DependencyLicenseContentAuditTests {
         let project = try String(contentsOf: root.appendingPathComponent("UniversalAssistant.xcodeproj/project.pbxproj"), encoding: .utf8)
         let inventory = try String(contentsOf: root.appendingPathComponent("DEPENDENCIES.md"), encoding: .utf8)
 
-        #expect(!package.contains(".package("))
+        for (dependency, inventoryName) in [("vapor/vapor.git", "vapor"), ("apple/swift-crypto.git", "swift crypto"), ("iansampson/AppAttest.git", "appattest")] {
+            #expect(package.contains(dependency))
+            #expect(inventory.lowercased().contains(inventoryName), "Dependency missing from inventory: \(dependency)")
+        }
         #expect(!project.contains("XCRemoteSwiftPackageReference"))
         #expect(!project.contains("XCSwiftPackageProductDependency"))
-        #expect(inventory.contains("no third-party runtime packages"))
+        #expect(inventory.contains("reproducibly pinned"))
         #expect(inventory.contains("Version/source"))
         #expect(inventory.contains("Privacy implications"))
     }

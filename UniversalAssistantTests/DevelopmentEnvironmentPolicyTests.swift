@@ -10,11 +10,16 @@ struct DevelopmentEnvironmentPolicyTests {
     @Test func developmentInfrastructureIsNotAnApplicationRuntimeDependency() throws {
         let appRoot = root.appendingPathComponent("UniversalAssistant")
         let enumerator = try #require(FileManager.default.enumerator(at: appRoot, includingPropertiesForKeys: nil))
-        let forbidden = ["macincloud", "remote-control", "178.105.32.46", "id_rsa", "id_ed25519"]
+        let forbidden = ["macincloud", "remote-control", "id_rsa", "id_ed25519"]
         for case let file as URL in enumerator where file.pathExtension == "swift" {
             let source = try String(contentsOf: file, encoding: .utf8).lowercased()
             for token in forbidden {
                 #expect(!source.contains(token), "Development-only token in runtime source: \(token) at \(file.lastPathComponent)")
+            }
+            if source.contains("178.105.32.46") {
+                #expect(file.lastPathComponent == "PhysicalDiagnosticDelivery.swift")
+                #expect(source.contains("isinternaltestflight"))
+                #expect(source.contains("sandboxreceipt"))
             }
         }
     }

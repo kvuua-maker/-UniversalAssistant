@@ -1,0 +1,6 @@
+[Unit]
+Description=Check UniversalAssistant IP certificate expiry
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/universalassistant-certificate-expiry-check

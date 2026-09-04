@@ -1,0 +1,13 @@
+[Unit]
+Description=Expire bounded UniversalAssistant physical diagnostics
+
+[Service]
+Type=oneshot
+User=universalassistant
+Group=universalassistant
+ExecStart=/usr/bin/find /mnt/HC_Volume_106589590/universalassistant-diagnostics/data/sessions -type f -name *.json -mtime +7 -delete
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/mnt/HC_Volume_106589590/universalassistant-diagnostics/data/sessions

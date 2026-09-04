@@ -5,6 +5,7 @@ CODE_SIGN_STYLE = Automatic
 CODE_SIGNING_ALLOWED = YES
 DEVELOPMENT_TEAM = 9V5XXDXF3N
 APS_ENVIRONMENT = development
+APP_ATTEST_ENVIRONMENT = development
 ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
 ENABLE_TESTABILITY = YES
 INFOPLIST_KEY_NSMicrophoneUsageDescription = UniversalAssistant uses the microphone only when you start a voice command.

@@ -2,6 +2,7 @@ import AVFoundation
 import Observation
 import OSLog
 import Speech
+import UIKit
 
 enum VoiceInputState: Equatable, Sendable { case idle, requestingPermission, listening, denied, unavailable, failed }
 
@@ -20,18 +21,20 @@ private enum VoiceDiagnostic {
 }
 
 final class LocalVoiceDiagnosticReport: @unchecked Sendable {
+    struct Entry: Sendable { let timestamp: Date; let marker: String; let details: String }
     static let shared = LocalVoiceDiagnosticReport()
     private let lock = NSLock()
-    private var entries: [String] = []
+    private var entries: [Entry] = []
+    private var sessionID = UUID()
+    private var startedAt = Date()
 
     func reset() {
-        lock.lock(); entries = []; lock.unlock()
+        lock.lock(); entries = []; sessionID = UUID(); startedAt = Date(); lock.unlock()
     }
 
     func record(_ marker: String, _ details: String = "") {
         lock.lock()
-        let sequence = entries.count + 1
-        entries.append("\(sequence). \(marker)\(details.isEmpty ? "" : " | \(details)")")
+        entries.append(.init(timestamp: .now, marker: marker, details: details))
         if entries.count > 200 { entries.removeFirst(entries.count - 200) }
         lock.unlock()
         VoiceDiagnostic.logger.notice("\(marker, privacy: .public) \(details, privacy: .public)")
@@ -39,7 +42,33 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
 
     func snapshot() -> String {
         lock.lock(); defer { lock.unlock() }
-        return (["UniversalAssistant Local Voice Diagnostic", "No audio or transcript content recorded."] + entries).joined(separator: "\n")
+        let lines = entries.enumerated().map { "\($0.offset + 1). \($0.element.marker)\($0.element.details.isEmpty ? "" : " | \($0.element.details)")" }
+        return (["UniversalAssistant Local Voice Diagnostic", "No audio or transcript content recorded."] + lines).joined(separator: "\n")
+    }
+
+    @MainActor func completedSession() -> PhysicalDiagnosticSession? {
+        lock.lock(); defer { lock.unlock() }
+        guard entries.contains(where: { $0.marker == "start_listening_invoked" }),
+              entries.suffix(3).contains(where: { $0.marker == "state_transition" && $0.details.contains("idle") }) else { return nil }
+        let safeKeys: Set<String> = ["state", "granted", "available", "locale", "input", "sample_rate", "channels", "running", "count", "frames", "partial_results", "has_text", "final", "error_domain", "error_code", "partial_count", "final_count", "reason", "had_task", "had_request", "length", "input_available", "error_type"]
+        let events = entries.enumerated().map { index, entry in
+            let values = entry.details.split(separator: " ").compactMap { token -> (String, String)? in
+                let parts = token.split(separator: "=", maxSplits: 1).map(String.init)
+                guard parts.count == 2, safeKeys.contains(parts[0]) else { return nil }
+                return (parts[0], String(parts[1].prefix(256)))
+            }
+            return PhysicalDiagnosticEvent(sequence: index + 1, timestamp: entry.timestamp, marker: entry.marker, attributes: Dictionary(uniqueKeysWithValues: values))
+        }
+        let error = events.reversed().first { $0.attributes["error_domain"] != nil }
+        let failed = error != nil || entries.contains(where: { $0.marker == "voice_start_failed" })
+        let ended = entries.last?.timestamp ?? .now
+        return .init(schema: 1, sessionID: sessionID, liveTestID: "MS-800-LIVE-VOICE-QA", feature: "voice",
+                     appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
+                     build: Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0") ?? 0,
+                     environment: "internal-testflight", osVersion: UIDevice.current.systemVersion, deviceClass: UIDevice.current.model,
+                     startedAt: startedAt, endedAt: ended, durationMilliseconds: max(0, Int(ended.timeIntervalSince(startedAt) * 1_000)),
+                     result: failed ? .failure : .unknown, failureStage: error?.marker,
+                     errorDomain: error?.attributes["error_domain"], errorCode: error?.attributes["error_code"].flatMap(Int.init), events: events)
     }
 }
 
