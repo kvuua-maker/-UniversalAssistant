@@ -110,7 +110,14 @@ struct LocalCommandEngine: CommandParsing {
     func parse(_ text: String) -> StructuredCommand {
         let normalized = normalize(text); let language = detectLanguage(normalized)
         guard !normalized.isEmpty else { return unknown(text, normalized, language) }
-        let intent = priorityIntent(normalized) ?? Self.intentPatterns.first { _, patterns in patterns.contains { normalized.contains($0) } }?.0 ?? contextualIntent(normalized)
+        let specificPatternIntent = Self.intentPatterns.first { intent, patterns in
+            intent != .productSearch && patterns.contains { normalized.contains($0) }
+        }?.0
+        let intent = priorityIntent(normalized)
+            ?? specificPatternIntent
+            ?? semanticCapabilityIntent(normalized)
+            ?? Self.intentPatterns.first { _, patterns in patterns.contains { normalized.contains($0) } }?.0
+            ?? contextualIntent(normalized)
         var entities: [String: String] = [:]; var constraints = CommandConstraints()
         extractPrice(from: normalized, into: &constraints); extractSize(from: normalized, into: &constraints)
         extractMaximumWait(from: normalized, into: &constraints)
@@ -172,6 +179,25 @@ struct LocalCommandEngine: CommandParsing {
         if text.contains("таксі додому") && text.contains("чекати") { return .taxiSearch }
         return nil
     }
+    private func semanticCapabilityIntent(_ text: String) -> CommandIntent? {
+        let commerceActions = ["куп", "придба", "замов", "ціна", "вартіст", "скільки кошту", "сколько стоит", "покуп", "закаж", "цена", "стоимость", "buy", "purchase", "price"]
+        let placeActions = ["де ", "куди", "поруч", "поблизу", "зайти", "піти", "сходити", "рядом", "куда", "пойти", "nearby", "where"]
+        let placeKinds = ["кав", "кафе", "кофе", "кофейн", "ресторан", "бар", "піцер", "пиццер", "bakery", "cafe", "coffee shop", "restaurant"]
+        let fashionKinds = ["одяг", "взут", "футбол", "сороч", "куртк", "сукн", "штани", "кросів", "черев", "одеж", "обув", "рубаш", "плать", "брюк", "кроссов", "ботин", "clothing", "apparel", "footwear", "shirt", "jacket", "dress", "sneaker", "shoe"]
+        let groceryKinds = ["продукт", "супермаркет", "магазин", "молоч", "хліб", "овоч", "фрукт", "круп", "напій", "хлеб", "овощ", "grocer", "supermarket", "food store"]
+        let retailerSignals = ["сільпо", "silpo", "атб", "fora", "фора", "fozzy"]
+
+        if containsAny(text, placeActions), containsAny(text, placeKinds) { return .placeSearch }
+        guard containsAny(text, commerceActions) else { return nil }
+        if containsAny(text, retailerSignals) || containsAny(text, groceryKinds) { return .groceryBasket }
+        if containsAny(text, fashionKinds) { return .fashionDiscovery }
+        return .productSearch
+    }
+
+    private func containsAny(_ text: String, _ signals: [String]) -> Bool {
+        signals.contains(where: text.contains)
+    }
+
     private func extractPrice(from text: String, into constraints: inout CommandConstraints) {
         let pattern = #"(?:до|max(?:imum)?|under|bis|jusqu['’]?à)\s*([0-9]+(?:[.,][0-9]+)?)\s*(грн|uah|usd|eur|€|\$|₴|гривень)?"#
         guard let range = text.range(of: pattern, options: .regularExpression) else { return }

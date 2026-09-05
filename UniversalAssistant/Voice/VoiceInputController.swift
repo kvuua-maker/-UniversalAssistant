@@ -50,7 +50,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         guard entries.contains(where: { $0.marker == "start_listening_invoked" }),
               entries.contains(where: { $0.marker == "state_transition" && $0.details.contains("idle") }) else { return nil }
-        let safeKeys: Set<String> = ["state", "granted", "available", "locale", "input", "sample_rate", "channels", "running", "count", "frames", "partial_results", "has_text", "final", "error_domain", "error_code", "partial_count", "final_count", "reason", "had_task", "had_request", "length", "input_available", "error_type", "status"]
+        let safeKeys: Set<String> = ["state", "granted", "available", "locale", "input", "sample_rate", "channels", "running", "count", "frames", "partial_results", "punctuation", "task_hint", "api", "has_text", "final", "error_domain", "error_code", "partial_count", "final_count", "reason", "had_task", "had_request", "length", "input_available", "error_type", "status", "capability", "language", "mechanism", "kind"]
         let events = entries.enumerated().map { index, entry in
             let values = entry.details.split(separator: " ").compactMap { token -> (String, String)? in
                 let parts = token.split(separator: "=", maxSplits: 1).map(String.init)
@@ -94,6 +94,21 @@ private final class VoiceBufferDiagnosticCounter: @unchecked Sendable {
 
 enum VoiceAudioCaptureError: Error, Equatable {
     case invalidInputFormat
+}
+
+struct VoiceRecognitionRequestConfiguration: Sendable {
+    static let contextualVocabulary = [
+        "UniversalAssistant", "Telegram", "WhatsApp", "Viber", "Signal",
+        "Apple Music", "подкаст", "календар", "нагадування", "маршрут",
+        "погода", "контакт", "нотатка", "документ"
+    ]
+
+    func apply(to request: SFSpeechAudioBufferRecognitionRequest) {
+        request.shouldReportPartialResults = true
+        request.addsPunctuation = true
+        request.taskHint = .search
+        request.contextualStrings = Self.contextualVocabulary
+    }
 }
 
 @MainActor
@@ -257,8 +272,12 @@ final class VoiceInputController {
         guard let recognizer = SFSpeechRecognizer(locale: locale), recognizer.isAvailable else { setState(.unavailable); return }
         LocalVoiceDiagnosticReport.shared.record("recognizer_ready", "locale=\(locale.identifier) available=\(recognizer.isAvailable)")
         self.recognizer = recognizer
-        let request = SFSpeechAudioBufferRecognitionRequest(); request.shouldReportPartialResults = true
-        LocalVoiceDiagnosticReport.shared.record("recognition_request_created", "partial_results=true")
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        VoiceRecognitionRequestConfiguration().apply(to: request)
+        LocalVoiceDiagnosticReport.shared.record(
+            "recognition_request_created",
+            "api=sfspeechrecognizer partial_results=true punctuation=true task_hint=search"
+        )
         self.request = request
         let requestSink = VoiceRecognitionRequestSink(request)
         do {

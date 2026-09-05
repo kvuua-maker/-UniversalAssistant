@@ -7,16 +7,17 @@ struct AssistantHomeView: View {
     var body: some View {
         TabView {
             NavigationStack {
-                VStack(spacing: 28) {
-                    Spacer()
-                    Button(action: model.toggleListening) {
-                        Image(systemName: model.isListening ? "waveform.circle.fill" : "mic.circle.fill")
+                ScrollView {
+                    VStack(spacing: 28) {
+                        Spacer(minLength: 24)
+                        Button(action: model.toggleListening) {
+                            Image(systemName: model.isListening ? "waveform.circle.fill" : "mic.circle.fill")
                             .font(.system(size: 112))
                             .symbolRenderingMode(.palette)
                             .foregroundStyle(.white, Color.accentColor)
                     }
-                    .disabled(!model.voiceInputEnabled)
-                    .accessibilityLabel(model.isListening ? Text("stop_listening") : Text("start_listening"))
+                        .disabled(!model.voiceInputEnabled)
+                        .accessibilityLabel(model.isListening ? Text("stop_listening") : Text("start_listening"))
                     Toggle("voice_input_enabled", isOn: Binding(
                         get: { model.voiceInputEnabled }, set: { model.setVoiceInputEnabled($0) }
                     ))
@@ -32,14 +33,18 @@ struct AssistantHomeView: View {
                         Task { await model.reportWrongResult() }
                     })
                         .frame(maxWidth: 520)
-                    Spacer()
-                    TextField("type_command", text: $model.input)
-                        .textFieldStyle(.roundedBorder)
-                        .submitLabel(.go)
-                        .onSubmit(model.submit)
-                        .accessibilityIdentifier("assistant.input")
+                        Spacer(minLength: 24)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal)
                 }
-                .padding()
+                .scrollDismissesKeyboard(.interactively)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    AdaptiveRequestComposer(text: $model.input, submit: model.submit)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(.bar)
+                }
                 .navigationTitle("UniversalAssistant")
                 .toolbar {
                     NavigationLink(destination: QuickLaunchView(capabilities: .init(
@@ -79,6 +84,51 @@ struct AssistantHomeView: View {
                 }
             }
         }
+    }
+}
+
+enum RequestComposerLayoutPolicy {
+    static let minimumLines = 1
+    static let maximumLines = 6
+}
+
+private struct AdaptiveRequestComposer: View {
+    @Binding var text: String
+    let submit: () -> Void
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 10) {
+            TextField("type_command", text: $text, axis: .vertical)
+                .lineLimit(RequestComposerLayoutPolicy.minimumLines...RequestComposerLayoutPolicy.maximumLines)
+                .focused($isFocused)
+                .textFieldStyle(.plain)
+                .submitLabel(.send)
+                .accessibilityIdentifier("assistant.input")
+
+            Button(action: submitIfPossible) {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.title2)
+            }
+            .buttonStyle(.plain)
+            .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .accessibilityLabel(Text("send"))
+            .accessibilityIdentifier("assistant.input.send")
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(.separator.opacity(0.45), lineWidth: 0.5)
+        }
+        .frame(maxWidth: 640)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func submitIfPossible() {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        submit()
     }
 }
 

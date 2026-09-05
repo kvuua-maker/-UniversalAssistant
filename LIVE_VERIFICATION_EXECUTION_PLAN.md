@@ -469,3 +469,15 @@
 ## Перший пункт
 
 **Почати з `MS-800-LIVE-VOICE-QA` — Voice QA на фізичному iPhone.**
+
+
+## Consolidated current-HEAD voice/text/routing physical batch (pending Apple 90382 clearance)
+
+Run this batch only from the next single TestFlight build produced from the then-current authoritative HEAD. Build 22 is stale and must not be uploaded.
+
+1. Voice quality: dictate one natural Ukrainian request, one semantically different Russian request, one longer conversational request, and one request containing a proper name or brand. Confirm stable final punctuation/capitalization, automatic stop, editable visible text, and no unexplained “Find” prefix.
+2. Composer: type a short request; then type/paste a multiline long request with the keyboard visible. Confirm wrapping, adaptive growth, bounded scrolling, caret visibility, reachable send/microphone controls, dismissal/restoration, and edit a dictated request before submitting.
+3. Routing: submit one place/local-discovery request, one clothing/footwear commerce request, one grocery/store-price request, and one broad informational request. Confirm the specific canonical capability is selected before general web fallback and that truthful provider-unavailable states do not claim success.
+4. Pending system classes: verify the Russian informational path; create/query/update/delete one disposable Calendar event; create/query/complete/delete one disposable Reminder; then cover the smallest representative already-queued physical classes (installed-app/system handoff, Contacts/MessageUI, Photos/Files/camera, Maps/navigation, media, share extension) using their existing queue criteria.
+
+PASS evidence: exact-build physical UI/system results plus automatically uploaded privacy-safe VPS sessions showing speech API/locale/configuration, lifecycle, semantic capability, selected mechanism, and result stage, with no transcript/audio/private content. Each capability remains separately PASS/FAIL; this batch never converts external-provider absence into success.

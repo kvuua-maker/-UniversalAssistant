@@ -141,8 +141,11 @@ final class AssistantViewModel {
 
     func submit() {
         resultDismissTask?.cancel()
-        LocalVoiceDiagnosticReport.shared.record("router_received")
         let command = commandEngine.parse(input)
+        LocalVoiceDiagnosticReport.shared.record(
+            "router_received",
+            "capability=\(command.intent.rawValue) language=\(command.language.rawValue)"
+        )
         let summary = ResultSummary(request: command.originalText, intent: command.intent, risk: command.risk)
         interactionDecision = interactionEngine.decide(for: command)
         input = ""
@@ -155,8 +158,8 @@ final class AssistantViewModel {
             resultState = .clarification(summary)
             statusText = AppText.value("clarification_needed")
         } else {
-            LocalVoiceDiagnosticReport.shared.record("router_accepted")
-            LocalVoiceDiagnosticReport.shared.record("execution_started")
+            LocalVoiceDiagnosticReport.shared.record("router_accepted", "capability=\(command.intent.rawValue)")
+            LocalVoiceDiagnosticReport.shared.record("execution_started", "capability=\(command.intent.rawValue)")
             if command.intent == .weather {
                 weatherExecutionInFlight = true
                 resultState = .processing

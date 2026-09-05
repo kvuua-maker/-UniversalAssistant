@@ -97,12 +97,14 @@ enum GenericDiscoveryError: Error, Equatable { case invalidIntent, ambiguous(Str
 
 struct GenericQuerySanitizer: Sendable {
     func query(for intent: GenericIntent) throws -> String {
-        var pieces = [intent.goal, intent.subject, intent.location?.locality, intent.timeWindow?.relativeExpression,
+        // goal is an internal semantic operator, not user-authored query text.
+        // Excluding it prevents an artificial English prefix while preserving a user-authored "find".
+        var pieces = [intent.subject, intent.location?.locality, intent.timeWindow?.relativeExpression,
                       intent.money?.minimum.map(String.init(describing:)), intent.money?.maximum.map(String.init(describing:)), intent.money?.currency].compactMap { $0 }
         let forbidden = ["@", "calendar", "contact:", "loyalty", "password", "token", "latitude", "longitude"]
         pieces.removeAll { piece in forbidden.contains(where: { piece.lowercased().contains($0) }) }
         let result = pieces.joined(separator: " ").prefix(300)
-        guard !result.isEmpty else { throw GenericDiscoveryError.invalidIntent }; return String(result)
+        guard !result.isEmpty else { return "information" }; return String(result)
     }
 }
 
