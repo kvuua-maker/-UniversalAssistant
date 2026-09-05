@@ -61,6 +61,8 @@ struct PhysicalDiagnosticsTests {
         await #expect(throws: DiagnosticServerError.self) { _ = try await store.put(forbidden) }
         let validData = try JSONEncoder.canonical.encode(valid)
         try AppAttestBootstrapFailureStore.validateRawSchema(validData)
+        let clientTransportData = try JSONEncoder().encode(valid)
+        #expect(try AppAttestBootstrapFailureStore.decodeTransport(clientTransportData) == valid)
         var object = try #require(JSONSerialization.jsonObject(with: validData) as? [String: Any])
         object["arbitrary"] = "rejected"
         let unknownFieldData = try JSONSerialization.data(withJSONObject: object)

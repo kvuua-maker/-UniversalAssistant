@@ -215,6 +215,11 @@ actor AppAttestBootstrapFailureStore {
               }) else { throw DiagnosticServerError.invalidSchema }
     }
 
+    static func decodeTransport(_ data: Data) throws -> AppAttestBootstrapFailureReport {
+        try validateRawSchema(data)
+        return try JSONDecoder().decode(AppAttestBootstrapFailureReport.self, from: data)
+    }
+
     private let directory: URL
     private let retention: TimeInterval
     private let maximumRecords: Int
@@ -360,9 +365,9 @@ extension Application {
             }
             guard let buffer = request.body.data else { throw Abort(.badRequest) }
             let raw = Data(buffer.readableBytesView)
-            do { try AppAttestBootstrapFailureStore.validateRawSchema(raw) }
+            let report: AppAttestBootstrapFailureReport
+            do { report = try AppAttestBootstrapFailureStore.decodeTransport(raw) }
             catch { throw Abort(.badRequest) }
-            let report = try request.content.decode(AppAttestBootstrapFailureReport.self)
             do { _ = try await bootstrapFailures.put(report) }
             catch DiagnosticServerError.invalidSchema { throw Abort(.badRequest) }
             catch DiagnosticServerError.forbiddenField { throw Abort(.badRequest) }
