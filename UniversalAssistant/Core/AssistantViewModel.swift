@@ -20,6 +20,7 @@ final class AssistantViewModel {
     private let commandEngine: any CommandParsing
     private let interactionEngine: any InteractionDeciding
     private let weatherExecutor: any WeatherCommandExecuting
+    private let webSearchHandoff: ControlledWebSearchHandoff
     private let voiceInput = VoiceInputController()
     private let feedbackStore: UserFeedbackStore
     private let compactResultDuration: Duration
@@ -31,6 +32,7 @@ final class AssistantViewModel {
         commandEngine: any CommandParsing = LocalCommandEngine(),
         interactionEngine: any InteractionDeciding = InteractionDecisionEngine(),
         weatherExecutor: any WeatherCommandExecuting = ProductionWeatherCommandExecutor(),
+        webSearchHandoff: ControlledWebSearchHandoff = ControlledWebSearchHandoff(),
         feedbackStore: UserFeedbackStore = .shared,
         compactResultDuration: Duration = .seconds(2),
         presentationPreferenceStore: PresentationPreferenceStore = PresentationPreferenceStore()
@@ -38,6 +40,7 @@ final class AssistantViewModel {
         self.commandEngine = commandEngine
         self.interactionEngine = interactionEngine
         self.weatherExecutor = weatherExecutor
+        self.webSearchHandoff = webSearchHandoff
         self.feedbackStore = feedbackStore
         self.compactResultDuration = compactResultDuration
         self.presentationPreferenceStore = presentationPreferenceStore
@@ -130,6 +133,25 @@ final class AssistantViewModel {
         let summary = ResultSummary(request: command.originalText, intent: command.intent, risk: command.risk)
         interactionDecision = interactionEngine.decide(for: command)
         input = ""
+        if command.needsClarification, command.intent == .unknown {
+            do {
+                let genericIntent = try GenericIntentParser().parse(command.originalText)
+                let minimizedQuery = try GenericQuerySanitizer().query(for: genericIntent)
+                let safeCommand = StructuredCommand(originalText: minimizedQuery, normalizedText: minimizedQuery.lowercased(), language: command.language, intent: .unknown)
+                let destination = try webSearchHandoff.destination(for: safeCommand, structuredCapabilityAvailable: false)
+                resultState = .webHandoff(.init(query: command.originalText, destination: destination))
+                LocalVoiceDiagnosticReport.shared.record("router_accepted", "mechanism=web_handoff")
+                LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=web_handoff")
+                statusText = AppText.value("ready")
+            } catch GenericDiscoveryError.ambiguous {
+                LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=clarification")
+                resultState = .clarification(summary)
+                statusText = AppText.value("clarification_needed")
+            } catch {
+                presentFailure(message: AppText.value("request_unavailable"))
+            }
+            return
+        }
         if command.needsClarification {
             LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=clarification")
             resultState = .clarification(summary)
@@ -162,6 +184,21 @@ final class AssistantViewModel {
                     if let session = LocalVoiceDiagnosticReport.shared.completedSession() {
                         Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
                     }
+                }
+                return
+            }
+            if command.intent == .webSearch || command.intent == .unknown {
+                do {
+                    _ = try GenericIntentParser().parse(command.originalText)
+                    let destination = try webSearchHandoff.destination(for: command, structuredCapabilityAvailable: false)
+                    resultState = .webHandoff(.init(query: command.originalText, destination: destination))
+                    LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=web_handoff")
+                    statusText = AppText.value("ready")
+                } catch GenericDiscoveryError.ambiguous {
+                    resultState = .clarification(summary)
+                    statusText = AppText.value("clarification_needed")
+                } catch {
+                    presentFailure(message: AppText.value("request_unavailable"))
                 }
                 return
             }

@@ -3,3 +3,7 @@
 "voice_input_enabled" = "Voice input";
 "voice_disabled" = "Voice input is off — type your command";
 "processing" = "Working…";
+
+"web_search_ready" = "Search is ready";
+"web_search_open" = "Open web search";
+"request_unavailable" = "This request is currently unavailable";

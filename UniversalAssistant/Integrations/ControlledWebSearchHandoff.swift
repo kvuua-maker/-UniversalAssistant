@@ -10,10 +10,10 @@ struct ControlledWebSearchHandoff: Sendable {
     private let endpoint = URL(string: "https://www.google.com/search")!
 
     func destination(for command: StructuredCommand, structuredCapabilityAvailable: Bool) throws -> URL {
-        guard command.intent == .webSearch, !structuredCapabilityAvailable else {
+        guard [.webSearch, .unknown].contains(command.intent), !structuredCapabilityAvailable else {
             throw WebSearchHandoffError.structuredCapabilityAvailable
         }
-        let query = extractedQuery(from: command.originalText)
+        let query = extractedQuery(from: command.originalText, explicitWebSearch: command.intent == .webSearch)
         guard !query.isEmpty else { throw WebSearchHandoffError.emptyQuery }
         var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)
         components?.queryItems = [.init(name: "q", value: query)]
@@ -23,9 +23,10 @@ struct ControlledWebSearchHandoff: Sendable {
         return url
     }
 
-    private func extractedQuery(from text: String) -> String {
+    private func extractedQuery(from text: String, explicitWebSearch: Bool) -> String {
         let prefixes = ["пошукай в інтернеті", "поищи в интернете", "search the web", "im web suchen", "recherche sur le web"]
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard explicitWebSearch else { return trimmed }
         guard let range = prefixes.compactMap({ trimmed.range(of: $0, options: [.caseInsensitive, .diacriticInsensitive]) })
             .min(by: { $0.lowerBound < $1.lowerBound }) else { return "" }
         return trimmed[range.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)

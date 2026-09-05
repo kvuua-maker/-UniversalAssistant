@@ -5,11 +5,14 @@ enum AssistantResultState: Equatable, Sendable {
     case processing
     case recognized(ResultSummary)
     case weather(WeatherSnapshot)
+    case webHandoff(WebHandoffResult)
     case clarification(ResultSummary)
     case actionRequired(ActionRequiredSummary)
     case failure(UserFacingFailure)
     case expanded(ResultSummary)
 }
+
+struct WebHandoffResult: Equatable, Sendable { let query: String; let destination: URL }
 
 struct ActionRequiredSummary: Equatable, Sendable {
     let prompt: String

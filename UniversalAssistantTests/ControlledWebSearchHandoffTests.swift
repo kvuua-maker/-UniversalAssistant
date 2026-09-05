@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import UniversalAssistant
 
@@ -23,5 +24,14 @@ struct ControlledWebSearchHandoffTests {
         #expect(throws: WebSearchHandoffError.structuredCapabilityAvailable) {
             try handoff.destination(for: parser.parse("Покажи погоду"), structuredCapabilityAvailable: false)
         }
+    }
+
+    @Test func unknownInformationalRequestUsesPrivacySafeQuery() throws {
+        let command = LocalCommandEngine().parse("Хто такий Леонардо да Вінчі?")
+        let url = try ControlledWebSearchHandoff().destination(for: command, structuredCapabilityAvailable: false)
+        #expect(command.intent == .unknown)
+        #expect(command.needsClarification == true)
+        #expect(url.host == "www.google.com")
+        #expect(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first?.value == command.originalText)
     }
 }

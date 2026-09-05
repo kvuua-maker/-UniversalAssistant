@@ -3,3 +3,7 @@
 "voice_input_enabled" = "Голосовой ввод";
 "voice_disabled" = "Голосовой ввод выключен — введите команду";
 "processing" = "Обрабатываю…";
+
+"web_search_ready" = "Поиск готов";
+"web_search_open" = "Открыть веб-поиск";
+"request_unavailable" = "Этот запрос сейчас недоступен";

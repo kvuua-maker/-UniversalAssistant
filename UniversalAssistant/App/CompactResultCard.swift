@@ -19,6 +19,14 @@ struct CompactResultCard: View {
             card(summary, title: "request_recognized", tint: .blue)
         case .weather(let snapshot):
             WeatherResultCard(snapshot: snapshot, onReportIssue: onReportIssue)
+        case .webHandoff(let result):
+            VStack(alignment: .leading, spacing: 10) {
+                Text("web_search_ready").font(.headline)
+                Text(result.query).font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
+                Link("web_search_open", destination: result.destination).buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("assistant.web-search.open")
+            }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .accessibilityIdentifier("assistant.web-search-result")
         case .clarification(let summary):
             card(summary, title: "clarification_needed", tint: .orange)
         case .actionRequired(let value):

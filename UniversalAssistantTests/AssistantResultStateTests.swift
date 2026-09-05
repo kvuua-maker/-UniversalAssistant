@@ -20,7 +20,7 @@ struct AssistantResultStateTests {
 
     @Test func unknownCommandRequestsClarificationTruthfully() {
         let model = AssistantViewModel()
-        model.input = "невизначений запит"
+        model.input = "Щось цікаве"
         model.submit()
 
         guard case .clarification(let summary) = model.resultState else {
@@ -28,7 +28,7 @@ struct AssistantResultStateTests {
             return
         }
         #expect(summary.intent == .unknown)
-        #expect(summary.request == "невизначений запит")
+        #expect(summary.request == "Щось цікаве")
     }
 
     @Test func compactConfirmationDismissesAndNewSubmissionCancelsOldTimer() async throws {
@@ -66,5 +66,38 @@ struct AssistantResultStateTests {
         let summary = ResultSummary(request: "Trip options", intent: .travelPlan, risk: .informational)
         model.presentExpanded(summary)
         #expect(model.resultState == .expanded(summary))
+    }
+
+    @Test func novelInformationalWordingUsesTypedWebHandoffInsteadOfAcknowledgement() {
+        let model = AssistantViewModel()
+        model.input = "Чому небо змінює колір перед заходом сонця?"
+        model.submit()
+        guard case .webHandoff(let result) = model.resultState else {
+            Issue.record("Expected a typed web handoff")
+            return
+        }
+        #expect(result.destination.host == "www.google.com")
+        #expect(result.query.contains("небо"))
+    }
+
+    @Test func russianNovelInformationalWordingUsesSameMechanism() {
+        let model = AssistantViewModel()
+        model.input = "Почему листья меняют цвет осенью?"
+        model.submit()
+        guard case .webHandoff(let result) = model.resultState else {
+            Issue.record("Expected the same typed web handoff")
+            return
+        }
+        #expect(result.destination.host == "www.google.com")
+    }
+
+    @Test func genuinelyAmbiguousUnknownStillClarifies() {
+        let model = AssistantViewModel()
+        model.input = "Щось цікаве"
+        model.submit()
+        guard case .clarification = model.resultState else {
+            Issue.record("Expected bounded clarification")
+            return
+        }
     }
 }

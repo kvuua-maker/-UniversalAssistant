@@ -23,3 +23,7 @@
 "voice_input_enabled" = "Голосове введення";
 "voice_disabled" = "Голосове введення вимкнено — напишіть команду";
 "processing" = "Обробляю…";
+
+"web_search_ready" = "Пошук готовий";
+"web_search_open" = "Відкрити вебпошук";
+"request_unavailable" = "Цей запит зараз недоступний";
