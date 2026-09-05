@@ -13,6 +13,7 @@ final class AssistantViewModel {
     private(set) var resultState: AssistantResultState = .idle
     private(set) var shouldOfferSettings = false
     private(set) var interactionDecision: InteractionDecision?
+    private(set) var capabilityPresentation: CapabilityPresentation?
     private(set) var personalTasks: [PersonalTaskItem] = []
     private(set) var favorites: [FavoriteReference] = []
     var presentationPreferences = PresentationPreferences()
@@ -21,7 +22,9 @@ final class AssistantViewModel {
     private let interactionEngine: any InteractionDeciding
     private let weatherExecutor: any WeatherCommandExecuting
     private let webSearchHandoff: ControlledWebSearchHandoff
+    private let genericDiscovery: GenericUnknownRequestCoordinator?
     private let eventKitExecutor: any EventKitCommandExecuting
+    private let capabilityExecutor: any CanonicalCapabilityExecuting
     private let voiceInput = VoiceInputController()
     private let feedbackStore: UserFeedbackStore
     private let compactResultDuration: Duration
@@ -35,7 +38,9 @@ final class AssistantViewModel {
         interactionEngine: any InteractionDeciding = InteractionDecisionEngine(),
         weatherExecutor: any WeatherCommandExecuting = ProductionWeatherCommandExecutor(),
         webSearchHandoff: ControlledWebSearchHandoff = ControlledWebSearchHandoff(),
+        genericDiscovery: GenericUnknownRequestCoordinator? = nil,
         eventKitExecutor: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
+        capabilityExecutor: (any CanonicalCapabilityExecuting)? = nil,
         recorder: AudioRecorderController = AudioRecorderController(),
         feedbackStore: UserFeedbackStore = .shared,
         compactResultDuration: Duration = .seconds(2),
@@ -45,7 +50,9 @@ final class AssistantViewModel {
         self.interactionEngine = interactionEngine
         self.weatherExecutor = weatherExecutor
         self.webSearchHandoff = webSearchHandoff
+        self.genericDiscovery = genericDiscovery
         self.eventKitExecutor = eventKitExecutor
+        self.capabilityExecutor = capabilityExecutor ?? ProductionCanonicalCapabilityExecutor()
         self.recorder = recorder
         self.feedbackStore = feedbackStore
         self.compactResultDuration = compactResultDuration
@@ -140,22 +147,7 @@ final class AssistantViewModel {
         interactionDecision = interactionEngine.decide(for: command)
         input = ""
         if command.needsClarification, command.intent == .unknown {
-            do {
-                let genericIntent = try GenericIntentParser().parse(command.originalText)
-                let minimizedQuery = try GenericQuerySanitizer().query(for: genericIntent)
-                let safeCommand = StructuredCommand(originalText: minimizedQuery, normalizedText: minimizedQuery.lowercased(), language: command.language, intent: .unknown)
-                let destination = try webSearchHandoff.destination(for: safeCommand, structuredCapabilityAvailable: false)
-                resultState = .webHandoff(.init(query: command.originalText, destination: destination))
-                LocalVoiceDiagnosticReport.shared.record("router_accepted", "mechanism=web_handoff")
-                LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=web_handoff")
-                statusText = AppText.value("ready")
-            } catch GenericDiscoveryError.ambiguous {
-                LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=clarification")
-                resultState = .clarification(summary)
-                statusText = AppText.value("clarification_needed")
-            } catch {
-                presentFailure(message: AppText.value("request_unavailable"))
-            }
+            presentGeneralInformation(command, summary: summary)
             return
         }
         if command.needsClarification {
@@ -193,7 +185,7 @@ final class AssistantViewModel {
                 }
                 return
             }
-            if [.calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete, .reminderCreate, .reminderQuery].contains(command.intent) {
+            if [.calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete, .reminderCreate, .reminderQuery, .reminderComplete, .reminderDelete].contains(command.intent) {
                 if interactionDecision?.pattern == .confirmation {
                     requireAction(prompt: AppText.value("confirmation_required"), choices: [AppText.value("confirm"), AppText.value("cancel")])
                     LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=confirmation_required")
@@ -242,24 +234,102 @@ final class AssistantViewModel {
                 return
             }
             if command.intent == .webSearch || command.intent == .unknown {
-                do {
-                    _ = try GenericIntentParser().parse(command.originalText)
-                    let destination = try webSearchHandoff.destination(for: command, structuredCapabilityAvailable: false)
-                    resultState = .webHandoff(.init(query: command.originalText, destination: destination))
-                    LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=web_handoff")
-                    statusText = AppText.value("ready")
-                } catch GenericDiscoveryError.ambiguous {
-                    resultState = .clarification(summary)
-                    statusText = AppText.value("clarification_needed")
-                } catch {
-                    presentFailure(message: AppText.value("request_unavailable"))
-                }
+                presentGeneralInformation(command, summary: summary)
                 return
             }
-            presentFailure(message: AppText.value("request_unavailable"))
-            LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=no_production_executor")
+            if interactionDecision?.pattern == .confirmation {
+                requireAction(prompt: AppText.value("confirmation_required"), choices: [AppText.value("confirm"), AppText.value("cancel")])
+                LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=confirmation_required")
+                return
+            }
+            executeCanonicalCapability(command, summary: summary)
         }
     }
+
+    private func presentGeneralInformation(_ command: StructuredCommand, summary: ResultSummary) {
+        do {
+            _ = try GenericIntentParser().parse(command.originalText)
+        } catch GenericDiscoveryError.ambiguous {
+            resultState = .clarification(summary)
+            statusText = AppText.value("clarification_needed")
+            return
+        } catch {
+            presentFailure(message: AppText.value("request_unavailable"))
+            return
+        }
+        guard let genericDiscovery else {
+            presentGeneralWebFallback(command)
+            return
+        }
+        resultState = .processing
+        statusText = AppText.value("processing")
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let result = try await genericDiscovery.execute(text: command.originalText, parsed: command)
+                resultState = .deterministic(result)
+                statusText = AppText.value("ready")
+                LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=deterministic_general_information")
+            } catch GenericDiscoveryError.ambiguous {
+                resultState = .clarification(summary)
+                statusText = AppText.value("clarification_needed")
+            } catch {
+                presentGeneralWebFallback(command)
+            }
+        }
+    }
+
+    private func presentGeneralWebFallback(_ command: StructuredCommand) {
+        do {
+            let intent = try GenericIntentParser().parse(command.originalText)
+            let minimized = try GenericQuerySanitizer().query(for: intent)
+            let safe = StructuredCommand(originalText: minimized, normalizedText: minimized.lowercased(), language: command.language, intent: .unknown)
+            let destination = try webSearchHandoff.destination(for: safe, structuredCapabilityAvailable: false)
+            resultState = .webHandoff(.init(query: command.originalText, destination: destination))
+            statusText = AppText.value("ready")
+            LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=web_handoff_fallback")
+        } catch {
+            presentFailure(message: AppText.value("request_unavailable"))
+        }
+    }
+
+    private func executeCanonicalCapability(_ command: StructuredCommand, summary: ResultSummary) {
+        resultState = .processing
+        statusText = AppText.value("processing")
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                switch try await capabilityExecutor.execute(command) {
+                case let .result(result):
+                    resultState = .deterministic(result)
+                    LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=deterministic capability=\(command.intent.rawValue)")
+                case let .handoff(result):
+                    resultState = .webHandoff(result)
+                    LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=handoff capability=\(command.intent.rawValue)")
+                case let .presentation(presentation):
+                    capabilityPresentation = presentation
+                    resultState = .recognized(summary)
+                    LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=system_presentation capability=\(command.intent.rawValue)")
+                }
+                statusText = AppText.value("ready")
+            } catch let CanonicalCapabilityExecutionError.ambiguous(values) {
+                requireAction(prompt: AppText.value("clarification_needed"), choices: Array(values.prefix(3)))
+                statusText = AppText.value("clarification_needed")
+            } catch let CanonicalCapabilityExecutionError.missingParameter(parameter) {
+                LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=missing_parameter parameter=\(parameter)")
+                resultState = .clarification(summary)
+                statusText = AppText.value("clarification_needed")
+            } catch let CanonicalCapabilityExecutionError.externalProviderRequired(providerClass) {
+                LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=external_provider_required capability=\(providerClass)")
+                presentFailure(message: AppText.value("request_unavailable"))
+            } catch {
+                LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=capability_unavailable capability=\(command.intent.rawValue)")
+                presentFailure(message: AppText.value("request_unavailable"))
+            }
+        }
+    }
+
+    func dismissCapabilityPresentation() { capabilityPresentation = nil }
 
     func beginProcessing() {
         resultDismissTask?.cancel()

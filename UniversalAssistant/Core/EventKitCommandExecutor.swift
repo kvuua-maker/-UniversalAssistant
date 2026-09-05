@@ -2,7 +2,7 @@ import Foundation
 
 struct EventKitExecutionResult: Equatable, Sendable {
     enum Kind: Equatable, Sendable { case calendar, reminder }
-    enum Operation: Equatable, Sendable { case created, queried, updated, deleted }
+    enum Operation: Equatable, Sendable { case created, queried, updated, completed, deleted }
     let kind: Kind; let operation: Operation; let title: String; let detail: String; let itemCount: Int
 }
 enum EventKitExecutionError: Error, Equatable { case unsupportedIntent, unresolvedDateTime, missingSubject, itemNotFound, ambiguousItem }
@@ -14,7 +14,7 @@ struct EventKitCommandArgumentExtractor: Sendable {
         let locale = LanguageConfiguration(uiLanguage: .uk, commandLanguage: command.language).voiceLocale
         let resolution = NaturalDateTimeResolver().resolve(command.originalText, locale: locale, timeZone: timeZone, relativeTo: now)
         let dateTime: ResolvedNaturalDateTime? = if case let .resolved(value) = resolution { value } else { nil }
-        let action = ["запиши", "додай", "зустріч", "перенеси", "видали", "скасуй", "нагадай", "нагадати", "покажи", "календарі", "нагадування", "создай", "встречу", "удали", "напомни", "календаре", "напоминания", "add", "event", "move", "delete", "remind", "show", "calendar", "reminders", "termin", "erstellen", "verschieben", "löschen", "erinnere", "kalendertermine", "rendez-vous", "ajoute", "déplace", "supprime", "rappelle", "événements", "rappels"]
+        let action = ["запиши", "додай", "зустріч", "перенеси", "видали", "скасуй", "нагадай", "нагадати", "покажи", "календарі", "нагадування", "виконай", "познач", "виконаним", "заверши", "complete", "создай", "встречу", "удали", "напомни", "календаре", "напоминания", "add", "event", "move", "delete", "remind", "show", "calendar", "reminders", "termin", "erstellen", "verschieben", "löschen", "erinnere", "kalendertermine", "rendez-vous", "ajoute", "déplace", "supprime", "rappelle", "événements", "rappels"]
         let temporal = ["сьогодні", "завтра", "післязавтра", "сегодня", "послезавтра", "today", "tomorrow", "day after tomorrow", "heute", "morgen", "übermorgen", "aujourd’hui", "demain", "après-demain"]
         var subject = command.originalText
         for token in action + temporal { subject = subject.replacingOccurrences(of: token, with: " ", options: [.caseInsensitive, .diacriticInsensitive]) }
@@ -59,6 +59,13 @@ struct ProductionEventKitCommandExecutor: EventKitCommandExecuting {
             try await reminders.requestFullAccessIfNeeded(); let interval = args.dateTime.map { day($0.instant) }
             let values = try await reminders.incomplete(dueFrom: interval?.start, to: interval?.end)
             return .init(kind: .reminder, operation: .queried, title: String(localized: "eventkit_reminders"), detail: list(values.map { $0.draft.title }), itemCount: values.count)
+        case .reminderComplete:
+            let old = try await matchReminder(args.subject)
+            let value = try await reminders.update(identifier: old.identifier, with: old.draft, isCompleted: true)
+            return .init(kind: .reminder, operation: .completed, title: value.draft.title, detail: String(localized: "eventkit_updated"), itemCount: 1)
+        case .reminderDelete:
+            let old = try await matchReminder(args.subject); try await reminders.delete(identifier: old.identifier)
+            return .init(kind: .reminder, operation: .deleted, title: old.draft.title, detail: String(localized: "eventkit_deleted"), itemCount: 1)
         default: throw EventKitExecutionError.unsupportedIntent
         }
     }
@@ -68,6 +75,15 @@ struct ProductionEventKitCommandExecutor: EventKitCommandExecuting {
         let values = try await calendar.events(from: cal.date(byAdding: .day, value: -1, to: now())!, to: cal.date(byAdding: .day, value: 90, to: now())!)
         let matches = values.filter { $0.draft.title.localizedCaseInsensitiveContains(subject) || subject.localizedCaseInsensitiveContains($0.draft.title) }
         guard !matches.isEmpty else { throw EventKitExecutionError.itemNotFound }; guard matches.count == 1 else { throw EventKitExecutionError.ambiguousItem }; return matches[0]
+    }
+    private func matchReminder(_ subject: String?) async throws -> ReminderSnapshot {
+        guard let subject else { throw EventKitExecutionError.missingSubject }
+        try await reminders.requestFullAccessIfNeeded()
+        let values = try await reminders.incomplete(dueFrom: nil, to: nil)
+        let matches = values.filter { $0.draft.title.localizedCaseInsensitiveContains(subject) || subject.localizedCaseInsensitiveContains($0.draft.title) }
+        guard !matches.isEmpty else { throw EventKitExecutionError.itemNotFound }
+        guard matches.count == 1 else { throw EventKitExecutionError.ambiguousItem }
+        return matches[0]
     }
     private func day(_ date: Date) -> DateInterval { var cal = Calendar.autoupdatingCurrent; cal.timeZone = timeZone; let start = cal.startOfDay(for: date); return .init(start: start, end: cal.date(byAdding: .day, value: 1, to: start)!) }
     private func format(_ date: Date) -> String { date.formatted(date: .abbreviated, time: .shortened) }

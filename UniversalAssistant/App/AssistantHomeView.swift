@@ -1,3 +1,4 @@
+import MessageUI
 import SwiftUI
 
 struct AssistantHomeView: View {
@@ -59,6 +60,25 @@ struct AssistantHomeView: View {
         }
         .preferredColorScheme(model.presentationPreferences.appearance == .dark ? .dark : model.presentationPreferences.appearance == .light ? .light : nil)
         .tint(model.presentationPreferences.accent.color)
+        .sheet(item: Binding(
+            get: { model.capabilityPresentation },
+            set: { if $0 == nil { model.dismissCapabilityPresentation() } }
+        )) { presentation in
+            switch presentation {
+            case .camera:
+                SystemCameraCapture { _ in model.dismissCapabilityPresentation() }
+            case .documents:
+                AuthorizedDocumentPicker { _ in model.dismissCapabilityPresentation() }
+            case let .share(value):
+                SystemShareSheet(items: [value])
+            case let .message(recipients, body):
+                if MFMessageComposeViewController.canSendText() {
+                    SystemMessageComposer(recipients: recipients, body: body) { _ in model.dismissCapabilityPresentation() }
+                } else {
+                    Text("request_unavailable")
+                }
+            }
+        }
     }
 }
 

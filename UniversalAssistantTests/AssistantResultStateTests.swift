@@ -4,12 +4,13 @@ import Testing
 
 @MainActor
 struct AssistantResultStateTests {
-    @Test func parserOnlyCommandDoesNotMasqueradeAsSuccessfulExecution() {
+    @Test func parserOnlyCommandDoesNotMasqueradeAsSuccessfulExecution() async throws {
         let model = AssistantViewModel()
         model.input = "Створи нотатку"
         model.submit()
-        guard case .failure = model.resultState else {
-            Issue.record("Parser-only command must be truthful")
+        try await waitUntil { if case .clarification = model.resultState { true } else { false } }
+        guard case .clarification = model.resultState else {
+            Issue.record("A note without content must request the missing content")
             return
         }
         #expect(model.interactionDecision?.pattern == .directAction)
@@ -28,14 +29,14 @@ struct AssistantResultStateTests {
         #expect(summary.request == "Щось цікаве")
     }
 
-    @Test func newerParserOnlySubmissionRemainsTruthfullyUnavailable() {
+    @Test func newerParserOnlySubmissionRemainsTruthfullyUnavailable() async throws {
         let model = AssistantViewModel(compactResultDuration: .milliseconds(200))
-        model.input = "Створи нотатку"
-        model.submit()
         model.input = "Покажи нотатки"
         model.submit()
-        guard case .failure = model.resultState else {
-            Issue.record("Expected truthful unavailable result")
+        try await waitUntil { model.capabilityPresentation == .documents }
+        guard case .recognized = model.resultState,
+              case .documents? = model.capabilityPresentation else {
+            Issue.record("Expected the typed system document presentation")
             return
         }
     }
@@ -91,5 +92,13 @@ struct AssistantResultStateTests {
             Issue.record("Expected bounded clarification")
             return
         }
+    }
+
+    private func waitUntil(_ condition:   () -> Bool) async throws {
+        for _ in 0..<100 {
+            if condition() { return }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        Issue.record("Timed out waiting for ViewModel state")
     }
 }

@@ -1,0 +1,65 @@
+import Foundation
+import Testing
+@testable import UniversalAssistant
+
+@MainActor
+private final class CapabilityExecutorStub: CanonicalCapabilityExecuting {
+    let outcome: Result<CapabilityExecutionOutcome, Error>
+    private(set) var received: [CommandIntent] = []
+    init(_ outcome: Result<CapabilityExecutionOutcome, Error>) { self.outcome = outcome }
+    func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        received.append(command.intent)
+        return try outcome.get()
+    }
+}
+
+@MainActor
+struct CanonicalCapabilityExecutionTests {
+    @Test func parserGeneralizesCanonicalDeviceClassesAcrossUkrainianAndRussian() {
+        let parser = LocalCommandEngine()
+        #expect(parser.parse("Зроби фото").intent == .cameraCapture)
+        #expect(parser.parse("Найди фотографии с моря").intent == .photoSearch)
+        #expect(parser.parse("Знайди документ Договір").intent == .fileSearch)
+        #expect(parser.parse("Включи музыку Океан Эльзы").intent == .mediaSearch)
+        #expect(parser.parse("Знайди подкаст про історію").intent == .podcastSearch)
+        #expect(parser.parse("Отследи посылку AB123456789CD").intent == .parcelTrack)
+    }
+
+    @Test func parsedCapabilityUsesProductionExecutionBoundary() async throws {
+        let fact = ResultFact(id: "one", label: "Result", value: "Verified", state: .verified,
+                              source: "test-source", observedAt: .now, priority: 1)
+        let value = try DeterministicResultComposer().compose(primaryAnswer: "Done", facts: [fact])
+        let executor = CapabilityExecutorStub(.success(.result(value)))
+        let model = AssistantViewModel(capabilityExecutor: executor)
+        model.input = "Знайди контакт Олена"
+        model.submit()
+        try await waitUntil { if case .deterministic = model.resultState { true } else { false } }
+        #expect(executor.received == [.contactLookup])
+    }
+
+    @Test func systemPresentationIsTypedAndDoesNotMasqueradeAsCompletedAction() async throws {
+        let executor = CapabilityExecutorStub(.success(.presentation(.camera)))
+        let model = AssistantViewModel(capabilityExecutor: executor)
+        model.input = "Зроби фото"
+        model.submit()
+        try await waitUntil { model.capabilityPresentation == .camera }
+        #expect(executor.received == [.cameraCapture])
+    }
+
+    @Test func externalProviderRequirementFailsTruthfully() async throws {
+        let executor = CapabilityExecutorStub(.failure(CanonicalCapabilityExecutionError.externalProviderRequired("productSearch")))
+        let model = AssistantViewModel(capabilityExecutor: executor)
+        model.input = "Знайди черевики"
+        model.submit()
+        try await waitUntil { if case .failure = model.resultState { true } else { false } }
+        #expect(executor.received == [.productSearch])
+    }
+
+    private func waitUntil(_ condition: @escaping @MainActor () -> Bool) async throws {
+        for _ in 0..<100 {
+            if condition() { return }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        Issue.record("Timed out waiting for ViewModel state")
+    }
+}

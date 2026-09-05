@@ -7,6 +7,7 @@ enum AssistantResultState: Equatable, Sendable {
     case weather(WeatherSnapshot)
     case webHandoff(WebHandoffResult)
     case eventKit(EventKitExecutionResult)
+    case deterministic(DeterministicResult)
     case clarification(ResultSummary)
     case actionRequired(ActionRequiredSummary)
     case failure(UserFacingFailure)

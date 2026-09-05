@@ -5,7 +5,8 @@ enum CommandIntent: String, Codable, CaseIterable, Sendable {
     case placeSearch, productSearch, fashionDiscovery, groceryBasket, serviceSearch, restaurantSearch, reservation
     case taxiSearch, taxiCompare, navigation, routeSearch, routeAwareSearch
     case calendarCreate, calendarQuery, calendarUpdate, calendarDelete, reminderCreate, reminderQuery
-    case noteCreate, noteQuery, shoppingList, contactLookup, contactCall, messageCompose, weather
+    case reminderComplete, reminderDelete, noteCreate, noteQuery, shoppingList, contactLookup, contactCall, messageCompose
+    case photoSearch, fileSearch, cameraCapture, mediaSearch, podcastSearch, parcelTrack, weather
     case publicTransport, transportRoute, ticketSearch, ticketPurchaseHandoff, hotelSearch, travelPlan
     case emergency, webSearch, deviceAction, appAction, audioRecord, show, open, cancel, undo
     case multiStep, settings, help, contextualSelection, unknown
@@ -59,6 +60,14 @@ struct LocalCommandEngine: CommandParsing {
                         "voice recorder", "pause recording", "resume recording", "stop recording",
                         "sprachmemo", "aufnahme pausieren", "aufnahme fortsetzen", "aufnahme stoppen",
                         "enregistre audio", "pause l'enregistrement", "reprends l'enregistrement", "arrête l'enregistrement"]),
+        (.cameraCapture, ["зроби фото", "відкрий камеру", "сфотографуй", "сделай фото", "открой камеру", "take a photo", "open camera"]),
+        (.photoSearch, ["знайди фото", "покажи фото", "найди фото", "покажи фотографии", "find photos", "show photos"]),
+        (.fileSearch, ["знайди файл", "знайди документ", "найди файл", "найди документ", "find file", "find document"]),
+        (.reminderComplete, ["виконай нагадування", "познач нагадування виконаним", "заверши напоминание", "complete reminder"]),
+        (.reminderDelete, ["видали нагадування", "скасуй нагадування", "удали напоминание", "delete reminder"]),
+        (.podcastSearch, ["знайди подкаст", "увімкни подкаст", "найди подкаст", "включи подкаст", "find podcast", "play podcast"]),
+        (.mediaSearch, ["увімкни музику", "знайди пісню", "включи музыку", "найди песню", "play music", "find song"]),
+        (.parcelTrack, ["де моя посилка", "відстеж посилку", "где моя посылка", "отследи посылку", "track parcel", "track package"]),
         (.calendarCreate, ["запиши", "додай зустріч", "создай встреч", "add event", "termin erstellen", "ajoute un rendez-vous"]),
         (.reminderCreate, ["нагадай", "нагадати", "напомни", "напомнить", "remind", "erinnere", "rappelle"]),
         (.contactCall, ["подзвони", "позвони", "call ", "ruf ", "appelle"]),
@@ -108,9 +117,15 @@ struct LocalCommandEngine: CommandParsing {
         extractFashionFilters(from: text, normalized: normalized, into: &constraints)
         constraints.ordinal = ordinal(in: normalized)
         if intent == .open, let target = target(after: ["відкрий", "открой", "open", "öffne", "ouvre"], in: text) { entities["app"] = target }
+        if [.contactLookup, .contactCall].contains(intent), let value = target(after: ["знайди контакт", "найди контакт", "find contact", "подзвони", "позвони", "call"], in: text) { entities["contact"] = value }
+        if intent == .messageCompose, let value = target(after: ["напиши", "отправь сообщение", "message", "schreib", "écris"], in: text) { entities["recipient"] = value }
+        if [.photoSearch, .fileSearch, .mediaSearch, .podcastSearch].contains(intent) { entities["query"] = querySubject(for: intent, in: text) }
+        if intent == .parcelTrack, let tracking = normalized.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init).first(where: { $0.count >= 5 && $0.rangeOfCharacter(from: .decimalDigits) != nil }) { entities["tracking_number"] = tracking }
         if intent == .serviceSearch, let category = serviceCategory(in: normalized) { entities["serviceCategory"] = category }
+        if [.navigation, .routeSearch, .transportRoute].contains(intent), let value = target(after: ["веди", "маршрут до", "navigate", "route to", "побудуй маршрут до", "покажи маршрут до", "построй маршрут до", "як доїхати до", "как доехать до"], in: text) { entities["destination"] = value }
+        if [.placeSearch, .restaurantSearch, .serviceSearch].contains(intent), let value = locality(in: text) { entities["location"] = value }
         if intent == .audioRecord { entities["recorder_action"] = recorderAction(in: normalized) }
-        let risk: ActionRisk = intent == .emergency ? .emergency : ([.calendarCreate, .reminderCreate, .cancel, .undo].contains(intent) ? .reversible : .informational)
+        let risk: ActionRisk = intent == .emergency ? .emergency : ([.calendarCreate, .reminderCreate, .reminderComplete, .reminderDelete, .shoppingList, .cancel, .undo].contains(intent) ? .reversible : .informational)
         return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: intent, entities: entities, constraints: constraints, risk: risk, needsClarification: intent == .unknown)
     }
 
@@ -119,6 +134,17 @@ struct LocalCommandEngine: CommandParsing {
         if ["продовж", "resume recording", "aufnahme fortsetzen", "reprends l'enregistrement"].contains(where: text.contains) { return "resume" }
         if ["зупини", "stop recording", "aufnahme stoppen", "arrête l'enregistrement"].contains(where: text.contains) { return "stop" }
         return "start"
+    }
+
+    private func querySubject(for intent: CommandIntent, in text: String) -> String {
+        let prefixes: [String] = switch intent {
+        case .photoSearch: ["знайди фото", "покажи фото", "найди фото", "покажи фотографии", "find photos", "show photos"]
+        case .fileSearch: ["знайди файл", "знайди документ", "найди файл", "найди документ", "find file", "find document"]
+        case .mediaSearch: ["увімкни музику", "знайди пісню", "включи музыку", "найди песню", "play music", "find song"]
+        case .podcastSearch: ["знайди подкаст", "увімкни подкаст", "найди подкаст", "включи подкаст", "find podcast", "play podcast"]
+        default: []
+        }
+        return target(after: prefixes, in: text) ?? ""
     }
 
     private func normalize(_ text: String) -> String {
@@ -221,6 +247,16 @@ struct LocalCommandEngine: CommandParsing {
         ]
         return values.first(where: { $0.1.contains(where: text.contains) })?.0
     }
+    private func locality(in original: String) -> String? {
+        let patterns = [" поруч у ", " поруч в ", " рядом в ", " у ", " в ", " in ", " near "]
+        let value = patterns.compactMap { marker -> String? in
+            guard let range = original.range(of: marker, options: [.caseInsensitive, .diacriticInsensitive]) else { return nil }
+            let suffix = original[range.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+            return suffix.isEmpty ? nil : suffix
+        }.first
+        return value
+    }
+
     private func target(after prefixes: [String], in original: String) -> String? {
         let trimmed = original.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let range = prefixes.compactMap({ trimmed.range(of: $0, options: [.caseInsensitive, .diacriticInsensitive]) })

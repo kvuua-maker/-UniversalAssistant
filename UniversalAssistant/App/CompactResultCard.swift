@@ -27,6 +27,22 @@ struct CompactResultCard: View {
                     .accessibilityIdentifier("assistant.web-search.open")
             }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .accessibilityIdentifier("assistant.web-search-result")
+        case .deterministic(let result):
+            VStack(alignment: .leading, spacing: 10) {
+                Text(result.primaryAnswer).font(.headline)
+                ForEach(result.facts.prefix(5)) { fact in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(fact.label).font(.subheadline.weight(.semibold))
+                        if let value = fact.value { Text(value).font(.subheadline) }
+                        if let source = fact.source { Text(source).font(.caption).foregroundStyle(.secondary) }
+                    }
+                }
+                ForEach(result.actions.prefix(3)) { action in
+                    if let destination = action.destination { Link(action.title, destination: destination).buttonStyle(.bordered) }
+                }
+                ForEach(result.warnings, id: \.self) { Text($0).font(.caption).foregroundStyle(.secondary) }
+            }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .accessibilityIdentifier("assistant.deterministic-result")
         case .eventKit(let result):
             HStack(alignment: .top, spacing: 14) {
                 Image(systemName: result.kind == .calendar ? "calendar" : "checkmark.circle.fill")

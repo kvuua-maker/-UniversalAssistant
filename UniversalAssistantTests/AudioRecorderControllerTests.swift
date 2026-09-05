@@ -65,10 +65,14 @@ struct AudioRecorderControllerTests {
         #expect(backend.events == ["start"])
     }
 
-    @Test func unsupportedParsedIntentDoesNotMasqueradeAsExecuted() {
+    @Test func unsupportedParsedIntentDoesNotMasqueradeAsExecuted() async {
         let model = AssistantViewModel()
         model.input = "Увімкни ліхтарик"
         model.submit()
+        for _ in 0..<500 {
+            if case .failure = model.resultState { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
         guard case .failure = model.resultState else {
             Issue.record("Expected truthful unavailable result")
             return
