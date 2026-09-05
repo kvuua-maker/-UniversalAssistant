@@ -118,7 +118,7 @@ actor AppAttestRegistrationStore {
         self.directory = directory
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let file = directory.appendingPathComponent("app-attest-keys.json")
-        if let data = try? Data(contentsOf: file) { records = (try? JSONDecoder().decode([String: Record].self, from: data)) ?? [:] }
+        if let data = try? Data(contentsOf: file) { records = (try? JSONDecoder.canonical.decode([String: Record].self, from: data)) ?? [:] }
     }
 
     func record(for keyID: String) -> Record? { records[keyID] }
@@ -399,6 +399,12 @@ extension Application {
             catch DiagnosticServerError.forbiddenField { throw Abort(.badRequest) }
             return .init(sessionID: decoded.diagnostic.sessionID, status: "delivered", receivedAt: .now)
         }
+    }
+}
+
+extension JSONDecoder {
+    static var canonical: JSONDecoder {
+        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601; return decoder
     }
 }
 

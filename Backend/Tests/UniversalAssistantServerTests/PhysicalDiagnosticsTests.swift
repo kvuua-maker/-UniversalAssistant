@@ -43,6 +43,23 @@ struct PhysicalDiagnosticsTests {
         await #expect(throws: DiagnosticServerError.self) { try await store.advanceCounter(keyID: "key", to: 1) }
     }
 
+    @Test func registrationAndCounterSurviveServerRestart() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let first = try AppAttestRegistrationStore(directory: root)
+        let registeredAt = Date(timeIntervalSince1970: 1_000)
+        try await first.register(.init(keyID: "key", publicKey: Data([1, 2, 3]), counter: 4, environment: "production", registeredAt: registeredAt))
+        try await first.advanceCounter(keyID: "key", to: 5)
+
+        let restarted = try AppAttestRegistrationStore(directory: root)
+        let record = await restarted.record(for: "key")
+        #expect(record?.publicKey == Data([1, 2, 3]))
+        #expect(record?.counter == 5)
+        #expect(record?.environment == "production")
+        #expect(record?.registeredAt == registeredAt)
+        try await restarted.advanceCounter(keyID: "key", to: 6)
+    }
+
     @Test func bootstrapStoreAcceptsOnlyBoundedAllowlistedFailureMetadata() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
