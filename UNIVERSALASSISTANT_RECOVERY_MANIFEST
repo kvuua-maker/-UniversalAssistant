@@ -20,7 +20,7 @@ cc95b286cd291044d1ea71639e312381297fed5995d2bae0d050d85ad925ee46  2000619  Unive
 
 DESTINATIONS
 github_main: origin/main contains complete tracked source/history at source_head
-github_recovery_artifacts: pending dedicated non-secret recovery ref
+github_recovery_artifacts: refs/heads/disaster-recovery-2026-09-05 at 2adb9881b02bdb991ff35fd97712ed6764333675
 vps: /mnt/HC_Volume_106589590/universalassistant-recovery/2026-09-05-96557638
 third_independent_copy: pending owner-approved destination
 
@@ -35,7 +35,9 @@ git_bundle_verify: PASS; complete history; all refs recorded
 git_fsck_full: PASS (unreferenced local objects reported but no corruption)
 source_snapshot_list_read: PASS
 vps_nonsecret_hash_match: PASS
-restore_drill: in_progress_at_manifest_creation
+source_restore_drill: PASS; cloned bundle to fresh temporary repository at expected HEAD
+backend_restore_build_tests: PASS; 114 tests in 28 suites
+ios_release_restore_build: PASS; clean unsigned Release simulator build from restored repository
 signing_recovery: NOT_VERIFIED until protected identity import/use is tested on replacement environment
 full_disaster_recovery: NOT_VERIFIED while secure artifacts and independent third copy are pending
 
