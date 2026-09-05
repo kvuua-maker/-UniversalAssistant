@@ -76,7 +76,11 @@
         "UniversalAssistant/Core/NaturalDateTimeResolver.swift",
         "UniversalAssistantTests/CalendarServiceTests.swift",
         "UniversalAssistantTests/ReminderServiceTests.swift",
-        "UniversalAssistantTests/NaturalDateTimeResolverTests.swift"
+        "UniversalAssistantTests/NaturalDateTimeResolverTests.swift",
+        "UniversalAssistant/Core/EventKitCommandExecutor.swift",
+        "UniversalAssistant/Core/AssistantViewModel.swift",
+        "UniversalAssistant/App/CompactResultCard.swift",
+        "Production-path targeted EventKit tests: CalendarServiceTests, ReminderServiceTests, NaturalDateTimeResolverTests"
       ],
       "required_live_action": "Grant Calendar and Reminders access; create, query, reschedule, complete and delete controlled records using five-language natural dates; verify exact EventKit identifiers and authoritative read-back after every mutation, then deny permission and verify fail-closed behavior.",
       "expected_result": "Only resolved authorized records mutate, each mutation is visible in the system app and read back by exact identifier, timezone is preserved, and denial/ambiguity never produces fake success.",
@@ -1334,7 +1338,7 @@
       "requirement_id": "MS-104-LIVE-UNIVERSAL-INFORMATION-HANDOFF",
       "service_provider": "UniversalAssistant production entry + privacy-minimized HTTPS web handoff on physical Internal TestFlight device",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
-      "missing_dependency": "Physical confirmation that semantically varied Ukrainian/Russian informational requests produce the typed web-search result and open the intended encoded query without generic acknowledgement or false execution.",
+      "missing_dependency": "Build 21 physically verified the Ukrainian web handoff and ambiguity gate; the Russian informational request exposed a semantic product-search collision. A reusable multilingual informational-goal precedence fix is locally verified and awaits physical retest.",
       "dependency_owner": "Owner/device tester",
       "local_evidence": [
         "UniversalAssistant/Core/AssistantViewModel.swift",
@@ -1345,7 +1349,7 @@
         "UniversalAssistantTests/ControlledWebSearchHandoffTests.swift",
         "Full iOS regression: 567 tests passed; backend regression: 114 tests passed; commit 1596a6a"
       ],
-      "required_live_action": "Install Internal TestFlight Build 21. Submit one novel Ukrainian factual question and one differently worded Russian factual question not present in parser fixtures; for each, verify the native Search is ready card appears, tap Open web search, and confirm Safari opens an encoded search for the requested subject. Then submit Щось цікаве and confirm one clarification rather than a fabricated result.",
+      "required_live_action": "Install the next Internal TestFlight build. Submit the Russian informational request Найди свежую информацию о компании Nvidia; verify the native Search is ready card appears, tap Open web search, and confirm Safari opens the intended encoded query. The Ukrainian handoff and Щось цікаве clarification are already physically evidenced on Build 21.",
       "expected_result": "Both legitimate novel informational requests converge on the same typed HTTPS web-handoff mechanism and open the correct minimized query; the ambiguous request asks one clarification; no request is reported as executed merely because it was recognized.",
       "created_at": "2026-09-05T15:25:00+02:00",
       "last_checked": "2026-09-05T15:25:00+02:00",

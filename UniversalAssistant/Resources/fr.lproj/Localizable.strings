@@ -7,3 +7,9 @@
 "web_search_ready" = "Recherche prête";
 "web_search_open" = "Ouvrir la recherche web";
 "request_unavailable" = "Cette demande est actuellement indisponible";
+
+"eventkit_calendar" = "Calendrier";
+"eventkit_reminders" = "Rappels";
+"eventkit_deleted" = "Supprimé";
+"eventkit_empty" = "Aucun élément trouvé";
+"eventkit_unavailable" = "Le calendrier ou les rappels sont indisponibles";

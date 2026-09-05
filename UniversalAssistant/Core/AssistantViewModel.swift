@@ -21,18 +21,21 @@ final class AssistantViewModel {
     private let interactionEngine: any InteractionDeciding
     private let weatherExecutor: any WeatherCommandExecuting
     private let webSearchHandoff: ControlledWebSearchHandoff
+    private let eventKitExecutor: any EventKitCommandExecuting
     private let voiceInput = VoiceInputController()
     private let feedbackStore: UserFeedbackStore
     private let compactResultDuration: Duration
     private let presentationPreferenceStore: PresentationPreferenceStore
     private var resultDismissTask: Task<Void, Never>?
     private var weatherExecutionInFlight = false
+    private var eventKitExecutionInFlight = false
 
     init(
         commandEngine: any CommandParsing = LocalCommandEngine(),
         interactionEngine: any InteractionDeciding = InteractionDecisionEngine(),
         weatherExecutor: any WeatherCommandExecuting = ProductionWeatherCommandExecutor(),
         webSearchHandoff: ControlledWebSearchHandoff = ControlledWebSearchHandoff(),
+        eventKitExecutor: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
         feedbackStore: UserFeedbackStore = .shared,
         compactResultDuration: Duration = .seconds(2),
         presentationPreferenceStore: PresentationPreferenceStore = PresentationPreferenceStore()
@@ -41,6 +44,7 @@ final class AssistantViewModel {
         self.interactionEngine = interactionEngine
         self.weatherExecutor = weatherExecutor
         self.webSearchHandoff = webSearchHandoff
+        self.eventKitExecutor = eventKitExecutor
         self.feedbackStore = feedbackStore
         self.compactResultDuration = compactResultDuration
         self.presentationPreferenceStore = presentationPreferenceStore
@@ -85,7 +89,7 @@ final class AssistantViewModel {
         case let .state(state):
             LocalVoiceDiagnosticReport.shared.record("state_delivered_to_view_model", "state=\(String(describing: state))")
             applyVoiceState(state)
-            if state == .idle, !weatherExecutionInFlight, let session = LocalVoiceDiagnosticReport.shared.completedSession() {
+            if state == .idle, !weatherExecutionInFlight, !eventKitExecutionInFlight, let session = LocalVoiceDiagnosticReport.shared.completedSession() {
                 Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
             }
         case let .transcript(transcript, isFinal):
@@ -181,6 +185,36 @@ final class AssistantViewModel {
                         statusText = unavailable
                     }
                     weatherExecutionInFlight = false
+                    if let session = LocalVoiceDiagnosticReport.shared.completedSession() {
+                        Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
+                    }
+                }
+                return
+            }
+            if [.calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete, .reminderCreate, .reminderQuery].contains(command.intent) {
+                if interactionDecision?.pattern == .confirmation {
+                    requireAction(prompt: AppText.value("confirmation_required"), choices: [AppText.value("confirm"), AppText.value("cancel")])
+                    LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=confirmation_required")
+                    return
+                }
+                eventKitExecutionInFlight = true
+                resultState = .processing
+                statusText = AppText.value("processing")
+                LocalVoiceDiagnosticReport.shared.record("execution_started", "mechanism=eventkit")
+                Task { [weak self] in
+                    guard let self else { return }
+                    do {
+                        let result = try await eventKitExecutor.execute(command)
+                        resultState = .eventKit(result)
+                        statusText = AppText.value("ready")
+                        LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=eventkit")
+                    } catch EventKitExecutionError.unresolvedDateTime, EventKitExecutionError.missingSubject, EventKitExecutionError.ambiguousItem {
+                        resultState = .clarification(summary)
+                        statusText = AppText.value("clarification_needed")
+                    } catch {
+                        presentFailure(message: String(localized: "eventkit_unavailable"))
+                    }
+                    eventKitExecutionInFlight = false
                     if let session = LocalVoiceDiagnosticReport.shared.completedSession() {
                         Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
                     }

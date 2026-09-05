@@ -27,6 +27,17 @@ struct CompactResultCard: View {
                     .accessibilityIdentifier("assistant.web-search.open")
             }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .accessibilityIdentifier("assistant.web-search-result")
+        case .eventKit(let result):
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: result.kind == .calendar ? "calendar" : "checkmark.circle.fill")
+                    .font(.title2).foregroundStyle(.blue).frame(width: 32)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(result.title).font(.headline)
+                    Text(result.detail).font(.subheadline).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .accessibilityIdentifier("assistant.eventkit-result")
         case .clarification(let summary):
             card(summary, title: "clarification_needed", tint: .orange)
         case .actionRequired(let value):

@@ -7,3 +7,9 @@
 "web_search_ready" = "Search is ready";
 "web_search_open" = "Open web search";
 "request_unavailable" = "This request is currently unavailable";
+
+"eventkit_calendar" = "Calendar";
+"eventkit_reminders" = "Reminders";
+"eventkit_deleted" = "Deleted";
+"eventkit_empty" = "No matching items";
+"eventkit_unavailable" = "Calendar or reminders are unavailable";

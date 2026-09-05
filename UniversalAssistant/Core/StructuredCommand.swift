@@ -139,6 +139,8 @@ struct LocalCommandEngine: CommandParsing {
         ["другий", "друга", "второй", "second", "zweite", "deuxième", "цей", "this"].contains(text) ? .contextualSelection : .unknown
     }
     private func priorityIntent(_ text: String) -> CommandIntent? {
+        let informationalGoals = ["інформац", "відомо про", "хто зараз", "свежую информацию", "информацию о", "кто сейчас", "information about", "latest information", "who is", "informationen über", "wer ist", "informations sur", "qui est"]
+        if informationalGoals.contains(where: text.contains) { return .unknown }
         if text.contains("перенеси стоматолога") { return .calendarUpdate }
         if text.contains("скасуй завтра стоматолога") { return .calendarDelete }
         if text.contains("таксі додому") && text.contains("чекати") { return .taxiSearch }

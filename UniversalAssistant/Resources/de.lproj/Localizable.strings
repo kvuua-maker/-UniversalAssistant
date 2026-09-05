@@ -7,3 +7,9 @@
 "web_search_ready" = "Websuche bereit";
 "web_search_open" = "Websuche öffnen";
 "request_unavailable" = "Diese Anfrage ist derzeit nicht verfügbar";
+
+"eventkit_calendar" = "Kalender";
+"eventkit_reminders" = "Erinnerungen";
+"eventkit_deleted" = "Gelöscht";
+"eventkit_empty" = "Keine Einträge gefunden";
+"eventkit_unavailable" = "Kalender oder Erinnerungen sind nicht verfügbar";

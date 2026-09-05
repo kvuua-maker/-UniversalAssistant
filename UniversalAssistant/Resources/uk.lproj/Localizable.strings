@@ -27,3 +27,9 @@
 "web_search_ready" = "Пошук готовий";
 "web_search_open" = "Відкрити вебпошук";
 "request_unavailable" = "Цей запит зараз недоступний";
+
+"eventkit_calendar" = "Календар";
+"eventkit_reminders" = "Нагадування";
+"eventkit_deleted" = "Видалено";
+"eventkit_empty" = "Нічого не знайдено";
+"eventkit_unavailable" = "Календар або нагадування недоступні";
