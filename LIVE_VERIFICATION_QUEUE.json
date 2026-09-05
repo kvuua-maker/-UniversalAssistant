@@ -106,8 +106,8 @@
     {
       "requirement_id": "MS-800-LIVE-VOICE-QA",
       "service_provider": "Physical iPhone speech recognition",
-      "current_status": "BLOCKED_BY_CONFIRMED_DEFECT",
-      "missing_dependency": "Build 14 authenticated physical evidence proved recognition delivered four partial transcripts but never finalized the still-open continuous request, so submit/router/result could not occur. Build 15 contains the minimum bounded end-of-speech request finalization and requires one physical round-trip retest.",
+      "current_status": "VERIFIED_LIVE",
+      "missing_dependency": null,
       "dependency_owner": "Owner",
       "local_evidence": [
         "UniversalAssistant/Voice/VoiceInputController.swift",
@@ -120,11 +120,11 @@
         "Physical Build 14 authenticated session 7258D6C6-3A4A-4F50-81F5-D7ED1539E890: capture/task/buffers healthy, four non-final partial transcripts reached ViewModel/UI, no final result or router marker, only manual stop",
         "Build 15: VoiceInputController closes/finishes the existing recognition request after bounded quiet following the latest non-empty partial; focused voice tests and full iOS 556/556, backend 113/113"
       ],
-      "required_live_action": "Install UniversalAssistant 0.1.0 Build 15 from Internal TestFlight, press the main microphone once, say «Яка погода у Києві?» once, then wait without pressing stop or Copy Diagnostics.",
-      "expected_result": "Voice recognition produces a final transcript, automatically submits it through the existing router, shows an actual visible result, and automatically uploads the privacy-safe Build 15 session to the owner VPS.",
+      "required_live_action": "Completed on physical Internal TestFlight Build 15 without manual stop or Copy Diagnostics.",
+      "expected_result": "Voice recognition produced a final transcript, submitted through the existing router, displayed «Команда розпізнана», stopped automatically, and uploaded the privacy-safe authenticated session.",
       "created_at": "2026-09-02T12:58:00+02:00",
-      "last_checked": "2026-09-05T02:55:52+02:00",
-      "completion_evidence": null
+      "last_checked": "2026-09-05T10:57:09+02:00",
+      "completion_evidence": "Authenticated VPS session BEB97BDB-8978-443B-8A95-A935AB64AED7 sequences final transcript, transcript_delivered_to_router, router_received, router_accepted, execution_started, visible_result, recognitionFinal stop, and idle; owner observed the visible result."
     },
     {
       "requirement_id": "MS-741-742-745-747-LIVE-DEPLOY",

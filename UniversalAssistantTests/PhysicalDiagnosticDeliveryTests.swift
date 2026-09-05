@@ -40,6 +40,36 @@ struct PhysicalDiagnosticDeliveryTests {
         #expect(session?.events.flatMap(\.attributes.values).contains(where: { $0.contains("spoken private text") }) == false)
     }
 
+    @Test @MainActor func successfulVoiceChainIsNotMisclassifiedByNoErrorCallbackMetadata() {
+        let report = LocalVoiceDiagnosticReport.shared
+        report.reset()
+        report.record("start_listening_invoked")
+        report.record("recognition_callback", "error_domain=none error_code=0 final=true")
+        report.record("router_received")
+        report.record("router_accepted")
+        report.record("execution_started")
+        report.record("visible_result")
+        report.record("state_transition", "state=idle")
+        let session = report.completedSession()
+        #expect(session?.result == .success)
+        #expect(session?.failureStage == nil)
+        #expect(session?.errorDomain == nil)
+        #expect(session?.errorCode == nil)
+    }
+
+    @Test @MainActor func realRecognitionErrorRemainsFailure() {
+        let report = LocalVoiceDiagnosticReport.shared
+        report.reset()
+        report.record("start_listening_invoked")
+        report.record("recognition_callback", "error_domain=kAFAssistantErrorDomain error_code=1110 final=false")
+        report.record("state_transition", "state=idle")
+        let session = report.completedSession()
+        #expect(session?.result == .failure)
+        #expect(session?.failureStage == "recognition_callback")
+        #expect(session?.errorDomain == "kAFAssistantErrorDomain")
+        #expect(session?.errorCode == 1110)
+    }
+
     @Test func diagnosticReportUploadsMetadataNotTranscriptOrAudio() throws {
         let data = try JSONEncoder.diagnostic.encode(sampleSession())
         let text = String(decoding: data, as: UTF8.self)

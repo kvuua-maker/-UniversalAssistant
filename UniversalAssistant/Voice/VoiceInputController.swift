@@ -59,15 +59,20 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
             }
             return PhysicalDiagnosticEvent(sequence: index + 1, timestamp: entry.timestamp, marker: entry.marker, attributes: Dictionary(uniqueKeysWithValues: values))
         }
-        let error = events.reversed().first { $0.attributes["error_domain"] != nil }
+        let error = events.reversed().first {
+            let domain = $0.attributes["error_domain"]
+            let code = $0.attributes["error_code"].flatMap(Int.init) ?? 0
+            return (domain != nil && domain != "none") || code != 0
+        }
         let failed = error != nil || entries.contains(where: { $0.marker == "voice_start_failed" })
+        let succeeded = entries.contains(where: { $0.marker == "visible_result" })
         let ended = entries.last?.timestamp ?? .now
         return .init(schema: 1, sessionID: sessionID, liveTestID: "MS-800-LIVE-VOICE-QA", feature: "voice",
                      appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
                      build: Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0") ?? 0,
                      environment: "internal-testflight", osVersion: UIDevice.current.systemVersion, deviceClass: UIDevice.current.model,
                      startedAt: startedAt, endedAt: ended, durationMilliseconds: max(0, Int(ended.timeIntervalSince(startedAt) * 1_000)),
-                     result: failed ? .failure : .unknown, failureStage: error?.marker,
+                     result: failed ? .failure : (succeeded ? .success : .unknown), failureStage: error?.marker,
                      errorDomain: error?.attributes["error_domain"], errorCode: error?.attributes["error_code"].flatMap(Int.init), events: events)
     }
 }
