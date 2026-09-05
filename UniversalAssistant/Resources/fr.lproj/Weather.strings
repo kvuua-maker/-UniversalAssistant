@@ -1,0 +1,5 @@
+"weather_current_location" = "Position actuelle";
+"weather_feels_like_format" = "Ressenti %.0f °C";
+"weather_source_format" = "Source : %@";
+"weather_unavailable" = "La météo actuelle est indisponible";
+"weather_retry" = "Réessayer";

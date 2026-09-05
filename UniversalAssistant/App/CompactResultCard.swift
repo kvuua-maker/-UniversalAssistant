@@ -17,6 +17,8 @@ struct CompactResultCard: View {
             .accessibilityIdentifier("assistant.processing")
         case .recognized(let summary):
             card(summary, title: "request_recognized", tint: .blue)
+        case .weather(let snapshot):
+            WeatherResultCard(snapshot: snapshot, onReportIssue: onReportIssue)
         case .clarification(let summary):
             card(summary, title: "clarification_needed", tint: .orange)
         case .actionRequired(let value):

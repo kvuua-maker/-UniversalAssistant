@@ -1,0 +1,5 @@
+"weather_current_location" = "Текущее местоположение";
+"weather_feels_like_format" = "Ощущается как %.0f °C";
+"weather_source_format" = "Источник: %@";
+"weather_unavailable" = "Не удалось получить актуальную погоду";
+"weather_retry" = "Повторить";

@@ -1,0 +1,5 @@
+"weather_current_location" = "Current location";
+"weather_feels_like_format" = "Feels like %.0f °C";
+"weather_source_format" = "Source: %@";
+"weather_unavailable" = "Current weather is unavailable";
+"weather_retry" = "Try again";

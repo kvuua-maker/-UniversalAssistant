@@ -1,0 +1,5 @@
+"weather_current_location" = "Поточне місце";
+"weather_feels_like_format" = "Відчувається як %.0f °C";
+"weather_source_format" = "Джерело: %@";
+"weather_unavailable" = "Не вдалося отримати актуальну погоду";
+"weather_retry" = "Спробувати ще раз";

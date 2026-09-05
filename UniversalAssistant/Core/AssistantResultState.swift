@@ -4,6 +4,7 @@ enum AssistantResultState: Equatable, Sendable {
     case idle
     case processing
     case recognized(ResultSummary)
+    case weather(WeatherSnapshot)
     case clarification(ResultSummary)
     case actionRequired(ActionRequiredSummary)
     case failure(UserFacingFailure)

@@ -5,17 +5,17 @@ import Testing
 struct AssistantResultStateTests {
     @Test func successfulCommandProducesCompactResult() {
         let model = AssistantViewModel()
-        model.input = "Weather tomorrow"
+        model.input = "Створи нотатку"
         model.submit()
 
         guard case .recognized(let summary) = model.resultState else {
             Issue.record("Expected a recognized result")
             return
         }
-        #expect(summary.request == "Weather tomorrow")
-        #expect(summary.intent == .weather)
-        #expect(summary.symbolName == "cloud.sun.fill")
-        #expect(model.interactionDecision?.pattern == .compactAcknowledgement)
+        #expect(summary.request == "Створи нотатку")
+        #expect(summary.intent == .noteCreate)
+        #expect(summary.symbolName == "sparkles")
+        #expect(model.interactionDecision?.pattern == .directAction)
     }
 
     @Test func unknownCommandRequestsClarificationTruthfully() {
@@ -33,17 +33,17 @@ struct AssistantResultStateTests {
 
     @Test func compactConfirmationDismissesAndNewSubmissionCancelsOldTimer() async throws {
         let model = AssistantViewModel(compactResultDuration: .milliseconds(200))
-        model.input = "Weather tomorrow"
+        model.input = "Створи нотатку"
         model.submit()
         try await Task.sleep(for: .milliseconds(100))
-        model.input = "Покажи погоду"
+        model.input = "Покажи нотатки"
         model.submit()
         try await Task.sleep(for: .milliseconds(150))
         guard case .recognized(let summary) = model.resultState else {
             Issue.record("Old timer must not dismiss the newer confirmation")
             return
         }
-        #expect(summary.intent == .weather)
+        #expect(summary.intent == .noteQuery)
         try await Task.sleep(for: .milliseconds(300))
         #expect(model.resultState == .idle)
     }

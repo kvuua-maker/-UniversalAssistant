@@ -19,21 +19,25 @@ final class AssistantViewModel {
     let recorder = AudioRecorderController()
     private let commandEngine: any CommandParsing
     private let interactionEngine: any InteractionDeciding
+    private let weatherExecutor: any WeatherCommandExecuting
     private let voiceInput = VoiceInputController()
     private let feedbackStore: UserFeedbackStore
     private let compactResultDuration: Duration
     private let presentationPreferenceStore: PresentationPreferenceStore
     private var resultDismissTask: Task<Void, Never>?
+    private var weatherExecutionInFlight = false
 
     init(
         commandEngine: any CommandParsing = LocalCommandEngine(),
         interactionEngine: any InteractionDeciding = InteractionDecisionEngine(),
+        weatherExecutor: any WeatherCommandExecuting = ProductionWeatherCommandExecutor(),
         feedbackStore: UserFeedbackStore = .shared,
         compactResultDuration: Duration = .seconds(2),
         presentationPreferenceStore: PresentationPreferenceStore = PresentationPreferenceStore()
     ) {
         self.commandEngine = commandEngine
         self.interactionEngine = interactionEngine
+        self.weatherExecutor = weatherExecutor
         self.feedbackStore = feedbackStore
         self.compactResultDuration = compactResultDuration
         self.presentationPreferenceStore = presentationPreferenceStore
@@ -78,7 +82,7 @@ final class AssistantViewModel {
         case let .state(state):
             LocalVoiceDiagnosticReport.shared.record("state_delivered_to_view_model", "state=\(String(describing: state))")
             applyVoiceState(state)
-            if state == .idle, let session = LocalVoiceDiagnosticReport.shared.completedSession() {
+            if state == .idle, !weatherExecutionInFlight, let session = LocalVoiceDiagnosticReport.shared.completedSession() {
                 Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
             }
         case let .transcript(transcript, isFinal):
@@ -133,6 +137,34 @@ final class AssistantViewModel {
         } else {
             LocalVoiceDiagnosticReport.shared.record("router_accepted")
             LocalVoiceDiagnosticReport.shared.record("execution_started")
+            if command.intent == .weather {
+                weatherExecutionInFlight = true
+                resultState = .processing
+                statusText = AppText.value("processing")
+                Task { [weak self] in
+                    guard let self else { return }
+                    do {
+                        let snapshot = try await weatherExecutor.execute(command)
+                        resultState = .weather(snapshot)
+                        LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=weather")
+                        statusText = AppText.value("ready")
+                    } catch {
+                        LocalVoiceDiagnosticReport.shared.record(
+                            "execution_failed",
+                            "capability=weather error=\(String(describing: type(of: error)))"
+                        )
+                        let unavailable = String(localized: "weather_unavailable", table: "Weather")
+                        let retry = String(localized: "weather_retry", table: "Weather")
+                        presentFailure(message: unavailable, recoveryAction: retry)
+                        statusText = unavailable
+                    }
+                    weatherExecutionInFlight = false
+                    if let session = LocalVoiceDiagnosticReport.shared.completedSession() {
+                        Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
+                    }
+                }
+                return
+            }
             resultState = .recognized(summary)
             LocalVoiceDiagnosticReport.shared.record("visible_result")
             statusText = AppText.value("request_recognized")
