@@ -107,7 +107,7 @@
       "requirement_id": "MS-800-LIVE-VOICE-QA",
       "service_provider": "Physical iPhone speech recognition",
       "current_status": "BLOCKED_BY_CONFIRMED_DEFECT",
-      "missing_dependency": "Owner-accessible physical iPhone with microphone and Ukrainian/Russian speech recognition availability.",
+      "missing_dependency": "Build 14 authenticated physical evidence proved recognition delivered four partial transcripts but never finalized the still-open continuous request, so submit/router/result could not occur. Build 15 contains the minimum bounded end-of-speech request finalization and requires one physical round-trip retest.",
       "dependency_owner": "Owner",
       "local_evidence": [
         "UniversalAssistant/Voice/VoiceInputController.swift",
@@ -116,12 +116,14 @@
         "214 iOS tests across 52 suites passed on 2026-09-02",
         "Physical Build 2 crash 56A77EBB-DF1F-41F0-BC57-8E8AF508367F: binary UUID EF079917-083A-369C-9990-F3CA9F009B24 symbolicated to VoiceInputController.authorizationGranted TCC callback executor violation",
         "Physical Build 3 retest: crash resolved and listening started, but transcript/UI/router did not advance; source control-flow confirmed VoiceInputController transcript/state had no event delivery path to AssistantViewModel",
-        "Physical Build 4 retest: listening appeared briefly and returned to idle without user stop, transcript or routing; exact stop source remains under Build 5 local diagnostic instrumentation"
+        "Physical Build 4 retest: listening appeared briefly and returned to idle without user stop, transcript or routing; exact stop source remains under Build 5 local diagnostic instrumentation",
+        "Physical Build 14 authenticated session 7258D6C6-3A4A-4F50-81F5-D7ED1539E890: capture/task/buffers healthy, four non-final partial transcripts reached ViewModel/UI, no final result or router marker, only manual stop",
+        "Build 15: VoiceInputController closes/finishes the existing recognition request after bounded quiet following the latest non-empty partial; focused voice tests and full iOS 556/556, backend 113/113"
       ],
-      "required_live_action": "Speak mixed Ukrainian/Russian phrases containing proper names, addresses, brands and colloquial pronunciation; verify transcript, clarification behavior, typed fallback and microphone opt-out.",
-      "expected_result": "Recognized text preserves the intended entities or requests one minimal clarification; typed interaction remains fully usable when voice is denied or disabled.",
+      "required_live_action": "Install UniversalAssistant 0.1.0 Build 15 from Internal TestFlight, press the main microphone once, say «Яка погода у Києві?» once, then wait without pressing stop or Copy Diagnostics.",
+      "expected_result": "Voice recognition produces a final transcript, automatically submits it through the existing router, shows an actual visible result, and automatically uploads the privacy-safe Build 15 session to the owner VPS.",
       "created_at": "2026-09-02T12:58:00+02:00",
-      "last_checked": "2026-09-04T22:00:00+03:00",
+      "last_checked": "2026-09-05T02:55:52+02:00",
       "completion_evidence": null
     },
     {
@@ -1276,8 +1278,8 @@
     {
       "requirement_id": "LIVE-DIAG-049-LIVE-DIAG-050-LIVE-DIAG-051-LIVE-DIAG-052-LIVE-APP-ATTEST",
       "service_provider": "Apple App Attest and owner VPS diagnostic ingest",
-      "current_status": "READY_FOR_LIVE_VERIFICATION",
-      "missing_dependency": "Build 11 proved challenge delivery but failed device-side before registration. Build 13 delivered bootstrap evidence proving challenge-response decoding failed with NSCocoaErrorDomain/4864 because expiresAt is ISO-8601 while the client response decoder expected a numeric date. Build 14 contains only the confirmed response-decoder correction. A supported physical iPhone must verify App Attest proceeds to attestKey/registration/assertion; success remains live-only",
+      "current_status": "VERIFIED_LIVE",
+      "missing_dependency": null,
       "dependency_owner": "Owner physical-device tester and Apple App Attest service",
       "local_evidence": [
         "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
@@ -1285,17 +1287,17 @@
         "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
         "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
       ],
-      "required_live_action": "Install/update UniversalAssistant 0.1.0 Build 14 from Internal TestFlight, launch it, and press the main microphone once without pressing Copy Diagnostics.",
-      "expected_result": "If App Attest bootstrap still fails, the separate bounded endpoint stores one allowlisted Build 14 bootstrap report identifying the exact stage and safe error domain/code; if bootstrap succeeds, the server accepts production attestation for 9V5XXDXF3N.com.universalassistant.app and a fresh body-bound assertion. Neither outcome is inferred from mocks.",
+      "required_live_action": "Completed on physical Internal TestFlight Build 14.",
+      "expected_result": "Server accepted production App Attest registration/assertion for 9V5XXDXF3N.com.universalassistant.app and authenticated diagnostic ingest.",
       "created_at": "2026-09-05T00:40:00+02:00",
-      "last_checked": "2026-09-05T00:40:00+02:00",
-      "completion_evidence": null
+      "last_checked": "2026-09-05T02:34:13+02:00",
+      "completion_evidence": "Authenticated Build 14 session 7258D6C6-3A4A-4F50-81F5-D7ED1539E890 retrieved from owner VPS through Scripts/live_diagnostics.py."
     },
     {
       "requirement_id": "LIVE-DIAG-057-LIVE-AUTOMATIC-DELIVERY",
       "service_provider": "UniversalAssistant Internal TestFlight diagnostic transport on owner VPS",
-      "current_status": "READY_FOR_LIVE_VERIFICATION",
-      "missing_dependency": "One real Internal TestFlight voice session and successful network delivery over trusted HTTPS",
+      "current_status": "VERIFIED_LIVE",
+      "missing_dependency": null,
       "dependency_owner": "Owner physical-device tester",
       "local_evidence": [
         "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
@@ -1303,17 +1305,17 @@
         "Deployment/diagnostics/nginx-universalassistant.conf",
         "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
       ],
-      "required_live_action": "After the Build 14 microphone action, do not use the manual Copy Diagnostics control; leave the app online long enough for its asynchronous delivery attempt.",
-      "expected_result": "The SSH-only reader retrieves either the matching Build 14 authenticated voice session or its bounded pre-attestation bootstrap failure evidence; a normal diagnostic receipt is still required before automatic authenticated delivery can pass.",
+      "required_live_action": "Completed on physical Internal TestFlight Build 14 without Copy Diagnostics.",
+      "expected_result": "The SSH-only reader retrieved the authenticated Build 14 voice session.",
       "created_at": "2026-09-05T00:40:00+02:00",
-      "last_checked": "2026-09-05T00:40:00+02:00",
-      "completion_evidence": null
+      "last_checked": "2026-09-05T02:34:13+02:00",
+      "completion_evidence": "Session 7258D6C6-3A4A-4F50-81F5-D7ED1539E890 arrived automatically over HTTPS and was independently read over SSH."
     },
     {
       "requirement_id": "LIVE-DIAG-031-LIVE-DIAG-073-LIVE-DIAG-074-LIVE-END-TO-END",
       "service_provider": "Physical iPhone to owner VPS to Codex SSH reader",
-      "current_status": "READY_FOR_LIVE_VERIFICATION",
-      "missing_dependency": "Canonical physical end-to-end diagnostic-loop acceptance and subsequent continuation of MS-800 from independently retrieved evidence",
+      "current_status": "VERIFIED_LIVE",
+      "missing_dependency": null,
       "dependency_owner": "Owner physical-device tester and Codex through pre-authorized read-only SSH",
       "local_evidence": [
         "LIVE_VERIFICATION_EXECUTION_PLAN.md",
@@ -1321,11 +1323,11 @@
         "Scripts/live_diagnostics.py",
         "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
       ],
-      "required_live_action": "Install Build 14 and press the main microphone once for MS-800; provide only the physical UI outcome, not copied diagnostics. Codex then runs the SSH reader independently.",
-      "expected_result": "VPS has one correctly identified privacy-safe Build 14 record (bootstrap evidence if registration fails, otherwise the authenticated MS-800 session), forbidden content is absent, and Codex retrieves it without owner log relay. Bootstrap evidence alone does not pass the full diagnostic loop or MS-800.",
+      "required_live_action": "Completed on physical Internal TestFlight Build 14 without manual diagnostic copying.",
+      "expected_result": "VPS stored one correctly identified privacy-safe Build 14 session and Codex retrieved it independently; this does not pass MS-800.",
       "created_at": "2026-09-05T00:40:00+02:00",
-      "last_checked": "2026-09-05T00:40:00+02:00",
-      "completion_evidence": null
+      "last_checked": "2026-09-05T02:34:13+02:00",
+      "completion_evidence": "Build 14 session 7258D6C6-3A4A-4F50-81F5-D7ED1539E890 proves automatic physical iPhone to VPS to SSH-reader delivery; forbidden content was absent."
     }
   ]
 }

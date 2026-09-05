@@ -187,6 +187,31 @@ private final class VoiceRecognitionRequestSink: @unchecked Sendable {
 }
 
 @MainActor
+final class VoiceEndOfSpeechFinalizer {
+    private let delay: Duration
+    private var pending: Task<Void, Never>?
+
+    init(delay: Duration = .milliseconds(1_200)) {
+        self.delay = delay
+    }
+
+    func receivedPartial(_ finish: @escaping @MainActor @Sendable () -> Void) {
+        pending?.cancel()
+        let delay = delay
+        pending = Task { @MainActor in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            finish()
+        }
+    }
+
+    func cancel() {
+        pending?.cancel()
+        pending = nil
+    }
+}
+
+@MainActor
 @Observable
 final class VoiceInputController {
     private(set) var state: VoiceInputState = .idle
@@ -195,14 +220,20 @@ final class VoiceInputController {
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private var recognizer: SFSpeechRecognizer?
+    private let endOfSpeechFinalizer: VoiceEndOfSpeechFinalizer
+    private var isFinalizingRecognition = false
     @ObservationIgnored private var audioEvents: AudioSessionEventMonitor?
     @ObservationIgnored private var eventHandler: (@MainActor @Sendable (VoiceInputEvent) -> Void)?
     @ObservationIgnored private var recognitionCallbackCount = 0
     @ObservationIgnored private var partialResultCount = 0
     @ObservationIgnored private var finalResultCount = 0
 
-    init(captureBackend: (any VoiceAudioCaptureBackend)? = nil) {
+    init(
+        captureBackend: (any VoiceAudioCaptureBackend)? = nil,
+        endOfSpeechDelay: Duration = .milliseconds(1_200)
+    ) {
         capture = VoiceAudioCaptureLifecycle(backend: captureBackend ?? AppleVoiceAudioCaptureBackend())
+        endOfSpeechFinalizer = VoiceEndOfSpeechFinalizer(delay: endOfSpeechDelay)
         audioEvents = AudioSessionEventMonitor(
             onInterruption: { [weak self] in self?.handleAudioInterruptionBegan() },
             onRouteChange: { [weak self] evidence in self?.handleAudioRouteChanged(evidence) })
@@ -214,6 +245,7 @@ final class VoiceInputController {
         recognitionCallbackCount = 0
         partialResultCount = 0
         finalResultCount = 0
+        isFinalizingRecognition = false
         LocalVoiceDiagnosticReport.shared.record("start_listening_invoked")
         setState(.requestingPermission)
         guard await Self.authorizationGranted() else { setState(.denied); return }
@@ -236,6 +268,8 @@ final class VoiceInputController {
     }
 
     func stop(reason: VoiceStopReason = .externalRequest) {
+        endOfSpeechFinalizer.cancel()
+        isFinalizingRecognition = false
         LocalVoiceDiagnosticReport.shared.record("stop_invoked", "reason=\(reason.rawValue)")
         let hadTask = task != nil
         let hadRequest = request != nil
@@ -267,6 +301,11 @@ final class VoiceInputController {
             eventHandler?(.transcript(transcript, isFinal: isFinal))
             LocalVoiceDiagnosticReport.shared.record(isFinal ? "final_transcript" : "partial_transcript", "length=\(transcript.count)")
             LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_ui", "length=\(transcript.count) final=\(isFinal)")
+            if !isFinal, !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                endOfSpeechFinalizer.receivedPartial { [weak self] in
+                    self?.finishAfterEndOfSpeech()
+                }
+            }
         }
         if hasError { stop(reason: .recognitionError) }
         else if isFinal {
@@ -275,8 +314,21 @@ final class VoiceInputController {
         }
     }
 
+    private func finishAfterEndOfSpeech() {
+        guard state == .listening, !isFinalizingRecognition,
+              let request, let task else { return }
+        isFinalizingRecognition = true
+        LocalVoiceDiagnosticReport.shared.record("end_audio_called", "reason=endOfSpeech had_request=true")
+        request.endAudio()
+        LocalVoiceDiagnosticReport.shared.record("recognition_task_finished", "reason=endOfSpeech")
+        task.finish()
+        capture.stop()
+    }
+
     func handleAudioInterruptionBegan() { stop(reason: .audioInterruption) }
-    func handleAudioRouteChanged() { if state == .listening { stop(reason: .routeChange) } }
+    func handleAudioRouteChanged() {
+        if state == .listening, !isFinalizingRecognition { stop(reason: .routeChange) }
+    }
 
     func handleAudioRouteChanged(_ evidence: AudioRouteChangeEvidence) {
         LocalVoiceDiagnosticReport.shared.record("route_change", evidence.diagnosticDescription)

@@ -103,6 +103,35 @@ private final class VoiceTapInvocation: @unchecked Sendable {
 
 @MainActor
 struct VoiceAudioCaptureLifecycleTests {
+    @Test func partialResultSilenceFinishesOnce() async {
+        let finalizer = VoiceEndOfSpeechFinalizer(delay: .milliseconds(50))
+        var count = 0
+        finalizer.receivedPartial { count += 1 }
+        try? await Task.sleep(for: .milliseconds(250))
+        #expect(count == 1)
+    }
+
+    @Test func newerPartialRearmsEndOfSpeechWindow() async {
+        let finalizer = VoiceEndOfSpeechFinalizer(delay: .milliseconds(100))
+        var count = 0
+        finalizer.receivedPartial { count += 1 }
+        try? await Task.sleep(for: .milliseconds(50))
+        finalizer.receivedPartial { count += 1 }
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(count == 0)
+        try? await Task.sleep(for: .milliseconds(200))
+        #expect(count == 1)
+    }
+
+    @Test func explicitStopCancelsPendingEndOfSpeechFinalization() async {
+        let finalizer = VoiceEndOfSpeechFinalizer(delay: .milliseconds(50))
+        var count = 0
+        finalizer.receivedPartial { count += 1 }
+        finalizer.cancel()
+        try? await Task.sleep(for: .milliseconds(250))
+        #expect(count == 0)
+    }
+
     @Test func realtimeTapCallbackHasNoMainActorExecutorRequirementAndDeliversBuffer() {
         let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
         let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 64)!
