@@ -820,18 +820,19 @@
       "requirement_id": "MS-223-225-LIVE-WEATHERKIT",
       "service_provider": "Apple WeatherKit on signed physical device",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
-      "missing_dependency": "Owner signing team, WeatherKit entitlement/network access and an owner-accessible physical iPhone.",
+      "missing_dependency": "Physical hourly/daily forecast and denied/offline/timeout verification remains for MS-225; current WeatherKit provider/current weather are VERIFIED_LIVE.",
       "dependency_owner": "Owner/device tester and Apple Developer account owner",
       "local_evidence": [
         "UniversalAssistant/Weather/WeatherModels.swift",
         "UniversalAssistant/Weather/WeatherKitProvider.swift",
         "UniversalAssistant/Weather/WeatherContextEngine.swift",
-        "UniversalAssistantTests/WeatherContextTests.swift"
+        "UniversalAssistantTests/WeatherContextTests.swift",
+        "Physical Build 20 VPS session 735722AA-7CBF-4CFB-AE66-B576B74FE29E: weatherkit_response_received, weather_result_mapped, weather_context_succeeded and visible_result."
       ],
-      "required_live_action": "Run the signed app with WeatherKit entitlement; request current, hourly and daily weather for device and manual destinations; compare source/time/location context with WeatherKit output and verify denied/offline/timeout recovery.",
-      "expected_result": "Current/hourly/daily values come only from WeatherKit, retain correct location/context provenance and bounds, and unavailable service returns truthful recovery without fabricated weather.",
+      "required_live_action": "Request bounded hourly and daily forecasts for a controlled destination, then verify denied/offline/timeout recovery; current Kyiv weather is already VERIFIED_LIVE.",
+      "expected_result": "Hourly/daily values come only from WeatherKit with correct time/location provenance; denied/offline/timeout states remain truthful without fabricated weather.",
       "created_at": "2026-09-02T23:05:00+02:00",
-      "last_checked": "2026-09-02T23:05:00+02:00",
+      "last_checked": "2026-09-05T14:32:29+02:00",
       "completion_evidence": null
     },
     {

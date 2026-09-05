@@ -67,6 +67,6 @@ Allowed statuses follow the canonical ZERO-OMISSION policy. Evidence below is lo
 | MS-797 | VERIFIED_LOCAL | critical long-label/Dynamic Type/accessibility layout contract |
 | MS-798 | VERIFIED_LOCAL | no count-dependent user copy currently requires plural rules; re-audit gate documented |
 | MS-799 | VERIFIED_LOCAL | locale date/time/currency/decimal/unit formatting tests |
-| MS-800 | READY_FOR_LIVE_VERIFICATION | local mixed-language fixtures pass; physical-device voice QA queued |
+| MS-800 | VERIFIED_LIVE | Physical Internal TestFlight Build 15 authenticated VPS session BEB97BDB-8978-443B-8A95-A935AB64AED7 proves final transcript delivery, router acceptance, visible result and automatic stop. |
 
 Counts: NOT_IMPLEMENTED = 0; IMPLEMENTED_UNVERIFIED = 0. READY_FOR_LIVE_VERIFICATION rows have exact dependencies/actions in `LIVE_VERIFICATION_QUEUE.json`.

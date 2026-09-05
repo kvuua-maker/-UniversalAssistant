@@ -4232,39 +4232,43 @@
       "id": "MS-223",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "WEATHER PROVIDER Use a legitimate current weather provider such as",
-      "status": "READY_FOR_LIVE_VERIFICATION",
+      "status": "VERIFIED_LIVE",
       "implementation_evidence": [
         "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
-        "AppleWeatherKitProvider is the production WeatherProvider and maps native current/hourly/daily data with location provenance; a signed entitlement/device response is required solely for live verification; LIVE_VERIFICATION_QUEUE MS-223-225"
+        "Physical Build 20 authenticated VPS session 735722AA-7CBF-4CFB-AE66-B576B74FE29E proves the production AppleWeatherKitProvider returned and mapped native current Kyiv weather into a visible result; hourly/daily remain independently queued under MS-225."
       ],
       "test_evidence": [
-        "AppleWeatherKitProvider is the production WeatherProvider and maps native current/hourly/daily data with location provenance; a signed entitlement/device response is required solely for live verification; LIVE_VERIFICATION_QUEUE MS-223-225",
+        "Physical Build 20 authenticated VPS session 735722AA-7CBF-4CFB-AE66-B576B74FE29E proves the production AppleWeatherKitProvider returned and mapped native current Kyiv weather into a visible result; hourly/daily remain independently queued under MS-225.",
         "latest full iOS/backend regression"
       ],
       "commit_evidence": [
-        "957271a5c7c4a12ec5c6c5a2073299170f5b4399"
+        "31369feb225b794d687167e0af251cd21a6d4fe7"
       ],
-      "live_evidence": [],
-      "remaining_dependency": "AppleWeatherKitProvider is the production WeatherProvider and maps native current/hourly/daily data with location provenance; a signed entitlement/device response is required solely for live verification; LIVE_VERIFICATION_QUEUE MS-223-225"
+      "live_evidence": [
+        "Physical Internal TestFlight Build 20 authenticated VPS session 735722AA-7CBF-4CFB-AE66-B576B74FE29E: Apple WeatherKit request returned successfully, result mapping succeeded, and native visible result appeared for Kyiv."
+      ],
+      "remaining_dependency": null
     },
     {
       "id": "MS-224",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "WEATHER CURRENT Support current weather.",
-      "status": "READY_FOR_LIVE_VERIFICATION",
+      "status": "VERIFIED_LIVE",
       "implementation_evidence": [
         "docs/GLOBAL_ZERO_OMISSION_RECONCILIATION.md",
-        "WeatherSnapshot models current observed weather from WeatherKit and WeatherContextEngine bounds failures/timeouts; live current response remains queued; LIVE_VERIFICATION_QUEUE MS-223-225"
+        "Physical Build 20 authenticated VPS session 735722AA-7CBF-4CFB-AE66-B576B74FE29E proves current Kyiv weather returned from WeatherKit and was visibly rendered."
       ],
       "test_evidence": [
-        "WeatherSnapshot models current observed weather from WeatherKit and WeatherContextEngine bounds failures/timeouts; live current response remains queued; LIVE_VERIFICATION_QUEUE MS-223-225",
+        "Physical Build 20 authenticated VPS session 735722AA-7CBF-4CFB-AE66-B576B74FE29E proves current Kyiv weather returned from WeatherKit and was visibly rendered.",
         "latest full iOS/backend regression"
       ],
       "commit_evidence": [
-        "957271a5c7c4a12ec5c6c5a2073299170f5b4399"
+        "31369feb225b794d687167e0af251cd21a6d4fe7"
       ],
-      "live_evidence": [],
-      "remaining_dependency": "WeatherSnapshot models current observed weather from WeatherKit and WeatherContextEngine bounds failures/timeouts; live current response remains queued; LIVE_VERIFICATION_QUEUE MS-223-225"
+      "live_evidence": [
+        "Physical Internal TestFlight Build 20 authenticated VPS session 735722AA-7CBF-4CFB-AE66-B576B74FE29E: current Kyiv weather returned from WeatherKit and was visibly rendered."
+      ],
+      "remaining_dependency": null
     },
     {
       "id": "MS-225",
@@ -12823,10 +12827,10 @@
       "status": "VERIFIED_LOCAL",
       "implementation_evidence": [
         "docs/FINAL_ZERO_OMISSION_AUDIT.md",
-        "complete 1787-ID inventory, explicit per-ID evidence ledgers, final audit script and full 479 iOS/92 backend regression"
+        "complete 2011-ID inventory, explicit per-ID evidence ledgers, executable global/Jobs/Loyalty audits and full 501 iOS/109 backend regression"
       ],
       "test_evidence": [
-        "complete 1787-ID inventory, explicit per-ID evidence ledgers, final audit script and full 479 iOS/92 backend regression",
+        "complete 2011-ID inventory, explicit per-ID evidence ledgers, executable global/Jobs/Loyalty audits and full 501 iOS/109 backend regression",
         "latest full iOS/backend regression"
       ],
       "commit_evidence": [
@@ -15195,20 +15199,22 @@
       "id": "MS-800",
       "source": "docs/UniversalAssistant_FULL_UNABRIDGED_MASTER_SPEC_v13.2_MAC_GIT_VERIFIED_FINAL.txt",
       "title": "LOCALIZATION VOICE QA Test spoken/recognized Ukrainian/Russian",
-      "status": "READY_FOR_LIVE_VERIFICATION",
+      "status": "VERIFIED_LIVE",
       "implementation_evidence": [
         "docs/M10_ZERO_OMISSION_AUDIT.md",
-        "local mixed-language fixtures pass; physical-device voice QA queued"
+        "Physical Internal TestFlight Build 15 authenticated VPS session BEB97BDB-8978-443B-8A95-A935AB64AED7 proves final transcript delivery, router acceptance, visible result and automatic stop."
       ],
       "test_evidence": [
-        "local mixed-language fixtures pass; physical-device voice QA queued",
+        "Physical Internal TestFlight Build 15 authenticated VPS session BEB97BDB-8978-443B-8A95-A935AB64AED7 proves final transcript delivery, router acceptance, visible result and automatic stop.",
         "latest full iOS/backend regression"
       ],
       "commit_evidence": [
         "1a5ecf7670bd0a07de4255fc8ecdd61e9b44b64b"
       ],
-      "live_evidence": [],
-      "remaining_dependency": "local mixed-language fixtures pass; physical-device voice QA queued"
+      "live_evidence": [
+        "Physical Internal TestFlight Build 15 authenticated VPS session BEB97BDB-8978-443B-8A95-A935AB64AED7: final transcript reached ViewModel/UI/router, router accepted execution, visible result appeared, and recognition stopped automatically."
+      ],
+      "remaining_dependency": null
     },
     {
       "id": "MS-801",
@@ -24128,10 +24134,10 @@
       "status": "VERIFIED_LOCAL",
       "implementation_evidence": [
         "docs/FINAL_ZERO_OMISSION_AUDIT.md",
-        "attempt/history audit found no parallel competing framework or Jobs Marketplace work; one stale owner-queue report was corrected"
+        "attempt/history audit found no parallel competing framework; later owner-authorized Jobs work reuses existing shared infrastructure"
       ],
       "test_evidence": [
-        "attempt/history audit found no parallel competing framework or Jobs Marketplace work; one stale owner-queue report was corrected",
+        "attempt/history audit found no parallel competing framework; later owner-authorized Jobs work reuses existing shared infrastructure",
         "latest full iOS/backend regression"
       ],
       "commit_evidence": [
@@ -27719,10 +27725,10 @@
       "status": "VERIFIED_LOCAL",
       "implementation_evidence": [
         "docs/FINAL_ZERO_OMISSION_AUDIT.md",
-        "Git/source audit found no Jobs Marketplace or unrelated CRM/ERP/bank/ad platform implementation; components map to canonical requirements"
+        "Git/source audit maps all components to canonical requirements; owner-authorized Jobs remains bounded to Employment Core with no unrelated CRM/ERP/bank/ad platform"
       ],
       "test_evidence": [
-        "Git/source audit found no Jobs Marketplace or unrelated CRM/ERP/bank/ad platform implementation; components map to canonical requirements",
+        "Git/source audit maps all components to canonical requirements; owner-authorized Jobs remains bounded to Employment Core with no unrelated CRM/ERP/bank/ad platform",
         "latest full iOS/backend regression"
       ],
       "commit_evidence": [
@@ -33837,10 +33843,10 @@
       "status": "VERIFIED_LOCAL",
       "implementation_evidence": [
         "docs/FINAL_ZERO_OMISSION_AUDIT.md",
-        "all 1787 IDs have VERIFIED_LOCAL, READY_FOR_LIVE_VERIFICATION, VERIFIED_LIVE or NOT_APPLICABLE_VERIFIED evidence status"
+        "all 2179 IDs have VERIFIED_LOCAL, READY_FOR_LIVE_VERIFICATION, VERIFIED_LIVE or NOT_APPLICABLE_VERIFIED evidence status"
       ],
       "test_evidence": [
-        "all 1787 IDs have VERIFIED_LOCAL, READY_FOR_LIVE_VERIFICATION, VERIFIED_LIVE or NOT_APPLICABLE_VERIFIED evidence status",
+        "all 2179 IDs have VERIFIED_LOCAL, READY_FOR_LIVE_VERIFICATION, VERIFIED_LIVE or NOT_APPLICABLE_VERIFIED evidence status",
         "latest full iOS/backend regression"
       ],
       "commit_evidence": [

@@ -31,10 +31,13 @@ assert all(queue_covers(r["id"]) for r in ready)
 required_queue_fields = {"requirement_id","service_provider","current_status","missing_dependency","dependency_owner","local_evidence","required_live_action","expected_result","created_at","last_checked","completion_evidence"}
 for item in QUEUE["items"]:
     assert required_queue_fields <= item.keys()
-    assert item["current_status"] in {"READY_FOR_LIVE_VERIFICATION", "BLOCKED_BY_CONFIRMED_DEFECT"}
-    assert item["missing_dependency"] and item["dependency_owner"] and item["local_evidence"]
+    assert item["current_status"] in {"READY_FOR_LIVE_VERIFICATION", "BLOCKED_BY_CONFIRMED_DEFECT", "VERIFIED_LIVE"}
+    assert item["dependency_owner"] and item["local_evidence"]
     assert item["required_live_action"] and item["expected_result"]
-    assert item["completion_evidence"] is None
+    if item["current_status"] == "VERIFIED_LIVE":
+        assert item["missing_dependency"] is None and item["completion_evidence"]
+    else:
+        assert item["missing_dependency"] and item["completion_evidence"] is None
 commits = set()
 for row in rows:
     if row["status"] not in {"NOT_IMPLEMENTED", "IMPLEMENTED_UNVERIFIED"}:
