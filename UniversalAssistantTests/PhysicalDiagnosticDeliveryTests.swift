@@ -59,6 +59,14 @@ struct PhysicalDiagnosticDeliveryTests {
         #expect(report?.contains("private-key") == false)
     }
 
+    @Test func serverResponseUsesISO8601WithoutChangingLocalQueueDateCoding() throws {
+        struct Dated: Codable, Equatable { let date: Date }
+        let iso = Data(#"{"date":"2026-09-05T00:21:22Z"}"#.utf8)
+        #expect(try JSONDecoder.serverDiagnosticResponse.decode(Dated.self, from: iso).date == Date(timeIntervalSince1970: 1_788_567_682))
+        let local = Dated(date: Date(timeIntervalSinceReferenceDate: 123))
+        #expect(try JSONDecoder.diagnostic.decode(Dated.self, from: JSONEncoder.diagnostic.encode(local)) == local)
+    }
+
     private func sampleSession() -> PhysicalDiagnosticSession {
         .init(schema: 1, sessionID: UUID(), liveTestID: "MS-800-LIVE-VOICE-QA", feature: "voice", appVersion: "0.1.0", build: 10,
               environment: "internal-testflight", osVersion: "26.6.1", deviceClass: "iPhone", startedAt: .now, endedAt: .now,

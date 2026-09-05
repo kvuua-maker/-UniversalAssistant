@@ -79,7 +79,7 @@ struct URLSessionDiagnosticTransport: DiagnosticHTTPTransport {
         let (data, urlResponse) = try await URLSession.shared.data(for: request)
         guard let http = urlResponse as? HTTPURLResponse else { throw PhysicalDiagnosticDeliveryError.httpFailure(statusCode: 0) }
         guard (200..<300).contains(http.statusCode) else { throw PhysicalDiagnosticDeliveryError.httpFailure(statusCode: http.statusCode) }
-        return try JSONDecoder.diagnostic.decode(Response.self, from: data)
+        return try JSONDecoder.serverDiagnosticResponse.decode(Response.self, from: data)
     }
 }
 
@@ -267,4 +267,9 @@ actor PhysicalDiagnosticDelivery {
 extension JSONEncoder {
     static var diagnostic: JSONEncoder { let value = JSONEncoder(); value.outputFormatting = [.sortedKeys]; return value }
 }
-extension JSONDecoder { static var diagnostic: JSONDecoder { JSONDecoder() } }
+extension JSONDecoder {
+    static var diagnostic: JSONDecoder { JSONDecoder() }
+    static var serverDiagnosticResponse: JSONDecoder {
+        let value = JSONDecoder(); value.dateDecodingStrategy = .iso8601; return value
+    }
+}

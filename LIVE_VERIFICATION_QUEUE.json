@@ -1277,7 +1277,7 @@
       "requirement_id": "LIVE-DIAG-049-LIVE-DIAG-050-LIVE-DIAG-051-LIVE-DIAG-052-LIVE-APP-ATTEST",
       "service_provider": "Apple App Attest and owner VPS diagnostic ingest",
       "current_status": "READY_FOR_LIVE_VERIFICATION",
-      "missing_dependency": "Build 11 proved challenge delivery but failed device-side before registration. Build 12 proved the bootstrap report was rejected by a numeric-date versus ISO-8601 decoder mismatch, now fixed and production-probed. A supported physical iPhone running Internal TestFlight Build 13 must deliver the retained bootstrap evidence so the underlying App Attest failure stage/domain/code can be established without guessing; successful production registration/assertion remains live-only",
+      "missing_dependency": "Build 11 proved challenge delivery but failed device-side before registration. Build 13 delivered bootstrap evidence proving challenge-response decoding failed with NSCocoaErrorDomain/4864 because expiresAt is ISO-8601 while the client response decoder expected a numeric date. Build 14 contains only the confirmed response-decoder correction. A supported physical iPhone must verify App Attest proceeds to attestKey/registration/assertion; success remains live-only",
       "dependency_owner": "Owner physical-device tester and Apple App Attest service",
       "local_evidence": [
         "UniversalAssistant/Diagnostics/PhysicalDiagnosticDelivery.swift",
@@ -1285,8 +1285,8 @@
         "Backend/Tests/UniversalAssistantServerTests/PhysicalDiagnosticsTests.swift",
         "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
       ],
-      "required_live_action": "Install/update UniversalAssistant 0.1.0 Build 13 from Internal TestFlight, launch it, and press the main microphone once without pressing Copy Diagnostics.",
-      "expected_result": "If App Attest bootstrap still fails, the separate bounded endpoint stores one allowlisted Build 13 bootstrap report identifying the exact stage and safe error domain/code; if bootstrap succeeds, the server accepts production attestation for 9V5XXDXF3N.com.universalassistant.app and a fresh body-bound assertion. Neither outcome is inferred from mocks.",
+      "required_live_action": "Install/update UniversalAssistant 0.1.0 Build 14 from Internal TestFlight, launch it, and press the main microphone once without pressing Copy Diagnostics.",
+      "expected_result": "If App Attest bootstrap still fails, the separate bounded endpoint stores one allowlisted Build 14 bootstrap report identifying the exact stage and safe error domain/code; if bootstrap succeeds, the server accepts production attestation for 9V5XXDXF3N.com.universalassistant.app and a fresh body-bound assertion. Neither outcome is inferred from mocks.",
       "created_at": "2026-09-05T00:40:00+02:00",
       "last_checked": "2026-09-05T00:40:00+02:00",
       "completion_evidence": null
@@ -1303,8 +1303,8 @@
         "Deployment/diagnostics/nginx-universalassistant.conf",
         "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
       ],
-      "required_live_action": "After the Build 13 microphone action, do not use the manual Copy Diagnostics control; leave the app online long enough for its asynchronous delivery attempt.",
-      "expected_result": "The SSH-only reader retrieves either the matching Build 13 authenticated voice session or its bounded pre-attestation bootstrap failure evidence; a normal diagnostic receipt is still required before automatic authenticated delivery can pass.",
+      "required_live_action": "After the Build 14 microphone action, do not use the manual Copy Diagnostics control; leave the app online long enough for its asynchronous delivery attempt.",
+      "expected_result": "The SSH-only reader retrieves either the matching Build 14 authenticated voice session or its bounded pre-attestation bootstrap failure evidence; a normal diagnostic receipt is still required before automatic authenticated delivery can pass.",
       "created_at": "2026-09-05T00:40:00+02:00",
       "last_checked": "2026-09-05T00:40:00+02:00",
       "completion_evidence": null
@@ -1321,8 +1321,8 @@
         "Scripts/live_diagnostics.py",
         "docs/PHYSICAL_DIAGNOSTIC_LOOP_EVIDENCE.md"
       ],
-      "required_live_action": "Install Build 13 and press the main microphone once for MS-800; provide only the physical UI outcome, not copied diagnostics. Codex then runs the SSH reader independently.",
-      "expected_result": "VPS has one correctly identified privacy-safe Build 13 record (bootstrap evidence if registration fails, otherwise the authenticated MS-800 session), forbidden content is absent, and Codex retrieves it without owner log relay. Bootstrap evidence alone does not pass the full diagnostic loop or MS-800.",
+      "required_live_action": "Install Build 14 and press the main microphone once for MS-800; provide only the physical UI outcome, not copied diagnostics. Codex then runs the SSH reader independently.",
+      "expected_result": "VPS has one correctly identified privacy-safe Build 14 record (bootstrap evidence if registration fails, otherwise the authenticated MS-800 session), forbidden content is absent, and Codex retrieves it without owner log relay. Bootstrap evidence alone does not pass the full diagnostic loop or MS-800.",
       "created_at": "2026-09-05T00:40:00+02:00",
       "last_checked": "2026-09-05T00:40:00+02:00",
       "completion_evidence": null
