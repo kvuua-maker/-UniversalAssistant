@@ -16,7 +16,7 @@ final class AssistantViewModel {
     private(set) var personalTasks: [PersonalTaskItem] = []
     private(set) var favorites: [FavoriteReference] = []
     var presentationPreferences = PresentationPreferences()
-    let recorder = AudioRecorderController()
+    let recorder: AudioRecorderController
     private let commandEngine: any CommandParsing
     private let interactionEngine: any InteractionDeciding
     private let weatherExecutor: any WeatherCommandExecuting
@@ -36,6 +36,7 @@ final class AssistantViewModel {
         weatherExecutor: any WeatherCommandExecuting = ProductionWeatherCommandExecutor(),
         webSearchHandoff: ControlledWebSearchHandoff = ControlledWebSearchHandoff(),
         eventKitExecutor: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
+        recorder: AudioRecorderController = AudioRecorderController(),
         feedbackStore: UserFeedbackStore = .shared,
         compactResultDuration: Duration = .seconds(2),
         presentationPreferenceStore: PresentationPreferenceStore = PresentationPreferenceStore()
@@ -45,6 +46,7 @@ final class AssistantViewModel {
         self.weatherExecutor = weatherExecutor
         self.webSearchHandoff = webSearchHandoff
         self.eventKitExecutor = eventKitExecutor
+        self.recorder = recorder
         self.feedbackStore = feedbackStore
         self.compactResultDuration = compactResultDuration
         self.presentationPreferenceStore = presentationPreferenceStore
@@ -221,6 +223,24 @@ final class AssistantViewModel {
                 }
                 return
             }
+            if command.intent == .audioRecord {
+                let action = AudioRecorderCommand(rawValue: command.entities["recorder_action"] ?? "start") ?? .start
+                resultState = .processing
+                statusText = AppText.value("processing")
+                Task { [weak self] in
+                    guard let self else { return }
+                    await recorder.execute(action)
+                    if recorder.state == .failed || recorder.state == .denied {
+                        presentFailure(message: AppText.value("request_unavailable"))
+                        LocalVoiceDiagnosticReport.shared.record("execution_failed", "capability=audio_record")
+                    } else {
+                        resultState = .recognized(summary)
+                        statusText = AppText.value("ready")
+                        LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=audio_record state=\(String(describing: recorder.state))")
+                    }
+                }
+                return
+            }
             if command.intent == .webSearch || command.intent == .unknown {
                 do {
                     _ = try GenericIntentParser().parse(command.originalText)
@@ -236,18 +256,8 @@ final class AssistantViewModel {
                 }
                 return
             }
-            resultState = .recognized(summary)
-            LocalVoiceDiagnosticReport.shared.record("visible_result")
-            statusText = AppText.value("request_recognized")
-            if interactionDecision?.pattern == .compactAcknowledgement {
-                let duration = compactResultDuration
-                resultDismissTask = Task { [weak self] in
-                    try? await Task.sleep(for: duration)
-                    guard !Task.isCancelled else { return }
-                    self?.resultState = .idle
-                    self?.statusText = AppText.value("ready")
-                }
-            }
+            presentFailure(message: AppText.value("request_unavailable"))
+            LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=no_production_executor")
         }
     }
 

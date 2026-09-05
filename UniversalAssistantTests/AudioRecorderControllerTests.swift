@@ -53,6 +53,28 @@ struct AudioRecorderControllerTests {
         await controller.execute(.stop); #expect(controller.state == .stopped)
     }
 
+    @Test func viewModelRoutesRecorderIntentToExistingController() async {
+        let backend = RecorderBackendSpy()
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        let controller = AudioRecorderController(backend: backend, directory: directory, permission: { true })
+        let model = AssistantViewModel(recorder: controller)
+        model.input = "Запиши аудіо"
+        model.submit()
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(controller.state == .recording)
+        #expect(backend.events == ["start"])
+    }
+
+    @Test func unsupportedParsedIntentDoesNotMasqueradeAsExecuted() {
+        let model = AssistantViewModel()
+        model.input = "Увімкни ліхтарик"
+        model.submit()
+        guard case .failure = model.resultState else {
+            Issue.record("Expected truthful unavailable result")
+            return
+        }
+    }
+
     @Test func noRecordingCannotPlayShareRenameOrDelete() {
         let controller = AudioRecorderController(backend: RecorderBackendSpy(), directory: FileManager.default.temporaryDirectory)
         #expect(throws: AudioRecorderError.noRecording) { try controller.play() }

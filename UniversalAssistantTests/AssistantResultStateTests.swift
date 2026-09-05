@@ -4,18 +4,14 @@ import Testing
 
 @MainActor
 struct AssistantResultStateTests {
-    @Test func successfulCommandProducesCompactResult() {
+    @Test func parserOnlyCommandDoesNotMasqueradeAsSuccessfulExecution() {
         let model = AssistantViewModel()
         model.input = "Створи нотатку"
         model.submit()
-
-        guard case .recognized(let summary) = model.resultState else {
-            Issue.record("Expected a recognized result")
+        guard case .failure = model.resultState else {
+            Issue.record("Parser-only command must be truthful")
             return
         }
-        #expect(summary.request == "Створи нотатку")
-        #expect(summary.intent == .noteCreate)
-        #expect(summary.symbolName == "sparkles")
         #expect(model.interactionDecision?.pattern == .directAction)
     }
 
@@ -32,21 +28,16 @@ struct AssistantResultStateTests {
         #expect(summary.request == "Щось цікаве")
     }
 
-    @Test func compactConfirmationDismissesAndNewSubmissionCancelsOldTimer() async throws {
+    @Test func newerParserOnlySubmissionRemainsTruthfullyUnavailable() {
         let model = AssistantViewModel(compactResultDuration: .milliseconds(200))
         model.input = "Створи нотатку"
         model.submit()
-        try await Task.sleep(for: .milliseconds(100))
         model.input = "Покажи нотатки"
         model.submit()
-        try await Task.sleep(for: .milliseconds(150))
-        guard case .recognized(let summary) = model.resultState else {
-            Issue.record("Old timer must not dismiss the newer confirmation")
+        guard case .failure = model.resultState else {
+            Issue.record("Expected truthful unavailable result")
             return
         }
-        #expect(summary.intent == .noteQuery)
-        try await Task.sleep(for: .milliseconds(300))
-        #expect(model.resultState == .idle)
     }
 
     @Test func leavingActiveSceneStopsTransientListeningState() {

@@ -34,6 +34,8 @@
       "local_evidence": [
         "UniversalAssistant/Actions/UkraineEmergencyPlanner.swift",
         "UniversalAssistant/Recorder/AudioRecorderController.swift",
+        "UniversalAssistant/Core/AssistantViewModel.swift — production .audioRecord wiring",
+        "UniversalAssistantTests/AudioRecorderControllerTests.swift — production-entry and truthful-fallback coverage",
         "UniversalAssistant/Integrations/AppleSystemDomainIntegration.swift",
         "UniversalAssistant/Integrations/MessagingIntegration.swift",
         "UniversalAssistant/Integrations/MediaIntegrationEngine.swift",
