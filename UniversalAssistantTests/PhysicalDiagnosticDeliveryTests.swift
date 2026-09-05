@@ -70,6 +70,22 @@ struct PhysicalDiagnosticDeliveryTests {
         #expect(session?.errorCode == 1110)
     }
 
+    @Test @MainActor func weatherMarkersAfterIdleStillProduceSession() {
+        let report = LocalVoiceDiagnosticReport.shared; report.reset()
+        report.record("start_listening_invoked")
+        report.record("state_transition", "state=idle")
+        report.record("state_delivered_to_view_model", "state=idle")
+        report.record("weather_location_resolution_started")
+        report.record("weather_location_resolution_succeeded", "status=success")
+        report.record("weatherkit_request_failed", "error_domain=WeatherService error_code=2 error_type=WeatherError")
+        report.record("weather_context_failed", "error_domain=WeatherService error_code=2 error_type=WeatherError")
+        let session = report.completedSession()
+        #expect(session != nil)
+        #expect(session?.failureStage == "weather_context_failed")
+        #expect(session?.errorCode == 2)
+        #expect(session?.events.contains(where: { event in event.marker == "weatherkit_request_failed" }) == true)
+    }
+
     @Test func diagnosticReportUploadsMetadataNotTranscriptOrAudio() throws {
         let data = try JSONEncoder.diagnostic.encode(sampleSession())
         let text = String(decoding: data, as: UTF8.self)

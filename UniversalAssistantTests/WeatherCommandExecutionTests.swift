@@ -101,4 +101,21 @@ struct WeatherCommandExecutionTests {
             return
         }
     }
+
+    @Test func locationFailureRecordsExactFirstWeatherStageWithoutSensitiveLocation() async {
+        struct FailingGeocoder: ManualLocationGeocoding {
+            func resolve(_ label: String) async throws -> LocationSample { throw ManualLocationError.notFound }
+        }
+        let executor = ProductionWeatherCommandExecutor(locationResolver: .init(geocoder: FailingGeocoder()))
+        let report = LocalVoiceDiagnosticReport.shared
+        report.reset()
+        do {
+            _ = try await executor.execute(LocalCommandEngine().parse("Яка погода у Києві?"))
+            Issue.record("Expected location resolution failure")
+        } catch {
+            let snapshot = report.snapshot()
+            #expect(snapshot.contains("weather_location_resolution_failed"))
+            #expect(!snapshot.contains("Київ"))
+        }
+    }
 }

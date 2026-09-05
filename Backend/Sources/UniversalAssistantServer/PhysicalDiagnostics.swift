@@ -286,7 +286,11 @@ enum DiagnosticSchema {
         "route_change", "route_change_ignored", "stop_invoked", "recognition_task_cancelled", "recognition_task_finished",
         "end_audio_called", "partial_transcript", "final_transcript", "transcript_delivered_to_ui",
         "transcript_delivered_to_view_model", "transcript_delivered_to_router", "router_received", "router_accepted",
-        "router_rejected", "execution_started", "visible_result", "audio_interruption"
+        "router_rejected", "execution_started", "execution_failed", "visible_result", "audio_interruption",
+        "weather_route_validated", "weather_intent_parsed", "weather_location_resolution_started",
+        "weather_location_resolution_succeeded", "weather_location_resolution_failed", "weather_context_started",
+        "weather_context_succeeded", "weather_context_failed", "weatherkit_request_started",
+        "weatherkit_response_received", "weatherkit_request_failed", "weather_result_mapped"
     ]
 }
 

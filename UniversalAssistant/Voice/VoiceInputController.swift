@@ -49,8 +49,8 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
     @MainActor func completedSession() -> PhysicalDiagnosticSession? {
         lock.lock(); defer { lock.unlock() }
         guard entries.contains(where: { $0.marker == "start_listening_invoked" }),
-              entries.suffix(3).contains(where: { $0.marker == "state_transition" && $0.details.contains("idle") }) else { return nil }
-        let safeKeys: Set<String> = ["state", "granted", "available", "locale", "input", "sample_rate", "channels", "running", "count", "frames", "partial_results", "has_text", "final", "error_domain", "error_code", "partial_count", "final_count", "reason", "had_task", "had_request", "length", "input_available", "error_type"]
+              entries.contains(where: { $0.marker == "state_transition" && $0.details.contains("idle") }) else { return nil }
+        let safeKeys: Set<String> = ["state", "granted", "available", "locale", "input", "sample_rate", "channels", "running", "count", "frames", "partial_results", "has_text", "final", "error_domain", "error_code", "partial_count", "final_count", "reason", "had_task", "had_request", "length", "input_available", "error_type", "status"]
         let events = entries.enumerated().map { index, entry in
             let values = entry.details.split(separator: " ").compactMap { token -> (String, String)? in
                 let parts = token.split(separator: "=", maxSplits: 1).map(String.init)

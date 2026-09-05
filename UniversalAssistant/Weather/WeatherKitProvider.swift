@@ -9,9 +9,17 @@ struct AppleWeatherKitProvider: WeatherProvider {
     func weather(for request: WeatherRequest) async throws -> WeatherSnapshot {
         let request = try request.validated()
         let sample = request.location.sample
-        let weather = try await service.weather(for: CLLocation(latitude: sample.latitude, longitude: sample.longitude))
+        LocalVoiceDiagnosticReport.shared.record("weatherkit_request_started")
+        let weather: Weather
+        do {
+            weather = try await service.weather(for: CLLocation(latitude: sample.latitude, longitude: sample.longitude))
+            LocalVoiceDiagnosticReport.shared.record("weatherkit_response_received", "status=success")
+        } catch {
+            ProductionWeatherCommandExecutor.recordFailure("weatherkit_request_failed", error: error)
+            throw error
+        }
         let current = weather.currentWeather
-        return WeatherSnapshot(
+        let snapshot = WeatherSnapshot(
             current: .init(
                 date: current.date,
                 temperatureCelsius: current.temperature.converted(to: .celsius).value,
@@ -36,5 +44,7 @@ struct AppleWeatherKitProvider: WeatherProvider {
             locationLabel: request.location.manualLabel,
             context: request.context
         )
+        LocalVoiceDiagnosticReport.shared.record("weather_result_mapped", "status=success")
+        return snapshot
     }
 }
