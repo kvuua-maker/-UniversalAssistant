@@ -1329,6 +1329,27 @@
       "created_at": "2026-09-05T00:40:00+02:00",
       "last_checked": "2026-09-05T02:34:13+02:00",
       "completion_evidence": "Build 14 session 7258D6C6-3A4A-4F50-81F5-D7ED1539E890 proves automatic physical iPhone to VPS to SSH-reader delivery; forbidden content was absent."
+    },
+    {
+      "requirement_id": "MS-104-LIVE-UNIVERSAL-INFORMATION-HANDOFF",
+      "service_provider": "UniversalAssistant production entry + privacy-minimized HTTPS web handoff on physical Internal TestFlight device",
+      "current_status": "READY_FOR_LIVE_VERIFICATION",
+      "missing_dependency": "Physical confirmation that semantically varied Ukrainian/Russian informational requests produce the typed web-search result and open the intended encoded query without generic acknowledgement or false execution.",
+      "dependency_owner": "Owner/device tester",
+      "local_evidence": [
+        "UniversalAssistant/Core/AssistantViewModel.swift",
+        "UniversalAssistant/Search/GenericIntentDiscovery.swift",
+        "UniversalAssistant/Integrations/ControlledWebSearchHandoff.swift",
+        "UniversalAssistant/App/CompactResultCard.swift",
+        "UniversalAssistantTests/AssistantResultStateTests.swift",
+        "UniversalAssistantTests/ControlledWebSearchHandoffTests.swift",
+        "Full iOS regression: 567 tests passed; backend regression: 114 tests passed; commit 1596a6a"
+      ],
+      "required_live_action": "Install Internal TestFlight Build 21. Submit one novel Ukrainian factual question and one differently worded Russian factual question not present in parser fixtures; for each, verify the native Search is ready card appears, tap Open web search, and confirm Safari opens an encoded search for the requested subject. Then submit Щось цікаве and confirm one clarification rather than a fabricated result.",
+      "expected_result": "Both legitimate novel informational requests converge on the same typed HTTPS web-handoff mechanism and open the correct minimized query; the ambiguous request asks one clarification; no request is reported as executed merely because it was recognized.",
+      "created_at": "2026-09-05T15:25:00+02:00",
+      "last_checked": "2026-09-05T15:25:00+02:00",
+      "completion_evidence": null
     }
   ]
 }
