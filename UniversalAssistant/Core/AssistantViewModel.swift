@@ -406,6 +406,8 @@ final class AssistantViewModel {
         case .copy: UIPasteboard.general.string = result.recognizedText; statusText = AppText.value("ready")
         case .share: capabilityPresentation = .share(result.recognizedText)
         case .translate:
+            input = result.recognizedText
+            requireAction(prompt: "Оберіть мову перекладу", choices: ["Українська", "English", "Deutsch"])
             capabilityPresentation = .translationTarget(result.recognizedText)
         }
     }
