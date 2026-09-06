@@ -40,3 +40,20 @@ private struct LocalSourceStub: LocalSearchSource {
         #expect(!denied.isComplete); #expect(denied.results.isEmpty)
     }
 }
+
+private struct ProductionPersonalSourceStub: PersonalSearchSource {
+    let id: PersonalSearchSourceID = .local(.contacts)
+    func search(query: String, limit: Int) async -> PersonalSearchSourceResponse {
+        let value = PersonalSearchResult(id: "contacts:c1", title: "Mama", subtitle: nil, source: id, sourceObjectID: "c1", openReference: "contact:c1", freshness: .local, relevance: 100, exactMatch: true)
+        return .init(source: id, results: [value], isComplete: true, unavailableReason: nil)
+    }
+}
+
+extension ApplePersonalSearchSourcesTests {
+    @Test @MainActor func productionRequestUsesPersonalSearchAndReturnsTypedResultAction() async throws {
+        let executor = ProductionCanonicalCapabilityExecutor(personalSearchSources: [ProductionPersonalSourceStub()])
+        let command = StructuredCommand(originalText: "Знайди контакт мама", normalizedText: "знайди контакт мама", language: .uk, intent: .contactLookup, entities: ["contact":"Mama"])
+        guard case let .result(result) = try await executor.execute(command) else { Issue.record("Expected native deterministic result"); return }
+        #expect(result.facts.first?.id == "contacts:c1"); #expect(result.actions.first?.destination?.absoluteString == "contact:c1")
+    }
+}
