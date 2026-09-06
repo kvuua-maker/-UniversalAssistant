@@ -66,7 +66,7 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
             return .init(kind: .calendar, operation: .queried, title: String(localized: "eventkit_calendar"), detail: list(values.map { "\($0.draft.title) — \(format($0.draft.start))" }), itemCount: values.count)
         case .calendarUpdate:
             guard let date = args.dateTime, date.precision == .minute else { throw EventKitExecutionError.unresolvedDateTime }
-            let old = try await match(args.subject); let duration = max(60, old.draft.end.timeIntervalSince(old.draft.start))
+            let old = try await match(identifier: command.entities["selected_item_id"], subject: args.subject); let duration = max(60, old.draft.end.timeIntervalSince(old.draft.start))
             let value = try await calendar.update(identifier: old.identifier, with: .init(title: old.draft.title, start: date.instant, end: date.instant.addingTimeInterval(duration), notes: old.draft.notes))
             await recordHistory(.init(kind: .calendarUpdate, externalIdentifier: old.identifier, undoPayload: try JSONEncoder().encode(old)))
             return result(.calendar, .updated, value.draft.title, value.draft.start, 1)
@@ -154,6 +154,14 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
         }
         result = result.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
         return result.isEmpty ? nil : result
+    }
+    private func match(identifier: String?, subject: String?) async throws -> CalendarEventSnapshot {
+        guard let identifier else { return try await match(subject) }
+        try await calendar.requestFullAccessIfNeeded()
+        var cal = Calendar.autoupdatingCurrent; cal.timeZone = timeZone
+        let values = try await calendar.events(from: cal.date(byAdding: .day, value: -1, to: now())!, to: cal.date(byAdding: .day, value: 90, to: now())!)
+        guard let exact = values.first(where: { $0.identifier == identifier }) else { throw EventKitExecutionError.itemNotFound }
+        return exact
     }
     private func match(_ subject: String?) async throws -> CalendarEventSnapshot {
         guard let subject else { throw EventKitExecutionError.missingSubject }; try await calendar.requestFullAccessIfNeeded()

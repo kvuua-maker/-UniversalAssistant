@@ -174,7 +174,8 @@ final class CurrentContextStore {
         let entities = result.facts.prefix(20).map { fact -> ContextEntity in
             let action = actions[fact.id]
             let provenance = ContextProvenance(source: fact.source ?? "local-result", objectID: fact.id, observedAt: fact.observedAt ?? now, expiresAt: expires)
-            return ContextEntity(id: fact.id, kind: .providerResult, displayName: fact.label, phoneNumber: nil, provenance: provenance, actionID: action?.id, openReference: action?.destination?.absoluteString)
+            let phone = action?.destination?.scheme == "tel" ? action?.destination?.absoluteString.replacingOccurrences(of: "tel:", with: "") : nil
+            return ContextEntity(id: fact.id, kind: .providerResult, displayName: fact.label, phoneNumber: phone, provenance: provenance, actionID: action?.id, openReference: action?.destination?.absoluteString)
         }
         context.update(now: now, lifetime: lifetime, results: entities)
         consumedActionIDs.removeAll()
@@ -183,6 +184,7 @@ final class CurrentContextStore {
         _ = context.resolve(command, now: now)
         return context.selectedEntity
     }
+    func freshSelected(at now: Date = .now) -> ContextEntity? { context.expireStale(at: now); return context.selectedEntity }
     func consumeSelectedAction(now: Date = .now) -> URL? {
         context.expireStale(at: now)
         guard let selected = context.selectedEntity, let actionID = selected.actionID, !consumedActionIDs.contains(actionID), let reference = selected.openReference, let url = URL(string: reference) else { return nil }

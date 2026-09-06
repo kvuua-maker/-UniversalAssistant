@@ -193,7 +193,7 @@ final class AssistantViewModel {
                 }
                 return
             }
-            if [.calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete, .reminderCreate, .reminderQuery, .reminderComplete, .reminderDelete, .shoppingList, .undo].contains(command.intent) {
+            if [.calendarCreate, .calendarQuery, .calendarDelete, .reminderCreate, .reminderQuery, .reminderComplete, .reminderDelete, .shoppingList, .undo].contains(command.intent) {
                 if interactionDecision?.pattern == .confirmation {
                     requireAction(prompt: AppText.value("confirmation_required"), choices: [AppText.value("confirm"), AppText.value("cancel")])
                     LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=confirmation_required")

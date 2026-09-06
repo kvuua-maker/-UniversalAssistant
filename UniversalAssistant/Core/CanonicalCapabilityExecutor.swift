@@ -66,6 +66,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let currentContext: CurrentContextStore
     private let routeAwareSearch: RouteAwareSearchEngine
     private let multiStep: ProductionMultiStepCoordinator
+    private let eventKit: any EventKitCommandExecuting
 
     init(
         deviceRouter: UniversalDeviceCommandRouter = .init(applications: .init(applications: LaunchDeviceApplications.verified)),
@@ -78,6 +79,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         currentContext: CurrentContextStore = CurrentContextStore(),
         routeProvider: any RouteProvider = MapKitRouteProvider(),
         multiStepOperationFactory: @escaping ProductionStepOperationFactory = { _, _ in [:] },
+        eventKit: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
         personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())]
     ) {
         self.deviceRouter = deviceRouter
@@ -91,6 +93,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.currentContext = currentContext
         self.routeAwareSearch = RouteAwareSearchEngine(routeProvider: routeProvider)
         self.multiStep = ProductionMultiStepCoordinator(operationFactory: multiStepOperationFactory)
+        self.eventKit = eventKit
 #if canImport(MusicKit)
         self.media = MediaIntegrationEngine(adapters: [AppleMusicProviderAdapter()])
 #else
@@ -101,11 +104,12 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         switch command.intent {
         case .open, .appAction:
-            if command.constraints.ordinal != nil { return try contextual(command, opensSelection: true) }
+            if command.constraints.ordinal != nil { return try await contextual(command, opensSelection: true) }
             return try app(command)
         case .contactLookup:
             return try await personal(command, query: try required(command.entities["contact"], "contact_name"), immediateOpen: true)
         case .contactCall:
+            if command.entities["contact"] == nil { return try await contextual(command, opensSelection: true) }
             return try await contact(command, preparesCall: true)
         case .messageCompose:
             return .presentation(.message(
@@ -147,7 +151,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .help:
             return .result(try result("Скажіть або введіть, що потрібно зробити", facts: []))
         case .show, .contextualSelection:
-            return try contextual(command, opensSelection: command.normalizedText.contains("відк") || command.normalizedText.contains("откр") || command.normalizedText.contains("open"))
+            return try await contextual(command, opensSelection: command.normalizedText.contains("відк") || command.normalizedText.contains("откр") || command.normalizedText.contains("open"))
         case .cancel:
             return .result(try result("Скасовано", facts: []))
         case .productSearch, .fashionDiscovery, .groceryBasket, .serviceSearch, .restaurantSearch,
@@ -157,6 +161,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .placeSearch:
             return try await places(command)
         case .navigation, .routeSearch:
+            if command.entities["destination"] == nil { return try await contextual(command, opensSelection: true) }
             return try await route(command)
         case .routeAwareSearch:
             return try await routeAware(command)
@@ -164,7 +169,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             return .result(try await multiStep.execute(command))
         case .reminderComplete, .reminderDelete, .shoppingList, .undo:
             throw CanonicalCapabilityExecutionError.unavailable("canonical_mutation_context_required")
-        case .calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete, .reminderCreate,
+        case .calendarUpdate:
+            return try await contextualReschedule(command)
+        case .calendarCreate, .calendarQuery, .calendarDelete, .reminderCreate,
              .reminderQuery, .weather, .webSearch, .deviceAction, .audioRecord, .unknown:
             throw CanonicalCapabilityExecutionError.unavailable("handled_by_specialized_executor")
         }
@@ -228,13 +235,30 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         currentContext.replaceResults(output); return .result(output)
     }
 
-    private func contextual(_ command: StructuredCommand, opensSelection: Bool) throws -> CapabilityExecutionOutcome {
-        guard let selected = currentContext.select(command) else { throw CanonicalCapabilityExecutionError.missingParameter("active_result_context") }
+    private func contextual(_ command: StructuredCommand, opensSelection: Bool) async throws -> CapabilityExecutionOutcome {
+        let selected = command.constraints.ordinal != nil ? currentContext.select(command) : currentContext.freshSelected()
+        guard let selected else { throw CanonicalCapabilityExecutionError.missingParameter("active_result_context") }
+        if command.intent == .contactCall {
+            if selected.phoneNumber != nil {
+                guard let destination = currentContext.consumeSelectedAction() else { throw CanonicalCapabilityExecutionError.unavailable("context_action_unavailable_or_replayed") }
+                return .handoff(.init(query: selected.displayName, destination: destination, kind: .system))
+            }
+            let followUp = StructuredCommand(originalText: command.originalText, normalizedText: command.normalizedText, language: command.language, intent: .contactCall, entities: ["contact": selected.displayName])
+            return try await contact(followUp, preparesCall: true)
+        }
         if opensSelection {
             guard let destination = currentContext.consumeSelectedAction() else { throw CanonicalCapabilityExecutionError.unavailable("context_action_unavailable_or_replayed") }
             return .handoff(.init(query: selected.displayName, destination: destination, kind: .system))
         }
         return .result(try result(selected.displayName, facts: [.init(id: selected.id, label: selected.displayName, value: selected.kind.rawValue, state: .verified, source: selected.provenance.source, observedAt: selected.provenance.observedAt, priority: 100)]))
+    }
+
+    private func contextualReschedule(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        var entities = command.entities
+        if let selected = currentContext.freshSelected() { entities["selected_item_id"] = selected.id; entities["subject"] = selected.displayName }
+        let resolved = StructuredCommand(id: command.id, originalText: command.originalText, normalizedText: command.normalizedText, language: command.language, intent: .calendarUpdate, entities: entities, constraints: command.constraints, risk: command.risk, needsClarification: command.needsClarification)
+        let value = try await eventKit.execute(resolved)
+        return .result(try result(value.title, facts: [.init(id: entities["selected_item_id"] ?? command.id.uuidString, label: value.title, value: value.detail, state: .verified, source: "EventKit", observedAt: .now, priority: 100)]))
     }
 
     private func personalSourceName(_ source: PersonalSearchSourceID) -> String {
