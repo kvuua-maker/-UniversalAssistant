@@ -15,7 +15,14 @@ struct ContextEntity: Equatable, Codable, Sendable {
     let kind: Kind
     let displayName: String
     let phoneNumber: String?
+    let latitude: Double?
+    let longitude: Double?
     let provenance: ContextProvenance
+
+    init(id: String, kind: Kind, displayName: String, phoneNumber: String?, provenance: ContextProvenance, latitude: Double? = nil, longitude: Double? = nil) {
+        self.id = id; self.kind = kind; self.displayName = displayName; self.phoneNumber = phoneNumber
+        self.provenance = provenance; self.latitude = latitude; self.longitude = longitude
+    }
 }
 
 struct ValidatedContextLocation: Equatable, Codable, Sendable {
@@ -151,4 +158,24 @@ struct CurrentContext: Equatable, Codable, Sendable {
         currentTask = nil; resultEntities = []; selectedEntity = nil; connectedServiceState = [:]
         explicitPreferences = [:]; expiresAt = nil
     }
+}
+
+
+@MainActor
+final class CurrentContextStore {
+    private(set) var context = CurrentContext()
+    func replaceRoute(origin: ValidatedLocation, destination: ValidatedLocation, destinationName: String, now: Date = .now, lifetime: TimeInterval = 300) {
+        let expires = now.addingTimeInterval(lifetime)
+        let destinationProvenance = ContextProvenance(source: "apple-geocoder", objectID: "destination-\(destination.sample.latitude),\(destination.sample.longitude)", observedAt: now, expiresAt: expires)
+        let destinationEntity = ContextEntity(id: destinationProvenance.objectID, kind: .place, displayName: destinationName, phoneNumber: nil, provenance: destinationProvenance, latitude: destination.sample.latitude, longitude: destination.sample.longitude)
+        let routeProvenance = ContextProvenance(source: "apple-maps", objectID: "route-\(UUID().uuidString)", observedAt: now, expiresAt: expires)
+        let locationProvenance = ContextProvenance(source: "core-location", objectID: "origin-\(origin.sample.timestamp.timeIntervalSince1970)", observedAt: now, expiresAt: expires)
+        context.update(now: now, lifetime: lifetime, location: .init(latitude: origin.sample.latitude, longitude: origin.sample.longitude, horizontalAccuracyMeters: origin.sample.horizontalAccuracy, provenance: locationProvenance), route: .init(destination: destinationEntity, provenance: routeProvenance))
+    }
+    func freshRoute(at now: Date = .now) -> (ValidatedContextLocation, ContextRoute)? {
+        context.expireStale(at: now)
+        guard let location = context.validatedLocation, let route = context.activeRoute else { return nil }
+        return (location, route)
+    }
+    func reset() { context.reset() }
 }

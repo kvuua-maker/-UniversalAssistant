@@ -63,6 +63,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let navigation = NavigationHandoff()
     private let currentLocation: any CurrentLocationResolving
     private let personalSearch: UniversalPersonalSearchEngine
+    private let currentContext: CurrentContextStore
+    private let routeAwareSearch: RouteAwareSearchEngine
 
     init(
         deviceRouter: UniversalDeviceCommandRouter = .init(applications: .init(applications: LaunchDeviceApplications.verified)),
@@ -72,6 +74,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         locationResolver: ManualLocationContextResolver = .init(),
         placeSearch: PlaceSearchEngine = .init(providers: [MapKitPlaceProvider()]),
         currentLocation: any CurrentLocationResolving = AppleCurrentLocationResolver(),
+        currentContext: CurrentContextStore = CurrentContextStore(),
+        routeProvider: any RouteProvider = MapKitRouteProvider(),
         personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())]
     ) {
         self.deviceRouter = deviceRouter
@@ -82,6 +86,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.placeSearch = placeSearch
         self.currentLocation = currentLocation
         self.personalSearch = UniversalPersonalSearchEngine(sources: personalSearchSources)
+        self.currentContext = currentContext
+        self.routeAwareSearch = RouteAwareSearchEngine(routeProvider: routeProvider)
 #if canImport(MusicKit)
         self.media = MediaIntegrationEngine(adapters: [AppleMusicProviderAdapter()])
 #else
@@ -149,7 +155,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .navigation, .routeSearch:
             return try await route(command)
         case .routeAwareSearch:
-            throw CanonicalCapabilityExecutionError.unavailable("active_route_context_required")
+            return try await routeAware(command)
         case .reminderComplete, .reminderDelete, .shoppingList, .undo, .multiStep:
             throw CanonicalCapabilityExecutionError.unavailable("canonical_mutation_context_required")
         case .calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete, .reminderCreate,
@@ -179,8 +185,18 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private func route(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         let destinationName = try required(command.entities["destination"], "destination")
         let destination = try await locationResolver.resolve(destinationName)
+        if let origin = try? await currentLocation.resolveCurrent(for: .navigation) { currentContext.replaceRoute(origin: origin, destination: destination, destinationName: destinationName) }
         let url = try navigation.url(provider: .appleMaps, destination: .init(latitude: destination.sample.latitude, longitude: destination.sample.longitude, name: destinationName), mode: .driving)
         return .handoff(.init(query: command.originalText, destination: url, kind: .navigation))
+    }
+
+    private func routeAware(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        guard let (origin, route) = currentContext.freshRoute(), let latitude = route.destination.latitude, let longitude = route.destination.longitude else { throw CanonicalCapabilityExecutionError.missingParameter("active_route_context") }
+        let location = ValidatedLocation(sample: .init(latitude: origin.latitude, longitude: origin.longitude, horizontalAccuracy: origin.horizontalAccuracyMeters, timestamp: route.provenance.observedAt, speed: -1, course: -1, source: .device), quality: .good, isSafeForLocationActions: true, manualLabel: nil)
+        let response = try await placeSearch.search(.init(text: command.originalText, category: placeCategory(in: command.normalizedText), location: location, limit: 8))
+        let values = try await routeAwareSearch.evaluate(origin: .init(latitude: origin.latitude, longitude: origin.longitude, name: "origin"), destination: .init(latitude: latitude, longitude: longitude, name: route.destination.displayName), candidates: response.places, mode: .driving)
+        guard !values.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_route_aware_places") }
+        return .result(try result("Знайдено по дорозі", facts: values.prefix(3).enumerated().map { index, value in ResultFact(id: value.place.id, label: value.place.name, value: "\(Int(value.detourSeconds * 0.0166667)) хв відхилення", state: .verified, source: value.place.source, observedAt: value.place.timestamp, priority: 100 - index) }, actions: values.prefix(3).compactMap { value in try? ResultAction(id: value.place.id, title: "Маршрут", kind: .open, destination: navigation.url(provider: .appleMaps, destination: .init(latitude: value.place.latitude, longitude: value.place.longitude, name: value.place.name), mode: .driving)) }))
     }
 
     private func app(_ command: StructuredCommand) throws -> CapabilityExecutionOutcome {
