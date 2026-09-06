@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import OSLog
+import UIKit
 
 @MainActor
 @Observable
@@ -358,6 +359,23 @@ final class AssistantViewModel {
         }
     }
 
+    func handleScannedCode(_ observation: ObservedScannerCode) {
+        capabilityPresentation = nil
+        do { resultState = .scanner(try ScannerProductionRouter().route(observation)); statusText = AppText.value("ready"); LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=scanner type=\(observation.isQR ? "qr" : "barcode")") }
+        catch { presentFailure(message: AppText.value("request_unavailable")) }
+    }
+    func handleScannerUnavailable() { capabilityPresentation = nil; presentFailure(message: AppText.value("request_unavailable")) }
+    func performScannerAction(_ result: ScannerProductionResult) {
+        switch result.route.content {
+        case let .url(url) where result.route.action == .open: UIApplication.shared.open(url)
+        case let .text(value) where result.route.action == .save: UIPasteboard.general.string = value; statusText = AppText.value("ready")
+        case let .text(value) where result.route.action == .call:
+            let number = value.replacingOccurrences(of: "tel:", with: ""); if let url = URL(string: "tel:\(number.filter(\.isNumber))") { UIApplication.shared.open(url) }
+        case let .vCard(data) where result.route.action == .importContact: capabilityPresentation = .contactImport(data)
+        case let .retailBarcode(value): UIPasteboard.general.string = value; statusText = AppText.value("ready")
+        default: presentFailure(message: AppText.value("request_unavailable"))
+        }
+    }
     func dismissCapabilityPresentation() { capabilityPresentation = nil }
 
     func beginProcessing() {

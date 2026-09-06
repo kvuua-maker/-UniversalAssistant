@@ -8,6 +8,7 @@ enum AssistantResultState: Equatable, Sendable {
     case webHandoff(WebHandoffResult)
     case eventKit(EventKitExecutionResult)
     case deterministic(DeterministicResult)
+    case scanner(ScannerProductionResult)
     case clarification(ResultSummary)
     case actionRequired(ActionRequiredSummary)
     case failure(UserFacingFailure)

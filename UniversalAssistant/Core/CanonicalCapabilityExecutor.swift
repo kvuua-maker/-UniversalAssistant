@@ -2,19 +2,25 @@ import Foundation
 import MessageUI
 import SwiftUI
 import UIKit
+import Contacts
+import ContactsUI
 
 enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case camera
+    case scanner
     case documents
     case share(String)
     case message(recipients: [String], body: String?)
+    case contactImport(Data)
 
     var id: String {
         switch self {
         case .camera: "camera"
+        case .scanner: "scanner"
         case .documents: "documents"
         case .share: "share"
         case .message: "message"
+        case .contactImport: "contact-import"
         }
     }
 }
@@ -96,7 +102,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .fileSearch:
             return try await personal(command, query: try required(command.entities["query"], "file_query"), immediateOpen: true)
         case .cameraCapture:
-            return .presentation(.camera)
+            return .presentation(command.entities["capture_mode"] == "code_scan" ? .scanner : .camera)
         case .photoSearch:
             return try await personal(command, query: command.entities["query"] ?? "", immediateOpen: false)
         case .podcastSearch:
@@ -239,6 +245,23 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     }
 }
 
+
+struct VCardImportConfirmationView: UIViewControllerRepresentable {
+    let data: Data
+    let onComplete: () -> Void
+    func makeUIViewController(context: Context) -> UINavigationController {
+        let controller = (try? VCardImportIntegration().makeConfirmationController(data: data)) ?? CNContactViewController(forNewContact: CNMutableContact())
+        controller.delegate = context.coordinator
+        return UINavigationController(rootViewController: controller)
+    }
+    func updateUIViewController(_ controller: UINavigationController, context: Context) {}
+    func makeCoordinator() -> Coordinator { Coordinator(onComplete: onComplete) }
+    final class Coordinator: NSObject, CNContactViewControllerDelegate {
+        let onComplete: () -> Void
+        init(onComplete: @escaping () -> Void) { self.onComplete = onComplete }
+        func contactViewController(_ viewController: CNContactViewController, didCompleteWith contact: CNContact?) { onComplete() }
+    }
+}
 
 struct SystemShareSheet: UIViewControllerRepresentable {
     let items: [Any]

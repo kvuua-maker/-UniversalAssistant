@@ -1,4 +1,5 @@
 import Foundation
+import Contacts
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -52,14 +53,21 @@ struct SharedContentActionRouter: Sendable {
             guard let url = URL(string: assessment.normalizedValue) else { throw SharedContentRoutingError.invalidPayload }
             return try route(.url(url), requested: .open)
         case .contact:
-            guard let data = assessment.normalizedValue.data(using: .utf8) else { throw SharedContentRoutingError.invalidPayload }
+            guard let data = assessment.normalizedValue.data(using: .utf8),
+                  let contacts = try? CNContactVCardSerialization.contacts(with: data), !contacts.isEmpty
+            else { throw SharedContentRoutingError.invalidPayload }
             return try route(.vCard(data), requested: .importContact)
         case .telephone:
             return try route(.text(assessment.normalizedValue), requested: .call)
         case .payment:
             throw SharedContentRoutingError.unsupportedAction
-        case .wifi, .email, .plainText, .unknown:
+        case .wifi, .email:
+            let safe = try route(.text(assessment.normalizedValue), requested: .save)
+            return .init(content: safe.content, action: safe.action, requiresConfirmation: true, reason: safe.reason)
+        case .plainText:
             return try route(.text(assessment.normalizedValue), requested: .save)
+        case .unknown:
+            throw SharedContentRoutingError.unsupportedAction
         }
     }
 

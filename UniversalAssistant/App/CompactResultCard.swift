@@ -3,6 +3,7 @@ import SwiftUI
 struct CompactResultCard: View {
     let state: AssistantResultState
     var onReportIssue: () -> Void = {}
+    var onScannerAction: (ScannerProductionResult) -> Void = { _ in }
 
     var body: some View {
         switch state {
@@ -27,6 +28,12 @@ struct CompactResultCard: View {
                     .accessibilityIdentifier("assistant.web-search.open")
             }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .accessibilityIdentifier("assistant.web-search-result")
+        case .scanner(let result):
+            VStack(alignment: .leading, spacing: 10) {
+                Text(result.observedType == "qr" ? "QR-код" : "Штрихкод").font(.headline)
+                Text(result.observedValue).font(.subheadline).textSelection(.enabled)
+                Button(result.route.requiresConfirmation ? "Підтвердити дію" : "Виконати") { onScannerAction(result) }.buttonStyle(.borderedProminent)
+            }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous)).accessibilityIdentifier("assistant.scanner-result")
         case .deterministic(let result):
             VStack(alignment: .leading, spacing: 10) {
                 Text(result.primaryAnswer).font(.headline)

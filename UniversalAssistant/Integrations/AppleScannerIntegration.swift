@@ -1,11 +1,12 @@
 import Foundation
 import UIKit
+import SwiftUI
 import Vision
 @preconcurrency import VisionKit
 
 @MainActor
 final class LiveCodeScanner: NSObject, DataScannerViewControllerDelegate {
-    var onPayload: ((String) -> Void)?
+    var onPayload: ((ObservedScannerCode) -> Void)?
 
     func makeController() throws -> DataScannerViewController {
         guard DataScannerViewController.isSupported else {
@@ -30,11 +31,43 @@ final class LiveCodeScanner: NSObject, DataScannerViewControllerDelegate {
         for item in addedItems {
             guard case let .barcode(barcode) = item,
                   let payload = barcode.payloadStringValue else { continue }
-            onPayload?(payload)
+            onPayload?(ObservedScannerCode(payload: payload, symbology: barcode.observation.symbology))
             dataScanner.stopScanning()
             return
         }
     }
+}
+
+struct ObservedScannerCode: Equatable, Sendable {
+    let payload: String
+    let symbology: VNBarcodeSymbology
+    var isQR: Bool { symbology == .qr }
+}
+
+struct ScannerProductionResult: Equatable, Sendable {
+    let observedValue: String
+    let observedType: String
+    let route: SharedContentRoute
+}
+
+struct ScannerProductionRouter: Sendable {
+    private let router = SharedContentActionRouter()
+    func route(_ observation: ObservedScannerCode) throws -> ScannerProductionResult {
+        let route = try observation.isQR ? router.routeQR(observation.payload) : router.routeRetailBarcode(observation.payload)
+        return .init(observedValue: observation.payload.trimmingCharacters(in: .whitespacesAndNewlines), observedType: observation.isQR ? "qr" : "barcode", route: route)
+    }
+}
+
+@MainActor
+struct LiveCodeScannerView: UIViewControllerRepresentable {
+    let onResult: (ObservedScannerCode) -> Void
+    let onUnavailable: () -> Void
+    func makeCoordinator() -> LiveCodeScanner { let scanner = LiveCodeScanner(); scanner.onPayload = onResult; return scanner }
+    func makeUIViewController(context: Context) -> DataScannerViewController {
+        do { let controller = try context.coordinator.makeController(); controller.delegate = context.coordinator; try controller.startScanning(); return controller }
+        catch { Task { @MainActor in onUnavailable() }; return DataScannerViewController(recognizedDataTypes: [.barcode()], qualityLevel: .balanced, recognizesMultipleItems: false, isHighFrameRateTrackingEnabled: false, isPinchToZoomEnabled: false, isGuidanceEnabled: false, isHighlightingEnabled: false) }
+    }
+    func updateUIViewController(_ uiViewController: DataScannerViewController, context: Context) {}
 }
 
 @MainActor

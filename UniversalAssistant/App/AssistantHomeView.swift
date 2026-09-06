@@ -31,7 +31,7 @@ struct AssistantHomeView: View {
                     RecordingStatusPill(state: model.recorder.state)
                     CompactResultCard(state: model.resultState, onReportIssue: {
                         Task { await model.reportWrongResult() }
-                    })
+                    }, onScannerAction: model.performScannerAction)
                         .frame(maxWidth: 520)
                         Spacer(minLength: 24)
                     }
@@ -72,10 +72,14 @@ struct AssistantHomeView: View {
             switch presentation {
             case .camera:
                 SystemCameraCapture { _ in model.dismissCapabilityPresentation() }
+            case .scanner:
+                LiveCodeScannerView(onResult: model.handleScannedCode, onUnavailable: model.handleScannerUnavailable)
             case .documents:
                 AuthorizedDocumentPicker { _ in model.dismissCapabilityPresentation() }
             case let .share(value):
                 SystemShareSheet(items: [value])
+            case let .contactImport(data):
+                VCardImportConfirmationView(data: data, onComplete: model.dismissCapabilityPresentation)
             case let .message(recipients, body):
                 if MFMessageComposeViewController.canSendText() {
                     SystemMessageComposer(recipients: recipients, body: body) { _ in model.dismissCapabilityPresentation() }
