@@ -5,6 +5,7 @@ struct CompactResultCard: View {
     var onReportIssue: () -> Void = {}
     var onScannerAction: (ScannerProductionResult) -> Void = { _ in }
     var onOCRAction: (OCRProductionResult, OCRResultAction) -> Void = { _, _ in }
+    var onTranslationAction: (TranslationProductionResult, OCRResultAction) -> Void = { _, _ in }
 
     var body: some View {
         switch state {
@@ -41,6 +42,15 @@ struct CompactResultCard: View {
                 Text(result.recognizedText).font(.subheadline).textSelection(.enabled).lineLimit(8)
                 HStack { ForEach(result.actions, id: \.self) { action in Button(ocrActionTitle(action)) { onOCRAction(result, action) }.buttonStyle(.bordered) } }
             }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous)).accessibilityIdentifier("assistant.ocr-result")
+        case .translation(let result):
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Переклад").font(.headline)
+                Text(result.translatedText).font(.subheadline).textSelection(.enabled)
+                HStack {
+                    Button("Копіювати") { onTranslationAction(result, .copy) }.buttonStyle(.bordered)
+                    Button("Поділитися") { onTranslationAction(result, .share) }.buttonStyle(.bordered)
+                }
+            }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous)).accessibilityIdentifier("assistant.translation-result")
         case .deterministic(let result):
             VStack(alignment: .leading, spacing: 10) {
                 Text(result.primaryAnswer).font(.headline)

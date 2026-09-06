@@ -406,9 +406,17 @@ final class AssistantViewModel {
         case .copy: UIPasteboard.general.string = result.recognizedText; statusText = AppText.value("ready")
         case .share: capabilityPresentation = .share(result.recognizedText)
         case .translate:
-            input = result.recognizedText
-            requireAction(prompt: "Оберіть мову перекладу", choices: ["Українська", "English", "Deutsch"])
+            capabilityPresentation = .translationTarget(result.recognizedText)
         }
+    }
+    func startTranslation(_ text: String, _ targetLanguage: String) {
+        do { capabilityPresentation = .translation(try CameraIntelligenceCore().translationPlan(text: text, sourceLanguage: nil, targetLanguage: targetLanguage)) }
+        catch { capabilityPresentation = nil; presentFailure(message: AppText.value("request_unavailable")) }
+    }
+    func handleTranslationResult(_ result: TranslationProductionResult) { capabilityPresentation = nil; resultState = .translation(result); statusText = AppText.value("ready"); LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=translation") }
+    func handleTranslationFailure() { capabilityPresentation = nil; presentFailure(message: AppText.value("request_unavailable")) }
+    func performTranslationAction(_ result: TranslationProductionResult, _ action: OCRResultAction) {
+        switch action { case .copy: UIPasteboard.general.string = result.translatedText; case .share: capabilityPresentation = .share(result.translatedText); case .translate: break }
     }
     func dismissCapabilityPresentation() { capabilityPresentation = nil }
 

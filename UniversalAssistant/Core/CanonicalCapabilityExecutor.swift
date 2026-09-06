@@ -14,6 +14,8 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case share(String)
     case message(recipients: [String], body: String?)
     case contactImport(Data)
+    case translationTarget(String)
+    case translation(LocalTranslationPlan)
 
     var id: String {
         switch self {
@@ -25,6 +27,8 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
         case .share: "share"
         case .message: "message"
         case .contactImport: "contact-import"
+        case .translationTarget: "translation-target"
+        case .translation: "translation"
         }
     }
 }

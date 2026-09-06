@@ -10,6 +10,7 @@ enum AssistantResultState: Equatable, Sendable {
     case deterministic(DeterministicResult)
     case scanner(ScannerProductionResult)
     case ocr(OCRProductionResult)
+    case translation(TranslationProductionResult)
     case clarification(ResultSummary)
     case actionRequired(ActionRequiredSummary)
     case failure(UserFacingFailure)
