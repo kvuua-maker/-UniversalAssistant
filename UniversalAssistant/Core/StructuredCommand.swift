@@ -113,9 +113,9 @@ struct LocalCommandEngine: CommandParsing {
         let specificPatternIntent = Self.intentPatterns.first { intent, patterns in
             intent != .productSearch && patterns.contains { normalized.contains($0) }
         }?.0
+        let semanticIntent = semanticCapabilityIntent(normalized)
         let intent = priorityIntent(normalized)
-            ?? specificPatternIntent
-            ?? semanticCapabilityIntent(normalized)
+            ?? resolveSpecificAndSemantic(specific: specificPatternIntent, semantic: semanticIntent)
             ?? Self.intentPatterns.first { _, patterns in patterns.contains { normalized.contains($0) } }?.0
             ?? contextualIntent(normalized)
         var entities: [String: String] = [:]; var constraints = CommandConstraints()
@@ -124,7 +124,7 @@ struct LocalCommandEngine: CommandParsing {
         extractFashionFilters(from: text, normalized: normalized, into: &constraints)
         constraints.ordinal = ordinal(in: normalized)
         if intent == .open, let target = target(after: ["відкрий", "открой", "open", "öffne", "ouvre"], in: text) { entities["app"] = target }
-        if [.contactLookup, .contactCall].contains(intent), let value = target(after: ["знайди контакт", "найди контакт", "find contact", "подзвони", "позвони", "call"], in: text) { entities["contact"] = value }
+        if [.contactLookup, .contactCall].contains(intent), let value = target(after: ["знайди контакт", "найди контакт", "find contact", "подзвони", "позвони", "call"], in: text) { entities["contact"] = contactSubject(value) }
         if intent == .messageCompose, let value = target(after: ["напиши", "отправь сообщение", "message", "schreib", "écris"], in: text) { entities["recipient"] = value }
         if [.photoSearch, .fileSearch, .mediaSearch, .podcastSearch].contains(intent) { entities["query"] = querySubject(for: intent, in: text) }
         if intent == .parcelTrack, let tracking = normalized.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init).first(where: { $0.count >= 5 && $0.rangeOfCharacter(from: .decimalDigits) != nil }) { entities["tracking_number"] = tracking }
@@ -145,13 +145,17 @@ struct LocalCommandEngine: CommandParsing {
 
     private func querySubject(for intent: CommandIntent, in text: String) -> String {
         let prefixes: [String] = switch intent {
-        case .photoSearch: ["знайди фото", "покажи фото", "найди фото", "покажи фотографии", "find photos", "show photos"]
+        case .photoSearch: ["знайди фото", "покажи фото", "покажи мої", "найди фото", "покажи фотографии", "find photos", "show photos"]
         case .fileSearch: ["знайди файл", "знайди документ", "найди файл", "найди документ", "find file", "find document"]
-        case .mediaSearch: ["увімкни музику", "знайди пісню", "включи музыку", "найди песню", "play music", "find song"]
+        case .mediaSearch: ["увімкни музику", "увімкни", "знайди пісню", "включи музыку", "включи", "найди песню", "play music", "play", "find song"]
         case .podcastSearch: ["знайди подкаст", "увімкни подкаст", "найди подкаст", "включи подкаст", "find podcast", "play podcast"]
         default: []
         }
-        return target(after: prefixes, in: text) ?? ""
+        var value = target(after: prefixes, in: text) ?? ""
+        if intent == .mediaSearch {
+            value = value.replacingOccurrences(of: #"\s+(?:в|у|через|on|in)\s+apple\s+music\s*$"#, with: "", options: [.regularExpression, .caseInsensitive])
+        }
+        return value.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
     }
 
     private func normalize(_ text: String) -> String {
@@ -179,13 +183,47 @@ struct LocalCommandEngine: CommandParsing {
         if text.contains("таксі додому") && text.contains("чекати") { return .taxiSearch }
         return nil
     }
+    private func resolveSpecificAndSemantic(specific: CommandIntent?, semantic: CommandIntent?) -> CommandIntent? {
+        guard let semantic else { return specific }
+        let broadCollision: Bool = switch (semantic, specific) {
+        case (.photoSearch, .show), (.audioRecord, .calendarCreate),
+             (.mediaSearch, .show), (.mediaSearch, .productSearch),
+             (.calendarCreate, .productSearch),
+             (.placeSearch, .show), (.placeSearch, .productSearch),
+             (.placeSearch, .transportRoute), (.placeSearch, .routeSearch),
+             (.placeSearch, .ticketSearch): true
+        default: false
+        }
+        return broadCollision ? semantic : (specific ?? semantic)
+    }
+
     private func semanticCapabilityIntent(_ text: String) -> CommandIntent? {
         let commerceActions = ["куп", "придба", "замов", "ціна", "вартіст", "скільки кошту", "сколько стоит", "покуп", "закаж", "цена", "стоимость", "buy", "purchase", "price"]
-        let placeActions = ["де ", "куди", "поруч", "поблизу", "зайти", "піти", "сходити", "рядом", "куда", "пойти", "nearby", "where"]
+        let placeActions = ["де ", "куди", "поруч", "поблизу", "найближ", "зайти", "піти", "сходити", "рядом", "ближайш", "куда", "пойти", "nearby", "nearest", "closest", "where"]
         let placeKinds = ["кав", "кафе", "кофе", "кофейн", "ресторан", "бар", "піцер", "пиццер", "bakery", "cafe", "coffee shop", "restaurant"]
         let fashionKinds = ["одяг", "взут", "футбол", "сороч", "куртк", "сукн", "штани", "кросів", "черев", "одеж", "обув", "рубаш", "плать", "брюк", "кроссов", "ботин", "clothing", "apparel", "footwear", "shirt", "jacket", "dress", "sneaker", "shoe"]
         let groceryKinds = ["продукт", "супермаркет", "магазин", "молоч", "хліб", "овоч", "фрукт", "круп", "напій", "хлеб", "овощ", "grocer", "supermarket", "food store"]
         let retailerSignals = ["сільпо", "silpo", "атб", "fora", "фора", "fozzy"]
+
+        let showActions = ["покажи", "знайди", "найди", "show", "find"]
+        let photoKinds = ["фото", "фотограф", "світлин", "снимк", "photos", "pictures"]
+        if containsAny(text, showActions), containsAny(text, photoKinds) { return .photoSearch }
+
+        let recordActions = ["запиши", "записати", "почни запис", "запиши голос", "запиши аудіо", "запиши аудио", "record"]
+        let recordKinds = ["голосов", "аудіо", "аудио", "диктофон", "voice note", "recording"]
+        if containsAny(text, recordActions), containsAny(text, recordKinds) { return .audioRecord }
+
+        let mediaActions = ["увімкни", "включи", "програй", "воспроизведи", "знайди", "найди", "play", "listen"]
+        let mediaKinds = ["apple music", "музик", "пісн", "песн", "трек", "альбом", "виконав", "исполнител", "song", "artist"]
+        if containsAny(text, mediaActions), containsAny(text, mediaKinds) { return .mediaSearch }
+
+        let calendarActions = ["створи", "создай", "додай", "добавь", "заплануй", "запланируй", "create", "add", "schedule"]
+        let calendarKinds = ["подію", "подія", "событие", "зустріч", "встреч", "event", "appointment"]
+        if containsAny(text, calendarActions), containsAny(text, calendarKinds) { return .calendarCreate }
+
+        let storefrontKinds = ["магазин", "крамниц", "store", "shop"]
+        let routeSignals = ["як доїхати", "как доехать", "маршрут", "route", "directions"]
+        if containsAny(text, storefrontKinds), (containsAny(text, placeActions) || containsAny(text, routeSignals)) { return .placeSearch }
 
         if containsAny(text, placeActions), containsAny(text, placeKinds) { return .placeSearch }
         guard containsAny(text, commerceActions) else { return nil }
@@ -196,6 +234,14 @@ struct LocalCommandEngine: CommandParsing {
 
     private func containsAny(_ text: String, _ signals: [String]) -> Bool {
         signals.contains(where: text.contains)
+    }
+
+    private func contactSubject(_ value: String) -> String {
+        value.replacingOccurrences(
+            of: #"\s+(?:на|у|в)\s+(?:моєму|моем|цьому|этом)?\s*(?:iphone|айфоні|айфоне|телефоні|телефоне|пристрої|устройстве)\s*$"#,
+            with: "",
+            options: [.regularExpression, .caseInsensitive]
+        ).trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
     }
 
     private func extractPrice(from text: String, into constraints: inout CommandConstraints) {
@@ -278,7 +324,12 @@ struct LocalCommandEngine: CommandParsing {
         let value = patterns.compactMap { marker -> String? in
             guard let range = original.range(of: marker, options: [.caseInsensitive, .diacriticInsensitive]) else { return nil }
             let suffix = original[range.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
-            return suffix.isEmpty ? nil : suffix
+            let boundary = [",", " який ", " яка ", " яке ", " которые ", " который ", " як ", " как ", " і ", " и "]
+                .compactMap { suffix.range(of: $0, options: [.caseInsensitive, .diacriticInsensitive])?.lowerBound }
+                .min()
+            let locality = boundary.map { String(suffix[..<$0]) } ?? suffix
+            let value = locality.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+            return value.isEmpty ? nil : value
         }.first
         return value
     }

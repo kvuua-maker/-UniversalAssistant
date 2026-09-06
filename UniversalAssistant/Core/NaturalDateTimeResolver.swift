@@ -30,7 +30,7 @@ struct NaturalDateTimeResolver: Sendable {
             return .unresolved
         }
 
-        let time = explicitTime(in: text)
+        let time = explicitTime(in: text) ?? spokenTime(in: text)
         let instant: Date
         if let time {
             guard let value = calendar.date(bySettingHour: time.hour, minute: time.minute, second: 0, of: targetDay) else {
@@ -55,6 +55,27 @@ struct NaturalDateTimeResolver: Sendable {
             ("сьогодні", 0), ("сегодня", 0), ("today", 0), ("heute", 0), ("aujourd'hui", 0)
         ]
         return phrases.first(where: { text.contains($0.0) })?.1
+    }
+
+    private func spokenTime(in text: String) -> (hour: Int, minute: Int)? {
+        let hours: [(Int, [String])] = [
+            (23, ["двадцять трет", "двадцать трет"]), (22, ["двадцять друг", "двадцать втор"]),
+            (21, ["двадцять перш", "двадцать перв"]), (20, ["двадцят", "двадцат"]),
+            (19, ["дев'ятнадцят", "девятнадцат"]), (18, ["вісімнадцят", "восемнадцат"]),
+            (17, ["сімнадцят", "семнадцат"]), (16, ["шістнадцят", "шестнадцат"]),
+            (15, ["п'ятнадцят", "пятнадцят", "пятнадцат"]), (14, ["чотирнадцят", "четырнадцат"]),
+            (13, ["тринадцят", "тринадцат"]), (12, ["дванадцят", "двенадцат"]),
+            (11, ["одинадцят", "одиннадцат"]), (10, ["десят"]),
+            (9, ["дев'ят", "девят"]), (8, ["восьм", "восем"]),
+            (7, ["сьом", "седьм"]), (6, ["шост", "шест"]),
+            (5, ["п'ят", "пят"]), (4, ["четверт", "чотир"]),
+            (3, ["трет"]), (2, ["друг", "другій", "втор"]),
+            (1, ["перш", "перв"]), (0, ["опівноч", "полноч"])
+        ]
+        guard text.contains(" о ") || text.contains(" об ") || text.contains(" в ") || text.hasSuffix("ій") || text.hasSuffix("ой") else { return nil }
+        guard let hour = hours.first(where: { entry in entry.1.contains(where: text.contains) })?.0 else { return nil }
+        let minute = text.contains("половин") ? 30 : text.contains("чверт") || text.contains("четверть") ? 15 : 0
+        return (hour, minute)
     }
 
     private func explicitTime(in text: String) -> (hour: Int, minute: Int)? {

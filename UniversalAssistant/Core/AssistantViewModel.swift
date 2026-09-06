@@ -32,6 +32,7 @@ final class AssistantViewModel {
     private var resultDismissTask: Task<Void, Never>?
     private var weatherExecutionInFlight = false
     private var eventKitExecutionInFlight = false
+    private var capabilityExecutionInFlight = false
 
     init(
         commandEngine: any CommandParsing = LocalCommandEngine(),
@@ -98,7 +99,7 @@ final class AssistantViewModel {
         case let .state(state):
             LocalVoiceDiagnosticReport.shared.record("state_delivered_to_view_model", "state=\(String(describing: state))")
             applyVoiceState(state)
-            if state == .idle, !weatherExecutionInFlight, !eventKitExecutionInFlight, let session = LocalVoiceDiagnosticReport.shared.completedSession() {
+            if state == .idle, !weatherExecutionInFlight, !eventKitExecutionInFlight, !capabilityExecutionInFlight, let session = LocalVoiceDiagnosticReport.shared.completedSession() {
                 Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
             }
         case let .transcript(transcript, isFinal):
@@ -205,10 +206,18 @@ final class AssistantViewModel {
                         resultState = .eventKit(result)
                         statusText = AppText.value("ready")
                         LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=eventkit")
-                    } catch EventKitExecutionError.unresolvedDateTime, EventKitExecutionError.missingSubject, EventKitExecutionError.ambiguousItem {
-                        resultState = .clarification(summary)
-                        statusText = AppText.value("clarification_needed")
+                    } catch let error as EventKitExecutionError {
+                        LocalVoiceDiagnosticReport.shared.record("execution_failed", "mechanism=eventkit reason=\(String(describing: error)) error_type=EventKitExecutionError")
+                        switch error {
+                        case .unresolvedDateTime, .missingSubject, .ambiguousItem:
+                            resultState = .clarification(summary)
+                            statusText = AppText.value("clarification_needed")
+                        default:
+                            presentFailure(message: String(localized: "eventkit_unavailable"))
+                        }
                     } catch {
+                        let failure = error as NSError
+                        LocalVoiceDiagnosticReport.shared.record("execution_failed", "mechanism=eventkit reason=unavailable error_domain=\(failure.domain) error_code=\(failure.code) error_type=\(String(describing: type(of: error)))")
                         presentFailure(message: String(localized: "eventkit_unavailable"))
                     }
                     eventKitExecutionInFlight = false
@@ -222,6 +231,7 @@ final class AssistantViewModel {
                 let action = AudioRecorderCommand(rawValue: command.entities["recorder_action"] ?? "start") ?? .start
                 resultState = .processing
                 statusText = AppText.value("processing")
+                capabilityExecutionInFlight = true
                 Task { [weak self] in
                     guard let self else { return }
                     await recorder.execute(action)
@@ -233,6 +243,8 @@ final class AssistantViewModel {
                         statusText = AppText.value("ready")
                         LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=audio_record state=\(String(describing: recorder.state))")
                     }
+                    capabilityExecutionInFlight = false
+                    deliverCompletedDiagnosticSession()
                 }
                 return
             }
@@ -299,8 +311,13 @@ final class AssistantViewModel {
     private func executeCanonicalCapability(_ command: StructuredCommand, summary: ResultSummary) {
         resultState = .processing
         statusText = AppText.value("processing")
+        capabilityExecutionInFlight = true
         Task { [weak self] in
             guard let self else { return }
+            defer {
+                capabilityExecutionInFlight = false
+                deliverCompletedDiagnosticSession()
+            }
             do {
                 switch try await capabilityExecutor.execute(command) {
                 case let .result(result):
@@ -325,10 +342,19 @@ final class AssistantViewModel {
             } catch let CanonicalCapabilityExecutionError.externalProviderRequired(providerClass) {
                 LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=external_provider_required capability=\(providerClass)")
                 presentFailure(message: AppText.value("request_unavailable"))
+            } catch let CanonicalCapabilityExecutionError.unavailable(reason) {
+                LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=capability_unavailable capability=\(command.intent.rawValue) detail=\(reason)")
+                presentFailure(message: AppText.value("request_unavailable"))
             } catch {
                 LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=capability_unavailable capability=\(command.intent.rawValue)")
                 presentFailure(message: AppText.value("request_unavailable"))
             }
+        }
+    }
+
+    private func deliverCompletedDiagnosticSession() {
+        if let session = LocalVoiceDiagnosticReport.shared.completedSession() {
+            Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
         }
     }
 

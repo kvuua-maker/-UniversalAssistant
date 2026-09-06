@@ -35,6 +35,7 @@ struct PhotoAssetReference: Equatable, Sendable {
 
 protocol PhotoLibrarySearching: Sendable {
     func authorization() -> LocalSearchAccess
+    func requestAuthorization() async -> LocalSearchAccess
     func search(_ criteria: PhotoSearchCriteria, limit: Int) async -> [PhotoAssetReference]
 }
 
@@ -47,6 +48,12 @@ struct PhotoKitLibrarySearch: PhotoLibrarySearching {
         case .denied, .restricted: .denied
         @unknown default: .unavailable
         }
+    }
+
+    func requestAuthorization() async -> LocalSearchAccess {
+        guard authorization() == .permissionRequired else { return authorization() }
+        _ = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+        return authorization()
     }
 
     func search(_ criteria: PhotoSearchCriteria, limit: Int) async -> [PhotoAssetReference] {

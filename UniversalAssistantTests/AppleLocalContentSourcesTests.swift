@@ -7,6 +7,7 @@ import Testing
         let access: LocalSearchAccess
         let assets: [PhotoAssetReference]
         func authorization() -> LocalSearchAccess { access }
+        func requestAuthorization() async -> LocalSearchAccess { access }
         func search(_ criteria: PhotoSearchCriteria, limit: Int) async -> [PhotoAssetReference] { Array(assets.prefix(limit)) }
     }
     private struct ImageLoaderStub: PhotoAssetImageLoading {

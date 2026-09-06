@@ -13,3 +13,8 @@
 "eventkit_deleted" = "Supprimé";
 "eventkit_empty" = "Aucun élément trouvé";
 "eventkit_unavailable" = "Le calendrier ou les rappels sont indisponibles";
+
+"navigation_ready" = "La navigation est prête";
+"navigation_open" = "Ouvrir l’itinéraire";
+"system_handoff_ready" = "L’action système est prête";
+"system_handoff_open" = "Continuer";

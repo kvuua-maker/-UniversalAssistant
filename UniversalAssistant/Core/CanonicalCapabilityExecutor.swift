@@ -47,6 +47,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let locationResolver: ManualLocationContextResolver
     private let placeSearch: PlaceSearchEngine
     private let navigation = NavigationHandoff()
+    private let currentLocation: any CurrentLocationResolving
 
     init(
         deviceRouter: UniversalDeviceCommandRouter = .init(applications: .init(applications: LaunchDeviceApplications.verified)),
@@ -54,7 +55,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         photos: any PhotoLibrarySearching = PhotoKitLibrarySearch(),
         podcasts: ApplePodcastSearchProvider = .init(),
         locationResolver: ManualLocationContextResolver = .init(),
-        placeSearch: PlaceSearchEngine = .init(providers: [MapKitPlaceProvider()])
+        placeSearch: PlaceSearchEngine = .init(providers: [MapKitPlaceProvider()]),
+        currentLocation: any CurrentLocationResolving = AppleCurrentLocationResolver()
     ) {
         self.deviceRouter = deviceRouter
         self.contacts = contacts
@@ -62,6 +64,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.podcasts = podcasts
         self.locationResolver = locationResolver
         self.placeSearch = placeSearch
+        self.currentLocation = currentLocation
 #if canImport(MusicKit)
         self.media = MediaIntegrationEngine(adapters: [AppleMusicProviderAdapter()])
 #else
@@ -91,10 +94,14 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             return .presentation(.camera)
         case .photoSearch:
             let query = command.entities["query"] ?? ""
-            guard [.permitted, .limited].contains(photos.authorization()) else {
+            let photoAccess = await photos.requestAuthorization()
+            guard [.permitted, .limited].contains(photoAccess) else {
                 throw CanonicalCapabilityExecutionError.unavailable("photos_permission_required")
             }
-            let values = await PhotoSemanticSearchEngine(library: photos, loader: PhotoKitAssetImageLoader(), labeler: VisionPhotoSemanticLabeler()).search(query, limit: 5)
+            let recent = ["останн", "последн", "recent", "latest"].contains(where: command.normalizedText.contains)
+            let values = recent
+                ? await photos.search(.init(), limit: 5)
+                : await PhotoSemanticSearchEngine(library: photos, loader: PhotoKitAssetImageLoader(), labeler: VisionPhotoSemanticLabeler()).search(query, limit: 5)
             return .result(try result(
                 values.isEmpty ? "Немає підтверджених збігів" : "Знайдено фото: \(values.count)",
                 facts: values.enumerated().map { index, value in
@@ -116,10 +123,10 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             }, actions: values.compactMap { item in item.exactURL.map { .init(id: item.id, title: "Відкрити", kind: .open, destination: $0) } }))
         case .emergency:
             guard let url = URL(string: "tel:112") else { throw CanonicalCapabilityExecutionError.unavailable("invalid_emergency_handoff") }
-            return .handoff(.init(query: command.originalText, destination: url))
+            return .handoff(.init(query: command.originalText, destination: url, kind: .system))
         case .settings:
             guard let url = URL(string: "app-settings:") else { throw CanonicalCapabilityExecutionError.unavailable("settings_unavailable") }
-            return .handoff(.init(query: command.originalText, destination: url))
+            return .handoff(.init(query: command.originalText, destination: url, kind: .system))
         case .help:
             return .result(try result("Скажіть або введіть, що потрібно зробити", facts: []))
         case .show, .contextualSelection:
@@ -145,9 +152,13 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     }
 
     private func places(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
-        let area = try required(command.entities["location"], "location")
-        let location = try await locationResolver.resolve(area)
-        let category: PlaceCategory? = command.intent == .placeSearch ? .cafe : nil
+        let location: ValidatedLocation
+        if let area = command.entities["location"], !area.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            location = try await locationResolver.resolve(area)
+        } else {
+            location = try await currentLocation.resolveCurrent(for: .nearbySearch)
+        }
+        let category = placeCategory(in: command.normalizedText)
         let response = try await placeSearch.search(.init(text: command.entities["serviceCategory"] ?? command.originalText, category: category, location: location, limit: 5))
         guard !response.places.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_places_found") }
         return .result(try result("Знайдено місця", facts: response.places.prefix(5).enumerated().map { index, place in
@@ -162,12 +173,12 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let destinationName = try required(command.entities["destination"], "destination")
         let destination = try await locationResolver.resolve(destinationName)
         let url = try navigation.url(provider: .appleMaps, destination: .init(latitude: destination.sample.latitude, longitude: destination.sample.longitude, name: destinationName), mode: .driving)
-        return .handoff(.init(query: command.originalText, destination: url))
+        return .handoff(.init(query: command.originalText, destination: url, kind: .navigation))
     }
 
     private func app(_ command: StructuredCommand) throws -> CapabilityExecutionOutcome {
         switch deviceRouter.route(command) {
-        case let .deviceApplication(_, destination, _): return .handoff(.init(query: command.originalText, destination: destination))
+        case let .deviceApplication(_, destination, _): return .handoff(.init(query: command.originalText, destination: destination, kind: .system))
         case let .clarification(values): throw CanonicalCapabilityExecutionError.ambiguous(values)
         case let .unsupported(reason): throw CanonicalCapabilityExecutionError.unavailable(reason)
         default: throw CanonicalCapabilityExecutionError.unavailable("unsupported_app_route")
@@ -187,7 +198,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                       let url = URL(string: "tel:\(digits)") else {
                     throw CanonicalCapabilityExecutionError.ambiguous(value.phoneNumbers)
                 }
-                return .handoff(.init(query: value.displayName, destination: url))
+                return .handoff(.init(query: value.displayName, destination: url, kind: .system))
             }
             return .result(try result(value.displayName, facts: value.phoneNumbers.enumerated().map { index, number in
                 ResultFact(id: "phone-\(index)", label: "Телефон", value: number, state: .verified, source: "Contacts", observedAt: .now, priority: 100 - index)
@@ -197,6 +208,14 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
 
     private func result(_ answer: String, facts: [ResultFact], actions: [ResultAction] = []) throws -> DeterministicResult {
         try DeterministicResultComposer().compose(primaryAnswer: answer, facts: facts, actions: actions)
+    }
+
+    private func placeCategory(in text: String) -> PlaceCategory? {
+        if ["кав", "кафе", "кофе", "coffee", "cafe"].contains(where: text.contains) { return .cafe }
+        if ["ресторан", "restaurant"].contains(where: text.contains) { return .restaurant }
+        if ["супермаркет", "supermarket", "grocer"].contains(where: text.contains) { return .supermarket }
+        if ["магазин", "store", "shop"].contains(where: text.contains) { return .shop }
+        return nil
     }
 
     private func required(_ value: String?, _ key: String) throws -> String {

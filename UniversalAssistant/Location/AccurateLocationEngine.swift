@@ -108,6 +108,31 @@ struct LocationValidator: Sendable {
 enum AccurateLocationState: Equatable, Sendable { case idle, requestingPermission, locating, available, denied, unavailable }
 
 @MainActor
+protocol CurrentLocationResolving: AnyObject {
+    func resolveCurrent(for purpose: LocationPurpose) async throws -> ValidatedLocation
+}
+
+enum CurrentLocationResolutionError: Error, Equatable { case denied, unavailable }
+
+@MainActor
+final class AppleCurrentLocationResolver: CurrentLocationResolving {
+    private let engine: AccurateLocationEngine
+
+    init(engine: AccurateLocationEngine = .init()) { self.engine = engine }
+
+    func resolveCurrent(for purpose: LocationPurpose) async throws -> ValidatedLocation {
+        engine.request(for: purpose)
+        for _ in 0..<100 {
+            if engine.state == .denied { throw CurrentLocationResolutionError.denied }
+            if engine.state == .unavailable { throw CurrentLocationResolutionError.unavailable }
+            if engine.state == .available, let value = engine.current, value.isSafeForLocationActions { return value }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        throw CurrentLocationResolutionError.unavailable
+    }
+}
+
+@MainActor
 @Observable
 final class AccurateLocationEngine: NSObject, @preconcurrency CLLocationManagerDelegate {
     private(set) var state: AccurateLocationState = .idle

@@ -29,6 +29,29 @@ struct NaturalDateTimeResolverTests {
         #expect(resolved.precision == .minute)
     }
 
+    @Test(arguments: [
+        ("Створи завтра о п'ятнадцятій подію", "uk_UA", 15),
+        ("Напомни завтра в двенадцать", "ru_RU", 12)
+    ])
+    func resolvesSpokenUkrainianAndRussianHours(input: String, localeID: String, expectedHour: Int) throws {
+        let result = resolver.resolve(input, locale: Locale(identifier: localeID), timeZone: zone, relativeTo: reference)
+        let resolved = try #require({
+            if case let .resolved(value) = result { return value }
+            return nil
+        }())
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        #expect(calendar.component(.hour, from: resolved.instant) == expectedHour)
+        #expect(calendar.component(.minute, from: resolved.instant) == 0)
+    }
+
+    @Test func eventKitArgumentsRemoveSpokenTimeWithoutDamagingTitle() throws {
+        let command = LocalCommandEngine().parse("Створи завтра о п'ятнадцятій подію Тест UniversalAssistant")
+        let values = EventKitCommandArgumentExtractor().extract(command, now: reference, timeZone: zone)
+        #expect(values.subject == "Тест UniversalAssistant")
+        #expect(values.dateTime != nil)
+    }
+
     @Test func distinguishesRelativeDaysAndPreservesDayPrecision() throws {
         let today = try resolved("сьогодні")
         let tomorrow = try resolved("tomorrow")

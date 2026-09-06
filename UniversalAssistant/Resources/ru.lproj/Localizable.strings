@@ -13,3 +13,8 @@
 "eventkit_deleted" = "Удалено";
 "eventkit_empty" = "Ничего не найдено";
 "eventkit_unavailable" = "Календарь или напоминания недоступны";
+
+"navigation_ready" = "Маршрут готов";
+"navigation_open" = "Открыть в Картах";
+"system_handoff_ready" = "Системное действие готово";
+"system_handoff_open" = "Продолжить";

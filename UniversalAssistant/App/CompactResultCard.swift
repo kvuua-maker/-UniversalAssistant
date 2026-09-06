@@ -21,9 +21,9 @@ struct CompactResultCard: View {
             WeatherResultCard(snapshot: snapshot, onReportIssue: onReportIssue)
         case .webHandoff(let result):
             VStack(alignment: .leading, spacing: 10) {
-                Text("web_search_ready").font(.headline)
+                Text(handoffTitle(result.kind)).font(.headline)
                 Text(result.query).font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
-                Link("web_search_open", destination: result.destination).buttonStyle(.borderedProminent)
+                Link(handoffAction(result.kind), destination: result.destination).buttonStyle(.borderedProminent)
                     .accessibilityIdentifier("assistant.web-search.open")
             }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .accessibilityIdentifier("assistant.web-search-result")
@@ -74,6 +74,22 @@ struct CompactResultCard: View {
             .accessibilityIdentifier("assistant.failure")
         case .expanded(let summary):
             card(summary, title: "request_recognized", tint: .blue)
+        }
+    }
+
+    private func handoffTitle(_ kind: HandoffKind) -> LocalizedStringKey {
+        switch kind {
+        case .webSearch: "web_search_ready"
+        case .navigation: "navigation_ready"
+        case .system: "system_handoff_ready"
+        }
+    }
+
+    private func handoffAction(_ kind: HandoffKind) -> LocalizedStringKey {
+        switch kind {
+        case .webSearch: "web_search_open"
+        case .navigation: "navigation_open"
+        case .system: "system_handoff_open"
         }
     }
 

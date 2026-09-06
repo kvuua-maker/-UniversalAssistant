@@ -13,3 +13,8 @@
 "eventkit_deleted" = "Deleted";
 "eventkit_empty" = "No matching items";
 "eventkit_unavailable" = "Calendar or reminders are unavailable";
+
+"navigation_ready" = "Navigation is ready";
+"navigation_open" = "Open route";
+"system_handoff_ready" = "System action is ready";
+"system_handoff_open" = "Continue";

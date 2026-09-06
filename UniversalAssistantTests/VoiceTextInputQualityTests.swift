@@ -42,6 +42,28 @@ struct VoiceTextInputQualityTests {
         #expect(engine.parse(phrase).intent == expected)
     }
 
+    @Test("Build 23 capability routing regressions", arguments: [
+        ("Знайди найближчу кав'ярню", CommandIntent.placeSearch),
+        ("Найди ближайшую кофейню", .placeSearch),
+        ("Знайди магазин спортивного бренду у Києві, який сьогодні працює, і покажи маршрут", .placeSearch),
+        ("Створи завтра о п'ятнадцятій подію Тест", .calendarCreate),
+        ("Запиши голосову замітку", .audioRecord),
+        ("Покажи мої останні фотографії", .photoSearch),
+        ("Увімкни композицію у Apple Music", .mediaSearch)
+    ])
+    func build23SpecificCapabilitiesPrecedeBroadPatterns(_ phrase: String, _ expected: CommandIntent) {
+        #expect(engine.parse(phrase).intent == expected)
+    }
+
+    @Test func build23EntitiesAreReusableAndDoNotContainExecutionContext() {
+        let contact = engine.parse("Знайди контакт Мама на моєму iPhone")
+        #expect(contact.entities["contact"] == "Мама")
+        let place = engine.parse("Знайди магазин у Києві, який сьогодні працює, і покажи маршрут")
+        #expect(place.entities["location"] == "Києві")
+        let media = engine.parse("Увімкни композицію Example Artist в Apple Music")
+        #expect(media.entities["query"] == "композицію Example Artist")
+    }
+
     @Test func broadInformationAndAmbiguityRemainFallbacks() {
         #expect(engine.parse("Хто зараз президент Аргентини?").intent == .unknown)
         #expect(engine.parse("Найди свежую информацию о компании Nvidia").intent == .unknown)

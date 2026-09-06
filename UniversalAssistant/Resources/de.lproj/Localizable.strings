@@ -13,3 +13,8 @@
 "eventkit_deleted" = "Gelöscht";
 "eventkit_empty" = "Keine Einträge gefunden";
 "eventkit_unavailable" = "Kalender oder Erinnerungen sind nicht verfügbar";
+
+"navigation_ready" = "Navigation ist bereit";
+"navigation_open" = "Route öffnen";
+"system_handoff_ready" = "Systemaktion ist bereit";
+"system_handoff_open" = "Fortfahren";
