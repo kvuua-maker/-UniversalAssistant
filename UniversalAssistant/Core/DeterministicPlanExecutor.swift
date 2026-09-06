@@ -68,8 +68,14 @@ actor DeterministicPlanExecutor {
         stopWhen: (@Sendable ([String: CoordinationStepOutcome]) -> Bool)?
     ) async -> (outcomes: [String: CoordinationStepOutcome], maximumObservedConcurrency: Int) {
         await withTaskGroup(of: (String, CoordinationStepOutcome).self) { group in
-            var iterator = steps.makeIterator()
-            var groupOutcomes: [String: CoordinationStepOutcome] = [:]
+            let blocked = steps.filter { step in step.dependencies.contains { dependency in
+                guard let outcome = prior[dependency] else { return true }
+                if case .verified = outcome { return false }
+                return true
+            } }
+            let runnable = steps.filter { step in !blocked.contains(where: { $0.id == step.id }) }
+            var iterator = runnable.makeIterator()
+            var groupOutcomes: [String: CoordinationStepOutcome] = Dictionary(uniqueKeysWithValues: blocked.map { ($0.id, .unavailable(.operationUnavailable)) })
             var active = 0
             var maximumObserved = 0
 
@@ -84,7 +90,7 @@ actor DeterministicPlanExecutor {
                 }
             }
 
-            for _ in 0..<min(maximumConcurrency, steps.count) {
+            for _ in 0..<min(maximumConcurrency, runnable.count) {
                 if let step = iterator.next() { submit(step) }
             }
             while let (id, outcome) = await group.next() {

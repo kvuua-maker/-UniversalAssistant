@@ -65,6 +65,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let personalSearch: UniversalPersonalSearchEngine
     private let currentContext: CurrentContextStore
     private let routeAwareSearch: RouteAwareSearchEngine
+    private let multiStep: ProductionMultiStepCoordinator
 
     init(
         deviceRouter: UniversalDeviceCommandRouter = .init(applications: .init(applications: LaunchDeviceApplications.verified)),
@@ -76,6 +77,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         currentLocation: any CurrentLocationResolving = AppleCurrentLocationResolver(),
         currentContext: CurrentContextStore = CurrentContextStore(),
         routeProvider: any RouteProvider = MapKitRouteProvider(),
+        multiStepOperationFactory: @escaping ProductionStepOperationFactory = { _, _ in [:] },
         personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())]
     ) {
         self.deviceRouter = deviceRouter
@@ -88,6 +90,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.personalSearch = UniversalPersonalSearchEngine(sources: personalSearchSources)
         self.currentContext = currentContext
         self.routeAwareSearch = RouteAwareSearchEngine(routeProvider: routeProvider)
+        self.multiStep = ProductionMultiStepCoordinator(operationFactory: multiStepOperationFactory)
 #if canImport(MusicKit)
         self.media = MediaIntegrationEngine(adapters: [AppleMusicProviderAdapter()])
 #else
@@ -157,7 +160,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             return try await route(command)
         case .routeAwareSearch:
             return try await routeAware(command)
-        case .reminderComplete, .reminderDelete, .shoppingList, .undo, .multiStep:
+        case .multiStep:
+            return .result(try await multiStep.execute(command))
+        case .reminderComplete, .reminderDelete, .shoppingList, .undo:
             throw CanonicalCapabilityExecutionError.unavailable("canonical_mutation_context_required")
         case .calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete, .reminderCreate,
              .reminderQuery, .weather, .webSearch, .deviceAction, .audioRecord, .unknown:
