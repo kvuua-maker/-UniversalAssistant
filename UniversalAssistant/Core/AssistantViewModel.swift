@@ -26,6 +26,7 @@ final class AssistantViewModel {
     private let genericDiscovery: GenericUnknownRequestCoordinator?
     private let eventKitExecutor: any EventKitCommandExecuting
     private let capabilityExecutor: any CanonicalCapabilityExecuting
+    private let ocrPipeline: OCRProductionPipeline
     private let voiceInput = VoiceInputController()
     private let feedbackStore: UserFeedbackStore
     private let compactResultDuration: Duration
@@ -43,6 +44,7 @@ final class AssistantViewModel {
         genericDiscovery: GenericUnknownRequestCoordinator? = nil,
         eventKitExecutor: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
         capabilityExecutor: (any CanonicalCapabilityExecuting)? = nil,
+        ocrProcessor: (any DocumentOCRProcessing)? = nil,
         recorder: AudioRecorderController = AudioRecorderController(),
         feedbackStore: UserFeedbackStore = .shared,
         compactResultDuration: Duration = .seconds(2),
@@ -55,6 +57,7 @@ final class AssistantViewModel {
         self.genericDiscovery = genericDiscovery
         self.eventKitExecutor = eventKitExecutor
         self.capabilityExecutor = capabilityExecutor ?? ProductionCanonicalCapabilityExecutor()
+        self.ocrPipeline = OCRProductionPipeline(processor: ocrProcessor ?? OnDeviceDocumentOCR())
         self.recorder = recorder
         self.feedbackStore = feedbackStore
         self.compactResultDuration = compactResultDuration
@@ -374,6 +377,37 @@ final class AssistantViewModel {
         case let .vCard(data) where result.route.action == .importContact: capabilityPresentation = .contactImport(data)
         case let .retailBarcode(value): UIPasteboard.general.string = value; statusText = AppText.value("ready")
         default: presentFailure(message: AppText.value("request_unavailable"))
+        }
+    }
+    func handleCapturedOCRImage(_ image: UIImage?) { processOCR(image, provenance: .camera) }
+    func handleSelectedOCRDocuments(_ urls: [URL]) {
+        capabilityPresentation = nil
+        guard let url = urls.first else { presentFailure(message: AppText.value("request_unavailable")); return }
+        let accessed = url.startAccessingSecurityScopedResource()
+        let image = UIImage(contentsOfFile: url.path)
+        if accessed { url.stopAccessingSecurityScopedResource() }
+        processOCR(image, provenance: .document)
+    }
+    private func processOCR(_ image: UIImage?, provenance: OCRInputProvenance) {
+        capabilityPresentation = nil
+        guard image != nil else { presentFailure(message: AppText.value("request_unavailable")); return }
+        resultState = .processing
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let result = try await ocrPipeline.process(image, provenance: provenance)
+                resultState = .ocr(result); statusText = AppText.value("ready")
+                LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=ocr source=\(provenance.rawValue)")
+            } catch { presentFailure(message: AppText.value("request_unavailable")) }
+        }
+    }
+    func performOCRAction(_ result: OCRProductionResult, _ action: OCRResultAction) {
+        switch action {
+        case .copy: UIPasteboard.general.string = result.recognizedText; statusText = AppText.value("ready")
+        case .share: capabilityPresentation = .share(result.recognizedText)
+        case .translate:
+            input = result.recognizedText
+            requireAction(prompt: "Оберіть мову перекладу", choices: ["Українська", "English", "Deutsch"])
         }
     }
     func dismissCapabilityPresentation() { capabilityPresentation = nil }

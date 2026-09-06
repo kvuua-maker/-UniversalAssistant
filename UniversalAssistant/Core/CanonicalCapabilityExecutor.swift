@@ -7,6 +7,8 @@ import ContactsUI
 
 enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case camera
+    case ocrCamera
+    case ocrDocuments
     case scanner
     case documents
     case share(String)
@@ -16,6 +18,8 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     var id: String {
         switch self {
         case .camera: "camera"
+        case .ocrCamera: "ocr-camera"
+        case .ocrDocuments: "ocr-documents"
         case .scanner: "scanner"
         case .documents: "documents"
         case .share: "share"
@@ -102,7 +106,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .fileSearch:
             return try await personal(command, query: try required(command.entities["query"], "file_query"), immediateOpen: true)
         case .cameraCapture:
-            return .presentation(command.entities["capture_mode"] == "code_scan" ? .scanner : .camera)
+            if command.entities["capture_mode"] == "code_scan" { return .presentation(.scanner) }
+            if command.entities["capture_mode"] == "text_scan" { return .presentation(command.entities["input_source"] == "document" ? .ocrDocuments : .ocrCamera) }
+            return .presentation(.camera)
         case .photoSearch:
             return try await personal(command, query: command.entities["query"] ?? "", immediateOpen: false)
         case .podcastSearch:

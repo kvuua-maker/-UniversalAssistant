@@ -103,7 +103,24 @@ final class DocumentScannerCoordinator: NSObject, @preconcurrency VNDocumentCame
     }
 }
 
-struct OnDeviceDocumentOCR {
+
+@MainActor
+protocol DocumentOCRProcessing: AnyObject {
+    func recognize(cgImage: CGImage) async throws -> [String]
+}
+
+enum OCRInputProvenance: String, Equatable, Sendable { case camera, document }
+enum OCRResultAction: String, CaseIterable, Equatable, Sendable { case copy, share, translate }
+struct OCRProductionResult: Equatable, Sendable {
+    let recognizedText: String
+    let provenance: OCRInputProvenance
+    let actions: [OCRResultAction]
+}
+enum OCRProductionError: Error, Equatable { case cancelled, unsupportedInput, noTextDetected, processingFailed }
+
+
+@MainActor
+final class OnDeviceDocumentOCR: DocumentOCRProcessing {
     func recognize(cgImage: CGImage) async throws -> [String] {
         try await withCheckedThrowingContinuation { continuation in
             let request = VNRecognizeTextRequest { request, error in
@@ -117,5 +134,22 @@ struct OnDeviceDocumentOCR {
             do { try VNImageRequestHandler(cgImage: cgImage).perform([request]) }
             catch { continuation.resume(throwing: error) }
         }
+    }
+}
+
+
+@MainActor
+struct OCRProductionPipeline {
+    let processor: any DocumentOCRProcessing
+    init(processor: any DocumentOCRProcessing = OnDeviceDocumentOCR()) { self.processor = processor }
+    func process(_ image: UIImage?, provenance: OCRInputProvenance) async throws -> OCRProductionResult {
+        guard let image else { throw OCRProductionError.cancelled }
+        guard let cgImage = image.cgImage else { throw OCRProductionError.unsupportedInput }
+        let lines: [String]
+        do { lines = try await processor.recognize(cgImage: cgImage) }
+        catch { throw OCRProductionError.processingFailed }
+        let text = lines.map { line in line.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { line in !line.isEmpty }.joined(separator: "\n")
+        guard !text.isEmpty else { throw OCRProductionError.noTextDetected }
+        return .init(recognizedText: text, provenance: provenance, actions: OCRResultAction.allCases)
     }
 }

@@ -4,6 +4,7 @@ struct CompactResultCard: View {
     let state: AssistantResultState
     var onReportIssue: () -> Void = {}
     var onScannerAction: (ScannerProductionResult) -> Void = { _ in }
+    var onOCRAction: (OCRProductionResult, OCRResultAction) -> Void = { _, _ in }
 
     var body: some View {
         switch state {
@@ -34,6 +35,12 @@ struct CompactResultCard: View {
                 Text(result.observedValue).font(.subheadline).textSelection(.enabled)
                 Button(result.route.requiresConfirmation ? "Підтвердити дію" : "Виконати") { onScannerAction(result) }.buttonStyle(.borderedProminent)
             }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous)).accessibilityIdentifier("assistant.scanner-result")
+        case .ocr(let result):
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Розпізнаний текст").font(.headline)
+                Text(result.recognizedText).font(.subheadline).textSelection(.enabled).lineLimit(8)
+                HStack { ForEach(result.actions, id: \.self) { action in Button(ocrActionTitle(action)) { onOCRAction(result, action) }.buttonStyle(.bordered) } }
+            }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous)).accessibilityIdentifier("assistant.ocr-result")
         case .deterministic(let result):
             VStack(alignment: .leading, spacing: 10) {
                 Text(result.primaryAnswer).font(.headline)
@@ -82,6 +89,10 @@ struct CompactResultCard: View {
         case .expanded(let summary):
             card(summary, title: "request_recognized", tint: .blue)
         }
+    }
+
+    private func ocrActionTitle(_ action: OCRResultAction) -> String {
+        switch action { case .copy: "Копіювати"; case .share: "Поділитися"; case .translate: "Перекласти" }
     }
 
     private func handoffTitle(_ kind: HandoffKind) -> LocalizedStringKey {

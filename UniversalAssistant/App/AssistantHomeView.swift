@@ -31,7 +31,7 @@ struct AssistantHomeView: View {
                     RecordingStatusPill(state: model.recorder.state)
                     CompactResultCard(state: model.resultState, onReportIssue: {
                         Task { await model.reportWrongResult() }
-                    }, onScannerAction: model.performScannerAction)
+                    }, onScannerAction: model.performScannerAction, onOCRAction: model.performOCRAction)
                         .frame(maxWidth: 520)
                         Spacer(minLength: 24)
                     }
@@ -72,6 +72,10 @@ struct AssistantHomeView: View {
             switch presentation {
             case .camera:
                 SystemCameraCapture { _ in model.dismissCapabilityPresentation() }
+            case .ocrCamera:
+                SystemCameraCapture(onCapturedImage: model.handleCapturedOCRImage)
+            case .ocrDocuments:
+                AuthorizedDocumentPicker(onSelection: model.handleSelectedOCRDocuments)
             case .scanner:
                 LiveCodeScannerView(onResult: model.handleScannedCode, onUnavailable: model.handleScannerUnavailable)
             case .documents:
