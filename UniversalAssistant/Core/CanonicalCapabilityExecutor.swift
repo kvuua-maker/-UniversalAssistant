@@ -78,7 +78,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         currentLocation: any CurrentLocationResolving = AppleCurrentLocationResolver(),
         currentContext: CurrentContextStore = CurrentContextStore(),
         routeProvider: any RouteProvider = MapKitRouteProvider(),
-        multiStepOperationFactory: @escaping ProductionStepOperationFactory = { _, _ in [:] },
+        multiStepOperationFactory: ProductionStepOperationFactory? = nil,
         eventKit: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
         personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())]
     ) {
@@ -92,8 +92,15 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.personalSearch = UniversalPersonalSearchEngine(sources: personalSearchSources)
         self.currentContext = currentContext
         self.routeAwareSearch = RouteAwareSearchEngine(routeProvider: routeProvider)
-        self.multiStep = ProductionMultiStepCoordinator(operationFactory: multiStepOperationFactory)
         self.eventKit = eventKit
+        if let multiStepOperationFactory {
+            self.multiStep = ProductionMultiStepCoordinator(operationFactory: multiStepOperationFactory)
+        } else {
+            let operationMap = ProductionStepOperationMap(eventKit: eventKit, currentLocation: currentLocation, locationResolver: locationResolver, places: placeSearch)
+            self.multiStep = ProductionMultiStepCoordinator { command, plan in
+                operationMap.operations(for: command, plan: plan)
+            }
+        }
 #if canImport(MusicKit)
         self.media = MediaIntegrationEngine(adapters: [AppleMusicProviderAdapter()])
 #else

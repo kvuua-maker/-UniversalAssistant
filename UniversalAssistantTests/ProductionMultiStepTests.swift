@@ -46,3 +46,94 @@ struct ProductionMultiStepTests {
         #expect(report.maximumObservedConcurrency == 2)
     }
 }
+
+private actor MultiStepEventKitStub: EventKitCommandExecuting {
+    private(set) var intents: [CommandIntent] = []
+    func execute(_ command: StructuredCommand) async throws -> EventKitExecutionResult {
+        intents.append(command.intent)
+        return .init(kind: .calendar, operation: .queried, title: "Calendar", detail: "one item", itemCount: 1)
+    }
+}
+@MainActor private final class MultiStepLocationStub: CurrentLocationResolving {
+    private(set) var purposes: [LocationPurpose] = []
+    let value = ValidatedLocation(sample: .init(latitude: 50.45, longitude: 30.52, horizontalAccuracy: 4, timestamp: .now, speed: 0, course: 0, source: .device), quality: .precise, isSafeForLocationActions: true, manualLabel: nil)
+    func resolveCurrent(for purpose: LocationPurpose) async throws -> ValidatedLocation { purposes.append(purpose); return value }
+}
+private actor MultiStepGeocoderStub: ManualLocationGeocoding {
+    func resolve(_ label: String) async throws -> LocationSample {
+        .init(latitude: 50.45, longitude: 30.52, horizontalAccuracy: 0, timestamp: .now, speed: -1, course: -1, source: .manual)
+    }
+}
+private struct MultiStepPlaceStub: PlaceProvider {
+    let providerID = "multi-step-place"
+    func search(_ query: PlaceQuery) async throws -> [Place] {
+        [.init(id: "candidate-1", providerID: providerID, name: "Candidate", category: .other, latitude: 50.46, longitude: 30.53, source: providerID, timestamp: .now, verification: .providerVerified)]
+    }
+}
+private struct MultiStepWeatherStub: WeatherCommandExecuting {
+    func execute(_ command: StructuredCommand) async throws -> WeatherSnapshot {
+        .init(current: .init(date: .now, temperatureCelsius: 20, apparentTemperatureCelsius: 20, condition: "clear", symbolName: "sun.max"),
+              hourly: [], daily: [], source: "WeatherKit", fetchedAt: .now, locationSource: .manual, locationLabel: "Kyiv", context: .travel)
+    }
+}
+
+extension ProductionMultiStepTests {
+    private func liveMapPlan() -> DeterministicExecutionPlan {
+        .init(commandID: UUID(), intent: .multiStep, constraints: [], steps: [
+            .init(id: "date", capability: .relativeDate, dependencies: []),
+            .init(id: "calendar", capability: .calendar, dependencies: []),
+            .init(id: "location", capability: .location, dependencies: []),
+            .init(id: "candidates", capability: .candidateDiscovery, dependencies: []),
+            .init(id: "route", capability: .route, dependencies: []),
+            .init(id: "weather", capability: .weather, dependencies: []),
+            .init(id: "transport", capability: .transport, dependencies: []),
+            .init(id: "hotel", capability: .hotel, dependencies: []),
+            .init(id: "compose", capability: .deterministicCompose, dependencies: [])
+        ], completionStepID: "compose", aiInvocationCount: 0)
+    }
+    private func liveMapCommand() -> StructuredCommand {
+        .init(originalText: "Tomorrow in Kyiv", normalizedText: "tomorrow in kyiv", language: .en, intent: .multiStep, entities: ["destination":"Kyiv"])
+    }
+    private func liveMap() -> ProductionStepOperationMap {
+        .init(eventKit: MultiStepEventKitStub(), currentLocation: MultiStepLocationStub(),
+              locationResolver: .init(geocoder: MultiStepGeocoderStub()),
+              places: .init(providers: [MultiStepPlaceStub()]), weather: MultiStepWeatherStub())
+    }
+
+    @Test func liveFactoryMapsEveryEligiblePlanCapability() {
+        let operations = liveMap().operations(for: liveMapCommand(), plan: liveMapPlan())
+        #expect(Set(operations.keys) == ["date","calendar","location","candidates","route","weather","compose"])
+    }
+    @Test func blockedExternalProvidersHaveNoFakeOperations() {
+        let operations = liveMap().operations(for: liveMapCommand(), plan: liveMapPlan())
+        #expect(operations["transport"] == nil); #expect(operations["hotel"] == nil)
+    }
+    @Test func liveDateOperationUsesDeterministicResolver() async throws {
+        let operations = liveMap().operations(for: liveMapCommand(), plan: liveMapPlan())
+        #expect(try await operations["date"]?().source == "NaturalDateTimeResolver")
+    }
+    @Test func liveCalendarOperationUsesEventKit() async throws {
+        let operations = liveMap().operations(for: liveMapCommand(), plan: liveMapPlan())
+        #expect(try await operations["calendar"]?().source == "EventKit")
+    }
+    @Test func liveLocationOperationUsesCoreLocation() async throws {
+        let operations = liveMap().operations(for: liveMapCommand(), plan: liveMapPlan())
+        #expect(try await operations["location"]?().source == "CoreLocation")
+    }
+    @Test func liveCandidateOperationUsesPlaceEngine() async throws {
+        let operations = liveMap().operations(for: liveMapCommand(), plan: liveMapPlan())
+        #expect(try await operations["candidates"]?().value == "Candidate")
+    }
+    @Test func liveRouteOperationProducesMapsURLFact() async throws {
+        let operations = liveMap().operations(for: liveMapCommand(), plan: liveMapPlan())
+        #expect(try await operations["route"]?().value?.hasPrefix("https://") == true)
+    }
+    @Test func liveWeatherOperationUsesWeatherExecutor() async throws {
+        let operations = liveMap().operations(for: liveMapCommand(), plan: liveMapPlan())
+        #expect(try await operations["weather"]?().source == "WeatherKit")
+    }
+    @Test func liveComposeOperationIsDeterministic() async throws {
+        let operations = liveMap().operations(for: liveMapCommand(), plan: liveMapPlan())
+        #expect(try await operations["compose"]?().value == "deterministic_aggregate_ready")
+    }
+}
