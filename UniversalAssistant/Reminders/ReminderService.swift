@@ -23,6 +23,7 @@ struct ReminderDraft: Equatable, Codable, Sendable {
     var priority: Int = 0
     var timeZoneIdentifier: String?
     var locationTrigger: ReminderLocationTrigger?
+    var listIdentifier: String? = nil
 
     func validated() throws -> Self {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -72,7 +73,10 @@ actor EventKitReminderService: ReminderMutating {
     func create(_ input: ReminderDraft) throws -> ReminderSnapshot {
         try requireFullAccess()
         let draft = try input.validated()
-        guard let calendar = store.defaultCalendarForNewReminders() else { throw ReminderServiceError.noWritableList }
+        let calendar = draft.listIdentifier.flatMap { identifier in
+            store.calendars(for: .reminder).first { $0.calendarIdentifier == identifier && $0.allowsContentModifications }
+        } ?? (draft.listIdentifier == nil ? store.defaultCalendarForNewReminders() : nil)
+        guard let calendar else { throw ReminderServiceError.noWritableList }
         let reminder = EKReminder(eventStore: store)
         reminder.calendar = calendar
         apply(draft, to: reminder)
@@ -181,7 +185,8 @@ actor EventKitReminderService: ReminderMutating {
                           alarm.proximity == .enter || alarm.proximity == .leave else { return nil }
                     return .init(title: title, latitude: coordinate.latitude, longitude: coordinate.longitude,
                                  radius: location.radius, proximity: alarm.proximity == .enter ? .enter : .leave)
-                }.first
+                }.first,
+                listIdentifier: reminder.calendar.calendarIdentifier
             ),
             isCompleted: reminder.isCompleted
         )

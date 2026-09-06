@@ -2,11 +2,25 @@ import Foundation
 
 struct EventKitExecutionResult: Equatable, Sendable {
     enum Kind: Equatable, Sendable { case calendar, reminder }
-    enum Operation: Equatable, Sendable { case created, queried, updated, completed, deleted }
+    enum Operation: Equatable, Sendable { case created, queried, updated, completed, deleted, undone }
     let kind: Kind; let operation: Operation; let title: String; let detail: String; let itemCount: Int
 }
 enum EventKitExecutionError: Error, Equatable { case unsupportedIntent, unresolvedDateTime, missingSubject, itemNotFound, ambiguousItem }
 protocol EventKitCommandExecuting: Sendable { func execute(_ command: StructuredCommand) async throws -> EventKitExecutionResult }
+protocol EventKitCalendarExecuting: CalendarMutating {
+    func requestFullAccessIfNeeded() async throws
+    func create(_ input: CalendarEventDraft) async throws -> CalendarEventSnapshot
+    func events(from start: Date, to end: Date) async throws -> [CalendarEventSnapshot]
+    func update(identifier: String, with input: CalendarEventDraft) async throws -> CalendarEventSnapshot
+}
+protocol EventKitReminderExecuting: ReminderMutating {
+    func requestFullAccessIfNeeded() async throws
+    func create(_ input: ReminderDraft) async throws -> ReminderSnapshot
+    func incomplete(dueFrom start: Date?, to end: Date?) async throws -> [ReminderSnapshot]
+    func update(identifier: String, with input: ReminderDraft, isCompleted: Bool?) async throws -> ReminderSnapshot
+}
+extension EventKitCalendarService: EventKitCalendarExecuting {}
+extension EventKitReminderService: EventKitReminderExecuting {}
 struct EventKitCommandArguments: Equatable, Sendable { let subject: String?; let dateTime: ResolvedNaturalDateTime? }
 
 struct EventKitCommandArgumentExtractor: Sendable {
@@ -30,11 +44,11 @@ struct EventKitCommandArgumentExtractor: Sendable {
 }
 
 actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
-    private let calendar: EventKitCalendarService; private let reminders: EventKitReminderService
+    private let calendar: any EventKitCalendarExecuting; private let reminders: any EventKitReminderExecuting
     private let history: ActionHistory
     private let now: @Sendable () -> Date; private let timeZone: TimeZone
     private var historyRestored = false
-    init(calendar: EventKitCalendarService = .init(), reminders: EventKitReminderService = .init(), history: ActionHistory = .init(), now: @escaping @Sendable () -> Date = { .now }, timeZone: TimeZone = .autoupdatingCurrent) { self.calendar = calendar; self.reminders = reminders; self.history = history; self.now = now; self.timeZone = timeZone }
+    init(calendar: any EventKitCalendarExecuting = EventKitCalendarService(), reminders: any EventKitReminderExecuting = EventKitReminderService(), history: ActionHistory = .init(), now: @escaping @Sendable () -> Date = { .now }, timeZone: TimeZone = .autoupdatingCurrent) { self.calendar = calendar; self.reminders = reminders; self.history = history; self.now = now; self.timeZone = timeZone }
     func execute(_ command: StructuredCommand) async throws -> EventKitExecutionResult {
         try await restoreHistoryIfNeeded()
         let args = EventKitCommandArgumentExtractor().extract(command, now: now(), timeZone: timeZone)
@@ -44,7 +58,7 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
             guard let date = args.dateTime, date.precision == .minute else { throw EventKitExecutionError.unresolvedDateTime }
             try await calendar.requestFullAccessIfNeeded()
             let value = try await calendar.create(.init(title: title, start: date.instant, end: date.instant.addingTimeInterval(3600), notes: nil))
-            try await history.record(.init(kind: .calendarCreate, externalIdentifier: value.identifier))
+            await recordHistory(.init(kind: .calendarCreate, externalIdentifier: value.identifier))
             return result(.calendar, .created, value.draft.title, value.draft.start, 1)
         case .calendarQuery:
             try await calendar.requestFullAccessIfNeeded(); let interval = day(args.dateTime?.instant ?? now())
@@ -54,17 +68,18 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
             guard let date = args.dateTime, date.precision == .minute else { throw EventKitExecutionError.unresolvedDateTime }
             let old = try await match(args.subject); let duration = max(60, old.draft.end.timeIntervalSince(old.draft.start))
             let value = try await calendar.update(identifier: old.identifier, with: .init(title: old.draft.title, start: date.instant, end: date.instant.addingTimeInterval(duration), notes: old.draft.notes))
-            try await history.record(.init(kind: .calendarUpdate, externalIdentifier: old.identifier, undoPayload: try JSONEncoder().encode(old)))
+            await recordHistory(.init(kind: .calendarUpdate, externalIdentifier: old.identifier, undoPayload: try JSONEncoder().encode(old)))
             return result(.calendar, .updated, value.draft.title, value.draft.start, 1)
         case .calendarDelete:
             let old = try await match(args.subject); try await calendar.delete(identifier: old.identifier)
+            await recordHistory(.init(kind: .calendarUpdate, externalIdentifier: old.identifier, undoPayload: try JSONEncoder().encode(old)))
             return .init(kind: .calendar, operation: .deleted, title: old.draft.title, detail: String(localized: "eventkit_deleted"), itemCount: 1)
         case .reminderCreate:
             guard let title = args.subject else { throw EventKitExecutionError.missingSubject }
             guard let date = args.dateTime else { throw EventKitExecutionError.unresolvedDateTime }
             try await reminders.requestFullAccessIfNeeded()
             let value = try await reminders.create(.init(title: title, dueDate: date.instant, notes: nil, priority: 0, timeZoneIdentifier: date.timeZoneIdentifier, locationTrigger: nil))
-            try await history.record(.init(kind: .reminderCreate, externalIdentifier: value.identifier))
+            await recordHistory(.init(kind: .reminderCreate, externalIdentifier: value.identifier))
             return result(.reminder, .created, value.draft.title, value.draft.dueDate ?? date.instant, 1)
         case .reminderQuery:
             try await reminders.requestFullAccessIfNeeded(); let interval = args.dateTime.map { day($0.instant) }
@@ -73,11 +88,11 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
         case .reminderComplete:
             let old = try await matchReminder(args.subject)
             let value = try await reminders.update(identifier: old.identifier, with: old.draft, isCompleted: true)
-            try await history.record(.init(kind: .reminderUpdate, externalIdentifier: old.identifier, undoPayload: try JSONEncoder().encode(old)))
+            await recordHistory(.init(kind: .reminderUpdate, externalIdentifier: old.identifier, undoPayload: try JSONEncoder().encode(old)))
             return .init(kind: .reminder, operation: .completed, title: value.draft.title, detail: String(localized: "eventkit_updated"), itemCount: 1)
         case .reminderDelete:
             let old = try await matchReminder(args.subject); try await reminders.delete(identifier: old.identifier)
-            try await history.record(.init(kind: .reminderUpdate, externalIdentifier: old.identifier, undoPayload: try JSONEncoder().encode(old)))
+            await recordHistory(.init(kind: .reminderUpdate, externalIdentifier: old.identifier, undoPayload: try JSONEncoder().encode(old)))
             return .init(kind: .reminder, operation: .deleted, title: old.draft.title, detail: String(localized: "eventkit_deleted"), itemCount: 1)
         case .shoppingList:
             return try await shoppingList(command, subject: args.subject)
@@ -93,7 +108,7 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
             case .calendarCreate, .calendarUpdate: .calendar
             default: .reminder
             }
-            return .init(kind: kind, operation: .deleted, title: String(localized: "undo"), detail: String(localized: "eventkit_updated"), itemCount: 1)
+            return .init(kind: kind, operation: .undone, title: String(localized: "undo"), detail: String(localized: "eventkit_updated"), itemCount: 1)
         default: throw EventKitExecutionError.unsupportedIntent
         }
     }
@@ -101,23 +116,36 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
         guard !historyRestored else { return }
         try await history.restore(); historyRestored = true
     }
+    private func recordHistory(_ record: ActionRecord) async {
+        // EventKit is authoritative. A secondary local-history failure may remove
+        // undo availability, but must never turn a completed system mutation into failure.
+        try? await history.record(record)
+    }
     private func shoppingList(_ command: StructuredCommand, subject: String?) async throws -> EventKitExecutionResult {
         try await reminders.requestFullAccessIfNeeded()
         let text = command.normalizedText
         if ["додай", "добав", "add "].contains(where: text.contains) {
             guard let title = shoppingSubject(command.originalText) else { throw EventKitExecutionError.missingSubject }
-            let value = try await reminders.create(.init(title: title, dueDate: nil, notes: nil, priority: 0, timeZoneIdentifier: nil, locationTrigger: nil))
-            try await history.record(.init(kind: .reminderCreate, externalIdentifier: value.identifier))
+            guard let listID = command.entities["selected_list_id"] else { throw EventKitExecutionError.missingSubject }
+            let value = try await reminders.create(.init(title: title, dueDate: nil, notes: nil, priority: 0, timeZoneIdentifier: nil, locationTrigger: nil, listIdentifier: listID))
+            await recordHistory(.init(kind: .reminderCreate, externalIdentifier: value.identifier))
             return .init(kind: .reminder, operation: .created, title: value.draft.title, detail: String(localized: "eventkit_updated"), itemCount: 1)
         }
         if ["видали", "удали", "remove", "delete"].contains(where: text.contains) {
-            let old = try await matchReminder(shoppingSubject(command.originalText) ?? subject)
+            guard let selectedID = command.entities["selected_item_id"] else { throw EventKitExecutionError.missingSubject }
+            let old = try await exactReminder(identifier: selectedID)
             try await reminders.delete(identifier: old.identifier)
-            try await history.record(.init(kind: .reminderUpdate, externalIdentifier: old.identifier, undoPayload: try JSONEncoder().encode(old)))
+            await recordHistory(.init(kind: .reminderUpdate, externalIdentifier: old.identifier, undoPayload: try JSONEncoder().encode(old)))
             return .init(kind: .reminder, operation: .deleted, title: old.draft.title, detail: String(localized: "eventkit_deleted"), itemCount: 1)
         }
-        let values = try await reminders.incomplete(dueFrom: nil, to: nil)
+        guard let listID = command.entities["selected_list_id"] else { throw EventKitExecutionError.missingSubject }
+        let values = try await reminders.incomplete(dueFrom: nil, to: nil).filter { $0.draft.listIdentifier == listID }
         return .init(kind: .reminder, operation: .queried, title: String(localized: "eventkit_reminders"), detail: list(values.map { $0.draft.title }), itemCount: values.count)
+    }
+    private func exactReminder(identifier: String) async throws -> ReminderSnapshot {
+        let values = try await reminders.incomplete(dueFrom: nil, to: nil)
+        guard let value = values.first(where: { $0.identifier == identifier }) else { throw EventKitExecutionError.itemNotFound }
+        return value
     }
     private func shoppingSubject(_ value: String) -> String? {
         var result = value
