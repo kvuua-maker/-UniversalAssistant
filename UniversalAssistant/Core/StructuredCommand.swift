@@ -133,9 +133,10 @@ struct LocalCommandEngine: CommandParsing {
             intent != .productSearch && patterns.contains { normalized.contains($0) }
         }?.0
         let semanticIntent = semanticCapabilityIntent(normalized)
-        let intent = compoundIntent(normalized)
-            ?? priorityIntent(normalized)
-            ?? resolveSpecificAndSemantic(specific: specificPatternIntent, semantic: semanticIntent)
+        let resolvedIntent = resolveSpecificAndSemantic(specific: specificPatternIntent, semantic: semanticIntent)
+        let intent = priorityIntent(normalized)
+            ?? (resolvedIntent == .placeSearch ? .placeSearch : compoundIntent(normalized))
+            ?? resolvedIntent
             ?? Self.intentPatterns.first { _, patterns in patterns.contains { normalized.contains($0) } }?.0
             ?? contextualIntent(normalized)
         var entities: [String: String] = [:]; var constraints = CommandConstraints()
