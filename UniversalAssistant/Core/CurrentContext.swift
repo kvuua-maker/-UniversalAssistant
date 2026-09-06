@@ -17,11 +17,14 @@ struct ContextEntity: Equatable, Codable, Sendable {
     let phoneNumber: String?
     let latitude: Double?
     let longitude: Double?
+    let actionID: String?
+    let openReference: String?
     let provenance: ContextProvenance
 
-    init(id: String, kind: Kind, displayName: String, phoneNumber: String?, provenance: ContextProvenance, latitude: Double? = nil, longitude: Double? = nil) {
+    init(id: String, kind: Kind, displayName: String, phoneNumber: String?, provenance: ContextProvenance, latitude: Double? = nil, longitude: Double? = nil, actionID: String? = nil, openReference: String? = nil) {
         self.id = id; self.kind = kind; self.displayName = displayName; self.phoneNumber = phoneNumber
         self.provenance = provenance; self.latitude = latitude; self.longitude = longitude
+        self.actionID = actionID; self.openReference = openReference
     }
 }
 
@@ -164,6 +167,28 @@ struct CurrentContext: Equatable, Codable, Sendable {
 @MainActor
 final class CurrentContextStore {
     private(set) var context = CurrentContext()
+    private var consumedActionIDs: Set<String> = []
+    func replaceResults(_ result: DeterministicResult, now: Date = .now, lifetime: TimeInterval = 300) {
+        let expires = now.addingTimeInterval(lifetime)
+        let actions = Dictionary(uniqueKeysWithValues: result.actions.map { ($0.id, $0) })
+        let entities = result.facts.prefix(20).map { fact -> ContextEntity in
+            let action = actions[fact.id]
+            let provenance = ContextProvenance(source: fact.source ?? "local-result", objectID: fact.id, observedAt: fact.observedAt ?? now, expiresAt: expires)
+            return ContextEntity(id: fact.id, kind: .providerResult, displayName: fact.label, phoneNumber: nil, provenance: provenance, actionID: action?.id, openReference: action?.destination?.absoluteString)
+        }
+        context.update(now: now, lifetime: lifetime, results: entities)
+        consumedActionIDs.removeAll()
+    }
+    func select(_ command: StructuredCommand, now: Date = .now) -> ContextEntity? {
+        _ = context.resolve(command, now: now)
+        return context.selectedEntity
+    }
+    func consumeSelectedAction(now: Date = .now) -> URL? {
+        context.expireStale(at: now)
+        guard let selected = context.selectedEntity, let actionID = selected.actionID, !consumedActionIDs.contains(actionID), let reference = selected.openReference, let url = URL(string: reference) else { return nil }
+        consumedActionIDs.insert(actionID)
+        return url
+    }
     func replaceRoute(origin: ValidatedLocation, destination: ValidatedLocation, destinationName: String, now: Date = .now, lifetime: TimeInterval = 300) {
         let expires = now.addingTimeInterval(lifetime)
         let destinationProvenance = ContextProvenance(source: "apple-geocoder", objectID: "destination-\(destination.sample.latitude),\(destination.sample.longitude)", observedAt: now, expiresAt: expires)
@@ -177,5 +202,5 @@ final class CurrentContextStore {
         guard let location = context.validatedLocation, let route = context.activeRoute else { return nil }
         return (location, route)
     }
-    func reset() { context.reset() }
+    func reset() { context.reset(); consumedActionIDs.removeAll() }
 }

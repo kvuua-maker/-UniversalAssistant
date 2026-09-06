@@ -98,6 +98,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         switch command.intent {
         case .open, .appAction:
+            if command.constraints.ordinal != nil { return try contextual(command, opensSelection: true) }
             return try app(command)
         case .contactLookup:
             return try await personal(command, query: try required(command.entities["contact"], "contact_name"), immediateOpen: true)
@@ -143,7 +144,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .help:
             return .result(try result("Скажіть або введіть, що потрібно зробити", facts: []))
         case .show, .contextualSelection:
-            throw CanonicalCapabilityExecutionError.missingParameter("active_result_context")
+            return try contextual(command, opensSelection: command.normalizedText.contains("відк") || command.normalizedText.contains("откр") || command.normalizedText.contains("open"))
         case .cancel:
             return .result(try result("Скасовано", facts: []))
         case .productSearch, .fashionDiscovery, .groceryBasket, .serviceSearch, .restaurantSearch,
@@ -218,7 +219,17 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         guard !values.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable(report.isPartial ? "personal_search_partial_no_result" : "personal_search_no_result") }
         let facts = values.enumerated().map { index, value in ResultFact(id: value.id, label: value.title, value: value.subtitle ?? value.sourceObjectID, state: .verified, source: personalSourceName(value.source), observedAt: personalObservedAt(value.freshness), priority: 100 - index) }
         let actions = values.compactMap { value -> ResultAction? in guard let url = URL(string: value.openReference) else { return nil }; return .init(id: value.id, title: "Відкрити", kind: .open, destination: url) }
-        return .result(try result("Знайдено на iPhone", facts: facts, actions: actions))
+        let output = try result("Знайдено на iPhone", facts: facts, actions: actions)
+        currentContext.replaceResults(output); return .result(output)
+    }
+
+    private func contextual(_ command: StructuredCommand, opensSelection: Bool) throws -> CapabilityExecutionOutcome {
+        guard let selected = currentContext.select(command) else { throw CanonicalCapabilityExecutionError.missingParameter("active_result_context") }
+        if opensSelection {
+            guard let destination = currentContext.consumeSelectedAction() else { throw CanonicalCapabilityExecutionError.unavailable("context_action_unavailable_or_replayed") }
+            return .handoff(.init(query: selected.displayName, destination: destination, kind: .system))
+        }
+        return .result(try result(selected.displayName, facts: [.init(id: selected.id, label: selected.displayName, value: selected.kind.rawValue, state: .verified, source: selected.provenance.source, observedAt: selected.provenance.observedAt, priority: 100)]))
     }
 
     private func personalSourceName(_ source: PersonalSearchSourceID) -> String {
