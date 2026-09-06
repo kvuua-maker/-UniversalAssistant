@@ -78,6 +78,30 @@ private struct MultiStepWeatherStub: WeatherCommandExecuting {
 }
 
 extension ProductionMultiStepTests {
+    @Test func typedProductionStepInvokesBoundRealExecutorAndPreservesTypedCommand() async throws {
+        actor Probe {
+            var intents: [CommandIntent] = []
+            func record(_ intent: CommandIntent) { intents.append(intent) }
+        }
+        let probe = Probe()
+        let subcommand = StructuredCommand(originalText: "record", normalizedText: "record", language: .en, intent: .audioRecord)
+        let step = ExecutionPlanStep(id: "step-01-audioRecord", capability: .typedCommand, dependencies: [], command: subcommand)
+        let plan = DeterministicExecutionPlan(commandID: UUID(), intent: .multiStep, constraints: [], steps: [step], completionStepID: step.id, aiInvocationCount: 0)
+        let map = ProductionStepOperationMap(eventKit: MultiStepEventKitStub(), currentLocation: MultiStepLocationStub(),
+            locationResolver: .init(geocoder: MultiStepGeocoderStub()), places: .init(providers: [MultiStepPlaceStub()]),
+            typedExecutor: { command, step in await probe.record(command.intent); return productionFact(step.id) })
+        let operation = try #require(map.operations(for: command(), plan: plan)[step.id])
+        #expect(try await operation().id == step.id)
+        #expect(await probe.intents == [.audioRecord])
+    }
+
+    @Test func typedProductionStepWithoutEligibleExecutorRemainsTruthfullyUnavailable() {
+        let subcommand = StructuredCommand(originalText: "blocked", normalizedText: "blocked", language: .en, intent: .hotelSearch)
+        let step = ExecutionPlanStep(id: "blocked", capability: .typedCommand, dependencies: [], command: subcommand)
+        let plan = DeterministicExecutionPlan(commandID: UUID(), intent: .multiStep, constraints: [], steps: [step], completionStepID: step.id, aiInvocationCount: 0)
+        #expect(liveMap().operations(for: command(), plan: plan)[step.id] == nil)
+    }
+
     private func liveMapPlan() -> DeterministicExecutionPlan {
         .init(commandID: UUID(), intent: .multiStep, constraints: [], steps: [
             .init(id: "date", capability: .relativeDate, dependencies: []),

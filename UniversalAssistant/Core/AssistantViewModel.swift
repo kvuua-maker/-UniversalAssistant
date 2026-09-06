@@ -56,7 +56,7 @@ final class AssistantViewModel {
         self.webSearchHandoff = webSearchHandoff
         self.genericDiscovery = genericDiscovery
         self.eventKitExecutor = eventKitExecutor
-        self.capabilityExecutor = capabilityExecutor ?? ProductionCanonicalCapabilityExecutor()
+        self.capabilityExecutor = capabilityExecutor ?? ProductionCanonicalCapabilityExecutor(recorder: recorder)
         self.ocrPipeline = OCRProductionPipeline(processor: ocrProcessor ?? OnDeviceDocumentOCR())
         self.recorder = recorder
         self.feedbackStore = feedbackStore

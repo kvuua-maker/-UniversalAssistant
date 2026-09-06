@@ -2,6 +2,7 @@ import Foundation
 
 typealias ProductionStepOperations = [String: CoordinationStepOperation]
 typealias ProductionStepOperationFactory = @MainActor @Sendable (StructuredCommand, DeterministicExecutionPlan) -> ProductionStepOperations
+typealias ProductionTypedStepExecutor = @MainActor @Sendable (StructuredCommand, ExecutionPlanStep) async throws -> ResultFact
 
 @MainActor
 final class ProductionStepOperationMap {
@@ -11,17 +12,19 @@ final class ProductionStepOperationMap {
     private let places: PlaceSearchEngine
     private let weather: any WeatherCommandExecuting
     private let navigation: NavigationHandoff
+    private let typedExecutor: ProductionTypedStepExecutor?
 
     init(eventKit: any EventKitCommandExecuting, currentLocation: any CurrentLocationResolving,
          locationResolver: ManualLocationContextResolver, places: PlaceSearchEngine,
          weather: any WeatherCommandExecuting = ProductionWeatherCommandExecutor(),
-         navigation: NavigationHandoff = .init()) {
+         navigation: NavigationHandoff = .init(), typedExecutor: ProductionTypedStepExecutor? = nil) {
         self.eventKit = eventKit
         self.currentLocation = currentLocation
         self.locationResolver = locationResolver
         self.places = places
         self.weather = weather
         self.navigation = navigation
+        self.typedExecutor = typedExecutor
     }
 
     func operations(for command: StructuredCommand, plan: DeterministicExecutionPlan) -> ProductionStepOperations {
@@ -83,6 +86,9 @@ final class ProductionStepOperationMap {
             return { Self.fact(step, value: "deterministic_aggregate_ready", source: "UniversalAssistant") }
         case .voice, .command:
             return { Self.fact(step, value: "validated", source: "UniversalAssistant") }
+        case .typedCommand:
+            guard let subcommand = step.command, let typedExecutor else { return nil }
+            return { @MainActor in try await typedExecutor(subcommand, step) }
         case .directAction, .transport, .hotel:
             return nil
         }

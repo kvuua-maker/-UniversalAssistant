@@ -6,7 +6,7 @@ enum CommandIntent: String, Codable, CaseIterable, Sendable {
     case taxiSearch, taxiCompare, navigation, routeSearch, routeAwareSearch
     case calendarCreate, calendarQuery, calendarUpdate, calendarDelete, reminderCreate, reminderQuery
     case reminderComplete, reminderDelete, noteCreate, noteQuery, shoppingList, contactLookup, contactCall, messageCompose
-    case photoSearch, fileSearch, cameraCapture, mediaSearch, podcastSearch, parcelTrack, weather
+    case photoSearch, fileSearch, cameraCapture, translation, mediaSearch, podcastSearch, parcelTrack, weather
     case publicTransport, transportRoute, ticketSearch, ticketPurchaseHandoff, hotelSearch, travelPlan
     case emergency, webSearch, deviceAction, appAction, audioRecord, show, open, cancel, undo
     case multiStep, settings, help, contextualSelection, unknown
@@ -46,6 +46,24 @@ struct StructuredCommand: Equatable, Codable, Sendable {
 
 protocol CommandParsing: Sendable { func parse(_ text: String) -> StructuredCommand }
 
+enum CompoundCommandClauses {
+    static func split(_ text: String) -> [String] {
+        let pattern = #"\s*(?:[,;]|\b(?:and then|und dann|і|та|потім|затем|then|puis)\b)\s*"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return [text] }
+        let range = NSRange(text.startIndex..., in: text)
+        var output: [String] = [], cursor = text.startIndex
+        for match in regex.matches(in: text, range: range) {
+            guard let valueRange = Range(match.range, in: text) else { continue }
+            let value = text[cursor..<valueRange.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
+            if !value.isEmpty { output.append(value) }
+            cursor = valueRange.upperBound
+        }
+        let tail = text[cursor...].trimmingCharacters(in: .whitespacesAndNewlines)
+        if !tail.isEmpty { output.append(tail) }
+        return output
+    }
+}
+
 struct LocalCommandEngine: CommandParsing {
     private static let intentPatterns: [(CommandIntent, [String])] = [
         (.multiStep, ["коли я кажу", "когда я говорю", "when i say", "wenn ich", "quand je dis",
@@ -61,6 +79,7 @@ struct LocalCommandEngine: CommandParsing {
                         "sprachmemo", "aufnahme pausieren", "aufnahme fortsetzen", "aufnahme stoppen",
                         "enregistre audio", "pause l'enregistrement", "reprends l'enregistrement", "arrête l'enregistrement"]),
         (.cameraCapture, ["зроби фото", "відкрий камеру", "сфотографуй", "сделай фото", "открой камеру", "take a photo", "open camera", "скануй qr", "скануй код", "штрихкод", "сканируй qr", "сканируй код", "scan qr", "scan barcode", "розпізнай текст", "розпізнати текст", "распознай текст", "recognize text", "scan text"]),
+        (.translation, ["переклади", "переведи", "translate ", "übersetze", "traduis"]),
         (.photoSearch, ["знайди фото", "покажи фото", "найди фото", "покажи фотографии", "find photos", "show photos"]),
         (.fileSearch, ["знайди файл", "знайди документ", "найди файл", "найди документ", "find file", "find document"]),
         (.reminderComplete, ["виконай нагадування", "познач нагадування виконаним", "заверши напоминание", "complete reminder"]),
@@ -114,7 +133,8 @@ struct LocalCommandEngine: CommandParsing {
             intent != .productSearch && patterns.contains { normalized.contains($0) }
         }?.0
         let semanticIntent = semanticCapabilityIntent(normalized)
-        let intent = priorityIntent(normalized)
+        let intent = compoundIntent(normalized)
+            ?? priorityIntent(normalized)
             ?? resolveSpecificAndSemantic(specific: specificPatternIntent, semantic: semanticIntent)
             ?? Self.intentPatterns.first { _, patterns in patterns.contains { normalized.contains($0) } }?.0
             ?? contextualIntent(normalized)
@@ -137,6 +157,10 @@ struct LocalCommandEngine: CommandParsing {
             entities["capture_mode"] = "text_scan"
             if ["файл", "документ", "file", "document"].contains(where: normalized.contains) { entities["input_source"] = "document" }
         }
+        if intent == .translation {
+            if let value = target(after: ["переклади", "переведи", "translate", "übersetze", "traduis"], in: text) { entities["source_text"] = value }
+            if let target = translationTarget(in: normalized) { entities["target_language"] = target }
+        }
         let risk: ActionRisk = intent == .emergency ? .emergency : ([.calendarCreate, .reminderCreate, .reminderComplete, .reminderDelete, .shoppingList, .cancel, .undo].contains(intent) ? .reversible : .informational)
         return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: intent, entities: entities, constraints: constraints, risk: risk, needsClarification: intent == .unknown)
     }
@@ -146,6 +170,30 @@ struct LocalCommandEngine: CommandParsing {
         if ["продовж", "resume recording", "aufnahme fortsetzen", "reprends l'enregistrement"].contains(where: text.contains) { return "resume" }
         if ["зупини", "stop recording", "aufnahme stoppen", "arrête l'enregistrement"].contains(where: text.contains) { return "stop" }
         return "start"
+    }
+
+    private func compoundIntent(_ text: String) -> CommandIntent? {
+        let clauses = CompoundCommandClauses.split(text)
+        guard clauses.count >= 2 else { return nil }
+        let recognized = clauses.filter { clause in
+            let specific = Self.intentPatterns.first { intent, patterns in
+                intent != .multiStep && intent != .productSearch && patterns.contains { clause.contains($0) }
+            }?.0
+            let semantic = semanticCapabilityIntent(clause)
+            let value = priorityIntent(clause)
+                ?? resolveSpecificAndSemantic(specific: specific, semantic: semantic)
+                ?? Self.intentPatterns.first { intent, patterns in intent != .multiStep && patterns.contains { clause.contains($0) } }?.0
+                ?? contextualIntent(clause)
+            return value != .unknown
+        }
+        return recognized.count >= 2 ? .multiStep : nil
+    }
+
+    private func translationTarget(in text: String) -> String? {
+        let values = [("англій", "en"), ("english", "en"), ("україн", "uk"), ("ukrainian", "uk"),
+                      ("росій", "ru"), ("russian", "ru"), ("німець", "de"), ("german", "de"),
+                      ("француз", "fr"), ("french", "fr")]
+        return values.first { text.contains($0.0) }?.1
     }
 
     private func querySubject(for intent: CommandIntent, in text: String) -> String {

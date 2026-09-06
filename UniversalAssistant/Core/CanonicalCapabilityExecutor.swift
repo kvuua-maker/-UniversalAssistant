@@ -65,7 +65,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let personalSearch: UniversalPersonalSearchEngine
     private let currentContext: CurrentContextStore
     private let routeAwareSearch: RouteAwareSearchEngine
-    private let multiStep: ProductionMultiStepCoordinator
+    private var multiStep: ProductionMultiStepCoordinator
+    private let multiStepOperationFactory: ProductionStepOperationFactory?
+    private let recorder: AudioRecorderController
     private let eventKit: any EventKitCommandExecuting
 
     init(
@@ -80,6 +82,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         routeProvider: any RouteProvider = MapKitRouteProvider(),
         multiStepOperationFactory: ProductionStepOperationFactory? = nil,
         eventKit: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
+        recorder: AudioRecorderController = AudioRecorderController(),
         personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())]
     ) {
         self.deviceRouter = deviceRouter
@@ -93,10 +96,12 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.currentContext = currentContext
         self.routeAwareSearch = RouteAwareSearchEngine(routeProvider: routeProvider)
         self.eventKit = eventKit
+        self.recorder = recorder
+        self.multiStepOperationFactory = multiStepOperationFactory
         if let multiStepOperationFactory {
             self.multiStep = ProductionMultiStepCoordinator(operationFactory: multiStepOperationFactory)
         } else {
-            let operationMap = ProductionStepOperationMap(eventKit: eventKit, currentLocation: currentLocation, locationResolver: locationResolver, places: placeSearch)
+            let operationMap = ProductionStepOperationMap(eventKit: eventKit, currentLocation: currentLocation, locationResolver: locationResolver, places: placeSearch, typedExecutor: nil)
             self.multiStep = ProductionMultiStepCoordinator { command, plan in
                 operationMap.operations(for: command, plan: plan)
             }
@@ -106,6 +111,13 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
 #else
         self.media = nil
 #endif
+        if multiStepOperationFactory == nil {
+            let operationMap = ProductionStepOperationMap(eventKit: eventKit, currentLocation: currentLocation, locationResolver: locationResolver, places: placeSearch) { [weak self] subcommand, step in
+                guard let self else { throw CanonicalCapabilityExecutionError.unavailable("multi_step_executor_released") }
+                return try await self.executeTypedStep(subcommand, step: step)
+            }
+            self.multiStep = ProductionMultiStepCoordinator { command, plan in operationMap.operations(for: command, plan: plan) }
+        }
     }
 
     func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
@@ -134,6 +146,10 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             if command.entities["capture_mode"] == "code_scan" { return .presentation(.scanner) }
             if command.entities["capture_mode"] == "text_scan" { return .presentation(command.entities["input_source"] == "document" ? .ocrDocuments : .ocrCamera) }
             return .presentation(.camera)
+        case .translation:
+            let text = try required(command.entities["source_text"], "translation_source_text")
+            let target = try required(command.entities["target_language"], "translation_target_language")
+            return .presentation(.translation(try CameraIntelligenceCore().translationPlan(text: text, sourceLanguage: nil, targetLanguage: target)))
         case .photoSearch:
             return try await personal(command, query: command.entities["query"] ?? "", immediateOpen: false)
         case .podcastSearch:
@@ -181,6 +197,32 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .calendarCreate, .calendarQuery, .calendarDelete, .reminderCreate,
              .reminderQuery, .weather, .webSearch, .deviceAction, .audioRecord, .unknown:
             throw CanonicalCapabilityExecutionError.unavailable("handled_by_specialized_executor")
+        }
+    }
+
+    private func executeTypedStep(_ command: StructuredCommand, step: ExecutionPlanStep) async throws -> ResultFact {
+        if [.calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete, .reminderCreate, .reminderQuery, .reminderComplete, .reminderDelete, .shoppingList, .undo].contains(command.intent) {
+            let value = try await eventKit.execute(command)
+            return .init(id: step.id, label: command.intent.rawValue, value: value.title + ": " + value.detail, state: .verified, source: "EventKit", observedAt: .now, priority: 100)
+        }
+        if command.intent == .audioRecord {
+            let action = AudioRecorderCommand(rawValue: command.entities["recorder_action"] ?? "start") ?? .start
+            await recorder.execute(action)
+            guard recorder.state != .failed && recorder.state != .denied else { throw CanonicalCapabilityExecutionError.unavailable("recorder_unavailable") }
+            return .init(id: step.id, label: command.intent.rawValue, value: String(describing: recorder.state), state: .verified, source: "AudioRecorderController", observedAt: .now, priority: 100)
+        }
+        let outcome = try await execute(command)
+        switch outcome {
+        case let .result(value): return .init(id: step.id, label: command.intent.rawValue, value: value.primaryAnswer, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
+        case let .handoff(value): return .init(id: step.id, label: command.intent.rawValue, value: value.destination.absoluteString, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
+        case let .presentation(value):
+            switch value {
+            case .message, .share, .documents, .contactImport:
+                return .init(id: step.id, label: command.intent.rawValue, value: value.id, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
+            case .camera, .ocrCamera, .ocrDocuments, .scanner, .translationTarget, .translation:
+                throw CoordinationOperationError.confirmationRequired
+            }
+
         }
     }
 

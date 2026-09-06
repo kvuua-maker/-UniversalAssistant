@@ -41,3 +41,111 @@ struct DeterministicExecutionPlanTests {
         #expect(throws: ExecutionPlanError.cyclicDependencies) { try plan.parallelGroups() }
     }
 }
+
+private struct TypedCompoundParser: CommandParsing {
+    let intents: [String: CommandIntent]
+    func parse(_ text: String) -> StructuredCommand {
+        let key = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let intent = intents[key] ?? .unknown
+        return .init(originalText: text, normalizedText: key, language: .en, intent: intent,
+                     entities: intent == .cameraCapture && key.contains("ocr") ? ["capture_mode": "text_scan"] : [:])
+    }
+}
+
+extension DeterministicExecutionPlanTests {
+    private func compound(_ text: String) -> StructuredCommand {
+        .init(originalText: text, normalizedText: text.lowercased(), language: .en, intent: .multiStep)
+    }
+
+    @Test func typedPlannerEmitsEveryEligibleParsedLocalIntentWithoutInventingSteps() throws {
+        let intents: [CommandIntent] = [.calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete,
+            .reminderCreate, .reminderQuery, .reminderComplete, .reminderDelete, .shoppingList, .undo,
+            .contactLookup, .contactCall, .messageCompose, .photoSearch, .fileSearch, .cameraCapture, .translation,
+            .audioRecord, .mediaSearch, .placeSearch, .navigation, .routeAwareSearch]
+        let names = intents.enumerated().map { "op\($0.offset)" }
+        let parser = TypedCompoundParser(intents: Dictionary(uniqueKeysWithValues: zip(names, intents)))
+        let plan = try DeterministicExecutionPlanBuilder(parser: parser).plan(for: compound(names.joined(separator: "; ")))
+        #expect(plan.steps.compactMap(\.command).map(\.intent) == intents)
+        #expect(plan.steps.filter { $0.capability == .typedCommand }.count == intents.count)
+        #expect(plan.aiInvocationCount == 0)
+    }
+
+    @Test func productionParserRoutesNaturalCompoundRequestIntoTypedPlan() throws {
+        let command = LocalCommandEngine().parse("find contact Alice, then call Alice")
+        #expect(command.intent == .multiStep)
+        let plan = try DeterministicExecutionPlanBuilder().plan(for: command)
+        #expect(plan.steps.compactMap(\.command).map(\.intent) == [.contactLookup, .contactCall])
+        let lookup = try #require(plan.steps.first { $0.command?.intent == .contactLookup })
+        #expect(plan.steps.first { $0.command?.intent == .contactCall }?.dependencies == [lookup.id])
+    }
+
+    @Test func contactsLookupIsHardDependencyForCall() throws {
+        let parser = TypedCompoundParser(intents: ["lookup": .contactLookup, "call": .contactCall])
+        let plan = try DeterministicExecutionPlanBuilder(parser: parser).plan(for: compound("lookup, then call"))
+        let lookup = try #require(plan.steps.first { $0.command?.intent == .contactLookup })
+        let call = try #require(plan.steps.first { $0.command?.intent == .contactCall })
+        #expect(call.dependencies == [lookup.id])
+    }
+
+    @Test func contactsLookupIsHardDependencyForMessage() throws {
+        let parser = TypedCompoundParser(intents: ["lookup": .contactLookup, "message": .messageCompose])
+        let plan = try DeterministicExecutionPlanBuilder(parser: parser).plan(for: compound("lookup and then message"))
+        let lookup = try #require(plan.steps.first { $0.command?.intent == .contactLookup })
+        let message = try #require(plan.steps.first { $0.command?.intent == .messageCompose })
+        #expect(message.dependencies == [lookup.id])
+    }
+
+    @Test func placesLookupIsHardDependencyForNavigation() throws {
+        let parser = TypedCompoundParser(intents: ["places": .placeSearch, "navigate": .navigation])
+        let plan = try DeterministicExecutionPlanBuilder(parser: parser).plan(for: compound("places; navigate"))
+        let places = try #require(plan.steps.first { $0.command?.intent == .placeSearch })
+        let navigation = try #require(plan.steps.first { $0.command?.intent == .navigation })
+        #expect(navigation.dependencies == [places.id])
+    }
+
+    @Test func routeIsHardDependencyForRouteAwareSearch() throws {
+        let parser = TypedCompoundParser(intents: ["navigate": .navigation, "detour": .routeAwareSearch])
+        let plan = try DeterministicExecutionPlanBuilder(parser: parser).plan(for: compound("navigate; detour"))
+        let route = try #require(plan.steps.first { $0.command?.intent == .navigation })
+        let detour = try #require(plan.steps.first { $0.command?.intent == .routeAwareSearch })
+        #expect(detour.dependencies == [route.id])
+    }
+
+    @Test func ocrIsHardDependencyForTranslation() throws {
+        let parser = TypedCompoundParser(intents: ["ocr": .cameraCapture, "translate": .translation])
+        let plan = try DeterministicExecutionPlanBuilder(parser: parser).plan(for: compound("ocr; translate"))
+        let ocr = try #require(plan.steps.first { $0.command?.intent == .cameraCapture })
+        let translation = try #require(plan.steps.first { $0.command?.intent == .translation })
+        #expect(translation.dependencies == [ocr.id])
+    }
+
+    @Test func calendarAndReminderMutationsDependOnAuthoritativeQueries() throws {
+        let parser = TypedCompoundParser(intents: ["calendar": .calendarQuery, "move": .calendarUpdate,
+                                                   "reminders": .reminderQuery, "complete": .reminderComplete])
+        let plan = try DeterministicExecutionPlanBuilder(parser: parser).plan(for: compound("calendar; move; reminders; complete"))
+        let calendar = try #require(plan.steps.first { $0.command?.intent == .calendarQuery })
+        let move = try #require(plan.steps.first { $0.command?.intent == .calendarUpdate })
+        let reminders = try #require(plan.steps.first { $0.command?.intent == .reminderQuery })
+        let complete = try #require(plan.steps.first { $0.command?.intent == .reminderComplete })
+        #expect(move.dependencies == [calendar.id])
+        #expect(complete.dependencies == [reminders.id])
+    }
+
+    @Test func independentTypedStepsRemainParallelWithStableIDs() throws {
+        let parser = TypedCompoundParser(intents: ["record": .audioRecord, "photos": .photoSearch, "music": .mediaSearch])
+        let command = compound("record; photos; music")
+        let first = try DeterministicExecutionPlanBuilder(parser: parser).plan(for: command)
+        let second = try DeterministicExecutionPlanBuilder(parser: parser).plan(for: command)
+        let typed = first.steps.filter { $0.capability == .typedCommand }
+        #expect(typed.allSatisfy { $0.dependencies.isEmpty })
+        #expect(first.steps.map(\.id) == second.steps.map(\.id))
+        #expect(try first.parallelGroups().first?.count == 3)
+    }
+
+    @Test func unknownClauseIsNotFabricatedIntoOperation() throws {
+        let parser = TypedCompoundParser(intents: ["known": .audioRecord])
+        let command = compound("known; unsupported; known")
+        let plan = try DeterministicExecutionPlanBuilder(parser: parser).plan(for: command)
+        #expect(plan.steps.compactMap(\.command).map(\.intent) == [.audioRecord, .audioRecord])
+    }
+}
