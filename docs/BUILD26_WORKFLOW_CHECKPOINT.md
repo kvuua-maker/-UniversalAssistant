@@ -1,7 +1,7 @@
 # Build 26 canonical repair checkpoint
 
 - Baseline physical release: `aab4b308cf79a38626e29bf86cc4a46513f2402a` (0.1.0 Build 25).
-- Latest green source checkpoint: `29497a166c52bbd6c92cf11e70123a34136fc6c9` (`Recover QR entities within scanner context`).
+- Latest green source checkpoint: `985e54bd0687cce6754e3bba8c90d0ec369cdca9` (`Rank explicit nearest place results by distance`).
 - Build metadata remains 0.1.0 (25). Build 26 has not been created.
 - Recovery artifacts remain untouched and untracked.
 
@@ -30,7 +30,7 @@
 
 ## Exact continuation point
 
-1. Continue with production multi-step lowering; eliminate abstract planner nodes from execution and UI.
+1. In `DeterministicExecutionPlanBuilder.typedPlan`, replace `.typedCommand` nodes with intent-derived concrete capabilities and remove the `.deterministicCompose` plan node; aggregation remains coordinator-owned. Update `ProductionStepOperationMap.operation` so any concrete step carrying `step.command` executes through `typedExecutor` before generic travel operations. Add top-level natural-input tests for Nike place→destination→navigation and product→current-source truthful fallback; assert no abstract IDs in plan, facts, warnings, or renderer.
 2. Continue in master priority order: Places/navigation; multi-step lowering; CurrentContext/Share Extension; local utilities; Notes/clipboard audit; real configured information providers; production UI.
 3. Persist the exactly 71-row B25 forensic matrix, capability inventory, voice evidence, and VPS correlation artifact.
 4. Run all repository gates and checkpoint green source before incrementing to Build 26.
