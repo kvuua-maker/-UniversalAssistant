@@ -136,7 +136,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 body: command.entities["message_body"]
             ))
         case .noteCreate:
-            let value = try required(command.entities["content"] ?? subject(after: ["створи нотатку", "создай заметку", "create a note"], in: command.originalText), "note_content")
+            let value = try required(command.entities["content"] ?? subject(after: ["створи нову нотатку", "створи нотатку", "создай заметку", "create a note"], in: command.originalText), "note_content")
             return .presentation(.share(value))
         case .noteQuery:
             return .presentation(.documents)

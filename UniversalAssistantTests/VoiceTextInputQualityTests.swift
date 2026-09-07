@@ -94,4 +94,16 @@ struct VoiceTextInputQualityTests {
         #expect(command.entities["target_language"] == "en")
         #expect(command.entities["source_text"] == "Добрий вечір, як справи")
     }
+
+    @Test func build25SemanticVariantsConvergeOnCanonicalIntents() {
+        #expect(engine.parse("Відкрий найновіше фото").intent == .photoSearch)
+        #expect(engine.parse("Відкрий найновіше фото").entities["query"] == "")
+        #expect(engine.parse("Що в мене заплановано на завтра?").intent == .calendarQuery)
+        let navigation = engine.parse("Проклади маршрут до залізничного вокзалу")
+        #expect(navigation.intent == .navigation)
+        #expect(navigation.entities["destination"] == "залізничного вокзалу")
+        #expect(engine.parse("Покажи найближчу аптеку").intent == .placeSearch)
+        #expect(engine.parse("Де найближча заправка?").intent == .placeSearch)
+        #expect(engine.parse("Створи нову нотатку: купити молоко").intent == .noteCreate)
+    }
 }

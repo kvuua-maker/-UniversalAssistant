@@ -81,7 +81,7 @@ struct LocalCommandEngine: CommandParsing {
                         "enregistre audio", "pause l'enregistrement", "reprends l'enregistrement", "arrête l'enregistrement"]),
         (.cameraCapture, ["зроби фото", "відкрий камеру", "сфотографуй", "сделай фото", "открой камеру", "take a photo", "open camera", "скануй qr", "відскануй qr", "qr-код", "qr код", "скануй код", "штрихкод", "сканируй qr", "сканируй код", "scan qr", "scan barcode", "розпізнай текст", "розпізнати текст", "распознай текст", "recognize text", "scan text"]),
         (.translation, ["переклади", "переведи", "translate ", "übersetze", "traduis"]),
-        (.photoSearch, ["знайди фото", "покажи фото", "найди фото", "покажи фотографии", "find photos", "show photos", "відкрий останнє фото", "відкрий останню світлину", "открой последнее фото", "open latest photo"]),
+        (.photoSearch, ["знайди фото", "покажи фото", "найди фото", "покажи фотографии", "find photos", "show photos", "відкрий останнє фото", "відкрий останню світлину", "відкрий найновіше фото", "відкрий найсвіжіше фото", "открой последнее фото", "open latest photo"]),
         (.fileSearch, ["знайди файл", "знайди документ", "найди файл", "найди документ", "find file", "find document"]),
         (.reminderComplete, ["виконай нагадування", "познач нагадування виконаним", "заверши напоминание", "complete reminder"]),
         (.reminderDelete, ["видали нагадування", "скасуй нагадування", "удали напоминание", "delete reminder"]),
@@ -92,7 +92,7 @@ struct LocalCommandEngine: CommandParsing {
         (.reminderCreate, ["нагадай", "нагадати", "напомни", "напомнить", "remind", "erinnere", "rappelle"]),
         (.contactCall, ["подзвони", "зателефонуй", "набери", "набрати", "позвони", "call ", "dial ", "ruf ", "appelle"]),
         (.messageCompose, ["напиши ", "отправь сообщение", "message ", "schreib ", "écris "]),
-        (.navigation, ["веди ", "маршрут до", "navigate", "route to", "navigiere", "itinéraire"]),
+        (.navigation, ["веди ", "веди мене до", "проклади маршрут до", "маршрут до", "navigate", "route to", "navigiere", "itinéraire"]),
         (.routeAwareSearch, ["по дорозі", "по пути", "along the route", "auf dem weg", "sur le trajet"]),
         (.routeSearch, ["побудуй маршрут", "покажи маршрут", "построй маршрут", "build a route", "route planen", "crée un itinéraire"]),
         (.publicTransport, ["громадський транспорт", "общественный транспорт", "public transport", "öffentliche verkehr", "transports en commun"]),
@@ -110,11 +110,11 @@ struct LocalCommandEngine: CommandParsing {
         (.restaurantSearch, ["ресторан поруч", "ресторан рядом", "restaurant nearby", "restaurant in der nähe", "restaurant à proximité"]),
         (.groceryBasket, ["кошик", "корзин", "grocery basket", "warenkorb", "panier"]),
         (.fashionDiscovery, ["колекці", "collection", "kollektion"]),
-        (.calendarQuery, ["що в календарі", "что в календаре", "calendar events", "kalendertermine", "événements du calendrier"]),
+        (.calendarQuery, ["що в календарі", "що в мене заплановано", "які в мене плани", "что в календаре", "calendar events", "kalendertermine", "événements du calendrier"]),
         (.calendarUpdate, ["перенеси зустріч", "перенеси стоматолога", "перенеси встречу", "move the event", "termin verschieben", "déplace le rendez-vous"]),
         (.calendarDelete, ["видали зустріч", "скасуй завтра стоматолога", "удали встречу", "delete the event", "termin löschen", "supprime le rendez-vous"]),
         (.reminderQuery, ["покажи нагадування", "покажи напоминания", "show reminders", "erinnerungen zeigen", "affiche les rappels"]),
-        (.noteCreate, ["створи нотатку", "создай заметку", "create a note", "notiz erstellen", "crée une note"]),
+        (.noteCreate, ["створи нотатку", "створи нову нотатку", "создай заметку", "create a note", "notiz erstellen", "crée une note"]),
         (.noteQuery, ["покажи нотатки", "покажи заметки", "show notes", "notizen zeigen", "affiche les notes"]),
         (.shoppingList, ["список покупок", "список покупок", "shopping list", "einkaufsliste", "liste de courses"]),
         (.contactLookup, ["знайди контакт", "найди контакт", "find contact", "kontakt finden", "trouve le contact"]),
@@ -152,7 +152,7 @@ struct LocalCommandEngine: CommandParsing {
         if [.photoSearch, .fileSearch, .mediaSearch, .podcastSearch].contains(intent) { entities["query"] = querySubject(for: intent, in: text) }
         if intent == .parcelTrack, let tracking = normalized.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init).first(where: { $0.count >= 5 && $0.rangeOfCharacter(from: .decimalDigits) != nil }) { entities["tracking_number"] = tracking }
         if intent == .serviceSearch, let category = serviceCategory(in: normalized) { entities["serviceCategory"] = category }
-        if [.navigation, .routeSearch, .transportRoute].contains(intent), let value = target(after: ["веди", "маршрут до", "navigate", "route to", "побудуй маршрут до", "покажи маршрут до", "построй маршрут до", "як доїхати до", "как доехать до"], in: text) { entities["destination"] = value }
+        if [.navigation, .routeSearch, .transportRoute].contains(intent), let value = target(after: ["веди мене до", "проклади маршрут до", "побудуй маршрут до", "покажи маршрут до", "построй маршрут до", "як доїхати до", "как доехать до", "маршрут до", "navigate", "route to", "веди"], in: text) { entities["destination"] = value }
         if [.placeSearch, .restaurantSearch, .serviceSearch].contains(intent), let value = locality(in: text) { entities["location"] = value }
         if intent == .audioRecord { entities["recorder_action"] = recorderAction(in: normalized) }
         if intent == .deviceAction { extractSystemQuickAction(from: normalized, into: &entities) }
@@ -235,7 +235,7 @@ struct LocalCommandEngine: CommandParsing {
 
     private func querySubject(for intent: CommandIntent, in text: String) -> String {
         let prefixes: [String] = switch intent {
-        case .photoSearch: ["знайди фото", "покажи фото", "покажи мої", "найди фото", "покажи фотографии", "find photos", "show photos"]
+        case .photoSearch: ["відкрий останнє фото", "відкрий найновіше фото", "відкрий найсвіжіше фото", "відкрий останню світлину", "знайди фото", "покажи фото", "покажи мої", "найди фото", "покажи фотографии", "find photos", "show photos"]
         case .fileSearch: ["знайди файл", "знайди документ", "найди файл", "найди документ", "find file", "find document"]
         case .mediaSearch: ["увімкни музику", "увімкни", "знайди пісню", "включи музыку", "включи", "найди песню", "play music", "play", "find song"]
         case .podcastSearch: ["знайди подкаст", "увімкни подкаст", "найди подкаст", "включи подкаст", "find podcast", "play podcast"]
@@ -290,7 +290,7 @@ struct LocalCommandEngine: CommandParsing {
     private func semanticCapabilityIntent(_ text: String) -> CommandIntent? {
         let commerceActions = ["куп", "придба", "замов", "ціна", "вартіст", "скільки кошту", "сколько стоит", "покуп", "закаж", "цена", "стоимость", "buy", "purchase", "price"]
         let placeActions = ["де ", "куди", "поруч", "поблизу", "найближ", "зайти", "піти", "сходити", "рядом", "ближайш", "куда", "пойти", "nearby", "nearest", "closest", "where"]
-        let placeKinds = ["кав", "кафе", "кофе", "кофейн", "ресторан", "бар", "піцер", "пиццер", "bakery", "cafe", "coffee shop", "restaurant"]
+        let placeKinds = ["кав", "кафе", "кофе", "кофейн", "ресторан", "бар", "піцер", "пиццер", "bakery", "cafe", "coffee shop", "restaurant", "аптек", "pharmacy", "заправ", "gas station", "поїсти", "поесть", "dining"]
         let fashionKinds = ["одяг", "взут", "футбол", "сороч", "куртк", "сукн", "штани", "кросів", "черев", "одеж", "обув", "рубаш", "плать", "брюк", "кроссов", "ботин", "clothing", "apparel", "footwear", "shirt", "jacket", "dress", "sneaker", "shoe"]
         let groceryKinds = ["продукт", "супермаркет", "магазин", "молоч", "хліб", "овоч", "фрукт", "круп", "напій", "хлеб", "овощ", "grocer", "supermarket", "food store"]
         let retailerSignals = ["сільпо", "silpo", "атб", "fora", "фора", "fozzy"]
