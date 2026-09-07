@@ -17,6 +17,20 @@ private actor CalendarSpy: CalendarMutating {
     }
 }
 
+final class CalendarAuthorizationStub: CalendarAuthorizing, @unchecked Sendable {
+    private let lock = NSLock()
+    private var state: CalendarAuthorizationState
+    private let granted: Bool
+    private var refreshReads: Int
+    init(_ state: CalendarAuthorizationState, granted: Bool = true, refreshReads: Int = 0) { self.state = state; self.granted = granted; self.refreshReads = refreshReads }
+    func currentStatus() -> CalendarAuthorizationState {
+        lock.lock(); defer { lock.unlock() }
+        if state == .notDetermined, refreshReads > 0 { refreshReads -= 1; if refreshReads == 0 { state = .fullAccess } }
+        return state
+    }
+    func requestFullAccess() async throws -> Bool { granted }
+}
+
 struct CalendarServiceTests {
     private let start = Date(timeIntervalSince1970: 10_000)
 
@@ -78,5 +92,21 @@ struct CalendarServiceTests {
         model.input = "Видали зустріч Team Sync"
         model.submit()
         guard case .actionRequired = model.resultState else { Issue.record("Expected confirmation"); return }
+    }
+
+    @Test func calendarAuthorizationRefreshesAfterGrantBeforeReturning() async throws {
+        let authorization = CalendarAuthorizationStub(.notDetermined, refreshReads: 3)
+        let service = EventKitCalendarService(authorization: authorization)
+        try await service.requestFullAccessIfNeeded()
+        #expect(authorization.currentStatus() == .fullAccess)
+    }
+
+    @Test func calendarAuthorizationDeniedRestrictedAndRejectedGrantFailTruthfully() async {
+        for state in [CalendarAuthorizationState.denied, .restricted, .writeOnly] {
+            let service = EventKitCalendarService(authorization: CalendarAuthorizationStub(state))
+            await #expect(throws: CalendarServiceError.permissionDenied) { try await service.requestFullAccessIfNeeded() }
+        }
+        let rejected = EventKitCalendarService(authorization: CalendarAuthorizationStub(.notDetermined, granted: false))
+        await #expect(throws: CalendarServiceError.permissionDenied) { try await rejected.requestFullAccessIfNeeded() }
     }
 }

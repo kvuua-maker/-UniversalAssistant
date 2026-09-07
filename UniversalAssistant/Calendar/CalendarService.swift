@@ -1,6 +1,27 @@
 import EventKit
 import Foundation
 
+enum CalendarAuthorizationState: Equatable, Sendable { case notDetermined, fullAccess, writeOnly, denied, restricted }
+protocol CalendarAuthorizing: Sendable {
+    func currentStatus() -> CalendarAuthorizationState
+    func requestFullAccess() async throws -> Bool
+}
+struct SystemCalendarAuthorization: CalendarAuthorizing, @unchecked Sendable {
+    private let store: EKEventStore
+    init(store: EKEventStore) { self.store = store }
+    func currentStatus() -> CalendarAuthorizationState {
+        switch EKEventStore.authorizationStatus(for: .event) {
+        case .notDetermined: .notDetermined
+        case .fullAccess: .fullAccess
+        case .writeOnly: .writeOnly
+        case .denied: .denied
+        case .restricted: .restricted
+         default: .restricted
+        }
+    }
+    func requestFullAccess() async throws -> Bool { try await store.requestFullAccessToEvents() }
+}
+
 struct CalendarEventDraft: Equatable, Codable, Sendable {
     let title: String
     let start: Date
@@ -35,15 +56,24 @@ protocol CalendarMutating: Sendable {
 }
 
 actor EventKitCalendarService: CalendarMutating {
-    private let store = EKEventStore()
+    private let store: EKEventStore
+    private let authorization: any CalendarAuthorizing
+    init(store: EKEventStore = EKEventStore(), authorization: (any CalendarAuthorizing)? = nil) {
+        self.store = store
+        self.authorization = authorization ?? SystemCalendarAuthorization(store: store)
+    }
 
     func requestFullAccessIfNeeded() async throws {
-        switch EKEventStore.authorizationStatus(for: .event) {
+        switch authorization.currentStatus() {
         case .fullAccess: return
         case .notDetermined:
-            guard try await store.requestFullAccessToEvents() else { throw CalendarServiceError.permissionDenied }
+            guard try await authorization.requestFullAccess() else { throw CalendarServiceError.permissionDenied }
+            for _ in 0..<20 {
+                if authorization.currentStatus() == .fullAccess { return }
+                try await Task.sleep(for: .milliseconds(25))
+            }
+            throw CalendarServiceError.permissionDenied
         case .denied, .restricted, .writeOnly: throw CalendarServiceError.permissionDenied
-        @unknown default: throw CalendarServiceError.permissionDenied
         }
     }
 
@@ -95,9 +125,8 @@ actor EventKitCalendarService: CalendarMutating {
     }
 
     private func requireFullAccess() throws {
-        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
-            throw EKEventStore.authorizationStatus(for: .event) == .notDetermined
-                ? CalendarServiceError.permissionRequired : CalendarServiceError.permissionDenied
+        guard authorization.currentStatus() == .fullAccess else {
+            throw authorization.currentStatus() == .notDetermined ? CalendarServiceError.permissionRequired : CalendarServiceError.permissionDenied
         }
     }
 
