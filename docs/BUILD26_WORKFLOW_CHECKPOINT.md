@@ -1,7 +1,7 @@
 # Build 26 canonical repair checkpoint
 
 - Baseline physical release: `aab4b308cf79a38626e29bf86cc4a46513f2402a` (0.1.0 Build 25).
-- Latest green source checkpoint: `985e54bd0687cce6754e3bba8c90d0ec369cdca9` (`Rank explicit nearest place results by distance`).
+- Latest green source checkpoint: `9105c861da880d94612c49e6b1e5a04af15d4d79` (`Lower multi-step plans to concrete operations`).
 - Build metadata remains 0.1.0 (25). Build 26 has not been created.
 - Recovery artifacts remain untouched and untracked.
 
@@ -28,10 +28,16 @@
 - QR entity recovery now corrects bounded ASR variants (`Q Club`, `Q клуб`, `quad`) only inside scanner/recognition context; public VisionKit scanner, Vision OCR, and in-app camera presentation remain wired. OCR/QR/voice suites passed 29 tests in 3 suites.
 - Explicit nearest-place requests now use stable physical-distance ordering (unknown distances last), while general discovery retains relevance ranking; pharmacy and fuel intents use structured MapKit categories. Places/navigation/route-aware/voice suites passed 26 tests in 4 suites.
 
+- Multi-step production plans now lower parsed clauses into intent-derived concrete capabilities. Standalone presentation fragments are discarded, anaphoric route clauses become concrete navigation dependencies, and storefront discovery becomes structured place search before navigation.
+- New production plans never emit `.typedCommand` or `.deterministicCompose`; legacy decoded abstract cases are explicitly non-executable. Coordinator-owned aggregation replaces the former compose pseudo-step.
+- The production operation map dispatches command-bearing concrete steps through the canonical typed executor. A dependent navigation step selects the first concrete MapKit result action through `CurrentContextStore` and produces a verified Apple Maps handoff.
+- Simple product requests remain one concrete `.productSearch` operation and use the existing truthful current-source/web fallback; they do not become an unresolved multi-step plan.
+- Multi-step planner/coordinator suites passed 31/31; expanded affected canonical execution, coordination, and CurrentContext suites passed 43/43 before the final abstract-ID guard; final ProductionMultiStep suite passed 16/16; Development compile passed.
+
 ## Exact continuation point
 
-1. In `DeterministicExecutionPlanBuilder.typedPlan`, replace `.typedCommand` nodes with intent-derived concrete capabilities and remove the `.deterministicCompose` plan node; aggregation remains coordinator-owned. Update `ProductionStepOperationMap.operation` so any concrete step carrying `step.command` executes through `typedExecutor` before generic travel operations. Add top-level natural-input tests for Nike place→destination→navigation and product→current-source truthful fallback; assert no abstract IDs in plan, facts, warnings, or renderer.
-2. Continue in master priority order: Places/navigation; multi-step lowering; CurrentContext/Share Extension; local utilities; Notes/clipboard audit; real configured information providers; production UI.
+1. Continue with the CurrentContext lifecycle: translation follow-up, route follow-up, shared URL, shared image, and Share Extension continuation. Start by tracing `CurrentContextStore`, production Home ingestion, and Share Extension payload binding; add production-boundary E2E coverage.
+2. Continue in master priority order: local utilities; Notes/clipboard audit; remaining public system-capability reconciliation; real configured information providers; production UI.
 3. Persist the exactly 71-row B25 forensic matrix, capability inventory, voice evidence, and VPS correlation artifact.
 4. Run all repository gates and checkpoint green source before incrementing to Build 26.
 
