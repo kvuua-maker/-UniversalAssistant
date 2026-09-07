@@ -80,6 +80,37 @@ struct ProductionOCRTests {
         #expect(result.provenance == .sharedImage)
     }
 
+    @Test func publicDocumentScanUsesVisionKitAndProcessesEveryPage() async throws {
+        let command = LocalCommandEngine().parse("Відскануй документ")
+        #expect(command.intent == .cameraCapture)
+        #expect(command.entities["capture_mode"] == "text_scan")
+        #expect(command.entities["input_source"] == "document_camera")
+        #expect(try await ProductionCanonicalCapabilityExecutor(personalSearchSources: []).execute(command) == .presentation(.scanDocument))
+
+        let processor = OCRProcessorStub(.success(["Page text"]))
+        let result = try await OCRProductionPipeline(processor: processor).process([image(), image()], provenance: .document)
+        #expect(result.recognizedText == "Page text\n\nPage text")
+        #expect(processor.callCount == 2)
+    }
+
+    @Test("Document scan semantic variants", arguments: ["Скануй документ", "Сканируй документ", "Scan document"])
+    func documentScanVariantsConverge(_ phrase: String) async throws {
+        let command = LocalCommandEngine().parse(phrase)
+        #expect(command.intent == .cameraCapture)
+        #expect(command.entities["input_source"] == "document_camera")
+        #expect(try await ProductionCanonicalCapabilityExecutor(personalSearchSources: []).execute(command) == .presentation(.scanDocument))
+    }
+
+    @Test func scannedPagesReachTypedOCRResultAtProductionBoundary() async throws {
+        let model = AssistantViewModel(ocrProcessor: OCRProcessorStub(.success(["Complete receipt line"])), compactResultDuration: .seconds(60))
+        model.handleScannedOCRDocument([image(), image()])
+        try await waitUntil { if case .ocr = model.resultState { true } else { false } }
+        guard case let .ocr(result) = model.resultState else { return }
+        #expect(result.provenance == .document)
+        #expect(result.recognizedText == "Complete receipt line\n\nComplete receipt line")
+        #expect(result.actions == [.copy, .share, .translate])
+    }
+
     private func image() -> UIImage {
         UIGraphicsImageRenderer(size: CGSize(width: 4, height: 4)).image { context in UIColor.white.setFill(); context.fill(CGRect(x: 0, y: 0, width: 4, height: 4)) }
     }

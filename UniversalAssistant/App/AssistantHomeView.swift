@@ -76,6 +76,8 @@ struct AssistantHomeView: View {
                 SystemCameraCapture(onCapturedImage: model.handleCapturedOCRImage)
             case .ocrDocuments:
                 AuthorizedDocumentPicker(onSelection: model.handleSelectedOCRDocuments)
+            case .scanDocument:
+                SystemDocumentScannerView(onPages: model.handleScannedOCRDocument, onFailure: model.handleDocumentScannerFailure)
             case .scanner:
                 LiveCodeScannerView(onResult: model.handleScannedCode, onUnavailable: model.handleScannerUnavailable)
             case .documents:

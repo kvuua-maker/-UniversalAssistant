@@ -48,6 +48,17 @@ struct ScannerProductionResult: Equatable, Sendable {
     let observedValue: String
     let observedType: String
     let route: SharedContentRoute
+
+    var actionTitle: String {
+        switch route.action {
+        case .open: "Відкрити"
+        case .call: "Зателефонувати"
+        case .importContact: "Імпортувати контакт"
+        case .identifyProduct: "Знайти товар"
+        case .save: "Копіювати"
+        default: "Продовжити"
+        }
+    }
 }
 
 struct ScannerProductionRouter: Sendable {
@@ -68,6 +79,25 @@ struct LiveCodeScannerView: UIViewControllerRepresentable {
         catch { Task { @MainActor in onUnavailable() }; return DataScannerViewController(recognizedDataTypes: [.barcode()], qualityLevel: .balanced, recognizesMultipleItems: false, isHighFrameRateTrackingEnabled: false, isPinchToZoomEnabled: false, isGuidanceEnabled: false, isHighlightingEnabled: false) }
     }
     func updateUIViewController(_ uiViewController: DataScannerViewController, context: Context) {}
+}
+
+@MainActor
+struct SystemDocumentScannerView: UIViewControllerRepresentable {
+    let onPages: ([UIImage]) -> Void
+    let onFailure: (Error) -> Void
+
+    func makeCoordinator() -> DocumentScannerCoordinator {
+        let coordinator = DocumentScannerCoordinator()
+        coordinator.onPages = onPages
+        coordinator.onFailure = onFailure
+        return coordinator
+    }
+
+    func makeUIViewController(context: Context) -> VNDocumentCameraViewController {
+        context.coordinator.makeController()
+    }
+
+    func updateUIViewController(_ uiViewController: VNDocumentCameraViewController, context: Context) {}
 }
 
 @MainActor
@@ -151,5 +181,16 @@ struct OCRProductionPipeline {
         let text = lines.map { line in line.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { line in !line.isEmpty }.joined(separator: "\n")
         guard !text.isEmpty else { throw OCRProductionError.noTextDetected }
         return .init(recognizedText: text, provenance: provenance, actions: OCRResultAction.allCases)
+    }
+
+    func process(_ images: [UIImage], provenance: OCRInputProvenance) async throws -> OCRProductionResult {
+        guard !images.isEmpty else { throw OCRProductionError.cancelled }
+        var pages: [String] = []
+        for image in images {
+            try Task.checkCancellation()
+            let page = try await process(image, provenance: provenance).recognizedText
+            pages.append(page)
+        }
+        return .init(recognizedText: pages.joined(separator: "\n\n"), provenance: provenance, actions: OCRResultAction.allCases)
     }
 }

@@ -26,7 +26,7 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-14.01 | GREEN |
 | B27-14.02 | GREEN |
 | B27-14.03 | GREEN |
-| B27-14.04 | NOT_STARTED |
+| B27-14.04 | GREEN |
 | B27-14.05 | NOT_STARTED |
 | B27-14.06 | NOT_STARTED |
 | B27-14.07 | NOT_STARTED |
@@ -125,3 +125,25 @@ PASS evidence:
 Unfinished B27 root groups: B27-10, B27-11, remaining B27-12/B27-13, B27-14.03 through B27-14.20 except the verified portions recorded above, B27-15 through B27-22, B27-24 and B27-25. Build 27 does not exist.
 
 Exact next code-level operation: begin B27-14.04 in the production Home path. Audit the existing CameraIntelligenceCore, ScannerProductionRouter, OCRProductionPipeline, VisionKit document-scanner presentation and SharedContentActionRouter; then connect typed and normalized-voice OCR, QR and document-scan intents to concrete public scanner or Vision execution. Preserve typed QR and OCR physical passes, extend full-receipt OCR result handling, provide safe QR payload continuation, and add scan to OCR to translation production-boundary regressions. Keep B27-14.04 IN_PROGRESS until affected suites and Development compile pass.
+
+
+## Completed material repair: B27-14.04
+
+Physical evidence: Build 26 typed OCR reached only a single-image path, voice/document scan could fall through, a public VisionKit document coordinator was not presented by Home, and the QR result exposed a generic Execute control without identifying the safe concrete continuation.
+
+Material repair:
+- Canonical camera parsing now converges Ukrainian, Russian and English document-scan variants on `cameraCapture` with `capture_mode=text_scan` and `input_source=document_camera`.
+- Home presents public `VNDocumentCameraViewController` through `SystemDocumentScannerView`; all scanned pages feed the existing on-device `VNRecognizeTextRequest` pipeline and retain page order.
+- Existing camera OCR and security-scoped picked-document OCR remain separate supported entry points.
+- QR/barcode results expose concrete safe action labels; URL, telephone and vCard payloads retain confirmation, plain text copies locally, unsupported/payment schemes fail closed, and validated GTIN uses the existing truthful product web handoff rather than fabricated product data.
+- OCR result actions remain local Copy, public Share Sheet and Apple Translation continuation.
+
+Production-boundary verification: Development compile PASS. `ProductionScannerTests`, `ProductionOCRTests`, `VoiceTextInputQualityTests`, and `ProductionTranslationTests` PASS: 42 tests in 4 suites. Coverage includes scanner presentation, ASR QR recovery scope, document-scan semantic variants, two-page OCR, Home result ownership, safe QR classifications/actions, GTIN handoff, shared-image OCR and OCR-to-translation continuation. Owner physical retest remains required.
+
+## Exact continuation point after B27-14.04
+
+Checkpoint source HEAD before commit: `35e735f`. B27-14.04 is GREEN. Build 27 does not exist.
+
+Unfinished B27 root groups: B27-10, B27-11, remaining B27-12/B27-13, B27-14.05 through B27-14.20 except the external-provider status already recorded, B27-15 through B27-22, B27-24 and B27-25.
+
+Exact next code-level operation: begin B27-14.05 Calendar. Trace `LocalCommandEngine` calendar action/date/time/title/duration extraction through `ProductionEventKitCommandExecutor`; repair today/tomorrow query and natural create commands independently of word order, preserve the physically passing tomorrow query/create paths, and add Home production-boundary permission/query/create tests before marking GREEN.

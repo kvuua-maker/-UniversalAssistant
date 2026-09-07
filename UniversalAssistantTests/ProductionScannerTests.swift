@@ -51,6 +51,21 @@ struct ProductionScannerTests {
         }
     }
 
+    @Test func actionLabelsDescribeTheSafeConcreteContinuation() throws {
+        #expect(try ScannerProductionRouter().route(.init(payload: "https://example.com", symbology: .qr)).actionTitle == "Відкрити")
+        #expect(try ScannerProductionRouter().route(.init(payload: "plain text", symbology: .qr)).actionTitle == "Копіювати")
+        #expect(try ScannerProductionRouter().route(.init(payload: "4006381333931", symbology: .ean13)).actionTitle == "Знайти товар")
+    }
+
+    @Test func retailBarcodeActionUsesTruthfulProductHandoff() throws {
+        let model = AssistantViewModel(compactResultDuration: .seconds(60))
+        let result = try ScannerProductionRouter().route(.init(payload: "4006381333931", symbology: .ean13))
+        model.performScannerAction(result)
+        guard case let .webHandoff(handoff) = model.resultState else { Issue.record("Expected product handoff"); return }
+        #expect(handoff.query == "GTIN 4006381333931")
+        #expect(handoff.destination.scheme == "https")
+    }
+
     @Test func plainQRUsesExplicitSafeCopyAction() throws {
         let result = try ScannerProductionRouter().route(.init(payload: "inventory note", symbology: .qr))
         #expect(result.route.action == .save)

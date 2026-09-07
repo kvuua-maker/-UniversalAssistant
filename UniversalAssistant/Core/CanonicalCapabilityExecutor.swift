@@ -9,6 +9,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case camera
     case ocrCamera
     case ocrDocuments
+    case scanDocument
     case scanner
     case documents
     case share(String)
@@ -23,6 +24,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
         case .camera: "camera"
         case .ocrCamera: "ocr-camera"
         case .ocrDocuments: "ocr-documents"
+        case .scanDocument: "scan-document"
         case .scanner: "scanner"
         case .documents: "documents"
         case .share: "share"
@@ -152,7 +154,10 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             return .presentation(.documents)
         case .cameraCapture:
             if command.entities["capture_mode"] == "code_scan" { return .presentation(.scanner) }
-            if command.entities["capture_mode"] == "text_scan" { return .presentation(command.entities["input_source"] == "document" ? .ocrDocuments : .ocrCamera) }
+            if command.entities["capture_mode"] == "text_scan" {
+                if command.entities["input_source"] == "document_camera" { return .presentation(.scanDocument) }
+                return .presentation(command.entities["input_source"] == "document" ? .ocrDocuments : .ocrCamera)
+            }
             return .presentation(.camera)
         case .translation:
             let text = try required(command.entities["source_text"], "translation_source_text")
@@ -240,7 +245,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             switch value {
             case .message, .share, .documents, .contactImport, .photoAsset:
                 return .init(id: step.id, label: command.intent.rawValue, value: value.id, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
-            case .camera, .ocrCamera, .ocrDocuments, .scanner, .translationTarget, .translation:
+            case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .translationTarget, .translation:
                 throw CoordinationOperationError.confirmationRequired
             }
 

@@ -34,7 +34,7 @@ struct CompactResultCard: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text(result.observedType == "qr" ? "QR-код" : "Штрихкод").font(.headline)
                 Text(result.observedValue).font(.subheadline).textSelection(.enabled)
-                Button(result.route.requiresConfirmation ? "Підтвердити дію" : "Виконати") { onScannerAction(result) }.buttonStyle(.borderedProminent)
+                Button(result.route.requiresConfirmation ? "Підтвердити: \(result.actionTitle.lowercased())" : result.actionTitle) { onScannerAction(result) }.buttonStyle(.borderedProminent)
             }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous)).accessibilityIdentifier("assistant.scanner-result")
         case .ocr(let result):
             VStack(alignment: .leading, spacing: 10) {

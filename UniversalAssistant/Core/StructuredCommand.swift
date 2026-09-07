@@ -88,7 +88,7 @@ struct LocalCommandEngine: CommandParsing {
                         "voice recorder", "pause recording", "resume recording", "stop recording",
                         "sprachmemo", "aufnahme pausieren", "aufnahme fortsetzen", "aufnahme stoppen",
                         "enregistre audio", "pause l'enregistrement", "reprends l'enregistrement", "arrête l'enregistrement"]),
-        (.cameraCapture, ["зроби фото", "відкрий камеру", "сфотографуй", "сделай фото", "открой камеру", "take a photo", "open camera", "скануй qr", "відскануй qr", "розпізнай qr", "qr-код", "qr код", "скануй код", "штрихкод", "сканируй qr", "сканируй код", "scan qr", "scan barcode", "розпізнай текст", "розпізнати текст", "распознай текст", "recognize text", "scan text"]),
+        (.cameraCapture, ["зроби фото", "відкрий камеру", "сфотографуй", "сделай фото", "открой камеру", "take a photo", "open camera", "скануй qr", "відскануй qr", "розпізнай qr", "qr-код", "qr код", "скануй код", "штрихкод", "сканируй qr", "сканируй код", "scan qr", "scan barcode", "розпізнай текст", "розпізнати текст", "распознай текст", "recognize text", "scan text", "відскануй документ", "скануй документ", "сканируй документ", "scan document"]),
         (.translation, ["переклади", "переведи", "translate ", "übersetze", "traduis"]),
         (.photoSearch, ["знайди фото", "покажи фото", "найди фото", "покажи фотографии", "find photos", "show photos", "відкрий останнє фото", "відкрий останню світлину", "відкрий найновіше фото", "відкрий найсвіжіше фото", "открой последнее фото", "open latest photo"]),
         (.fileSearch, ["знайди файл", "знайди документ", "найди файл", "найди документ", "find file", "find document"]),
@@ -169,6 +169,11 @@ struct LocalCommandEngine: CommandParsing {
         if intent == .cameraCapture, ["розпізнай текст", "розпізнати текст", "распознай текст", "recognize text", "scan text"].contains(where: normalized.contains) {
             entities["capture_mode"] = "text_scan"
             if ["файл", "документ", "file", "document"].contains(where: normalized.contains) { entities["input_source"] = "document" }
+        }
+        if intent == .cameraCapture,
+           ["відскануй документ", "скануй документ", "сканируй документ", "scan document"].contains(where: normalized.contains) {
+            entities["capture_mode"] = "text_scan"
+            entities["input_source"] = "document_camera"
         }
         if intent == .translation {
             if let value = translationSource(in: text) { entities["source_text"] = value }

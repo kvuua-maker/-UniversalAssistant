@@ -419,7 +419,9 @@ final class AssistantViewModel {
         case let .text(value) where result.route.action == .call:
             let number = value.replacingOccurrences(of: "tel:", with: ""); if let url = URL(string: "tel:\(number.filter(\.isNumber))") { UIApplication.shared.open(url) }
         case let .vCard(data) where result.route.action == .importContact: capabilityPresentation = .contactImport(data)
-        case let .retailBarcode(value): UIPasteboard.general.string = value; statusText = AppText.value("ready")
+        case let .retailBarcode(value):
+            let command = StructuredCommand(originalText: "GTIN \(value)", normalizedText: "gtin \(value)", language: .automatic, intent: .productSearch, entities: ["query": "GTIN \(value)"])
+            presentGeneralWebFallback(command)
         default: presentFailure(message: AppText.value("request_unavailable"))
         }
     }
@@ -437,6 +439,23 @@ final class AssistantViewModel {
         let image = UIImage(contentsOfFile: url.path)
         if accessed { url.stopAccessingSecurityScopedResource() }
         processOCR(image, provenance: .document)
+    }
+    func handleScannedOCRDocument(_ pages: [UIImage]) {
+        capabilityPresentation = nil
+        guard !pages.isEmpty else { presentFailure(message: AppText.value("request_unavailable")); return }
+        resultState = .processing
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let result = try await ocrPipeline.process(pages, provenance: .document)
+                resultState = .ocr(result); statusText = AppText.value("ready")
+                LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=ocr source=document pages=\(pages.count)")
+            } catch { presentFailure(message: AppText.value("request_unavailable")) }
+        }
+    }
+    func handleDocumentScannerFailure(_ error: Error) {
+        capabilityPresentation = nil
+        presentFailure(message: AppText.value("request_unavailable"))
     }
     private func processOCR(_ image: UIImage?, provenance: OCRInputProvenance) {
         capabilityPresentation = nil
