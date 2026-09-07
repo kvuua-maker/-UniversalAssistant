@@ -271,8 +271,11 @@ struct LocalCommandEngine: CommandParsing {
     }
 
     private func translationSource(in text: String) -> String? {
-        guard var value = target(after: ["переклади", "переведи", "translate", "übersetze", "traduis"], in: text) else { return nil }
-        value = value.replacingOccurrences(of: #"^\s*(?:англійською|на англійську|на английский|into english|to english|німецькою|на німецьку|на немецкий|into german|французькою|на французьку|українською|на українську|на украинский)\s*[:,-]?\s*"#, with: "", options: [.regularExpression, .caseInsensitive])
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let actionPattern = #"(?:перекла\p{L}*|переве\p{L}*|translate\p{L}*|übersetz\p{L}*|tradui\p{L}*)"#
+        guard let action = trimmed.range(of: actionPattern, options: [.regularExpression, .caseInsensitive]) else { return nil }
+        var value = String(trimmed[action.upperBound...])
+        value = value.replacingOccurrences(of: #"^\s*(?:мені|мне|please|будь ласка)?\s*(?:англійською|на англійську|на английский|into english|to english|німецькою|на німецьку|на немецкий|into german|французькою|на французьку|українською|на українську|на украинский)(?:\s+(?:мовою|языком|language))?\s*[:,-]?\s*"#, with: "", options: [.regularExpression, .caseInsensitive])
         let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
         return cleaned.isEmpty ? nil : cleaned
     }
@@ -302,8 +305,8 @@ struct LocalCommandEngine: CommandParsing {
     }
 
     private func translationTarget(in text: String) -> String? {
-        let values = [("англій", "en"), ("english", "en"), ("україн", "uk"), ("ukrainian", "uk"),
-                      ("росій", "ru"), ("russian", "ru"), ("німець", "de"), ("german", "de"),
+        let values = [("англій", "en"), ("англий", "en"), ("english", "en"), ("україн", "uk"), ("украин", "uk"), ("ukrainian", "uk"),
+                      ("росій", "ru"), ("русск", "ru"), ("russian", "ru"), ("німець", "de"), ("немец", "de"), ("german", "de"),
                       ("француз", "fr"), ("french", "fr")]
         return values.first { text.contains($0.0) }?.1
     }
@@ -376,6 +379,10 @@ struct LocalCommandEngine: CommandParsing {
         let fashionKinds = ["одяг", "взут", "футбол", "сороч", "куртк", "сукн", "штани", "кросів", "черев", "одеж", "обув", "рубаш", "плать", "брюк", "кроссов", "ботин", "clothing", "apparel", "footwear", "shirt", "jacket", "dress", "sneaker", "shoe"]
         let groceryKinds = ["продукт", "супермаркет", "магазин", "молоч", "хліб", "овоч", "фрукт", "круп", "напій", "хлеб", "овощ", "grocer", "supermarket", "food store"]
         let retailerSignals = ["сільпо", "silpo", "атб", "fora", "фора", "fozzy"]
+
+        let translationActions = ["перекла", "переве", "translate", "übersetz", "tradui"]
+        let translationTargets = ["англій", "україн", "росій", "німець", "француз", "англий", "украин", "русск", "немец", "english", "ukrainian", "russian", "german", "french"]
+        if containsAny(text, translationActions), containsAny(text, translationTargets) { return .translation }
 
         let showActions = ["покажи", "знайди", "найди", "show", "find"]
         let photoKinds = ["фото", "фотограф", "світлин", "снимк", "photos", "pictures"]

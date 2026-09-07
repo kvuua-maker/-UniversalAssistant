@@ -55,4 +55,24 @@ struct ProductionTranslationTests {
         #expect(plan.text == "Добрий вечір, як справи?")
         #expect(plan.targetLanguage == "de")
     }
+
+    @Test func morphologyAndVoiceVariantsReachTheCanonicalAppleTranslationBoundary() async throws {
+        let engine = LocalCommandEngine()
+        let ukrainian = engine.parse("Будь ласка, перекласти німецькою мовою: Гарного ранку")
+        #expect(ukrainian.intent == .translation)
+        #expect(ukrainian.entities["target_language"] == "de")
+        #expect(ukrainian.entities["source_text"] == "Гарного ранку")
+        let russian = engine.parse("Перевести на английский, До встречи завтра")
+        #expect(russian.intent == .translation)
+        #expect(russian.entities["target_language"] == "en")
+        #expect(russian.entities["source_text"] == "До встречи завтра")
+
+        let executor = ProductionCanonicalCapabilityExecutor()
+        guard case let .presentation(.translation(plan)) = try await executor.execute(ukrainian) else {
+            Issue.record("Expected canonical Apple Translation presentation")
+            return
+        }
+        #expect(plan.text == "Гарного ранку")
+        #expect(plan.targetLanguage == "de")
+    }
 }
