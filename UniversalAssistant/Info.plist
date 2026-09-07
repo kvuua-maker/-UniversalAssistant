@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>UniversalAssistant</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIcons</key>
+	<dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array>
+				<string>AppIcon60x60</string>
+			</array>
+			<key>CFBundleIconName</key>
+			<string>AppIcon</string>
+		</dict>
+	</dict>
+	<key>CFBundleIcons~ipad</key>
+	<dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array>
+				<string>AppIcon60x60</string>
+				<string>AppIcon76x76</string>
+			</array>
+		</dict>
+	</dict>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>UniversalAssistant creates alarms and timers only when you explicitly request them.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>UniversalAssistant uses Apple Music access only when you ask to search or play music.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>UniversalAssistant accesses Calendar only to find and manage events you request.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>UniversalAssistant uses the camera only when you ask to capture an image.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>UniversalAssistant accesses contacts only when you ask it to find or contact a person.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>UniversalAssistant uses your location only for nearby, route, navigation, weather, or emergency requests.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>UniversalAssistant uses the microphone only when you start a voice command.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>UniversalAssistant searches only photos you permit to find requested local results.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>UniversalAssistant accesses Reminders only to find and manage reminders you request.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>UniversalAssistant converts your spoken command into text so it can perform the requested action.</string>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UILaunchScreen</key>
+		<dict/>
+	</dict>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+</dict>
+</plist>
