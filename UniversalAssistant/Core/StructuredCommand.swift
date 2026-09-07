@@ -78,7 +78,7 @@ struct LocalCommandEngine: CommandParsing {
         (.deviceAction, ["увімкни ліхтарик", "вимкни ліхтарик", "включи фонарик", "выключи фонарик", "turn on flashlight", "turn off flashlight", "taschenlampe einschalten", "allume la lampe",
                          "постав таймер", "створи таймер", "установи таймер", "создай таймер", "set a timer", "create a timer", "постав будильник", "створи будильник", "установи будильник", "создай будильник", "set an alarm", "create an alarm",
                          "заряд батареї", "заряд акумулятора", "скільки заряду", "відсоток батареї", "уровень батареи", "сколько заряда", "процент батареи", "battery level", "battery percentage", "вільного місця", "свободного места", "free storage",
-                         "скопіюй у буфер", "скопируй в буфер", "copy to clipboard", "налаштування wi-fi", "настройки wi-fi",
+                         "скопіюй у буфер", "скопіюй в буфер", "скопируй в буфер", "copy to clipboard", "покажи буфер", "прочитай буфер", "що в буфері", "що зараз у буфері", "що у буфері", "что в буфере", "что сейчас в буфере", "read clipboard", "відкрий посилання з буфера", "открой ссылку из буфера", "open clipboard url", "скопіюй останній результат", "скопируй последний результат", "copy last result", "налаштування wi-fi", "настройки wi-fi",
                          "увімкни bluetooth", "включи bluetooth", "режим енергозбереження", "режим энергосбережения",
                          "зменш яскравість", "уменьши яркость", "збільш гучність", "увеличь громкость",
                          "пропущені дзвінки", "пропущенные звонки", "відкрий калькулятор", "открой калькулятор",
@@ -164,7 +164,7 @@ struct LocalCommandEngine: CommandParsing {
         if [.navigation, .routeSearch, .transportRoute].contains(intent), let value = target(after: ["веди мене до", "проклади маршрут до", "побудуй маршрут до", "покажи маршрут до", "построй маршрут до", "як доїхати до", "как доехать до", "маршрут до", "navigate", "route to", "веди"], in: text) { entities["destination"] = value }
         if [.placeSearch, .restaurantSearch, .serviceSearch].contains(intent), let value = locality(in: text) { entities["location"] = value }
         if intent == .audioRecord { entities["recorder_action"] = recorderAction(in: normalized) }
-        if intent == .deviceAction { extractSystemQuickAction(from: normalized, into: &entities) }
+        if intent == .deviceAction { extractSystemQuickAction(from: text, normalized: normalized, into: &entities) }
         if intent == .cameraCapture, ["qr", "q r", "ку ар", "штрихкод", "barcode", "скануй код", "сканируй код"].contains(where: normalized.contains) { entities["capture_mode"] = "code_scan" }
         if intent == .cameraCapture, ["розпізнай текст", "розпізнати текст", "распознай текст", "recognize text", "scan text"].contains(where: normalized.contains) {
             entities["capture_mode"] = "text_scan"
@@ -193,15 +193,24 @@ struct LocalCommandEngine: CommandParsing {
         }
     }
 
-    private func extractSystemQuickAction(from text: String, into entities: inout [String: String]) {
+    private func extractSystemQuickAction(from original: String, normalized text: String, into entities: inout [String: String]) {
         if ["ліхтарик", "фонарик", "flashlight", "taschenlampe", "lampe"].contains(where: text.contains) {
             entities["system_action"] = "flashlight"
             entities["enabled"] = ["вимк", "выключ", "turn off"].contains(where: text.contains) ? "false" : "true"
         } else if ["заряд батареї", "заряд акумулятора", "скільки заряду", "відсоток батареї", "уровень батареи", "сколько заряда", "процент батареи", "battery level", "battery percentage"].contains(where: text.contains) { entities["system_action"] = "battery"
         } else if ["вільного місця", "свободного места", "free storage"].contains(where: text.contains) { entities["system_action"] = "storage"
-        } else if ["скопіюй у буфер", "скопируй в буфер", "copy to clipboard"].contains(where: text.contains) {
+        } else if ["відкрий посилання з буфера", "открой ссылку из буфера", "open clipboard url"].contains(where: text.contains) {
+            entities["system_action"] = "clipboard_open_url"
+        } else if ["покажи буфер", "прочитай буфер", "що в буфері", "що зараз у буфері", "що у буфері", "что в буфере", "что сейчас в буфере", "read clipboard"].contains(where: text.contains) {
+            entities["system_action"] = "clipboard_read"
+        } else if ["скопіюй останній результат", "скопируй последний результат", "copy last result"].contains(where: text.contains) {
+            entities["system_action"] = "clipboard_copy_context"
+        } else if let trigger = ["скопіюй у буфер", "скопіюй в буфер", "скопируй в буфер", "copy to clipboard"].first(where: text.contains) {
             entities["system_action"] = "clipboard"
-            if let separator = text.firstIndex(of: ":") { entities["content"] = String(text[text.index(after: separator)...]).trimmingCharacters(in: .whitespacesAndNewlines) }
+            if let range = original.range(of: trigger, options: [.caseInsensitive, .diacriticInsensitive]) {
+                let content = original[range.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: ":,-")))
+                if !content.isEmpty { entities["content"] = content }
+            }
         } else if ["wi-fi", "bluetooth", "енергозбереження", "энергосбережения", "яскравість", "яркость", "гучність", "громкость", "пропущені дзвінки", "пропущенные звонки", "калькулятор", "програму телефон", "покажи мої контакти", "покажи мои контакты", "покажи мої будильники"].contains(where: text.contains) { entities["system_action"] = "unsupported_system_control"
         } else if ["таймер", "timer"].contains(where: text.contains) {
             entities["system_action"] = "timer"

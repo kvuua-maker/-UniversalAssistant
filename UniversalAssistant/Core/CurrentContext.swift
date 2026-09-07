@@ -52,6 +52,11 @@ struct ContextTranslation: Equatable, Codable, Sendable {
     let provenance: ContextProvenance
 }
 
+struct ContextAnswer: Equatable, Codable, Sendable {
+    let text: String
+    let provenance: ContextProvenance
+}
+
 struct ContextSharedContent: Equatable, Codable, Sendable {
     enum Kind: String, Codable, Sendable { case url, text, image, document, vcard }
     let kind: Kind
@@ -77,6 +82,7 @@ struct CurrentContext: Equatable, Codable, Sendable {
     private(set) var currentTask: ContextTask? = nil
     private(set) var translation: ContextTranslation? = nil
     private(set) var sharedContent: ContextSharedContent? = nil
+    private(set) var lastAnswer: ContextAnswer? = nil
     private(set) var resultEntities: [ContextEntity] = []
     private(set) var selectedEntity: ContextEntity? = nil
     private(set) var connectedServiceState: [String: Bool] = [:]
@@ -96,6 +102,7 @@ struct CurrentContext: Equatable, Codable, Sendable {
         task: ContextTask? = nil,
         translation: ContextTranslation? = nil,
         sharedContent: ContextSharedContent? = nil,
+        answer: ContextAnswer? = nil,
         results: [ContextEntity]? = nil,
         services: [String: Bool]? = nil,
         preferences: [String: String]? = nil
@@ -109,6 +116,7 @@ struct CurrentContext: Equatable, Codable, Sendable {
         if let task, task.provenance.isFresh(at: now) { currentTask = task }
         if let translation, translation.provenance.isFresh(at: now) { self.translation = translation }
         if let sharedContent, sharedContent.provenance.isFresh(at: now) { self.sharedContent = sharedContent }
+        if let answer, answer.provenance.isFresh(at: now) { lastAnswer = answer }
         if let results { resultEntities = Array(results.filter { $0.provenance.isFresh(at: now) }.prefix(20)); selectedEntity = nil }
         if let services { connectedServiceState = services }
         if let preferences { explicitPreferences = preferences }
@@ -173,13 +181,14 @@ struct CurrentContext: Equatable, Codable, Sendable {
         if currentTask?.provenance.isFresh(at: now) == false { currentTask = nil }
         if translation?.provenance.isFresh(at: now) == false { translation = nil }
         if sharedContent?.provenance.isFresh(at: now) == false { sharedContent = nil }
+        if lastAnswer?.provenance.isFresh(at: now) == false { lastAnswer = nil }
         resultEntities.removeAll { !$0.provenance.isFresh(at: now) }
         if let selectedEntity, !selectedEntity.provenance.isFresh(at: now) { self.selectedEntity = nil }
     }
 
     mutating func reset() {
         currentTime = nil; validatedLocation = nil; activeRoute = nil; nextCalendarEvent = nil
-        currentTask = nil; translation = nil; sharedContent = nil; resultEntities = []; selectedEntity = nil; connectedServiceState = [:]
+        currentTask = nil; translation = nil; sharedContent = nil; lastAnswer = nil; resultEntities = []; selectedEntity = nil; connectedServiceState = [:]
         explicitPreferences = [:]; expiresAt = nil
     }
 }
@@ -241,6 +250,13 @@ final class CurrentContextStore {
         context.update(now: observedAt, lifetime: lifetime, sharedContent: .init(kind: kind, value: value, provenance: provenance))
     }
     func freshShared(at now: Date = .now) -> ContextSharedContent? { context.expireStale(at: now); return context.sharedContent }
+    func replaceAnswer(_ text: String, now: Date = .now, lifetime: TimeInterval = 300) {
+        let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return }
+        let provenance = ContextProvenance(source: "assistant-result", objectID: "answer-\(UUID().uuidString)", observedAt: now, expiresAt: now.addingTimeInterval(lifetime))
+        context.update(now: now, lifetime: lifetime, answer: .init(text: value, provenance: provenance))
+    }
+    func freshAnswer(at now: Date = .now) -> String? { context.expireStale(at: now); return context.lastAnswer?.text }
     func consumeSelectedAction(now: Date = .now) -> URL? {
         context.expireStale(at: now)
         guard let selected = context.selectedEntity, let actionID = selected.actionID, !consumedActionIDs.contains(actionID), let reference = selected.openReference, let url = URL(string: reference) else { return nil }

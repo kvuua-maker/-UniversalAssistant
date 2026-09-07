@@ -321,6 +321,7 @@ final class AssistantViewModel {
             guard let self else { return }
             do {
                 let result = try await genericDiscovery.execute(text: command.originalText, parsed: command)
+                currentContext.replaceAnswer(result.primaryAnswer)
                 resultState = .deterministic(result)
                 statusText = AppText.value("ready")
                 LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=deterministic_general_information")
@@ -365,6 +366,7 @@ final class AssistantViewModel {
                 guard activeRequestGeneration == requestGeneration else { return }
                 switch outcome {
                 case let .result(result):
+                    currentContext.replaceAnswer(result.primaryAnswer)
                     resultState = .deterministic(result)
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=deterministic capability=\(command.intent.rawValue)")
                 case let .handoff(result):

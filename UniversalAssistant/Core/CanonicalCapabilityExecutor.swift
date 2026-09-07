@@ -74,6 +74,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let recorder: AudioRecorderController
     private let eventKit: any EventKitCommandExecuting
     private let publicDeviceExecute: @MainActor (SystemQuickAction) throws -> String
+    private let clipboardRead: @MainActor () throws -> SharedContent
 
     init(
         deviceRouter: UniversalDeviceCommandRouter = .init(applications: .init(applications: LaunchDeviceApplications.verified)),
@@ -89,6 +90,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         eventKit: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
         recorder: AudioRecorderController = AudioRecorderController(),
         publicDeviceExecute: @escaping @MainActor (SystemQuickAction) throws -> String = { try ProductionPublicDeviceExecutor().execute($0) },
+        clipboardRead: @escaping @MainActor () throws -> SharedContent = { try SystemUserInitiatedClipboardReader().readAfterUserAction() },
         personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())]
     ) {
         self.deviceRouter = deviceRouter
@@ -104,6 +106,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.eventKit = eventKit
         self.recorder = recorder
         self.publicDeviceExecute = publicDeviceExecute
+        self.clipboardRead = clipboardRead
         self.multiStepOperationFactory = multiStepOperationFactory
         if let multiStepOperationFactory {
             self.multiStep = ProductionMultiStepCoordinator(operationFactory: multiStepOperationFactory)
@@ -254,6 +257,24 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
 
     private func systemQuickAction(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         let kind = command.entities["system_action"] ?? ""
+        if kind == "clipboard_read" {
+            switch try clipboardRead() {
+            case let .url(url): return .result(try result(url.absoluteString, facts: []))
+            case let .text(value): return .result(try result(value, facts: []))
+            default: throw CanonicalCapabilityExecutionError.unavailable("clipboard_content_unsupported")
+            }
+        }
+        if kind == "clipboard_open_url" {
+            let content = try clipboardRead()
+            let url: URL?
+            switch content { case let .url(value): url = value; case let .text(value): url = URL(string: value.trimmingCharacters(in: .whitespacesAndNewlines)); default: url = nil }
+            guard let url, ["http", "https"].contains(url.scheme?.lowercased() ?? ""), url.host != nil else { throw CanonicalCapabilityExecutionError.unavailable("clipboard_url_invalid") }
+            return .handoff(.init(query: url.host ?? url.absoluteString, destination: url, kind: .system))
+        }
+        if kind == "clipboard_copy_context" {
+            guard let value = currentContext.freshAnswer() else { throw CanonicalCapabilityExecutionError.missingParameter("current_result") }
+            return .result(try result(try publicDeviceExecute(.copyToClipboard(value)), facts: []))
+        }
         if kind == "unsupported_system_control" { throw CanonicalCapabilityExecutionError.unavailable("system_control_not_publicly_available") }
         let action: SystemQuickAction
         if kind == "timer", let seconds = Int(command.entities["duration_seconds"] ?? "") { action = .startTimer(seconds: seconds, label: command.entities["label"]) }
