@@ -54,7 +54,7 @@ protocol CanonicalCapabilityExecuting: AnyObject {
 @MainActor
 final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting {
     private let deviceRouter: UniversalDeviceCommandRouter
-    private let contacts: LocalContactResolver
+    private let contacts: any ContactResolving
     private let photos: any PhotoLibrarySearching
     private let podcasts: ApplePodcastSearchProvider
     private let media: MediaIntegrationEngine?
@@ -72,7 +72,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
 
     init(
         deviceRouter: UniversalDeviceCommandRouter = .init(applications: .init(applications: LaunchDeviceApplications.verified)),
-        contacts: LocalContactResolver = .init(),
+        contacts: any ContactResolving = LocalContactResolver(),
         photos: any PhotoLibrarySearching = PhotoKitLibrarySearch(),
         podcasts: ApplePodcastSearchProvider = .init(),
         locationResolver: ManualLocationContextResolver = .init(),

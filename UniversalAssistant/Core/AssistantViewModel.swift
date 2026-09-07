@@ -35,6 +35,8 @@ final class AssistantViewModel {
     private var weatherExecutionInFlight = false
     private var eventKitExecutionInFlight = false
     private var capabilityExecutionInFlight = false
+    private var activeRequestGeneration: UInt64 = 0
+    private var capabilityExecutionTask: Task<Void, Never>?
 
     init(
         commandEngine: any CommandParsing = LocalCommandEngine(),
@@ -146,6 +148,9 @@ final class AssistantViewModel {
 
     func submit() {
         resultDismissTask?.cancel()
+        activeRequestGeneration &+= 1
+        let requestGeneration = activeRequestGeneration
+        capabilityExecutionTask?.cancel()
         let command = commandEngine.parse(input)
         LocalVoiceDiagnosticReport.shared.record(
             "router_received",
@@ -261,7 +266,7 @@ final class AssistantViewModel {
                 LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=confirmation_required")
                 return
             }
-            executeCanonicalCapability(command, summary: summary)
+            executeCanonicalCapability(command, summary: summary, requestGeneration: requestGeneration)
         }
     }
 
@@ -312,18 +317,23 @@ final class AssistantViewModel {
         }
     }
 
-    private func executeCanonicalCapability(_ command: StructuredCommand, summary: ResultSummary) {
+    private func executeCanonicalCapability(_ command: StructuredCommand, summary: ResultSummary, requestGeneration: UInt64) {
         resultState = .processing
         statusText = AppText.value("processing")
         capabilityExecutionInFlight = true
-        Task { [weak self] in
+        capabilityExecutionTask = Task { [weak self] in
             guard let self else { return }
             defer {
-                capabilityExecutionInFlight = false
-                deliverCompletedDiagnosticSession()
+                if activeRequestGeneration == requestGeneration {
+                    capabilityExecutionInFlight = false
+                    deliverCompletedDiagnosticSession()
+                }
             }
             do {
-                switch try await capabilityExecutor.execute(command) {
+                let outcome = try await capabilityExecutor.execute(command)
+                try Task.checkCancellation()
+                guard activeRequestGeneration == requestGeneration else { return }
+                switch outcome {
                 case let .result(result):
                     resultState = .deterministic(result)
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=deterministic capability=\(command.intent.rawValue)")
@@ -336,20 +346,27 @@ final class AssistantViewModel {
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=system_presentation capability=\(command.intent.rawValue)")
                 }
                 statusText = AppText.value("ready")
+            } catch is CancellationError {
+                return
             } catch let CanonicalCapabilityExecutionError.ambiguous(values) {
+                guard activeRequestGeneration == requestGeneration else { return }
                 requireAction(prompt: AppText.value("clarification_needed"), choices: Array(values.prefix(3)))
                 statusText = AppText.value("clarification_needed")
             } catch let CanonicalCapabilityExecutionError.missingParameter(parameter) {
+                guard activeRequestGeneration == requestGeneration else { return }
                 LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=missing_parameter parameter=\(parameter)")
                 resultState = .clarification(summary)
                 statusText = AppText.value("clarification_needed")
             } catch let CanonicalCapabilityExecutionError.externalProviderRequired(providerClass) {
+                guard activeRequestGeneration == requestGeneration else { return }
                 LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=external_provider_required capability=\(providerClass)")
                 presentGeneralWebFallback(command)
             } catch let CanonicalCapabilityExecutionError.unavailable(reason) {
+                guard activeRequestGeneration == requestGeneration else { return }
                 LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=capability_unavailable capability=\(command.intent.rawValue) detail=\(reason)")
                 presentFailure(message: AppText.value("request_unavailable"))
             } catch {
+                guard activeRequestGeneration == requestGeneration else { return }
                 LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=capability_unavailable capability=\(command.intent.rawValue)")
                 presentFailure(message: AppText.value("request_unavailable"))
             }
