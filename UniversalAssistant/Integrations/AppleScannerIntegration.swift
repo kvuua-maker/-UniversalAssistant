@@ -109,7 +109,7 @@ protocol DocumentOCRProcessing: AnyObject {
     func recognize(cgImage: CGImage) async throws -> [String]
 }
 
-enum OCRInputProvenance: String, Equatable, Sendable { case camera, document }
+enum OCRInputProvenance: String, Equatable, Sendable { case camera, document, sharedImage }
 enum OCRResultAction: String, CaseIterable, Equatable, Sendable { case copy, share, translate }
 struct OCRProductionResult: Equatable, Sendable {
     let recognizedText: String

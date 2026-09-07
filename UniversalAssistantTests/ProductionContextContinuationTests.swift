@@ -38,6 +38,21 @@ struct ProductionContextContinuationTests {
         #expect(value.destination.absoluteString == "https://example.com/contact-1")
         await #expect(throws: CanonicalCapabilityExecutionError.unavailable("context_action_unavailable_or_replayed")) { try await executor.execute(open) }
     }
+
+    @Test func typedTranslationAndSharedContentReplaceExpireAndReset() {
+        let store = CurrentContextStore()
+        store.replaceTranslation(sourceText: "Original", sourceLanguage: "en", now: now, lifetime: 10)
+        #expect(store.freshTranslation(at: now)?.sourceText == "Original")
+        store.replaceTranslation(sourceText: "New", sourceLanguage: "uk", now: now.addingTimeInterval(1), lifetime: 10)
+        #expect(store.freshTranslation(at: now.addingTimeInterval(1))?.sourceText == "New")
+        store.replaceShared(kind: .url, value: "https://example.com", observedAt: now, lifetime: 10)
+        #expect(store.freshShared(at: now)?.kind == .url)
+        store.replaceShared(kind: .image, value: "payload", observedAt: now.addingTimeInterval(1), lifetime: 10)
+        #expect(store.freshShared(at: now.addingTimeInterval(1))?.kind == .image)
+        #expect(store.freshShared(at: now.addingTimeInterval(12)) == nil)
+        store.reset()
+        #expect(store.freshTranslation(at: now.addingTimeInterval(1)) == nil)
+    }
 }
 
 private struct PersonalSearchSourceFixtureForContext: PersonalSearchSource {

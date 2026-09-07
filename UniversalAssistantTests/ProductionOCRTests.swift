@@ -68,6 +68,18 @@ struct ProductionOCRTests {
         if case .actionRequired = model.resultState {} else { Issue.record("Expected target-language clarification") }
     }
 
+    @Test func sharedImageFollowUpUsesPreservedPayloadAndLocalOCR() async throws {
+        let model = AssistantViewModel(ocrProcessor: OCRProcessorStub(.success(["Shared image text"])), compactResultDuration: .seconds(60))
+        let encoded = try #require(image().jpegData(compressionQuality: 0.9)).base64EncodedString()
+        model.ingestShared(.init(kind: "image", value: encoded, receivedAt: .now))
+        model.input = "Що написано на цій фотографії?"
+        model.submit()
+        try await waitUntil { if case .ocr = model.resultState { true } else { false } }
+        guard case let .ocr(result) = model.resultState else { return }
+        #expect(result.recognizedText == "Shared image text")
+        #expect(result.provenance == .sharedImage)
+    }
+
     private func image() -> UIImage {
         UIGraphicsImageRenderer(size: CGSize(width: 4, height: 4)).image { context in UIColor.white.setFill(); context.fill(CGRect(x: 0, y: 0, width: 4, height: 4)) }
     }

@@ -54,6 +54,7 @@ final class ShareViewController: UIViewController {
             provider.loadItem(forTypeIdentifier: type.identifier) { item, _ in
                 if let url = item as? URL { continuation.resume(returning: url.absoluteString) }
                 else if let text = item as? String { continuation.resume(returning: text) }
+                else if let image = item as? UIImage, let data = image.jpegData(compressionQuality: 0.95) { continuation.resume(returning: data.base64EncodedString()) }
                 else if let data = item as? Data { continuation.resume(returning: data.base64EncodedString()) }
                 else { continuation.resume(returning: nil) }
             }

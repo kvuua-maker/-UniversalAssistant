@@ -94,13 +94,17 @@ struct AssistantResultStateTests {
         }
     }
 
-     func sharedURLRemainsTypedURLAndIsNeverConvertedToSearchText() {
+    @Test func sharedURLRemainsTypedURLAndIsNeverConvertedToSearchText() {
         let model = AssistantViewModel()
         model.ingestShared(.init(kind: "url", value: "https://www.apple.com/iphone", receivedAt: .now))
         guard case let .webHandoff(result) = model.resultState else { Issue.record("Expected exact shared URL handoff"); return }
         #expect(result.destination.absoluteString == "https://www.apple.com/iphone")
         #expect(result.destination.host == "www.apple.com")
         #expect(result.kind == .system)
+        model.input = "Відкрий це"
+        model.submit()
+        guard case let .webHandoff(followUp) = model.resultState else { Issue.record("Expected contextual URL handoff"); return }
+        #expect(followUp.destination.absoluteString == "https://www.apple.com/iphone")
     }
 
     private func waitUntil(_ condition:   () -> Bool) async throws {

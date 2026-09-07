@@ -26,6 +26,7 @@ final class AssistantViewModel {
     private let genericDiscovery: GenericUnknownRequestCoordinator?
     private let eventKitExecutor: any EventKitCommandExecuting
     private let capabilityExecutor: any CanonicalCapabilityExecuting
+    private let currentContext: CurrentContextStore
     private let ocrPipeline: OCRProductionPipeline
     private let voiceInput = VoiceInputController()
     private let feedbackStore: UserFeedbackStore
@@ -58,7 +59,9 @@ final class AssistantViewModel {
         self.webSearchHandoff = webSearchHandoff
         self.genericDiscovery = genericDiscovery
         self.eventKitExecutor = eventKitExecutor
-        self.capabilityExecutor = capabilityExecutor ?? ProductionCanonicalCapabilityExecutor(recorder: recorder)
+        let currentContext = CurrentContextStore()
+        self.currentContext = currentContext
+        self.capabilityExecutor = capabilityExecutor ?? ProductionCanonicalCapabilityExecutor(currentContext: currentContext, recorder: recorder)
         self.ocrPipeline = OCRProductionPipeline(processor: ocrProcessor ?? OnDeviceDocumentOCR())
         self.recorder = recorder
         self.feedbackStore = feedbackStore
@@ -151,7 +154,26 @@ final class AssistantViewModel {
         activeRequestGeneration &+= 1
         let requestGeneration = activeRequestGeneration
         capabilityExecutionTask?.cancel()
-        let command = commandEngine.parse(input)
+        let submittedInput = input
+        if let target = translationFollowUpTarget(submittedInput), let translation = currentContext.freshTranslation() {
+            input = ""
+            startTranslation(translation.sourceText, target)
+            return
+        }
+        if isSharedImageTextRequest(submittedInput), let shared = currentContext.freshShared(), shared.kind == .image,
+           let data = Data(base64Encoded: shared.value), let image = UIImage(data: data) {
+            input = ""
+            processOCR(image, provenance: .sharedImage)
+            return
+        }
+        if isSharedURLOpenRequest(submittedInput), let shared = currentContext.freshShared(), shared.kind == .url,
+           let url = URL(string: shared.value) {
+            input = ""
+            resultState = .webHandoff(.init(query: url.host ?? shared.value, destination: url, kind: .system))
+            statusText = AppText.value("ready")
+            return
+        }
+        let command = commandEngine.parse(submittedInput)
         LocalVoiceDiagnosticReport.shared.record(
             "router_received",
             "capability=\(command.intent.rawValue) language=\(command.language.rawValue)"
@@ -437,7 +459,7 @@ final class AssistantViewModel {
         do { capabilityPresentation = .translation(try CameraIntelligenceCore().translationPlan(text: text, sourceLanguage: nil, targetLanguage: targetLanguage)) }
         catch { capabilityPresentation = nil; presentFailure(message: AppText.value("request_unavailable")) }
     }
-    func handleTranslationResult(_ result: TranslationProductionResult) { capabilityPresentation = nil; resultState = .translation(result); statusText = AppText.value("ready"); LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=translation") }
+    func handleTranslationResult(_ result: TranslationProductionResult) { currentContext.replaceTranslation(sourceText: result.sourceText, sourceLanguage: result.sourceLanguage); capabilityPresentation = nil; resultState = .translation(result); statusText = AppText.value("ready"); LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=translation") }
     func handleTranslationFailure() { capabilityPresentation = nil; presentFailure(message: AppText.value("request_unavailable")) }
     func performTranslationAction(_ result: TranslationProductionResult, _ action: OCRResultAction) {
         switch action { case .copy: UIPasteboard.general.string = result.translatedText; case .share: capabilityPresentation = .share(result.translatedText); case .translate: break }
@@ -466,6 +488,8 @@ final class AssistantViewModel {
     }
 
     func ingestShared(_ envelope: SharedInboxEnvelope) {
+        guard let kind = ContextSharedContent.Kind(rawValue: envelope.kind) else { return }
+        currentContext.replaceShared(kind: kind, value: envelope.value, observedAt: envelope.receivedAt)
         switch envelope.kind {
         case "url":
             guard let url = URL(string: envelope.value), ["https", "http"].contains(url.scheme?.lowercased() ?? ""), url.host != nil else { presentFailure(message: AppText.value("request_unavailable")); return }
@@ -477,13 +501,34 @@ final class AssistantViewModel {
         case "vcard":
             input = "Використай переданий контакт"
         case "image":
-            input = "Опрацюй передане зображення"
+            resultState = .idle
+            statusText = AppText.value("ready")
+            return
         case "document":
             input = "Опрацюй переданий документ"
         default:
             return
         }
         submit()
+    }
+
+    private func translationFollowUpTarget(_ text: String) -> String? {
+        let value = text.lowercased()
+        guard ["а тепер", "тепер", "now in", "and now"].contains(where: value.contains) else { return nil }
+        if value.contains("німець") || value.contains("german") || value.contains("deutsch") { return "de" }
+        if value.contains("англі") || value.contains("english") { return "en" }
+        if value.contains("україн") || value.contains("ukrainian") { return "uk" }
+        return nil
+    }
+
+    private func isSharedImageTextRequest(_ text: String) -> Bool {
+        let value = text.lowercased()
+        return ["що написано", "який текст", "розпізнай текст", "what does", "read this"].contains(where: value.contains)
+    }
+
+    private func isSharedURLOpenRequest(_ text: String) -> Bool {
+        let value = text.lowercased()
+        return ["відкрий це", "відкрий посилання", "open it", "open this link"].contains(where: value.contains)
     }
 
     @discardableResult

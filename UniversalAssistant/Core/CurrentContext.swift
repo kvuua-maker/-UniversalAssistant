@@ -46,6 +46,19 @@ struct ContextTask: Equatable, Codable, Sendable {
     let provenance: ContextProvenance
 }
 
+struct ContextTranslation: Equatable, Codable, Sendable {
+    let sourceText: String
+    let sourceLanguage: String?
+    let provenance: ContextProvenance
+}
+
+struct ContextSharedContent: Equatable, Codable, Sendable {
+    enum Kind: String, Codable, Sendable { case url, text, image, document, vcard }
+    let kind: Kind
+    let value: String
+    let provenance: ContextProvenance
+}
+
 enum ContextFollowUp: Equatable, Sendable {
     case confirm(ContextTask)
     case cheaper(resultIDs: [String])
@@ -62,6 +75,8 @@ struct CurrentContext: Equatable, Codable, Sendable {
     private(set) var activeRoute: ContextRoute? = nil
     private(set) var nextCalendarEvent: ContextEntity? = nil
     private(set) var currentTask: ContextTask? = nil
+    private(set) var translation: ContextTranslation? = nil
+    private(set) var sharedContent: ContextSharedContent? = nil
     private(set) var resultEntities: [ContextEntity] = []
     private(set) var selectedEntity: ContextEntity? = nil
     private(set) var connectedServiceState: [String: Bool] = [:]
@@ -79,6 +94,8 @@ struct CurrentContext: Equatable, Codable, Sendable {
         route: ContextRoute? = nil,
         nextEvent: ContextEntity? = nil,
         task: ContextTask? = nil,
+        translation: ContextTranslation? = nil,
+        sharedContent: ContextSharedContent? = nil,
         results: [ContextEntity]? = nil,
         services: [String: Bool]? = nil,
         preferences: [String: String]? = nil
@@ -90,6 +107,8 @@ struct CurrentContext: Equatable, Codable, Sendable {
         if let route, route.provenance.isFresh(at: now), route.destination.provenance.isFresh(at: now) { activeRoute = route }
         if let nextEvent, nextEvent.provenance.isFresh(at: now) { nextCalendarEvent = nextEvent }
         if let task, task.provenance.isFresh(at: now) { currentTask = task }
+        if let translation, translation.provenance.isFresh(at: now) { self.translation = translation }
+        if let sharedContent, sharedContent.provenance.isFresh(at: now) { self.sharedContent = sharedContent }
         if let results { resultEntities = Array(results.filter { $0.provenance.isFresh(at: now) }.prefix(20)); selectedEntity = nil }
         if let services { connectedServiceState = services }
         if let preferences { explicitPreferences = preferences }
@@ -152,13 +171,15 @@ struct CurrentContext: Equatable, Codable, Sendable {
         if activeRoute?.provenance.isFresh(at: now) == false || activeRoute?.destination.provenance.isFresh(at: now) == false { activeRoute = nil }
         if nextCalendarEvent?.provenance.isFresh(at: now) == false { nextCalendarEvent = nil }
         if currentTask?.provenance.isFresh(at: now) == false { currentTask = nil }
+        if translation?.provenance.isFresh(at: now) == false { translation = nil }
+        if sharedContent?.provenance.isFresh(at: now) == false { sharedContent = nil }
         resultEntities.removeAll { !$0.provenance.isFresh(at: now) }
         if let selectedEntity, !selectedEntity.provenance.isFresh(at: now) { self.selectedEntity = nil }
     }
 
     mutating func reset() {
         currentTime = nil; validatedLocation = nil; activeRoute = nil; nextCalendarEvent = nil
-        currentTask = nil; resultEntities = []; selectedEntity = nil; connectedServiceState = [:]
+        currentTask = nil; translation = nil; sharedContent = nil; resultEntities = []; selectedEntity = nil; connectedServiceState = [:]
         explicitPreferences = [:]; expiresAt = nil
     }
 }
@@ -190,6 +211,16 @@ final class CurrentContextStore {
         return context.select(entityID: first.id, now: now)
     }
     func freshSelected(at now: Date = .now) -> ContextEntity? { context.expireStale(at: now); return context.selectedEntity }
+    func replaceTranslation(sourceText: String, sourceLanguage: String?, now: Date = .now, lifetime: TimeInterval = 300) {
+        let provenance = ContextProvenance(source: "AppleTranslation", objectID: "translation-\(UUID().uuidString)", observedAt: now, expiresAt: now.addingTimeInterval(lifetime))
+        context.update(now: now, lifetime: lifetime, translation: .init(sourceText: sourceText, sourceLanguage: sourceLanguage, provenance: provenance))
+    }
+    func freshTranslation(at now: Date = .now) -> ContextTranslation? { context.expireStale(at: now); return context.translation }
+    func replaceShared(kind: ContextSharedContent.Kind, value: String, observedAt: Date = .now, lifetime: TimeInterval = 300) {
+        let provenance = ContextProvenance(source: "ShareExtension", objectID: "shared-\(UUID().uuidString)", observedAt: observedAt, expiresAt: observedAt.addingTimeInterval(lifetime))
+        context.update(now: observedAt, lifetime: lifetime, sharedContent: .init(kind: kind, value: value, provenance: provenance))
+    }
+    func freshShared(at now: Date = .now) -> ContextSharedContent? { context.expireStale(at: now); return context.sharedContent }
     func consumeSelectedAction(now: Date = .now) -> URL? {
         context.expireStale(at: now)
         guard let selected = context.selectedEntity, let actionID = selected.actionID, !consumedActionIDs.contains(actionID), let reference = selected.openReference, let url = URL(string: reference) else { return nil }

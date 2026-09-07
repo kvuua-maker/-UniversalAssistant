@@ -45,4 +45,14 @@ struct ProductionTranslationTests {
         #expect(!model.voiceDiagnosticReport().contains("private-source"))
         #expect(!model.voiceDiagnosticReport().contains("private-target"))
     }
+
+    @Test func followUpRetranslatesOriginalSourceInsteadOfPreviousTranslation() {
+        let model = AssistantViewModel()
+        model.handleTranslationResult(.init(sourceText: "Добрий вечір, як справи?", translatedText: "Good evening, how are you?", sourceLanguage: "uk", targetLanguage: "en"))
+        model.input = "А тепер німецькою"
+        model.submit()
+        guard case let .translation(plan) = model.capabilityPresentation else { Issue.record("Expected translation continuation"); return }
+        #expect(plan.text == "Добрий вечір, як справи?")
+        #expect(plan.targetLanguage == "de")
+    }
 }
