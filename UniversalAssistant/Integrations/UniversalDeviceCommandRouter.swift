@@ -31,6 +31,7 @@ struct DeviceApplicationResolver: Sendable {
     private static func normalize(_ value: String) -> String {
         value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: #"^(?:програму|программа|приложение|the\s+app|app)\s+"#, with: "", options: [.regularExpression, .caseInsensitive])
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
     }
 }
@@ -80,6 +81,9 @@ enum LaunchDeviceApplications {
                   return components?.url
               }),
         .init(id: "viber", aliases: ["viber", "вайбер"], launchURL: URL(string: "viber://")!, exactContext: nil),
+        .init(id: "youtube", aliases: ["youtube", "ютуб"], launchURL: URL(string: "https://www.youtube.com")!, exactContext: nil),
+        .init(id: "app-store", aliases: ["app store", "ап стор", "магазин застосунків"], launchURL: URL(string: "https://apps.apple.com")!, exactContext: nil),
+        .init(id: "mail", aliases: ["mail", "пошта", "почта"], launchURL: URL(string: "mailto:")!, exactContext: nil),
         .init(id: "google-maps", aliases: ["google maps", "гугл мапи", "гугл карты"],
               launchURL: URL(string: "https://www.google.com/maps")!, exactContext: { query in
                   var components = URLComponents(string: "https://www.google.com/maps/search/")

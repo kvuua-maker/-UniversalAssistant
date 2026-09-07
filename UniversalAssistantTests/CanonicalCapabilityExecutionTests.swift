@@ -68,6 +68,18 @@ struct CanonicalCapabilityExecutionTests {
         #expect(executor.received == [.productSearch])
     }
 
+    @Test func verifiedSystemHandoffExecutesImmediatelyWithoutNarrationCard() async throws {
+        let destination = try #require(URL(string: "https://www.youtube.com"))
+        let executor = CapabilityExecutorStub(.success(.handoff(.init(query: "Відкрий YouTube", destination: destination, kind: .system))))
+        var opened: URL?
+        let model = AssistantViewModel(capabilityExecutor: executor, systemHandoffOpen: { opened = $0 })
+        model.input = "Відкрий програму YouTube"
+        model.submit()
+        try await waitUntil { opened == destination }
+        #expect(model.resultState == AssistantResultState.idle)
+        #expect(executor.received == [.open])
+    }
+
     private func waitUntil(_ condition: @escaping @MainActor () -> Bool) async throws {
         for _ in 0..<100 {
             if condition() { return }

@@ -32,6 +32,7 @@ final class AssistantViewModel {
     private let feedbackStore: UserFeedbackStore
     private let compactResultDuration: Duration
     private let presentationPreferenceStore: PresentationPreferenceStore
+    private let systemHandoffOpen:  (URL) -> Void
     private var resultDismissTask: Task<Void, Never>?
     private var weatherExecutionInFlight = false
     private var eventKitExecutionInFlight = false
@@ -51,7 +52,8 @@ final class AssistantViewModel {
         recorder: AudioRecorderController = AudioRecorderController(),
         feedbackStore: UserFeedbackStore = .shared,
         compactResultDuration: Duration = .seconds(2),
-        presentationPreferenceStore: PresentationPreferenceStore = PresentationPreferenceStore()
+        presentationPreferenceStore: PresentationPreferenceStore = PresentationPreferenceStore(),
+        systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
     ) {
         self.commandEngine = commandEngine
         self.interactionEngine = interactionEngine
@@ -67,6 +69,7 @@ final class AssistantViewModel {
         self.feedbackStore = feedbackStore
         self.compactResultDuration = compactResultDuration
         self.presentationPreferenceStore = presentationPreferenceStore
+        self.systemHandoffOpen = systemHandoffOpen
         voiceInput.setEventHandler { [weak self] event in
             self?.handleVoiceEvent(event)
         }
@@ -365,7 +368,12 @@ final class AssistantViewModel {
                     resultState = .deterministic(result)
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=deterministic capability=\(command.intent.rawValue)")
                 case let .handoff(result):
-                    resultState = .webHandoff(result)
+                    if result.kind == .system {
+                        systemHandoffOpen(result.destination)
+                        resultState = .idle
+                    } else {
+                        resultState = .webHandoff(result)
+                    }
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=handoff capability=\(command.intent.rawValue)")
                 case let .presentation(presentation):
                     capabilityPresentation = presentation

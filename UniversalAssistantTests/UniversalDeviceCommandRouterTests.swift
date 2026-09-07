@@ -28,6 +28,16 @@ struct UniversalDeviceCommandRouterTests {
         #expect(DeviceApplicationResolver(applications: apps).resolve(spokenName: "telegrm") == .unsupported)
     }
 
+    @Test func appWordVariantsResolveOnlyVerifiedPublicDestinations() {
+        guard case let .deviceApplication(youtube, destination, _) = router.route(LocalCommandEngine().parse("Відкрий програму YouTube")) else { Issue.record("Expected verified YouTube handoff"); return }
+        #expect(youtube.id == "youtube")
+        #expect(destination.host == "www.youtube.com")
+        guard case let .deviceApplication(mail, mailDestination, _) = router.route(LocalCommandEngine().parse("Відкрий програму Mail")) else { Issue.record("Expected public mailto handoff"); return }
+        #expect(mail.id == "mail")
+        #expect(mailDestination.scheme == "mailto")
+        #expect(router.route(LocalCommandEngine().parse("Відкрий програму Калькулятор")) == .unsupported(reason: "no_verified_public_app_mechanism"))
+    }
+
     @Test func publiclyDocumentedExactContextBeatsGenericLaunch() {
         let command = LocalCommandEngine().parse("Відкрий Telegram")
         guard case let .deviceApplication(_, destination, silent) = router.route(command, exactContext: "durov") else {

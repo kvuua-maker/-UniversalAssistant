@@ -30,7 +30,7 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-14.05 | GREEN |
 | B27-14.06 | GREEN |
 | B27-14.07 | GREEN |
-| B27-14.08 | NOT_STARTED |
+| B27-14.08 | GREEN |
 | B27-14.09 | NOT_STARTED |
 | B27-14.10 | NOT_STARTED |
 | B27-14.11 | NOT_STARTED |
@@ -210,3 +210,24 @@ Verification: SystemQuickActionPlannerTests and VoiceTextInputQualityTests PASS:
 B27-14.07 is GREEN. Build 27 does not exist.
 
 Exact next code-level operation: begin B27-14.08 SYSTEM/OPEN_APP. Audit QuickLaunchPolicy, LaunchMarketAppMatrix, UniversalDeviceCommandRouter and Home presentation routing against current public mechanisms. Preserve Spotify, Apple Music, Camera and flashlight passes; repair general open-app/system-destination classification and ensure non-public brightness, volume, Low Power, Bluetooth, Wi-Fi and protected Phone/Calculator destinations terminate locally with precise public limitation rather than web. Add production-boundary unseen variants and renderer regressions.
+
+
+## Completed material repair: B27-14.08
+
+Physical evidence: Spotify, Apple Music and Camera worked but required redundant UA narration/Continue, while Files/Mail/App Store/YouTube and protected system destinations diverged or fell to web.
+
+Material repair:
+- Verified system/app handoffs execute immediately at the Home boundary through injected UIApplication.open rather than rendering another UA Continue card. OS confirmation remains authoritative.
+- Generic app-word normalization removes localized program/app prefixes before exact verified alias resolution.
+- Added verified HTTPS destinations for YouTube and App Store and the Apple-documented mailto handoff for Mail. Files and Camera remain typed public presentations.
+- Calculator/Phone-without-number and non-public direct controls remain local unsupported results; they do not become Google searches. Normal numeric calls continue through tel.
+
+Public API audit evidence: Apple UIKit documents UIApplication.open for http/https/tel/facetime/mailto, UIApplication.openSettingsURLString only for this app custom settings, and explicitly says system volume cannot be changed programmatically (MPVolumeView is the public UI). CoreBluetooth manages app communication with peripherals and does not expose a toggle for system Bluetooth. No private undocumented Settings URL was introduced.
+
+Verification: UniversalDeviceCommandRouterTests, CanonicalCapabilityExecutionTests, SystemQuickActionPlannerTests and VoiceTextInputQualityTests PASS: 31 tests in 4 suites. Development compile PASS. Owner physical retest remains required.
+
+## Exact continuation point after B27-14.08
+
+B27-14.08 is GREEN. Build 27 does not exist.
+
+Exact next code-level operation: begin B27-14.09 Battery/Storage. Preserve the physical local storage pass; trace broad battery semantics through LocalCommandEngine and ProductionPublicDeviceExecutor, remove automobile-battery ambiguity for device-status phrasing, verify bounded UIDevice monitoring and truthful integer formatting, and add typed/normalized-voice Home boundary regressions with different values.
