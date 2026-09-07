@@ -31,7 +31,7 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-14.06 | GREEN |
 | B27-14.07 | GREEN |
 | B27-14.08 | GREEN |
-| B27-14.09 | NOT_STARTED |
+| B27-14.09 | GREEN |
 | B27-14.10 | NOT_STARTED |
 | B27-14.11 | NOT_STARTED |
 | B27-14.12 | NOT_STARTED |
@@ -203,7 +203,7 @@ Material repair:
 
 CLOSED approach: assigning a runtime String to AlarmPresentation.Alert.title. The public SDK requires LocalizedStringResource and compilation rejected the mechanism. It will not be retried unchanged. The materially different supported mechanism stores the dynamic label in AlarmMetadata while retaining a static localized system presentation title.
 
-Verification: SystemQuickActionPlannerTests and VoiceTextInputQualityTests PASS: 21 tests in 2 suites. Development compile PASS. Physical AlarmKit execution remains owner-retest required.
+Verification: SystemQuickActionPlannerTests and VoiceTextInputQualityTests PASS: 22 tests in 2 suites. Development compile PASS. Physical AlarmKit execution remains owner-retest required.
 
 ## Exact continuation point after B27-14.07
 
@@ -231,3 +231,4 @@ Verification: UniversalDeviceCommandRouterTests, CanonicalCapabilityExecutionTes
 B27-14.08 is GREEN. Build 27 does not exist.
 
 Exact next code-level operation: begin B27-14.09 Battery/Storage. Preserve the physical local storage pass; trace broad battery semantics through LocalCommandEngine and ProductionPublicDeviceExecutor, remove automobile-battery ambiguity for device-status phrasing, verify bounded UIDevice monitoring and truthful integer formatting, and add typed/normalized-voice Home boundary regressions with different values.
+\n\n## Completed material repair: B27-14.09\n\nPhysical evidence: broad battery wording could be interpreted as an automobile question and routed to web; explicit iPhone battery produced a local reading that could differ from a status-bar sample taken at another instant. Local free-storage reading physically passed and had to be preserved.\n\nMaterial repair:\n- Ukrainian, Russian and English device-battery semantic variants now converge on the canonical deviceAction before general information/web routing.\n- The production boundary remains the public UIDevice.batteryLevel read and returns its observed integer percentage at execution time; it does not claim synchronization with a separately sampled status-bar value.\n- Free-storage variants remain on the bounded local file-system capacity executor; no network fallback was introduced.\n- Unseen semantic variants are covered at parser/router level, and the injected production executor test proves the Home capability path reaches the local battery action.\n\nVerification: SystemQuickActionPlannerTests and VoiceTextInputQualityTests PASS: 21 tests in 2 suites. Development compile PASS. Owner physical retest remains required.\n\n## Exact continuation point after B27-14.09\n\nB27-14.09 is GREEN. Build 27 does not exist.\n\nExact next code-level operation: begin B27-14.10 Clipboard/Notes. Preserve clipboard write with a colon and Notes Share Sheet creation; repair punctuation-independent clipboard write, clipboard read, URL-from-clipboard and copy-current-result routing/execution/context without allowing generic web fallback. Add unseen typed/normalized-voice production-boundary tests, then run affected suites and Development compile.\n

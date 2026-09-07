@@ -68,4 +68,22 @@ struct SystemQuickActionPlannerTests {
         guard case let .result(result) = try await executor.execute(command) else { Issue.record("Expected local result"); return }
         #expect(result.primaryAnswer == "Заряд батареї: 73%")
     }
+
+    @Test func batteryAndStorageSemanticVariantsRemainLocalSystemActions() {
+        let engine = LocalCommandEngine()
+        for phrase in [
+            "Скільки заряду лишилося на телефоні?",
+            "Покажи відсоток батареї",
+            "Сколько заряда осталось на телефоне?",
+            "Show the battery percentage"
+        ] {
+            let command = engine.parse(phrase)
+            #expect(command.intent == .deviceAction)
+            #expect(command.entities["system_action"] == "battery")
+        }
+
+        let storage = engine.parse("Скільки вільного місця залишилося на iPhone?")
+        #expect(storage.intent == .deviceAction)
+        #expect(storage.entities["system_action"] == "storage")
+    }
 }

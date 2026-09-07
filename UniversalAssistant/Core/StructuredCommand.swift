@@ -77,7 +77,7 @@ struct LocalCommandEngine: CommandParsing {
         (.webSearch, ["пошукай в інтернеті", "поищи в интернете", "search the web", "im web suchen", "recherche sur le web"]),
         (.deviceAction, ["увімкни ліхтарик", "вимкни ліхтарик", "включи фонарик", "выключи фонарик", "turn on flashlight", "turn off flashlight", "taschenlampe einschalten", "allume la lampe",
                          "постав таймер", "створи таймер", "установи таймер", "создай таймер", "set a timer", "create a timer", "постав будильник", "створи будильник", "установи будильник", "создай будильник", "set an alarm", "create an alarm",
-                         "заряд батареї", "уровень батареи", "battery level", "вільного місця", "свободного места", "free storage",
+                         "заряд батареї", "заряд акумулятора", "скільки заряду", "відсоток батареї", "уровень батареи", "сколько заряда", "процент батареи", "battery level", "battery percentage", "вільного місця", "свободного места", "free storage",
                          "скопіюй у буфер", "скопируй в буфер", "copy to clipboard", "налаштування wi-fi", "настройки wi-fi",
                          "увімкни bluetooth", "включи bluetooth", "режим енергозбереження", "режим энергосбережения",
                          "зменш яскравість", "уменьши яркость", "збільш гучність", "увеличь громкость",
@@ -197,7 +197,7 @@ struct LocalCommandEngine: CommandParsing {
         if ["ліхтарик", "фонарик", "flashlight", "taschenlampe", "lampe"].contains(where: text.contains) {
             entities["system_action"] = "flashlight"
             entities["enabled"] = ["вимк", "выключ", "turn off"].contains(where: text.contains) ? "false" : "true"
-        } else if ["заряд батареї", "уровень батареи", "battery level"].contains(where: text.contains) { entities["system_action"] = "battery"
+        } else if ["заряд батареї", "заряд акумулятора", "скільки заряду", "відсоток батареї", "уровень батареи", "сколько заряда", "процент батареи", "battery level", "battery percentage"].contains(where: text.contains) { entities["system_action"] = "battery"
         } else if ["вільного місця", "свободного места", "free storage"].contains(where: text.contains) { entities["system_action"] = "storage"
         } else if ["скопіюй у буфер", "скопируй в буфер", "copy to clipboard"].contains(where: text.contains) {
             entities["system_action"] = "clipboard"
