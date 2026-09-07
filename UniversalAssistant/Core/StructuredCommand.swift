@@ -90,7 +90,7 @@ struct LocalCommandEngine: CommandParsing {
         (.parcelTrack, ["де моя посилка", "відстеж посилку", "где моя посылка", "отследи посылку", "track parcel", "track package"]),
         (.calendarCreate, ["запиши", "додай зустріч", "создай встреч", "add event", "termin erstellen", "ajoute un rendez-vous"]),
         (.reminderCreate, ["нагадай", "нагадати", "напомни", "напомнить", "remind", "erinnere", "rappelle"]),
-        (.contactCall, ["подзвони", "позвони", "call ", "ruf ", "appelle"]),
+        (.contactCall, ["подзвони", "зателефонуй", "набери", "набрати", "позвони", "call ", "dial ", "ruf ", "appelle"]),
         (.messageCompose, ["напиши ", "отправь сообщение", "message ", "schreib ", "écris "]),
         (.navigation, ["веди ", "маршрут до", "navigate", "route to", "navigiere", "itinéraire"]),
         (.routeAwareSearch, ["по дорозі", "по пути", "along the route", "auf dem weg", "sur le trajet"]),
@@ -146,7 +146,8 @@ struct LocalCommandEngine: CommandParsing {
         extractFashionFilters(from: text, normalized: normalized, into: &constraints)
         constraints.ordinal = ordinal(in: normalized)
         if intent == .open, let target = target(after: ["відкрий", "открой", "open", "öffne", "ouvre"], in: text) { entities["app"] = target }
-        if [.contactLookup, .contactCall].contains(intent), let value = target(after: ["знайди контакт", "найди контакт", "find contact", "подзвони", "позвони", "call"], in: text) { entities["contact"] = contactSubject(value) }
+        if [.contactLookup, .contactCall].contains(intent), let value = target(after: ["знайди контакт", "найди контакт", "find contact", "подзвони", "зателефонуй", "набери", "набрати", "позвони", "call", "dial"], in: text) { entities["contact"] = contactSubject(value) }
+        if intent == .contactCall { extractCallDetails(from: text, normalized: normalized, into: &entities) }
         if intent == .messageCompose, let value = target(after: ["напиши", "отправь сообщение", "message", "schreib", "écris"], in: text) { entities["recipient"] = value }
         if [.photoSearch, .fileSearch, .mediaSearch, .podcastSearch].contains(intent) { entities["query"] = querySubject(for: intent, in: text) }
         if intent == .parcelTrack, let tracking = normalized.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init).first(where: { $0.count >= 5 && $0.rangeOfCharacter(from: .decimalDigits) != nil }) { entities["tracking_number"] = tracking }
@@ -166,6 +167,16 @@ struct LocalCommandEngine: CommandParsing {
         }
         let risk: ActionRisk = intent == .emergency ? .emergency : ([.calendarCreate, .reminderCreate, .reminderComplete, .reminderDelete, .shoppingList, .cancel, .undo].contains(intent) ? .reversible : .informational)
         return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: intent, entities: entities, constraints: constraints, risk: risk, needsClarification: intent == .unknown)
+    }
+
+    private func extractCallDetails(from original: String, normalized: String, into entities: inout [String: String]) {
+        if normalized.contains("whatsapp") || normalized.contains("вотсап") || normalized.contains("ватсап") { entities["call_service"] = "whatsapp" }
+        if let range = original.range(of: #"(?:номер\s*)?\+?[0-9][0-9\s()\-]{5,}"#, options: [.regularExpression, .caseInsensitive]) {
+            let raw = String(original[range])
+            let prefix = raw.contains("+") ? "+" : ""
+            let digits = raw.filter(\.isNumber)
+            if digits.count >= 7 { entities["phone_number"] = prefix + digits }
+        }
     }
 
     private func extractSystemQuickAction(from text: String, into entities: inout [String: String]) {

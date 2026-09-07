@@ -353,6 +353,10 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     }
 
     private func contact(_ command: StructuredCommand, preparesCall: Bool) async throws -> CapabilityExecutionOutcome {
+        let requestedService = command.entities["call_service"]
+        if preparesCall, let rawNumber = command.entities["phone_number"] {
+            return .handoff(.init(query: rawNumber, destination: try callDestination(number: rawNumber, service: requestedService), kind: .system))
+        }
         let name = try required(command.entities["contact"], "contact_name")
         try await contacts.requestAccessIfNeeded()
         switch try await contacts.resolve(name: name) {
@@ -360,17 +364,26 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case let .ambiguous(values): throw CanonicalCapabilityExecutionError.ambiguous(values.map(\.displayName))
         case let .resolved(value):
             if preparesCall {
-                guard value.phoneNumbers.count == 1,
-                      let digits = value.phoneNumbers.first?.filter(\.isNumber),
-                      let url = URL(string: "tel:\(digits)") else {
+                guard value.phoneNumbers.count == 1, let number = value.phoneNumbers.first else {
                     throw CanonicalCapabilityExecutionError.ambiguous(value.phoneNumbers)
                 }
-                return .handoff(.init(query: value.displayName, destination: url, kind: .system))
+                return .handoff(.init(query: value.displayName, destination: try callDestination(number: number, service: requestedService), kind: .system))
             }
             return .result(try result(value.displayName, facts: value.phoneNumbers.enumerated().map { index, number in
                 ResultFact(id: "phone-\(index)", label: "Телефон", value: number, state: .verified, source: "Contacts", observedAt: .now, priority: 100 - index)
             }))
         }
+    }
+
+    private func callDestination(number: String, service: String?) throws -> URL {
+        let digits = number.filter(\.isNumber)
+        guard digits.count >= 7 else { throw CanonicalCapabilityExecutionError.unavailable("invalid_phone_number") }
+        if service == "whatsapp" {
+            guard let url = URL(string: "https://wa.me/\(digits)") else { throw CanonicalCapabilityExecutionError.unavailable("invalid_whatsapp_handoff") }
+            return url
+        }
+        guard let url = URL(string: "tel:\(number.hasPrefix("+") ? "+" : "")\(digits)") else { throw CanonicalCapabilityExecutionError.unavailable("invalid_phone_handoff") }
+        return url
     }
 
     private func result(_ answer: String, facts: [ResultFact], actions: [ResultAction] = []) throws -> DeterministicResult {
