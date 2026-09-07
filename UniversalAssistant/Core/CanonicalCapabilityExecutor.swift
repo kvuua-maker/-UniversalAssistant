@@ -69,6 +69,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let personalSearch: UniversalPersonalSearchEngine
     private let currentContext: CurrentContextStore
     private let routeAwareSearch: RouteAwareSearchEngine
+    private let routeProvider: any RouteProvider
+    private let reverseLocation: any ReverseLocationGeocoding
     private var multiStep: ProductionMultiStepCoordinator
     private let multiStepOperationFactory: ProductionStepOperationFactory?
     private let recorder: AudioRecorderController
@@ -84,6 +86,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         locationResolver: ManualLocationContextResolver = .init(),
         placeSearch: PlaceSearchEngine = .init(providers: [MapKitPlaceProvider()]),
         currentLocation: any CurrentLocationResolving = AppleCurrentLocationResolver(),
+        reverseLocation: any ReverseLocationGeocoding = AppleReverseLocationGeocoder(),
         currentContext: CurrentContextStore = CurrentContextStore(),
         routeProvider: any RouteProvider = MapKitRouteProvider(),
         multiStepOperationFactory: ProductionStepOperationFactory? = nil,
@@ -103,6 +106,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.personalSearch = UniversalPersonalSearchEngine(sources: personalSearchSources)
         self.currentContext = currentContext
         self.routeAwareSearch = RouteAwareSearchEngine(routeProvider: routeProvider)
+        self.routeProvider = routeProvider
+        self.reverseLocation = reverseLocation
         self.eventKit = eventKit
         self.recorder = recorder
         self.publicDeviceExecute = publicDeviceExecute
@@ -274,6 +279,26 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         if kind == "clipboard_copy_context" {
             guard let value = currentContext.freshAnswer() else { throw CanonicalCapabilityExecutionError.missingParameter("current_result") }
             return .result(try result(try publicDeviceExecute(.copyToClipboard(value)), facts: []))
+        }
+        if kind == "current_location" {
+            let location = try await currentLocation.resolveCurrent(for: .general)
+            let coordinates = String(format: "%.5f, %.5f", location.sample.latitude, location.sample.longitude)
+            return .result(try result("Поточне місцезнаходження", facts: [.init(id: "current-location", label: "Координати", value: coordinates, state: .verified, source: "CoreLocation", observedAt: location.sample.timestamp, priority: 100)]))
+        }
+        if kind == "current_address" {
+            let location = try await currentLocation.resolveCurrent(for: .general)
+            let address = try await reverseLocation.address(for: location)
+            return .result(try result(address, facts: [.init(id: "current-address", label: "Поточна адреса", value: address, state: .verified, source: "CoreLocation", observedAt: location.sample.timestamp, priority: 100)]))
+        }
+        if kind == "travel_time" {
+            let destinationName = try required(command.entities["destination"], "destination")
+            let origin = try await currentLocation.resolveCurrent(for: .navigation)
+            let destination = try await locationResolver.resolve(destinationName)
+            let mode: TravelMode = ["пішки", "пешком", "walking", "walk"].contains(where: command.normalizedText.contains) ? .walking : .driving
+            let route = try await routeProvider.route(.init(origin: .init(latitude: origin.sample.latitude, longitude: origin.sample.longitude, name: "current location"), destination: .init(latitude: destination.sample.latitude, longitude: destination.sample.longitude, name: destinationName), mode: mode))
+            let minutes = max(1, Int((route.expectedTravelTime / 60).rounded()))
+            currentContext.replaceRoute(origin: origin, destination: destination, destinationName: destinationName)
+            return .result(try result("Приблизно \(minutes) хв", facts: [.init(id: "travel-time", label: destinationName, value: "\(minutes) хв", state: .verified, source: route.source, observedAt: route.timestamp, priority: 100)]))
         }
         if kind == "unsupported_system_control" { throw CanonicalCapabilityExecutionError.unavailable("system_control_not_publicly_available") }
         let action: SystemQuickAction

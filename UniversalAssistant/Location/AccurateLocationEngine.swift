@@ -24,6 +24,21 @@ struct ValidatedLocation: Equatable, Codable, Sendable {
     let manualLabel: String?
 }
 
+protocol ReverseLocationGeocoding: Sendable {
+    func address(for location: ValidatedLocation) async throws -> String
+}
+
+actor AppleReverseLocationGeocoder: ReverseLocationGeocoding {
+    private let geocoder = CLGeocoder()
+    func address(for location: ValidatedLocation) async throws -> String {
+        let point = CLLocation(latitude: location.sample.latitude, longitude: location.sample.longitude)
+        guard let value = try await geocoder.reverseGeocodeLocation(point).first else { throw CurrentLocationResolutionError.unavailable }
+        let parts = [value.name, value.locality, value.administrativeArea, value.country].compactMap { component in component }.filter { component in !component.isEmpty }
+        guard !parts.isEmpty else { throw CurrentLocationResolutionError.unavailable }
+        return parts.reduce(into: [String]()) { accumulated, component in if !accumulated.contains(component) { accumulated.append(component) } }.joined(separator: ", ")
+    }
+}
+
 protocol ManualLocationGeocoding: Sendable {
     func resolve(_ label: String) async throws -> LocationSample
 }

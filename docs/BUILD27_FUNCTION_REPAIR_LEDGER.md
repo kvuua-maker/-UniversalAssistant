@@ -34,7 +34,7 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-14.09 | GREEN |
 | B27-14.10 | GREEN |
 | B27-14.11 | GREEN |
-| B27-14.12 | IN_PROGRESS |
+| B27-14.12 | GREEN |
 | B27-14.13 | NOT_STARTED |
 | B27-14.14 | NOT_STARTED |
 | B27-14.15 | NOT_STARTED |
@@ -240,3 +240,27 @@ The production explicit-nearest path previously sorted only optional provider-su
 Verification: PlaceCoreTests and ProductionRouteAwareSearchTests PASS: 10 tests in 2 suites. Compilation within the focused test build PASS. B27-14.12 remains IN_PROGRESS; owner physical retest remains required.
 
 Exact next code-level operation: continue B27-14.12 in StructuredCommand and ProductionCanonicalCapabilityExecutor by adding general current-location/current-address and travel-time canonical semantics through public CoreLocation and MapKit boundaries. Preserve the green nearest-distance and Apple Maps navigation paths.
+
+
+## Completed material repair: B27-14.12
+
+Physical evidence: resolved Apple Maps navigation worked, while railway/airport formulations, travel time, current location/address, route follow-up and true nearest ordering diverged. Nearby results could preserve provider order rather than physical distance.
+
+Material repair:
+- Explicit nearest ordering computes geodesic distance from the resolved validated current/manual location when a provider omits distanceMeters; verified provider distances remain authoritative.
+- Current location uses the existing bounded CurrentLocationResolving CoreLocation boundary and returns observed coordinates locally.
+- Current address uses an injectable public CLGeocoder reverseGeocodeLocation boundary and a concise deduplicated postal description.
+- Travel-time semantics resolve the current origin and arbitrary destination, call the injected MapKit RouteProvider for driving/walking duration, return a sourced in-app result, and seed the same typed route CurrentContext.
+- Typed and normalized voice inputs share the LocalCommandEngine deviceAction path; none of these families can fall through to generic web.
+
+CLOSED approaches:
+- Exact phrase-only address matching is closed. Production E2E proved the Ukrainian accusative form “поточну адресу” escaped to contextual show. The green matcher uses address/location stems plus self/current semantics independent of word order and inflection.
+- The first test expected 10 minutes although its route fixture returned 360 seconds. That expectation is closed; result assertions now follow the injected route evidence.
+
+Verification: ProductionRouteAwareSearchTests, PlaceCoreTests and VoiceTextInputQualityTests PASS: 24 tests in 3 suites. Development compile PASS. Owner physical retest remains required.
+
+## Exact continuation point after B27-14.12
+
+B27-14.12 is GREEN. Build 27 does not exist.
+
+Exact next code-level operation: begin B27-14.13 Weather. Preserve the physically working Kyiv WeatherKit path; trace arbitrary-location and current-location parsing through the production weather executor, remove city special-casing or missing-location divergence, and add production-boundary tests with unseen locations plus current-location permission outcomes.

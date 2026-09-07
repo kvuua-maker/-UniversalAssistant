@@ -17,6 +17,10 @@ private struct RoutePlaceProviderStub: PlaceProvider {
     let places: [Place]
     func search(_ query: PlaceQuery) async throws -> [Place] { places }
 }
+private struct ReverseLocationStub: ReverseLocationGeocoding {
+    let value: String
+    func address(for location: ValidatedLocation) async throws -> String { value }
+}
 private struct RouteProviderStub: RouteProvider {
     let providerID = "routes.fixture"
     func route(_ request: RouteRequest) async throws -> RouteResult {
@@ -55,6 +59,25 @@ struct ProductionRouteAwareSearchTests {
         guard case let .handoff(value) = try await executor.execute(command) else { Issue.record("Expected Maps handoff"); return }
         #expect(value.kind == .navigation); #expect(context.freshRoute()?.1.destination.displayName == "Kyiv")
     }
+    @Test func currentLocationAddressAndTravelTimeStayOnPublicProductionBoundaries() async throws {
+        let parser = LocalCommandEngine(), context = CurrentContextStore(), value = executor(context: context)
+        let locationCommand = parser.parse("Де я зараз?")
+        #expect(locationCommand.intent == .deviceAction)
+        guard case let .result(locationResult) = try await value.execute(locationCommand) else { Issue.record("Expected location result"); return }
+        #expect(locationResult.facts.first?.source == "CoreLocation")
+
+        let addressCommand = parser.parse("Покажи мою поточну адресу")
+        #expect(addressCommand.entities["system_action"] == "current_address")
+        guard case let .result(addressResult) = try await value.execute(addressCommand) else { Issue.record("Expected address result"); return }
+        #expect(addressResult.primaryAnswer == "Fixture Address")
+
+        let travelCommand = parser.parse("Скільки їхати до нового вокзалу?")
+        #expect(travelCommand.entities["destination"] == "нового вокзалу?")
+        guard case let .result(travelResult) = try await value.execute(travelCommand) else { Issue.record("Expected travel result"); return }
+        #expect(travelResult.primaryAnswer == "Приблизно 6 хв")
+        #expect(context.freshRoute()?.1.destination.displayName == "нового вокзалу?")
+    }
+
     @Test func freshRouteInvokesDetourEngineAndReturnsTypedMapsAction() async throws {
         let context = CurrentContextStore(); context.replaceRoute(origin: location(50, 30), destination: location(51, 31), destinationName: "Kyiv")
         let command = StructuredCommand(originalText: "Кавярня по дорозі", normalizedText: "кавярня по дорозі", language: .uk, intent: .routeAwareSearch)
@@ -65,6 +88,6 @@ struct ProductionRouteAwareSearchTests {
     func executor(context: CurrentContextStore) -> ProductionCanonicalCapabilityExecutor {
         let origin = location(50, 30), destination = location(51, 31)
         let place = Place(id: "cafe", providerID: "1", name: "Cafe", category: .cafe, latitude: 50.5, longitude: 30.5, source: "fixture", timestamp: .now, verification: .providerReturned)
-        return .init(locationResolver: .init(geocoder: RouteGeocoderStub(destination.sample)), placeSearch: .init(providers: [RoutePlaceProviderStub(places: [place])]), currentLocation: RouteLocationStub(origin), currentContext: context, routeProvider: RouteProviderStub(), personalSearchSources: [])
+        return .init(locationResolver: .init(geocoder: RouteGeocoderStub(destination.sample)), placeSearch: .init(providers: [RoutePlaceProviderStub(places: [place])]), currentLocation: RouteLocationStub(origin), reverseLocation: ReverseLocationStub(value: "Fixture Address"), currentContext: context, routeProvider: RouteProviderStub(), personalSearchSources: [])
     }
 }

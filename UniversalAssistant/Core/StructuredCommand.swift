@@ -78,7 +78,7 @@ struct LocalCommandEngine: CommandParsing {
         (.deviceAction, ["увімкни ліхтарик", "вимкни ліхтарик", "включи фонарик", "выключи фонарик", "turn on flashlight", "turn off flashlight", "taschenlampe einschalten", "allume la lampe",
                          "постав таймер", "створи таймер", "установи таймер", "создай таймер", "set a timer", "create a timer", "постав будильник", "створи будильник", "установи будильник", "создай будильник", "set an alarm", "create an alarm",
                          "заряд батареї", "заряд акумулятора", "скільки заряду", "відсоток батареї", "уровень батареи", "сколько заряда", "процент батареи", "battery level", "battery percentage", "вільного місця", "свободного места", "free storage",
-                         "скопіюй у буфер", "скопіюй в буфер", "скопируй в буфер", "copy to clipboard", "покажи буфер", "прочитай буфер", "що в буфері", "що зараз у буфері", "що у буфері", "что в буфере", "что сейчас в буфере", "read clipboard", "відкрий посилання з буфера", "открой ссылку из буфера", "open clipboard url", "скопіюй останній результат", "скопируй последний результат", "copy last result", "налаштування wi-fi", "настройки wi-fi",
+                         "скопіюй у буфер", "скопіюй в буфер", "скопируй в буфер", "copy to clipboard", "покажи буфер", "прочитай буфер", "що в буфері", "що зараз у буфері", "що у буфері", "что в буфере", "что сейчас в буфере", "read clipboard", "відкрий посилання з буфера", "открой ссылку из буфера", "open clipboard url", "скопіюй останній результат", "скопируй последний результат", "copy last result", "де я зараз", "моє поточне місцезнаходження", "моя поточна адреса", "яка моя адреса", "где я сейчас", "мой текущий адрес", "current location", "current address", "скільки їхати", "сколько ехать", "travel time", "налаштування wi-fi", "настройки wi-fi",
                          "увімкни bluetooth", "включи bluetooth", "режим енергозбереження", "режим энергосбережения",
                          "зменш яскравість", "уменьши яркость", "збільш гучність", "увеличь громкость",
                          "пропущені дзвінки", "пропущенные звонки", "відкрий калькулятор", "открой калькулятор",
@@ -142,6 +142,11 @@ struct LocalCommandEngine: CommandParsing {
         if let directURL = validatedWebURL(text) {
             return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: .open, entities: ["direct_url": directURL.absoluteString])
         }
+        if let locationAction = locationSystemIntent(normalized) {
+            var entities = ["system_action": locationAction]
+            if locationAction == "travel_time", let destination = target(after: ["до", "to"], in: text) { entities["destination"] = destination }
+            return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: .deviceAction, entities: entities)
+        }
         let specificPatternIntent = Self.intentPatterns.first { intent, patterns in
             intent != .productSearch && patterns.contains { normalized.contains($0) }
         }?.0
@@ -186,6 +191,16 @@ struct LocalCommandEngine: CommandParsing {
         return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: intent, entities: entities, constraints: constraints, risk: risk, needsClarification: intent == .unknown)
     }
 
+    private func locationSystemIntent(_ text: String) -> String? {
+        if ["скільки їхати", "сколько ехать", "travel time", "how long"].contains(where: text.contains) { return "travel_time" }
+        let addressStem = ["адрес", "address"].contains(where: text.contains)
+        let selfLocation = ["мо", "поточ", "текущ", "де я", "где я", "current", "my "].contains(where: text.contains)
+        if addressStem && selfLocation { return "current_address" }
+        let locationStem = ["місцезнаход", "местополож", "location", "де я", "где я"].contains(where: text.contains)
+        if locationStem && selfLocation { return "current_location" }
+        return nil
+    }
+
     private func validatedWebURL(_ text: String) -> URL? {
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let components = URLComponents(string: value), let scheme = components.scheme?.lowercased(), ["http", "https"].contains(scheme), components.host != nil else { return nil }
@@ -220,6 +235,13 @@ struct LocalCommandEngine: CommandParsing {
                 let content = original[range.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: ":,-")))
                 if !content.isEmpty { entities["content"] = content }
             }
+        } else if ["скільки їхати", "сколько ехать", "travel time"].contains(where: text.contains) {
+            entities["system_action"] = "travel_time"
+            if let destination = target(after: ["до", "to"], in: original) { entities["destination"] = destination }
+        } else if ["адрес", "address"].contains(where: text.contains) {
+            entities["system_action"] = "current_address"
+        } else if ["де я", "где я", "current location", "місцезнаходження", "местоположение"].contains(where: text.contains) {
+            entities["system_action"] = "current_location"
         } else if ["wi-fi", "bluetooth", "енергозбереження", "энергосбережения", "яскравість", "яркость", "гучність", "громкость", "пропущені дзвінки", "пропущенные звонки", "калькулятор", "програму телефон", "покажи мої контакти", "покажи мои контакты", "покажи мої будильники"].contains(where: text.contains) { entities["system_action"] = "unsupported_system_control"
         } else if ["таймер", "timer"].contains(where: text.contains) {
             entities["system_action"] = "timer"
