@@ -36,4 +36,21 @@ struct SystemQuickActionPlannerTests {
     @Test func filesUsesSystemDocumentPicker() {
         #expect(planner.plan(.openFiles).mechanism == .documentPicker)
     }
+
+    @Test func documentedPublicDeviceActionsUseConcreteMechanisms() {
+        #expect(planner.plan(.flashlight(enabled: true)).mechanism == .avFoundationTorch)
+        #expect(planner.plan(.batteryLevel).mechanism == .uiDeviceRead)
+        #expect(planner.plan(.freeStorage).mechanism == .fileSystemRead)
+        #expect(planner.plan(.copyToClipboard("текст")).mechanism == .pasteboardWrite)
+    }
+
+    @Test @MainActor func productionBoundaryExecutesInjectedPublicAction() async throws {
+        let command = LocalCommandEngine().parse("Покажи заряд батареї у відсотках")
+        let executor = ProductionCanonicalCapabilityExecutor(publicDeviceExecute: { action in
+            #expect(action == .batteryLevel)
+            return "Заряд батареї: 73%"
+        }, personalSearchSources: [])
+        guard case let .result(result) = try await executor.execute(command) else { Issue.record("Expected local result"); return }
+        #expect(result.primaryAnswer == "Заряд батареї: 73%")
+    }
 }

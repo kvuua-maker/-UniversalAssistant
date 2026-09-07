@@ -1,4 +1,6 @@
 import Foundation
+@preconcurrency import AVFoundation
+import UIKit
 #if canImport(AlarmKit)
 import AlarmKit
 import SwiftUI
@@ -10,6 +12,10 @@ enum SystemQuickAction: Equatable, Sendable {
     case openApp(verifiedURL: URL)
     case startTimer(seconds: Int)
     case createAlarm(hour: Int, minute: Int)
+    case flashlight(enabled: Bool)
+    case batteryLevel
+    case freeStorage
+    case copyToClipboard(String)
     case captureThen(QuickActionContinuation)
 }
 
@@ -24,6 +30,10 @@ enum SystemQuickActionMechanism: String, Equatable, Sendable {
     case documentPicker
     case verifiedApplicationURL
     case alarmKit
+    case avFoundationTorch
+    case uiDeviceRead
+    case fileSystemRead
+    case pasteboardWrite
     case unavailable
 }
 
@@ -86,6 +96,14 @@ struct SystemQuickActionPlanner: Sendable {
             let validTime = (0...23).contains(hour) && (0...59).contains(minute)
             guard validTime else { return unavailable("invalid_alarm_time") }
             return .init(mechanism: .alarmKit, completion: .readyForUserInteraction, continuation: nil, destination: nil, reason: "public_alarmkit_alarm")
+        case .flashlight:
+            return .init(mechanism: .avFoundationTorch, completion: .readyForUserInteraction, continuation: nil, destination: nil, reason: "public_avcapturedevice_torch")
+        case .batteryLevel:
+            return .init(mechanism: .uiDeviceRead, completion: .readyForUserInteraction, continuation: nil, destination: nil, reason: "public_uidevice_battery")
+        case .freeStorage:
+            return .init(mechanism: .fileSystemRead, completion: .readyForUserInteraction, continuation: nil, destination: nil, reason: "public_volume_capacity")
+        case .copyToClipboard:
+            return .init(mechanism: .pasteboardWrite, completion: .readyForUserInteraction, continuation: nil, destination: nil, reason: "public_uipasteboard_write")
         }
     }
 
@@ -103,6 +121,33 @@ struct SystemQuickActionPlanner: Sendable {
             destination: nil,
             reason: reason
         )
+    }
+}
+
+@MainActor
+struct ProductionPublicDeviceExecutor {
+    enum ExecutionError: Error { case hardwareUnavailable, operationFailed, valueUnavailable }
+    func execute(_ action: SystemQuickAction) throws -> String {
+        switch action {
+        case .flashlight(let enabled):
+            guard let device = AVCaptureDevice.default(for: .video), device.hasTorch, device.isTorchAvailable else { throw ExecutionError.hardwareUnavailable }
+            do {
+                try device.lockForConfiguration(); defer { device.unlockForConfiguration() }
+                if enabled { try device.setTorchModeOn(level: AVCaptureDevice.maxAvailableTorchLevel) } else { device.torchMode = .off }
+                return enabled ? "Ліхтарик увімкнено" : "Ліхтарик вимкнено"
+            } catch { throw ExecutionError.operationFailed }
+        case .batteryLevel:
+            let device = UIDevice.current; device.isBatteryMonitoringEnabled = true
+            guard device.batteryLevel >= 0 else { throw ExecutionError.valueUnavailable }
+            return "Заряд батареї: \(Int((device.batteryLevel * 100).rounded()))%"
+        case .freeStorage:
+            guard let capacity = try? URL(fileURLWithPath: NSHomeDirectory()).resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage else { throw ExecutionError.valueUnavailable }
+            return "Вільно: \(ByteCountFormatter.string(fromByteCount: capacity, countStyle: .file))"
+        case .copyToClipboard(let value):
+            UIPasteboard.general.string = value
+            return "Скопійовано"
+        default: throw ExecutionError.operationFailed
+        }
     }
 }
 

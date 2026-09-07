@@ -71,6 +71,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let multiStepOperationFactory: ProductionStepOperationFactory?
     private let recorder: AudioRecorderController
     private let eventKit: any EventKitCommandExecuting
+    private let publicDeviceExecute: @MainActor (SystemQuickAction) throws -> String
 
     init(
         deviceRouter: UniversalDeviceCommandRouter = .init(applications: .init(applications: LaunchDeviceApplications.verified)),
@@ -85,6 +86,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         multiStepOperationFactory: ProductionStepOperationFactory? = nil,
         eventKit: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
         recorder: AudioRecorderController = AudioRecorderController(),
+        publicDeviceExecute: @escaping @MainActor (SystemQuickAction) throws -> String = { try ProductionPublicDeviceExecutor().execute($0) },
         personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())]
     ) {
         self.deviceRouter = deviceRouter
@@ -99,6 +101,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.routeAwareSearch = RouteAwareSearchEngine(routeProvider: routeProvider)
         self.eventKit = eventKit
         self.recorder = recorder
+        self.publicDeviceExecute = publicDeviceExecute
         self.multiStepOperationFactory = multiStepOperationFactory
         if let multiStepOperationFactory {
             self.multiStep = ProductionMultiStepCoordinator(operationFactory: multiStepOperationFactory)
@@ -232,24 +235,31 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
 
     private func systemQuickAction(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         let kind = command.entities["system_action"] ?? ""
+        if kind == "unsupported_system_control" { throw CanonicalCapabilityExecutionError.unavailable("system_control_not_publicly_available") }
         let action: SystemQuickAction
         if kind == "timer", let seconds = Int(command.entities["duration_seconds"] ?? "") { action = .startTimer(seconds: seconds) }
         else if kind == "alarm", let hour = Int(command.entities["hour"] ?? ""), let minute = Int(command.entities["minute"] ?? "") { action = .createAlarm(hour: hour, minute: minute) }
-        else if !kind.isEmpty { throw CanonicalCapabilityExecutionError.unavailable("system_control_not_publicly_available") }
+        else if kind == "flashlight" { action = .flashlight(enabled: command.entities["enabled"] != "false") }
+        else if kind == "battery" { action = .batteryLevel }
+        else if kind == "storage" { action = .freeStorage }
+        else if kind == "clipboard", let content = command.entities["content"], !content.isEmpty { action = .copyToClipboard(content) }
+        else if !kind.isEmpty { throw CanonicalCapabilityExecutionError.unavailable("system_action_missing_value") }
         else { throw CanonicalCapabilityExecutionError.missingParameter("system_action") }
-        guard #available(iOS 26.0, *) else { throw CanonicalCapabilityExecutionError.unavailable("alarmkit_requires_ios_26") }
-        #if canImport(AlarmKit)
-        do {
-            let detail = try await ProductionAlarmKitExecutor().execute(action)
-            return .result(try result(detail, facts: []))
-        } catch ProductionAlarmKitExecutor.ExecutionError.denied {
-            throw CanonicalCapabilityExecutionError.unavailable("alarmkit_permission_denied")
-        } catch {
-            throw CanonicalCapabilityExecutionError.unavailable("alarmkit_execution_failed")
+
+        switch action {
+        case .startTimer, .createAlarm:
+            guard #available(iOS 26.0, *) else { throw CanonicalCapabilityExecutionError.unavailable("alarmkit_requires_ios_26") }
+            #if canImport(AlarmKit)
+            do { return .result(try result(try await ProductionAlarmKitExecutor().execute(action), facts: [])) }
+            catch ProductionAlarmKitExecutor.ExecutionError.denied { throw CanonicalCapabilityExecutionError.unavailable("alarmkit_permission_denied") }
+            catch { throw CanonicalCapabilityExecutionError.unavailable("alarmkit_execution_failed") }
+            #else
+            throw CanonicalCapabilityExecutionError.unavailable("alarmkit_unavailable")
+            #endif
+        default:
+            do { return .result(try result(try publicDeviceExecute(action), facts: [])) }
+            catch { throw CanonicalCapabilityExecutionError.unavailable("public_system_action_unavailable") }
         }
-        #else
-        throw CanonicalCapabilityExecutionError.unavailable("alarmkit_unavailable")
-        #endif
     }
 
     private func places(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {

@@ -73,7 +73,13 @@ struct LocalCommandEngine: CommandParsing {
         (.travelPlan, ["сплануй подорож", "спланируй поездку", "plan a trip", "reise planen", "planifie un voyage", "треба бути у", "треба бути в"]),
         (.webSearch, ["пошукай в інтернеті", "поищи в интернете", "search the web", "im web suchen", "recherche sur le web"]),
         (.deviceAction, ["увімкни ліхтарик", "вимкни ліхтарик", "включи фонарик", "выключи фонарик", "turn on flashlight", "turn off flashlight", "taschenlampe einschalten", "allume la lampe",
-                         "постав таймер", "установи таймер", "set a timer", "постав будильник", "установи будильник", "set an alarm"]),
+                         "постав таймер", "установи таймер", "set a timer", "постав будильник", "установи будильник", "set an alarm",
+                         "заряд батареї", "уровень батареи", "battery level", "вільного місця", "свободного места", "free storage",
+                         "скопіюй у буфер", "скопируй в буфер", "copy to clipboard", "налаштування wi-fi", "настройки wi-fi",
+                         "увімкни bluetooth", "включи bluetooth", "режим енергозбереження", "режим энергосбережения",
+                         "зменш яскравість", "уменьши яркость", "збільш гучність", "увеличь громкость",
+                         "пропущені дзвінки", "пропущенные звонки", "відкрий калькулятор", "открой калькулятор",
+                         "відкрий програму телефон", "открой телефон", "покажи мої контакти", "покажи мои контакты", "покажи мої будильники"]),
         (.appAction, ["дія в застосунку", "действие в приложении", "action in app", "aktion in app", "action dans l'app"]),
         (.audioRecord, ["диктофон", "запиши аудіо", "призупини запис", "продовж запис", "зупини запис",
                         "voice recorder", "pause recording", "resume recording", "stop recording",
@@ -182,6 +188,13 @@ struct LocalCommandEngine: CommandParsing {
     private func extractSystemQuickAction(from text: String, into entities: inout [String: String]) {
         if ["ліхтарик", "фонарик", "flashlight", "taschenlampe", "lampe"].contains(where: text.contains) {
             entities["system_action"] = "flashlight"
+            entities["enabled"] = ["вимк", "выключ", "turn off"].contains(where: text.contains) ? "false" : "true"
+        } else if ["заряд батареї", "уровень батареи", "battery level"].contains(where: text.contains) { entities["system_action"] = "battery"
+        } else if ["вільного місця", "свободного места", "free storage"].contains(where: text.contains) { entities["system_action"] = "storage"
+        } else if ["скопіюй у буфер", "скопируй в буфер", "copy to clipboard"].contains(where: text.contains) {
+            entities["system_action"] = "clipboard"
+            if let separator = text.firstIndex(of: ":") { entities["content"] = String(text[text.index(after: separator)...]).trimmingCharacters(in: .whitespacesAndNewlines) }
+        } else if ["wi-fi", "bluetooth", "енергозбереження", "энергосбережения", "яскравість", "яркость", "гучність", "громкость", "пропущені дзвінки", "пропущенные звонки", "калькулятор", "програму телефон", "покажи мої контакти", "покажи мои контакты", "покажи мої будильники"].contains(where: text.contains) { entities["system_action"] = "unsupported_system_control"
         } else if ["таймер", "timer"].contains(where: text.contains) {
             entities["system_action"] = "timer"
             if let match = text.range(of: #"([0-9]+)\s*(хв|мин|min|minute|сек|sec)"#, options: .regularExpression) {

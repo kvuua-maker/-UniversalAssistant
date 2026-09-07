@@ -107,4 +107,30 @@ struct VoiceTextInputQualityTests {
         #expect(engine.parse("Де найближча заправка?").intent == .placeSearch)
         #expect(engine.parse("Створи нову нотатку: купити молоко").intent == .noteCreate)
     }
+
+    @Test func remainingSystemFamiliesNeverBecomeWebSearch() {
+        let publicCases: [(String, String)] = [
+            ("Увімкни ліхтарик", "flashlight"),
+            ("Вимкни ліхтарик", "flashlight"),
+            ("Покажи заряд батареї у відсотках", "battery"),
+            ("Скільки вільного місця на моєму iPhone?", "storage"),
+            ("Скопіюй у буфер: зустріч завтра о десятій", "clipboard")
+        ]
+        for (phrase, action) in publicCases {
+            let command = engine.parse(phrase)
+            #expect(command.intent == .deviceAction)
+            #expect(command.entities["system_action"] == action)
+        }
+        let limited = [
+            "Відкрий налаштування Wi-Fi", "Налаштування Wi-Fi", "Увімкни Bluetooth",
+            "Увімкни режим енергозбереження", "Зменш яскравість екрана",
+            "Збільш гучність до половини", "Покажи мої пропущені дзвінки",
+            "Відкрий калькулятор", "Відкрий програму Телефон", "Покажи мої контакти", "Покажи мої будильники"
+        ]
+        for phrase in limited {
+            let command = engine.parse(phrase)
+            #expect(command.intent == .deviceAction)
+            #expect(command.entities["system_action"] == "unsupported_system_control")
+        }
+    }
 }
