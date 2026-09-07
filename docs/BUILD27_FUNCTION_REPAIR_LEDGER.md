@@ -92,3 +92,22 @@ After a clean simulator boot and successful direct `simctl install`, the already
 
 Contacts lookup now also stores verified telephone actions in `CurrentContext`, so a selected contact can be acted on without returning to universal personal-source fan-out.
 
+## Exact continuation point
+
+Checkpoint source HEAD before this ledger update: `398b6c8`.
+
+Completed and verified in this execution:
+- B27-14.01 Files Home routing no longer fans out into unrelated personal sources; it opens the public security-scoped document picker.
+- B27-14.02 Contacts lookup/calling uses the bounded resolver directly; normal calls remain `tel:`, explicit WhatsApp remains separate, and contact results now populate `CurrentContext` with verified telephone actions.
+- B27-14.03 partial: semantic Photos has a bounded five-second production deadline, confidence filtering, localized category matching, cancellation, and stale completion suppression; Share Extension prioritizes image semantics and persists image bytes atomically in the App Group container rather than large UserDefaults blobs; host OCR reads the typed file payload.
+
+PASS evidence:
+- affected Contacts/Calls/Home/local-source tests: PASS;
+- Photos/Share/CurrentContext/OCR tests: PASS;
+- localized semantic photo + deadline test: PASS;
+- Development compile: PASS.
+
+Unfinished B27 root groups: B27-10, B27-11, remaining B27-12/B27-13, B27-14.03 through B27-14.20 except the verified portions recorded above, B27-15 through B27-22, B27-24 and B27-25. Build 27 does not exist.
+
+Exact next code-level operation: in `CurrentContext.swift`, extend the typed context entity model to retain a selected PhotoKit asset identifier and safe action semantics; in `CanonicalCapabilityExecutor.photo(_:)`, populate that typed photo context for latest and semantic results; in `AssistantViewModel`/`PhotoAssetPresentationView`, add public Share Sheet and OCR actions that load the selected PhotoKit asset through `PhotoKitAssetImageLoader`. Add production-boundary tests for latest-photo→OCR, semantic-photo→Open/Share, share-last-photo, replace/expire behavior, and stale-context rejection. Keep B27-14.03 `IN_PROGRESS` until all pass.
+
