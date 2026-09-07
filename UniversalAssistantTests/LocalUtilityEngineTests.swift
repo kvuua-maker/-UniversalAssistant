@@ -40,6 +40,17 @@ struct LocalUtilityEngineTests {
         #expect(try engine.execute("Котра година?", locale: locale, timeZone: utc, now: date) == "14:55")
     }
 
+    @Test func structuredSpeechNumberGroupsAndNaturalClockVariantsStayLocal() throws {
+        #expect(try engine.execute("Скільки буде 15 відсотків від 2000 400?", locale: locale, timeZone: utc, now: .now) == "360")
+        #expect(try engine.execute("Скільки буде 15 відсотків від 2 400?", locale: locale, timeZone: utc, now: .now) == "360")
+        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = utc
+        let date = try #require(calendar.date(from: .init(year: 2026, month: 9, day: 8, hour: 6, minute: 7)))
+        #expect(try engine.execute("Яке сьогодні число?", locale: locale, timeZone: utc, now: date).contains("8"))
+        #expect(try engine.execute("Скільки зараз часу?", locale: locale, timeZone: utc, now: date) == "06:07")
+        #expect(LocalCommandEngine().parse("Яке сьогодні число?").intent == .localUtility)
+        #expect(LocalCommandEngine().parse("Сколько сейчас времени?").intent == .localUtility)
+    }
+
     @Test func currencyIsRecognizedSeparatelyAndNeverComputedAsAUnit() {
         #expect(LocalCommandEngine().parse("Переведи 150 доларів у гривні").intent == .currencyConversion)
         #expect(LocalCommandEngine().parse("Покажи курс долара до гривні").intent == .currencyConversion)

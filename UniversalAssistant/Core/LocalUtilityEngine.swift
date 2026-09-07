@@ -5,7 +5,7 @@ enum LocalUtilityError: Error, Equatable { case unsupported, invalidNumber, divi
 struct LocalUtilityEngine: Sendable {
     static func recognizes(_ raw: String) -> Bool {
         let text = normalized(raw)
-        let signals = ["скільки буде", "сколько будет", "помнож", "умнож", "поділ", "раздел", "kilometer", "кілометр", "километр", "miles", "мил", "кілограм", "килограмм", "pounds", "фунт", "celsius", "fahrenheit", "цельсі", "цельси", "який сьогодні день", "какой сегодня день", "яка сьогодні дата", "какая сегодня дата", "котра година", "который час", "local time"]
+        let signals = ["скільки буде", "сколько будет", "помнож", "умнож", "поділ", "раздел", "kilometer", "кілометр", "километр", "miles", "мил", "кілограм", "килограмм", "pounds", "фунт", "celsius", "fahrenheit", "цельсі", "цельси", "який сьогодні день", "какой сегодня день", "яка сьогодні дата", "какая сегодня дата", "яке сьогодні число", "какое сегодня число", "котра година", "который час", "скільки зараз часу", "сколько сейчас времени", "який зараз час", "local time"]
         let range = NSRange(text.startIndex..., in: text)
         let numericExpression = numericExpressionRegex.firstMatch(in: text, range: range) != nil
         let percentageExpression = percentageExpressionRegex.firstMatch(in: text, range: range) != nil
@@ -23,10 +23,10 @@ struct LocalUtilityEngine: Sendable {
         if text.contains("день тижня") || text.contains("день недели") || text.contains("day of the week") {
             return format(now, template: "EEEE", locale: locale, timeZone: timeZone)
         }
-        if text.contains("сьогодні дата") || text.contains("сегодня дата") || text.contains("today's date") {
+        if text.contains("сьогодні дата") || text.contains("сегодня дата") || text.contains("сьогодні число") || text.contains("сегодня число") || text.contains("today.s date") {
             return format(now, template: "d MMMM y", locale: locale, timeZone: timeZone)
         }
-        if text.contains("котра година") || text.contains("который час") || text.contains("local time") {
+        if text.contains("котра година") || text.contains("который час") || text.contains("скільки зараз часу") || text.contains("сколько сейчас времени") || text.contains("який зараз час") || text.contains("local time") {
             return format(now, template: "HH:mm", locale: locale, timeZone: timeZone)
         }
         if let value = try percentage(text) { return format(value, locale: locale) }
@@ -100,5 +100,22 @@ struct LocalUtilityEngine: Sendable {
     private static let numberPattern = #"[-+]?\d+(?:[.,]\d+)?"#
     private static let numericExpressionRegex = try! NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?\s*[+×*\/÷-]\s*[-+]?\d+(?:[.,]\d+)?"#)
     private static let percentageExpressionRegex = try! NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?[^\d]{0,20}(?:%|відсот|процент)"#, options: [.caseInsensitive])
-    private static func normalized(_ raw: String) -> String { raw.lowercased().replacingOccurrences(of: "’", with: "'").split(whereSeparator: \.isWhitespace).joined(separator: " ") }
+    private static func normalized(_ raw: String) -> String {
+        let compact = raw.lowercased().replacingOccurrences(of: "’", with: "\u{27}").split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        return reconcileStructuredNumberGroups(in: compact)
+    }
+
+    private static func reconcileStructuredNumberGroups(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: #"(?<![\d.,])(\d{1,})\s+(\d{3})(?![\d.,])"#) else { return text }
+        var value = text
+        for match in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
+            guard let whole = Range(match.range(at: 0), in: value),
+                  let leftRange = Range(match.range(at: 1), in: value),
+                  let rightRange = Range(match.range(at: 2), in: value),
+                  let left = Int(value[leftRange]), let right = Int(value[rightRange]) else { continue }
+            let reconstructed: Int? = left >= 1_000 && left.isMultiple(of: 1_000) ? left + right : (left < 1_000 ? left * 1_000 + right : nil)
+            if let reconstructed { value.replaceSubrange(whole, with: String(reconstructed)) }
+        }
+        return value
+    }
 }
