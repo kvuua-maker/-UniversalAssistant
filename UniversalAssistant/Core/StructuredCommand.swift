@@ -139,6 +139,9 @@ struct LocalCommandEngine: CommandParsing {
     func parse(_ text: String) -> StructuredCommand {
         let normalized = normalize(text); let language = detectLanguage(normalized)
         guard !normalized.isEmpty else { return unknown(text, normalized, language) }
+        if let directURL = validatedWebURL(text) {
+            return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: .open, entities: ["direct_url": directURL.absoluteString])
+        }
         let specificPatternIntent = Self.intentPatterns.first { intent, patterns in
             intent != .productSearch && patterns.contains { normalized.contains($0) }
         }?.0
@@ -181,6 +184,12 @@ struct LocalCommandEngine: CommandParsing {
         }
         let risk: ActionRisk = intent == .emergency ? .emergency : ([.calendarCreate, .reminderCreate, .reminderComplete, .reminderDelete, .shoppingList, .cancel, .undo].contains(intent) ? .reversible : .informational)
         return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: intent, entities: entities, constraints: constraints, risk: risk, needsClarification: intent == .unknown)
+    }
+
+    private func validatedWebURL(_ text: String) -> URL? {
+        let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let components = URLComponents(string: value), let scheme = components.scheme?.lowercased(), ["http", "https"].contains(scheme), components.host != nil else { return nil }
+        return components.url
     }
 
     private func extractCallDetails(from original: String, normalized: String, into entities: inout [String: String]) {

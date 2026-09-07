@@ -80,6 +80,20 @@ struct CanonicalCapabilityExecutionTests {
         #expect(executor.received == [.open])
     }
 
+    @Test func directHTTPSInputBypassesGenericSearchAndUnsafeSchemesDoNot() async throws {
+        let command = LocalCommandEngine().parse("https://support.apple.com/uk-ua/")
+        #expect(command.intent == .open)
+        #expect(command.entities["direct_url"] == "https://support.apple.com/uk-ua/")
+        let executor = ProductionCanonicalCapabilityExecutor(personalSearchSources: [])
+        guard case let .handoff(handoff) = try await executor.execute(command) else { Issue.record("Expected direct HTTPS handoff"); return }
+        #expect(handoff.kind == .system)
+        #expect(handoff.destination.host == "support.apple.com")
+
+        let unsafe = LocalCommandEngine().parse("javascript:alert(1)")
+        #expect(unsafe.entities["direct_url"] == nil)
+        #expect(unsafe.intent == .unknown)
+    }
+
     private func waitUntil(_ condition: @escaping @MainActor () -> Bool) async throws {
         for _ in 0..<100 {
             if condition() { return }

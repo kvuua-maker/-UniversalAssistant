@@ -29,10 +29,14 @@ struct DeviceApplicationResolver: Sendable {
     }
 
     private static func normalize(_ value: String) -> String {
-        value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: #"^(?:програму|программа|приложение|the\s+app|app)\s+"#, with: "", options: [.regularExpression, .caseInsensitive])
-            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+        var words = value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .lowercased()
+            .split(whereSeparator: \.isWhitespace)
+            .map(String.init)
+        let rawPrefixes = [["the", "app"], ["сайт", "компании"], ["програму"], ["программа"], ["приложение"], ["app"], ["сайт"], ["website"], ["site"]]
+        let prefixes = rawPrefixes.map { prefix in prefix.map { token in token.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).lowercased() } }
+        if let prefix = prefixes.first(where: { candidate in words.starts(with: candidate) }) { words.removeFirst(prefix.count) }
+        return words.joined(separator: " ")
     }
 }
 
@@ -72,6 +76,7 @@ struct UniversalDeviceCommandRouter: Sendable {
 
 enum LaunchDeviceApplications {
     static let verified: [DeviceApplicationDescriptor] = [
+        .init(id: "apple-website", aliases: ["apple", "епл"], launchURL: URL(string: "https://www.apple.com/ua/")!, exactContext: nil),
         .init(id: "spotify", aliases: ["spotify", "спотіфай", "спотифай"], launchURL: URL(string: "spotify://")!, exactContext: nil),
         .init(id: "apple-music", aliases: ["apple music", "епл мюзік", "эппл мьюзик"], launchURL: URL(string: "https://music.apple.com")!, exactContext: nil),
         .init(id: "telegram", aliases: ["telegram", "телеграм", "телега"],

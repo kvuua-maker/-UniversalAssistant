@@ -344,6 +344,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     }
 
     private func app(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        if let rawURL = command.entities["direct_url"], let url = URL(string: rawURL), ["http", "https"].contains(url.scheme?.lowercased() ?? ""), url.host != nil {
+            return .handoff(.init(query: url.host ?? rawURL, destination: url, kind: .system))
+        }
         let target = (command.entities["app"] ?? "").folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
         if ["файли", "файлы", "files"].contains(target) { return .presentation(.documents) }
         if ["камера", "camera"].contains(target) { return .presentation(.camera) }

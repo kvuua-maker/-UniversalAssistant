@@ -46,4 +46,15 @@ struct UniversalDeviceCommandRouterTests {
         #expect(destination.absoluteString.contains("domain=durov"))
         #expect(silent)
     }
+
+    @Test func officialAppleSiteUsesVerifiedFirstPartyDestination() {
+        let command = LocalCommandEngine().parse("Відкрий сайт Apple")
+        #expect(command.intent == .open)
+        #expect(command.entities["app"] == "сайт Apple")
+        guard case .direct = DeviceApplicationResolver(applications: LaunchDeviceApplications.verified).resolve(spokenName: "сайт Apple") else { Issue.record("Resolver did not normalize site prefix"); return }
+        guard case let .deviceApplication(app, destination, silent) = router.route(command) else { Issue.record("Expected verified Apple website"); return }
+        #expect(app.id == "apple-website")
+        #expect(destination.host == "www.apple.com")
+        #expect(silent)
+    }
 }
