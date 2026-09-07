@@ -178,6 +178,11 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             return .handoff(.init(query: command.originalText, destination: url, kind: .system))
         case .help:
             return .result(try result("Скажіть або введіть, що потрібно зробити", facts: []))
+        case .localUtility:
+            let value = try LocalUtilityEngine().execute(command.originalText, locale: Locale(identifier: command.language == .ru ? "ru_RU" : "uk_UA"), timeZone: .autoupdatingCurrent, now: .now)
+            return .result(try result(value, facts: []))
+        case .currencyConversion:
+            throw CanonicalCapabilityExecutionError.externalProviderRequired("current_fx_rate")
         case .show, .contextualSelection:
             return try await contextual(command, opensSelection: command.normalizedText.contains("відк") || command.normalizedText.contains("откр") || command.normalizedText.contains("open"))
         case .cancel:

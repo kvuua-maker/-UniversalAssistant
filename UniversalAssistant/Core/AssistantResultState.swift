@@ -49,6 +49,8 @@ struct ResultSummary: Equatable, Sendable {
         case .serviceSearch: "wrench.and.screwdriver.fill"
         case .calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete: "calendar"
         case .reminderCreate, .reminderQuery: "checkmark.circle.fill"
+        case .localUtility: "function"
+        case .currencyConversion: "coloncurrencysign.arrow.circlepath"
         case .unknown: "questionmark.bubble.fill"
         default: "sparkles"
         }

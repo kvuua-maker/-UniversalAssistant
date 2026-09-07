@@ -9,6 +9,7 @@ enum CommandIntent: String, Codable, CaseIterable, Sendable {
     case photoSearch, fileSearch, cameraCapture, translation, mediaSearch, podcastSearch, parcelTrack, weather
     case publicTransport, transportRoute, ticketSearch, ticketPurchaseHandoff, hotelSearch, travelPlan
     case emergency, webSearch, deviceAction, appAction, audioRecord, show, open, cancel, undo
+    case localUtility, currencyConversion
     case multiStep, settings, help, contextualSelection, unknown
 }
 enum ActionRisk: String, Codable, Sendable { case informational, reversible, consequential, emergency }
@@ -71,6 +72,8 @@ struct LocalCommandEngine: CommandParsing {
         (.undo, ["відміни останнє", "отмени последнее", "undo last", "rückgängig", "annule la dernière"]),
         (.emergency, ["112", "швидк", "скорая", "ambulance", "polizei", "police", "пожежа", "пожар"]),
         (.travelPlan, ["сплануй подорож", "спланируй поездку", "plan a trip", "reise planen", "planifie un voyage", "треба бути у", "треба бути в"]),
+        (.currencyConversion, ["курс долара", "курс евро", "курс євро", "доларів у гривні", "долларов в гривны", "usd to uah", "eur to uah"]),
+        (.localUtility, ["скільки буде", "сколько будет", "помножити", "умножить", "поділити", "разделить", "відсотків від", "процентов от", "кілометрів у", "километров в", "який сьогодні день", "какой сегодня день", "котра година", "который час"]),
         (.webSearch, ["пошукай в інтернеті", "поищи в интернете", "search the web", "im web suchen", "recherche sur le web"]),
         (.deviceAction, ["увімкни ліхтарик", "вимкни ліхтарик", "включи фонарик", "выключи фонарик", "turn on flashlight", "turn off flashlight", "taschenlampe einschalten", "allume la lampe",
                          "постав таймер", "установи таймер", "set a timer", "постав будильник", "установи будильник", "set an alarm",
@@ -286,6 +289,8 @@ struct LocalCommandEngine: CommandParsing {
         ["другий", "друга", "второй", "second", "zweite", "deuxième", "цей", "this"].contains(text) ? .contextualSelection : .unknown
     }
     private func priorityIntent(_ text: String) -> CommandIntent? {
+        if LocalUtilityEngine.recognizes(text) { return .localUtility }
+        if LocalUtilityEngine.recognizesCurrency(text) { return .currencyConversion }
         let informationalGoals = ["інформац", "відомо про", "хто зараз", "свежую информацию", "информацию о", "кто сейчас", "information about", "latest information", "who is", "informationen über", "wer ist", "informations sur", "qui est"]
         if informationalGoals.contains(where: text.contains) { return .unknown }
         if text.contains("перенеси стоматолога") { return .calendarUpdate }
