@@ -34,7 +34,7 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-14.09 | GREEN |
 | B27-14.10 | GREEN |
 | B27-14.11 | GREEN |
-| B27-14.12 | NOT_STARTED |
+| B27-14.12 | IN_PROGRESS |
 | B27-14.13 | NOT_STARTED |
 | B27-14.14 | NOT_STARTED |
 | B27-14.15 | NOT_STARTED |

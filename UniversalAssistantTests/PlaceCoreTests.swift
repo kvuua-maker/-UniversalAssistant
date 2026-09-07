@@ -57,4 +57,12 @@ struct PlaceCoreTests {
         let near = place("near", distance: 80, open: false)
         #expect(PlaceProximityOrdering().nearestFirst([far, unknown, near]).map(\.id) == ["near", "far", "unknown"])
     }
+
+    @Test func explicitNearestComputesDistanceFromResolvedCurrentLocationWhenProviderOmitsIt() {
+        let farther = place("farther", lat: 50.47, lon: 30.52, distance: nil, open: true)
+        let nearer = place("nearer", lat: 50.4505, lon: 30.52, distance: nil, open: true)
+        let ordered = PlaceProximityOrdering().nearestFirst([farther, nearer], from: location)
+        #expect(ordered.map(\.id) == ["nearer", "farther"])
+        #expect((ordered.first?.distanceMeters ?? .infinity) < (ordered.last?.distanceMeters ?? 0))
+    }
 }

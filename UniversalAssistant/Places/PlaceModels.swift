@@ -93,6 +93,15 @@ struct PlaceDeduplicator: Sendable {
 }
 
 struct PlaceProximityOrdering: Sendable {
+    func nearestFirst(_ places: [Place], from origin: ValidatedLocation) -> [Place] {
+        nearestFirst(places.map { place in
+            guard place.distanceMeters == nil else { return place }
+            var value = place
+            value.distanceMeters = Self.distance(fromLatitude: origin.sample.latitude, longitude: origin.sample.longitude, toLatitude: place.latitude, longitude: place.longitude)
+            return value
+        })
+    }
+
     func nearestFirst(_ places: [Place]) -> [Place] {
         places.enumerated().sorted { lhs, rhs in
             switch (lhs.element.distanceMeters, rhs.element.distanceMeters) {
@@ -102,6 +111,15 @@ struct PlaceProximityOrdering: Sendable {
             case (nil, nil): return lhs.offset < rhs.offset
             }
         }.map(\.element)
+    }
+
+    private static func distance(fromLatitude latitude: Double, longitude: Double, toLatitude destinationLatitude: Double, longitude destinationLongitude: Double) -> Double {
+        let radius = 6_371_000.0
+        let firstLatitude = latitude * .pi / 180, secondLatitude = destinationLatitude * .pi / 180
+        let latitudeDelta = (destinationLatitude - latitude) * .pi / 180
+        let longitudeDelta = (destinationLongitude - longitude) * .pi / 180
+        let haversine = sin(latitudeDelta / 2) * sin(latitudeDelta / 2) + cos(firstLatitude) * cos(secondLatitude) * sin(longitudeDelta / 2) * sin(longitudeDelta / 2)
+        return radius * 2 * atan2(sqrt(haversine), sqrt(1 - haversine))
     }
 }
 

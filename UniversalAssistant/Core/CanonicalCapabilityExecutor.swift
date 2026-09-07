@@ -313,7 +313,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let searchText = placeSearchText(for: command, category: category)
         let response = try await placeSearch.search(.init(text: searchText, category: category, location: location, limit: 5))
         let nearestRequested = ["найближ", "ближайш", "nearest", "closest"].contains(where: command.normalizedText.contains)
-        let places = nearestRequested ? PlaceProximityOrdering().nearestFirst(response.places) : response.places
+        let places = nearestRequested ? PlaceProximityOrdering().nearestFirst(response.places, from: location) : response.places
         guard !places.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_places_found") }
         let output = try result("Знайдено місця", facts: places.prefix(5).enumerated().map { index, place in
             ResultFact(id: place.id, label: place.name, value: place.address ?? place.category.rawValue, state: .verified, source: place.source, observedAt: place.timestamp, priority: 100 - index)
