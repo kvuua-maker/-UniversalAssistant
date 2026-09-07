@@ -101,7 +101,7 @@ struct PhotoKitAssetImageLoader: PhotoAssetImageLoading {
     func imageData(localIdentifier: String) async throws -> Data {
         guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject else { throw CocoaError(.fileNoSuchFile) }
         return try await withCheckedThrowingContinuation { continuation in
-            let options = PHImageRequestOptions(); options.isNetworkAccessAllowed = false; options.deliveryMode = .highQualityFormat
+            let options = PHImageRequestOptions(); options.isNetworkAccessAllowed = true; options.deliveryMode = .highQualityFormat
             PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, info in
                 if let error = info?[PHImageErrorKey] as? Error { continuation.resume(throwing: error) }
                 else if let data { continuation.resume(returning: data) }
@@ -135,6 +135,22 @@ struct PhotoSemanticSearchEngine: Sendable {
             } }
             var matches: [(Int, PhotoAssetReference)] = []; for await value in group { if let value { matches.append(value) } }
             return matches.sorted { $0.0 < $1.0 }.prefix(max(1, min(limit, 10))).map { $0.1 }
+        }
+    }
+}
+
+struct PhotoAssetPresentationView: View {
+    let localIdentifier: String
+    @State private var image: UIImage?
+    var body: some View {
+        Group {
+            if let image { Image(uiImage: image).resizable().scaledToFit() }
+            else { ProgressView() }
+        }
+        .padding()
+        .task {
+            guard image == nil, let data = try? await PhotoKitAssetImageLoader().imageData(localIdentifier: localIdentifier) else { return }
+            image = UIImage(data: data)
         }
     }
 }

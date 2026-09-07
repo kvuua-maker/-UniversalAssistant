@@ -16,6 +16,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case contactImport(Data)
     case translationTarget(String)
     case translation(LocalTranslationPlan)
+    case photoAsset(String)
 
     var id: String {
         switch self {
@@ -29,6 +30,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
         case .contactImport: "contact-import"
         case .translationTarget: "translation-target"
         case .translation: "translation"
+        case .photoAsset: "photo-asset"
         }
     }
 }
@@ -151,7 +153,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             let target = try required(command.entities["target_language"], "translation_target_language")
             return .presentation(.translation(try CameraIntelligenceCore().translationPlan(text: text, sourceLanguage: nil, targetLanguage: target)))
         case .photoSearch:
-            return try await personal(command, query: command.entities["query"] ?? "", immediateOpen: false)
+            return try await photo(command)
         case .podcastSearch:
             let query = try required(command.entities["query"], "podcast_query")
             let values = try await podcasts.search(query, limit: 3, country: Locale.current.region?.identifier ?? "UA")
@@ -219,7 +221,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case let .handoff(value): return .init(id: step.id, label: command.intent.rawValue, value: value.destination.absoluteString, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
         case let .presentation(value):
             switch value {
-            case .message, .share, .documents, .contactImport:
+            case .message, .share, .documents, .contactImport, .photoAsset:
                 return .init(id: step.id, label: command.intent.rawValue, value: value.id, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
             case .camera, .ocrCamera, .ocrDocuments, .scanner, .translationTarget, .translation:
                 throw CoordinationOperationError.confirmationRequired
@@ -303,6 +305,29 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case let .unsupported(reason): throw CanonicalCapabilityExecutionError.unavailable(reason)
         default: throw CanonicalCapabilityExecutionError.unavailable("unsupported_app_route")
         }
+    }
+
+    private func photo(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        let query = command.entities["query"] ?? ""
+        let latest = query.isEmpty
+        let access = photos.authorization() == .permissionRequired ? await photos.requestAuthorization() : photos.authorization()
+        guard access == .permitted || access == .limited else { throw CanonicalCapabilityExecutionError.unavailable("photos_access_unavailable") }
+        let assets = await photos.search(.init(), limit: latest ? 1 : 20)
+        guard let newest = assets.first else { throw CanonicalCapabilityExecutionError.unavailable("photos_empty") }
+        if latest {
+            let action = ResultAction(id: "photos:" + newest.localIdentifier, title: "Відкрити", kind: .showPhoto, destination: nil)
+            let output = try result("Найновіше фото", facts: [.init(id: action.id, label: "Фото", value: newest.creationDate?.formatted(), state: .verified, source: "Photos", observedAt: newest.creationDate ?? .now, priority: 100)], actions: [action])
+            currentContext.replaceResults(output); return .result(output)
+        }
+        let response = await PhotosPersonalSearchSource(library: photos).search(query: query, limit: 5)
+        guard !response.results.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("photos_no_semantic_match") }
+        let facts = response.results.enumerated().map { index, value in
+            ResultFact(id: value.id, label: value.title, value: value.subtitle ?? value.sourceObjectID, state: .verified, source: "Photos", observedAt: .now, priority: 100 - index)
+        }
+        let actions = response.results.map { ResultAction(id: $0.id, title: "Відкрити", kind: .showPhoto, destination: nil) }
+        let output = try result("Знайдено у Фото", facts: facts, actions: actions)
+        currentContext.replaceResults(output)
+        return .result(output)
     }
 
     private func personal(_ command: StructuredCommand, query: String, immediateOpen: Bool) async throws -> CapabilityExecutionOutcome {

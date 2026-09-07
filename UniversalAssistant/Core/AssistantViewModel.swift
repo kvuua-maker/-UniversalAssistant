@@ -396,6 +396,11 @@ final class AssistantViewModel {
         default: presentFailure(message: AppText.value("request_unavailable"))
         }
     }
+    func performResultAction(_ action: ResultAction) {
+        guard action.kind == .showPhoto, action.id.hasPrefix("photos:") else { return }
+        capabilityPresentation = .photoAsset(String(action.id.dropFirst("photos:".count)))
+    }
+
     func handleCapturedOCRImage(_ image: UIImage?) { processOCR(image, provenance: .camera) }
     func handleSelectedOCRDocuments(_ urls: [URL]) {
         capabilityPresentation = nil

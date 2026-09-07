@@ -38,7 +38,7 @@ struct PhotosPersonalSearchSource: PersonalSearchSource {
         let access = library.authorization() == .permissionRequired ? await library.requestAuthorization() : library.authorization()
         guard access == .permitted || access == .limited else { return .init(source: id, results: [], isComplete: false, unavailableReason: "photos_access_unavailable") }
         let assets = query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? await library.search(.init(), limit: limit) : await PhotoSemanticSearchEngine(library: library, loader: loader, labeler: labeler).search(query, limit: limit)
-        let values = assets.enumerated().map { index, asset in PersonalSearchResult(id: "photos:\(asset.localIdentifier)", title: "Фото \(index + 1)", subtitle: asset.creationDate?.formatted(), source: id, sourceObjectID: asset.localIdentifier, openReference: "ph://\(asset.localIdentifier)", freshness: .local, relevance: 80 - index, exactMatch: false) }
+        let values = assets.enumerated().map { index, asset in PersonalSearchResult(id: "photos:\(asset.localIdentifier)", title: "Фото \(index + 1)", subtitle: asset.creationDate?.formatted(), source: id, sourceObjectID: asset.localIdentifier, openReference: "photo-asset:" + asset.localIdentifier, freshness: .local, relevance: 80 - index, exactMatch: false) }
         return .init(source: id, results: values, isComplete: true, unavailableReason: nil)
     }
 }

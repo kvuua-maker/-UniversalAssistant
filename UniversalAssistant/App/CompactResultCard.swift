@@ -6,6 +6,7 @@ struct CompactResultCard: View {
     var onScannerAction: (ScannerProductionResult) -> Void = { _ in }
     var onOCRAction: (OCRProductionResult, OCRResultAction) -> Void = { _, _ in }
     var onTranslationAction: (TranslationProductionResult, OCRResultAction) -> Void = { _, _ in }
+    var onResultAction: (ResultAction) -> Void = { _ in }
 
     var body: some View {
         switch state {
@@ -62,7 +63,8 @@ struct CompactResultCard: View {
                     }
                 }
                 ForEach(result.actions.prefix(3)) { action in
-                    if let destination = action.destination { Link(action.title, destination: destination).buttonStyle(.bordered) }
+                    if action.kind == .showPhoto { Button(action.title) { onResultAction(action) }.buttonStyle(.bordered) }
+                    else if let destination = action.destination { Link(action.title, destination: destination).buttonStyle(.bordered) }
                 }
                 ForEach(result.warnings, id: \.self) { Text($0).font(.caption).foregroundStyle(.secondary) }
             }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))

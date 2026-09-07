@@ -13,6 +13,17 @@ private struct PhotoLibraryStub: PhotoLibrarySearching {
     func requestAuthorization() async -> LocalSearchAccess { access }
     func search(_ criteria: PhotoSearchCriteria, limit: Int) async -> [PhotoAssetReference] { Array(values.prefix(limit)) }
 }
+private final class TransitioningPhotoLibraryStub: PhotoLibrarySearching, @unchecked Sendable {
+    private let lock = NSLock()
+    private var current: LocalSearchAccess
+    private let granted: LocalSearchAccess
+    private let values: [PhotoAssetReference]
+    private(set) var requestCount = 0
+    init(initial: LocalSearchAccess, granted: LocalSearchAccess, values: [PhotoAssetReference]) { self.current = initial; self.granted = granted; self.values = values }
+    func authorization() -> LocalSearchAccess { lock.withLock { current } }
+    func requestAuthorization() async -> LocalSearchAccess { lock.withLock { requestCount += 1; current = granted; return current } }
+    func search(_ criteria: PhotoSearchCriteria, limit: Int) async -> [PhotoAssetReference] { Array(values.prefix(limit)) }
+}
 private struct ImageLoaderStub: PhotoAssetImageLoading { func imageData(localIdentifier: String) async throws -> Data { Data() } }
 private struct LabelerStub: PhotoSemanticLabeling { func labels(imageData: Data) async throws -> [PhotoSemanticLabel] { [.init(name: "receipt", confidence: 1)] } }
 private struct LocalSourceStub: LocalSearchSource {
@@ -30,7 +41,7 @@ private struct LocalSourceStub: LocalSearchSource {
         let asset = PhotoAssetReference(localIdentifier: "p1", creationDate: .init(timeIntervalSince1970: 1), coordinate: nil, album: nil)
         let source = PhotosPersonalSearchSource(library: PhotoLibraryStub(access: .limited, values: [asset]), loader: ImageLoaderStub(), labeler: LabelerStub())
         let response = await source.search(query: "receipt", limit: 3)
-        #expect(response.isComplete); #expect(response.results.first?.sourceObjectID == "p1"); #expect(response.results.first?.openReference == "ph://p1")
+        #expect(response.isComplete); #expect(response.results.first?.sourceObjectID == "p1"); #expect(response.results.first?.openReference == "photo-asset:p1")
     }
     @Test func filesAdapterRejectsUnauthorizedAndPreservesOpenReference() async {
         let item = LocalSearchResult(id: "f1", source: .files, title: "Contract.pdf", subtitle: nil, occurredAt: nil, exactNameMatch: true, relevance: 70, openReference: "file:///authorized/Contract.pdf")
@@ -55,5 +66,39 @@ extension ApplePersonalSearchSourcesTests {
         let command = StructuredCommand(originalText: "Знайди контакт мама", normalizedText: "знайди контакт мама", language: .uk, intent: .contactLookup, entities: ["contact":"Mama"])
         guard case let .result(result) = try await executor.execute(command) else { Issue.record("Expected native deterministic result"); return }
         #expect(result.facts.first?.id == "contacts:c1"); #expect(result.actions.first?.destination?.absoluteString == "contact:c1")
+    }
+    @Test @MainActor func latestPhotoUsesOneNewestAssetAndInAppPresentationAction() async throws {
+        let older = PhotoAssetReference(localIdentifier: "old", creationDate: .init(timeIntervalSince1970: 1), coordinate: nil, album: nil)
+        let newest = PhotoAssetReference(localIdentifier: "new", creationDate: .init(timeIntervalSince1970: 2), coordinate: nil, album: nil)
+        let executor = ProductionCanonicalCapabilityExecutor(photos: PhotoLibraryStub(access: .limited, values: [newest, older]), personalSearchSources: [])
+        let command = LocalCommandEngine().parse("Відкрий найновіше фото")
+        guard case let .result(result) = try await executor.execute(command) else { Issue.record("Expected native photo result"); return }
+        #expect(result.facts.count == 1)
+        #expect(result.facts.first?.id == "photos:new")
+        #expect(result.actions == [.init(id: "photos:new", title: "Відкрити", kind: .showPhoto, destination: nil)])
+        let model = AssistantViewModel(capabilityExecutor: executor)
+        model.performResultAction(result.actions[0])
+        #expect(model.capabilityPresentation == .photoAsset("new"))
+    }
+    @Test @MainActor func photoPermissionGrantContinuesPendingLatestRequest() async throws {
+        let asset = PhotoAssetReference(localIdentifier: "granted", creationDate: .now, coordinate: nil, album: nil)
+        let library = TransitioningPhotoLibraryStub(initial: .permissionRequired, granted: .permitted, values: [asset])
+        let executor = ProductionCanonicalCapabilityExecutor(photos: library, personalSearchSources: [])
+        guard case let .result(result) = try await executor.execute(LocalCommandEngine().parse("Відкрий останнє фото")) else { Issue.record("Expected resumed photo result"); return }
+        #expect(library.requestCount == 1)
+        #expect(result.facts.map(\.id) == ["photos:granted"])
+    }
+
+    @Test @MainActor func latestPhotoFailsTruthfullyForDeniedAndEmptyLibrary() async {
+        for library in [
+            PhotoLibraryStub(access: .denied, values: []),
+            PhotoLibraryStub(access: .permitted, values: [])
+        ] {
+            let executor = ProductionCanonicalCapabilityExecutor(photos: library, personalSearchSources: [])
+            do { _ = try await executor.execute(LocalCommandEngine().parse("Відкрий найсвіжіше фото")); Issue.record("Expected unavailable photo result") }
+            catch let error as CanonicalCapabilityExecutionError {
+                #expect(error == .unavailable(library.access == .denied ? "photos_access_unavailable" : "photos_empty"))
+            } catch { Issue.record("Unexpected error: \(error)") }
+        }
     }
 }

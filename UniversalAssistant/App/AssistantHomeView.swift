@@ -31,7 +31,7 @@ struct AssistantHomeView: View {
                     RecordingStatusPill(state: model.recorder.state)
                     CompactResultCard(state: model.resultState, onReportIssue: {
                         Task { await model.reportWrongResult() }
-                    }, onScannerAction: model.performScannerAction, onOCRAction: model.performOCRAction, onTranslationAction: model.performTranslationAction)
+                    }, onScannerAction: model.performScannerAction, onOCRAction: model.performOCRAction, onTranslationAction: model.performTranslationAction, onResultAction: model.performResultAction)
                         .frame(maxWidth: 520)
                         Spacer(minLength: 24)
                     }
@@ -86,6 +86,8 @@ struct AssistantHomeView: View {
                 VCardImportConfirmationView(data: data, onComplete: model.dismissCapabilityPresentation)
             case let .translationTarget(text):
                 TranslationTargetPickerView(text: text, onSelect: model.startTranslation)
+            case let .photoAsset(identifier):
+                PhotoAssetPresentationView(localIdentifier: identifier)
             case let .translation(plan):
                 AppleTranslationExecutionView(plan: plan, onResult: model.handleTranslationResult, onFailure: model.handleTranslationFailure)
             case let .message(recipients, body):
