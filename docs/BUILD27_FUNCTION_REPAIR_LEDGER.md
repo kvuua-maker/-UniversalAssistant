@@ -25,7 +25,7 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-14 | IN_PROGRESS |
 | B27-14.01 | GREEN |
 | B27-14.02 | GREEN |
-| B27-14.03 | IN_PROGRESS |
+| B27-14.03 | GREEN |
 | B27-14.04 | NOT_STARTED |
 | B27-14.05 | NOT_STARTED |
 | B27-14.06 | NOT_STARTED |
@@ -92,6 +92,21 @@ After a clean simulator boot and successful direct `simctl install`, the already
 
 Contacts lookup now also stores verified telephone actions in `CurrentContext`, so a selected contact can be acted on without returning to universal personal-source fan-out.
 
+## Completed material repair: B27-14.03
+
+Physical evidence: Build 26 returned unrelated semantic assets, did not retain typed PhotoKit identity, and did not bind selected-photo OCR or Share to a fresh asset.
+
+Material repair:
+- Semantic search is bounded to five seconds, confidence-filtered, cancellable, and fails closed.
+- Latest and semantic results populate CurrentContext as typed photo entities with exact PhotoKit identifiers and bounded provenance.
+- Replace and expiry semantics prevent stale asset reuse.
+- Photo presentation loads the exact PHAsset through PhotoKitAssetImageLoader; public actions use UIActivityViewController for Share and local Vision OCR.
+- Share Extension images remain atomic App Group file-backed typed envelopes consumed once by the host.
+
+Production evidence: PhotoKit execution creates typed photo actions, AssistantViewModel dispatches the exact asset into PhotoAssetPresentationView, and follow-up resolves only a fresh typed identifier. No ph URL execution path is used.
+
+Verification: Development compile PASS; affected Photos, Share, CurrentContext and OCR run PASS, 24 tests in 4 suites. Owner physical retest remains required.
+
 ## Exact continuation point
 
 Checkpoint source HEAD before this ledger update: `398b6c8`.
@@ -109,5 +124,4 @@ PASS evidence:
 
 Unfinished B27 root groups: B27-10, B27-11, remaining B27-12/B27-13, B27-14.03 through B27-14.20 except the verified portions recorded above, B27-15 through B27-22, B27-24 and B27-25. Build 27 does not exist.
 
-Exact next code-level operation: in `CurrentContext.swift`, extend the typed context entity model to retain a selected PhotoKit asset identifier and safe action semantics; in `CanonicalCapabilityExecutor.photo(_:)`, populate that typed photo context for latest and semantic results; in `AssistantViewModel`/`PhotoAssetPresentationView`, add public Share Sheet and OCR actions that load the selected PhotoKit asset through `PhotoKitAssetImageLoader`. Add production-boundary tests for latest-photo→OCR, semantic-photo→Open/Share, share-last-photo, replace/expire behavior, and stale-context rejection. Keep B27-14.03 `IN_PROGRESS` until all pass.
-
+Exact next code-level operation: begin B27-14.04 in the production Home path. Audit the existing CameraIntelligenceCore, ScannerProductionRouter, OCRProductionPipeline, VisionKit document-scanner presentation and SharedContentActionRouter; then connect typed and normalized-voice OCR, QR and document-scan intents to concrete public scanner or Vision execution. Preserve typed QR and OCR physical passes, extend full-receipt OCR result handling, provide safe QR payload continuation, and add scan to OCR to translation production-boundary regressions. Keep B27-14.04 IN_PROGRESS until affected suites and Development compile pass.

@@ -166,6 +166,11 @@ final class AssistantViewModel {
             processOCR(image, provenance: .sharedImage)
             return
         }
+        if isSharedImageTextRequest(submittedInput), let identifier = currentContext.freshPhotoAssetIdentifier() {
+            input = ""
+            capabilityPresentation = .photoAsset(identifier)
+            return
+        }
         if isSharedURLOpenRequest(submittedInput), let shared = currentContext.freshShared(), shared.kind == .url,
            let url = URL(string: shared.value) {
             input = ""
@@ -424,6 +429,7 @@ final class AssistantViewModel {
     }
 
     func handleCapturedOCRImage(_ image: UIImage?) { processOCR(image, provenance: .camera) }
+    func handlePhotoOCRImage(_ image: UIImage?) { processOCR(image, provenance: .photoLibrary) }
     func handleSelectedOCRDocuments(_ urls: [URL]) {
         capabilityPresentation = nil
         guard let url = urls.first else { presentFailure(message: AppText.value("request_unavailable")); return }

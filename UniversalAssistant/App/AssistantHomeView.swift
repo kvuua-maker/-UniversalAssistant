@@ -87,7 +87,7 @@ struct AssistantHomeView: View {
             case let .translationTarget(text):
                 TranslationTargetPickerView(text: text, onSelect: model.startTranslation)
             case let .photoAsset(identifier):
-                PhotoAssetPresentationView(localIdentifier: identifier)
+                PhotoAssetPresentationView(localIdentifier: identifier, onOCR: model.handlePhotoOCRImage)
             case let .translation(plan):
                 AppleTranslationExecutionView(plan: plan, onResult: model.handleTranslationResult, onFailure: model.handleTranslationFailure)
             case let .message(recipients, body):

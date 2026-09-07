@@ -344,7 +344,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         if latest {
             let action = ResultAction(id: "photos:" + newest.localIdentifier, title: "Відкрити", kind: .showPhoto, destination: nil)
             let output = try result("Найновіше фото", facts: [.init(id: action.id, label: "Фото", value: newest.creationDate?.formatted(), state: .verified, source: "Photos", observedAt: newest.creationDate ?? .now, priority: 100)], actions: [action])
-            currentContext.replaceResults(output); return .result(output)
+            currentContext.replacePhotoResults(output); return .result(output)
         }
         let response = await PhotosPersonalSearchSource(library: photos).search(query: query, limit: 5)
         guard !response.results.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("photos_no_semantic_match") }
@@ -353,7 +353,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         }
         let actions = response.results.map { ResultAction(id: $0.id, title: "Відкрити", kind: .showPhoto, destination: nil) }
         let output = try result("Знайдено у Фото", facts: facts, actions: actions)
-        currentContext.replaceResults(output)
+        currentContext.replacePhotoResults(output)
         return .result(output)
     }
 

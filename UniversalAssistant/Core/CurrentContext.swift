@@ -10,7 +10,7 @@ struct ContextProvenance: Equatable, Codable, Sendable {
 }
 
 struct ContextEntity: Equatable, Codable, Sendable {
-    enum Kind: String, Codable, Sendable { case person, place, product, store, event, appointment, route, providerResult }
+    enum Kind: String, Codable, Sendable { case person, place, product, store, event, appointment, route, photo, providerResult }
     let id: String
     let kind: Kind
     let displayName: String
@@ -201,6 +201,19 @@ final class CurrentContextStore {
         context.update(now: now, lifetime: lifetime, results: entities)
         consumedActionIDs.removeAll()
     }
+    func replacePhotoResults(_ result: DeterministicResult, now: Date = .now, lifetime: TimeInterval = 300) {
+        let expires = now.addingTimeInterval(lifetime)
+        let actions = Dictionary(uniqueKeysWithValues: result.actions.map { ($0.id, $0) })
+        let entities = result.facts.prefix(20).compactMap { fact -> ContextEntity? in
+            guard fact.id.hasPrefix("photos:") else { return nil }
+            let localIdentifier = String(fact.id.dropFirst("photos:".count))
+            guard !localIdentifier.isEmpty else { return nil }
+            let provenance = ContextProvenance(source: fact.source ?? "Photos", objectID: localIdentifier, observedAt: fact.observedAt ?? now, expiresAt: expires)
+            return ContextEntity(id: fact.id, kind: .photo, displayName: fact.label, phoneNumber: nil, provenance: provenance, actionID: actions[fact.id]?.id, openReference: "photo-asset:\(localIdentifier)")
+        }
+        context.update(now: now, lifetime: lifetime, results: entities)
+        consumedActionIDs.removeAll()
+    }
     func select(_ command: StructuredCommand, now: Date = .now) -> ContextEntity? {
         _ = context.resolve(command, now: now)
         return context.selectedEntity
@@ -211,6 +224,13 @@ final class CurrentContextStore {
         return context.select(entityID: first.id, now: now)
     }
     func freshSelected(at now: Date = .now) -> ContextEntity? { context.expireStale(at: now); return context.selectedEntity }
+    func freshPhotoAssetIdentifier(at now: Date = .now) -> String? {
+        context.expireStale(at: now)
+        let entity = context.selectedEntity?.kind == .photo ? context.selectedEntity : context.resultEntities.first(where: { $0.kind == .photo })
+        guard let reference = entity?.openReference, reference.hasPrefix("photo-asset:") else { return nil }
+        let identifier = String(reference.dropFirst("photo-asset:".count))
+        return identifier.isEmpty ? nil : identifier
+    }
     func replaceTranslation(sourceText: String, sourceLanguage: String?, now: Date = .now, lifetime: TimeInterval = 300) {
         let provenance = ContextProvenance(source: "AppleTranslation", objectID: "translation-\(UUID().uuidString)", observedAt: now, expiresAt: now.addingTimeInterval(lifetime))
         context.update(now: now, lifetime: lifetime, translation: .init(sourceText: sourceText, sourceLanguage: sourceLanguage, provenance: provenance))

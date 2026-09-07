@@ -24,6 +24,18 @@ struct ProductionContextContinuationTests {
         #expect(store.consumeSelectedAction(now: now)?.absoluteString == "https://example.com/two")
         #expect(store.consumeSelectedAction(now: now) == nil)
     }
+    @Test func typedPhotoContextSelectsReplacesAndExpiresWithoutStaleReuse() throws {
+        let store = CurrentContextStore()
+        let first = try DeterministicResultComposer().compose(primaryAnswer: "Photo", facts: [.init(id: "photos:asset-a", label: "A", value: "image", state: .verified, source: "Photos", observedAt: now, priority: 100)], actions: [.init(id: "photos:asset-a", title: "Open", kind: .showPhoto, destination: nil)])
+        store.replacePhotoResults(first, now: now, lifetime: 10)
+        #expect(store.context.resultEntities.first?.kind == .photo)
+        #expect(store.freshPhotoAssetIdentifier(at: now) == "asset-a")
+        let second = try DeterministicResultComposer().compose(primaryAnswer: "Photo", facts: [.init(id: "photos:asset-b", label: "B", value: "image", state: .verified, source: "Photos", observedAt: now.addingTimeInterval(1), priority: 100)], actions: [.init(id: "photos:asset-b", title: "Open", kind: .showPhoto, destination: nil)])
+        store.replacePhotoResults(second, now: now.addingTimeInterval(1), lifetime: 10)
+        #expect(store.freshPhotoAssetIdentifier(at: now.addingTimeInterval(1)) == "asset-b")
+        #expect(store.freshPhotoAssetIdentifier(at: now.addingTimeInterval(12)) == nil)
+    }
+
     @Test func productionExecutorShowsAndOpensStoredPersonalResult() async throws {
         let store = CurrentContextStore()
         let contact = ContactCandidate(identifier: "contact-1", displayName: "Mama", phoneNumbers: ["+380501234567"])

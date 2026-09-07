@@ -199,13 +199,29 @@ struct PhotoSemanticSearchEngine: Sendable {
 
 struct PhotoAssetPresentationView: View {
     let localIdentifier: String
+    let onOCR: @MainActor (UIImage?) -> Void
     @State private var image: UIImage?
+    @State private var showsShareSheet = false
+
+    init(localIdentifier: String, onOCR: @escaping @MainActor (UIImage?) -> Void = { _ in }) {
+        self.localIdentifier = localIdentifier
+        self.onOCR = onOCR
+    }
+
     var body: some View {
-        Group {
-            if let image { Image(uiImage: image).resizable().scaledToFit() }
-            else { ProgressView() }
+        VStack {
+            if let image {
+                Image(uiImage: image).resizable().scaledToFit()
+                HStack {
+                    Button("Розпізнати текст") { onOCR(image) }
+                    Button("Поділитися") { showsShareSheet = true }
+                }
+            } else { ProgressView() }
         }
         .padding()
+        .sheet(isPresented: $showsShareSheet) {
+            if let image { SystemShareSheet(items: [image]) }
+        }
         .task {
             guard image == nil, let data = try? await PhotoKitAssetImageLoader().imageData(localIdentifier: localIdentifier) else { return }
             image = UIImage(data: data)
