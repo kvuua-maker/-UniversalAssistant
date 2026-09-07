@@ -1,7 +1,7 @@
 # Build 26 canonical repair checkpoint
 
 - Baseline physical release: `aab4b308cf79a38626e29bf86cc4a46513f2402a` (0.1.0 Build 25).
-- Latest green source checkpoint: `9105c861da880d94612c49e6b1e5a04af15d4d79` (`Lower multi-step plans to concrete operations`).
+- Latest green source checkpoint: `ecee031e6ce469e51347a0bbe2c5d113b9263d58` (`Preserve typed context across follow-up flows`).
 - Build metadata remains 0.1.0 (25). Build 26 has not been created.
 - Recovery artifacts remain untouched and untracked.
 
@@ -33,11 +33,14 @@
 - The production operation map dispatches command-bearing concrete steps through the canonical typed executor. A dependent navigation step selects the first concrete MapKit result action through `CurrentContextStore` and produces a verified Apple Maps handoff.
 - Simple product requests remain one concrete `.productSearch` operation and use the existing truthful current-source/web fallback; they do not become an unresolved multi-step plan.
 - Multi-step planner/coordinator suites passed 31/31; expanded affected canonical execution, coordination, and CurrentContext suites passed 43/43 before the final abstract-ID guard; final ProductionMultiStep suite passed 16/16; Development compile passed.
+- CurrentContext now retains typed original translation source and typed Share Extension URL/image payloads with five-minute freshness, replacement, expiry, and reset semantics. Translation follow-ups retranslate the original source text; explicit shared-URL follow-ups reuse the exact URL.
+- Share Extension image ingestion now handles public `UIImage` attachments as encoded image data. Main-app shared-image follow-ups decode that payload and run the existing local Vision OCR pipeline with `.sharedImage` provenance instead of converting the image into search text.
+- Route context remains backed by the existing typed origin/destination lifecycle and production route-aware executor. CurrentContext/Share/OCR/translation/route affected tests passed 48/48 in 8 suites; Development compile passed.
 
 ## Exact continuation point
 
-1. Continue with the CurrentContext lifecycle: translation follow-up, route follow-up, shared URL, shared image, and Share Extension continuation. Start by tracing `CurrentContextStore`, production Home ingestion, and Share Extension payload binding; add production-boundary E2E coverage.
-2. Continue in master priority order: local utilities; Notes/clipboard audit; remaining public system-capability reconciliation; real configured information providers; production UI.
+1. Continue with local deterministic utilities: arithmetic, percentages, unit conversion, and local date/day/time. Trace top-level Home parsing/routing and add production-boundary E2E tests; keep currency separate pending a legitimate live FX source.
+2. Continue in master priority order: currency provider audit; Notes/clipboard audit; remaining public system-capability reconciliation; real configured information providers; production UI.
 3. Persist the exactly 71-row B25 forensic matrix, capability inventory, voice evidence, and VPS correlation artifact.
 4. Run all repository gates and checkpoint green source before incrementing to Build 26.
 
