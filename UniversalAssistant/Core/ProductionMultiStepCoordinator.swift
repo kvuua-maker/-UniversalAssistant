@@ -34,6 +34,10 @@ final class ProductionStepOperationMap {
     }
 
     private func operation(for step: ExecutionPlanStep, command: StructuredCommand) -> CoordinationStepOperation? {
+        if [.typedCommand, .deterministicCompose].contains(step.capability) { return nil }
+        if let subcommand = step.command, let typedExecutor {
+            return { @MainActor in try await typedExecutor(subcommand, step) }
+        }
         switch step.capability {
         case .relativeDate:
             return { [command] in
@@ -83,12 +87,11 @@ final class ProductionStepOperationMap {
                 return Self.fact(step, value: "\(snapshot.current.temperatureCelsius) °C, \(snapshot.current.condition)", source: snapshot.source, observedAt: snapshot.fetchedAt)
             }
         case .deterministicCompose:
-            return { Self.fact(step, value: "deterministic_aggregate_ready", source: "UniversalAssistant") }
+            return nil
         case .voice, .command:
             return { Self.fact(step, value: "validated", source: "UniversalAssistant") }
         case .typedCommand:
-            guard let subcommand = step.command, let typedExecutor else { return nil }
-            return { @MainActor in try await typedExecutor(subcommand, step) }
+            return nil
         case .directAction, .transport, .hotel:
             return nil
         }

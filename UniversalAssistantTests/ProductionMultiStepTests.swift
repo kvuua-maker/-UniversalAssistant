@@ -78,14 +78,14 @@ private struct MultiStepWeatherStub: WeatherCommandExecuting {
 }
 
 extension ProductionMultiStepTests {
-    @Test func typedProductionStepInvokesBoundRealExecutorAndPreservesTypedCommand() async throws {
+    @Test func concreteProductionStepInvokesBoundRealExecutor() async throws {
         actor Probe {
             var intents: [CommandIntent] = []
             func record(_ intent: CommandIntent) { intents.append(intent) }
         }
         let probe = Probe()
         let subcommand = StructuredCommand(originalText: "record", normalizedText: "record", language: .en, intent: .audioRecord)
-        let step = ExecutionPlanStep(id: "step-01-audioRecord", capability: .typedCommand, dependencies: [], command: subcommand)
+        let step = ExecutionPlanStep(id: "step-01-audioRecord", capability: .directAction, dependencies: [], command: subcommand)
         let plan = DeterministicExecutionPlan(commandID: UUID(), intent: .multiStep, constraints: [], steps: [step], completionStepID: step.id, aiInvocationCount: 0)
         let map = ProductionStepOperationMap(eventKit: MultiStepEventKitStub(), currentLocation: MultiStepLocationStub(),
             locationResolver: .init(geocoder: MultiStepGeocoderStub()), places: .init(providers: [MultiStepPlaceStub()]),
@@ -95,9 +95,19 @@ extension ProductionMultiStepTests {
         #expect(await probe.intents == [.audioRecord])
     }
 
+    @Test func abstractPlannerIdentifiersAreNeverExecutable() {
+        let abstract = [
+            ExecutionPlanStep(id: "typed", capability: .typedCommand, dependencies: [], command: StructuredCommand(originalText: "open", normalizedText: "open", language: .en, intent: .open)),
+            ExecutionPlanStep(id: "compose", capability: .deterministicCompose, dependencies: [])
+        ]
+        let plan = DeterministicExecutionPlan(commandID: UUID(), intent: .multiStep, constraints: [], steps: abstract, completionStepID: "compose", aiInvocationCount: 0)
+        let map = ProductionStepOperationMap(eventKit: MultiStepEventKitStub(), currentLocation: MultiStepLocationStub(), locationResolver: .init(geocoder: MultiStepGeocoderStub()), places: .init(providers: [MultiStepPlaceStub()]), typedExecutor: { _, step in productionFact(step.id) })
+        #expect(map.operations(for: command(), plan: plan).isEmpty)
+    }
+
     @Test func typedProductionStepWithoutEligibleExecutorRemainsTruthfullyUnavailable() {
         let subcommand = StructuredCommand(originalText: "blocked", normalizedText: "blocked", language: .en, intent: .hotelSearch)
-        let step = ExecutionPlanStep(id: "blocked", capability: .typedCommand, dependencies: [], command: subcommand)
+        let step = ExecutionPlanStep(id: "blocked", capability: .directAction, dependencies: [], command: subcommand)
         let plan = DeterministicExecutionPlan(commandID: UUID(), intent: .multiStep, constraints: [], steps: [step], completionStepID: step.id, aiInvocationCount: 0)
         #expect(liveMap().operations(for: command(), plan: plan)[step.id] == nil)
     }
@@ -111,9 +121,8 @@ extension ProductionMultiStepTests {
             .init(id: "route", capability: .route, dependencies: []),
             .init(id: "weather", capability: .weather, dependencies: []),
             .init(id: "transport", capability: .transport, dependencies: []),
-            .init(id: "hotel", capability: .hotel, dependencies: []),
-            .init(id: "compose", capability: .deterministicCompose, dependencies: [])
-        ], completionStepID: "compose", aiInvocationCount: 0)
+            .init(id: "hotel", capability: .hotel, dependencies: [])
+        ], completionStepID: "weather", aiInvocationCount: 0)
     }
     private func liveMapCommand() -> StructuredCommand {
         .init(originalText: "Tomorrow in Kyiv", normalizedText: "tomorrow in kyiv", language: .en, intent: .multiStep, entities: ["destination":"Kyiv"])
@@ -126,7 +135,7 @@ extension ProductionMultiStepTests {
 
     @Test func liveFactoryMapsEveryEligiblePlanCapability() {
         let operations = liveMap().operations(for: liveMapCommand(), plan: liveMapPlan())
-        #expect(Set(operations.keys) == ["date","calendar","location","candidates","route","weather","compose"])
+        #expect(Set(operations.keys) == ["date","calendar","location","candidates","route","weather"])
     }
     @Test func blockedExternalProvidersHaveNoFakeOperations() {
         let operations = liveMap().operations(for: liveMapCommand(), plan: liveMapPlan())
@@ -156,8 +165,20 @@ extension ProductionMultiStepTests {
         let operations = liveMap().operations(for: liveMapCommand(), plan: liveMapPlan())
         #expect(try await operations["weather"]?().source == "WeatherKit")
     }
-    @Test func liveComposeOperationIsDeterministic() async throws {
-        let operations = liveMap().operations(for: liveMapCommand(), plan: liveMapPlan())
-        #expect(try await operations["compose"]?().value == "deterministic_aggregate_ready")
+
+    @Test func naturalPlaceThenNavigationExecutesConcreteProductionSteps() async throws {
+        let location = MultiStepLocationStub()
+        let context = CurrentContextStore()
+        let executor = ProductionCanonicalCapabilityExecutor(
+            locationResolver: .init(geocoder: MultiStepGeocoderStub()),
+            placeSearch: .init(providers: [MultiStepPlaceStub()]),
+            currentLocation: location, currentContext: context, personalSearchSources: []
+        )
+        let command = LocalCommandEngine().parse("Знайди магазин Nike у Києві і покажи, як до нього доїхати")
+        guard case let .result(result) = try await executor.execute(command) else { Issue.record("Expected aggregate"); return }
+        #expect(result.facts.count == 2)
+        #expect(result.facts.allSatisfy { $0.state == .verified })
+        #expect(!result.facts.contains { ["typedCommand", "deterministicCompose"].contains($0.label) })
+        #expect(result.facts.contains { $0.value?.contains("maps.apple.com") == true })
     }
 }

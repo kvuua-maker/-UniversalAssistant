@@ -7,7 +7,7 @@ struct DeterministicExecutionPlanTests {
         let command = LocalCommandEngine().parse("Відкрий Telegram")
         let plan = try DeterministicExecutionPlanBuilder().plan(for: command)
         #expect(plan.aiInvocationCount == 0)
-        #expect(try plan.parallelGroups().count == 2)
+        #expect(try plan.parallelGroups().count == 1)
         #expect(plan.steps.first?.capability == .directAction)
     }
 
@@ -66,7 +66,8 @@ extension DeterministicExecutionPlanTests {
         let parser = TypedCompoundParser(intents: Dictionary(uniqueKeysWithValues: zip(names, intents)))
         let plan = try DeterministicExecutionPlanBuilder(parser: parser).plan(for: compound(names.joined(separator: "; ")))
         #expect(plan.steps.compactMap(\.command).map(\.intent) == intents)
-        #expect(plan.steps.filter { $0.capability == .typedCommand }.count == intents.count)
+        #expect(!plan.steps.contains { [.typedCommand, .deterministicCompose].contains($0.capability) })
+        #expect(plan.steps.allSatisfy { $0.command != nil })
         #expect(plan.aiInvocationCount == 0)
     }
 
@@ -136,8 +137,9 @@ extension DeterministicExecutionPlanTests {
         let command = compound("record; photos; music")
         let first = try DeterministicExecutionPlanBuilder(parser: parser).plan(for: command)
         let second = try DeterministicExecutionPlanBuilder(parser: parser).plan(for: command)
-        let typed = first.steps.filter { $0.capability == .typedCommand }
-        #expect(typed.allSatisfy { $0.dependencies.isEmpty })
+        let concrete = first.steps.filter { $0.command != nil }
+        #expect(concrete.allSatisfy { $0.dependencies.isEmpty })
+        #expect(!concrete.contains { [.typedCommand, .deterministicCompose].contains($0.capability) })
         #expect(first.steps.map(\.id) == second.steps.map(\.id))
         #expect(try first.parallelGroups().first?.count == 3)
     }
@@ -147,5 +149,25 @@ extension DeterministicExecutionPlanTests {
         let command = compound("known; unsupported; known")
         let plan = try DeterministicExecutionPlanBuilder(parser: parser).plan(for: command)
         #expect(plan.steps.compactMap(\.command).map(\.intent) == [.audioRecord, .audioRecord])
+    }
+
+    @Test func naturalPlaceNavigationAndSimpleProductUseConcretePlans() throws {
+        for phrase in [
+            "Знайди магазин Nike у Києві і покажи, як до нього доїхати",
+            "Покажи магазин Nike у Києві та проклади маршрут до нього"
+        ] {
+            let command = LocalCommandEngine().parse(phrase)
+            #expect(command.intent == .multiStep)
+            let plan = try DeterministicExecutionPlanBuilder().plan(for: command)
+            #expect(!plan.steps.contains { [.typedCommand, .deterministicCompose].contains($0.capability) })
+            #expect(plan.steps.contains { $0.capability == .places })
+            #expect(plan.steps.contains { $0.capability == .route })
+        }
+        let product = LocalCommandEngine().parse("Знайди iPhone 17 Pro")
+        #expect(product.intent == .productSearch)
+        let productPlan = try DeterministicExecutionPlanBuilder().plan(for: product)
+        #expect(productPlan.steps.count == 1)
+        #expect(productPlan.steps.first?.capability == .directAction)
+        #expect(!productPlan.steps.contains { [.typedCommand, .deterministicCompose].contains($0.capability) })
     }
 }

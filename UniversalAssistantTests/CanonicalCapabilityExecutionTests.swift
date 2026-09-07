@@ -46,6 +46,19 @@ struct CanonicalCapabilityExecutionTests {
         #expect(executor.received == [.cameraCapture])
     }
 
+    @Test func simpleProductRequestUsesTruthfulCurrentSourceFallbackWithoutMultiStepLeakage() async throws {
+        let executor = CapabilityExecutorStub(.failure(CanonicalCapabilityExecutionError.externalProviderRequired("productSearch")))
+        let model = AssistantViewModel(capabilityExecutor: executor)
+        model.input = "Знайди iPhone 17 Pro"
+        model.submit()
+        try await waitUntil { if case .webHandoff = model.resultState { true } else { false } }
+        #expect(executor.received == [.productSearch])
+        guard case let .webHandoff(result) = model.resultState else { return }
+        #expect(result.query == "Знайди iPhone 17 Pro")
+        #expect(!result.query.contains("typedCommand"))
+        #expect(!result.query.contains("deterministicCompose"))
+    }
+
     @Test func externalProviderRequirementUsesTruthfulWebFallback() async throws {
         let executor = CapabilityExecutorStub(.failure(CanonicalCapabilityExecutionError.externalProviderRequired("productSearch")))
         let model = AssistantViewModel(capabilityExecutor: executor)

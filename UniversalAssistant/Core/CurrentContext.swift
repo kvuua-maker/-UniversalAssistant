@@ -184,6 +184,11 @@ final class CurrentContextStore {
         _ = context.resolve(command, now: now)
         return context.selectedEntity
     }
+    func selectFirstResult(now: Date = .now) -> ContextEntity? {
+        context.expireStale(at: now)
+        guard let first = context.resultEntities.first else { return nil }
+        return context.select(entityID: first.id, now: now)
+    }
     func freshSelected(at now: Date = .now) -> ContextEntity? { context.expireStale(at: now); return context.selectedEntity }
     func consumeSelectedAction(now: Date = .now) -> URL? {
         context.expireStale(at: now)

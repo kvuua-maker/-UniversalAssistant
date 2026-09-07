@@ -53,7 +53,7 @@ struct DeterministicExecutionPlanBuilder: Sendable {
         case .placeSearch: return [.voice, .command, .location, .places, .route]
         case .navigation: return [.voice, .command, .location, .route]
         case .calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete: return [.voice, .command, .calendar]
-        case .travelPlan, .multiStep: return [.voice, .command, .typedCommand, .deterministicCompose]
+        case .travelPlan, .multiStep: return [.voice, .command, .directAction]
         default: return [.voice, .command, .directAction]
         }
     }
@@ -62,14 +62,27 @@ struct DeterministicExecutionPlanBuilder: Sendable {
         guard !command.needsClarification, command.intent != .unknown else { throw ExecutionPlanError.unresolvedCommand }
         if command.intent == .multiStep, let typed = typedPlan(command) { return typed }
         if command.intent == .travelPlan || command.intent == .multiStep { return travelPlan(command) }
-        let steps = [ExecutionPlanStep(id: "direct", capability: .directAction, dependencies: [], command: command),
-                     ExecutionPlanStep(id: "compose", capability: .deterministicCompose, dependencies: ["direct"])]
-        return .init(commandID: command.id, intent: command.intent, constraints: constraints(command), steps: steps, completionStepID: "compose", aiInvocationCount: 0)
+        let steps = [ExecutionPlanStep(id: "direct", capability: concreteCapability(for: command.intent), dependencies: [], command: command)]
+        return .init(commandID: command.id, intent: command.intent, constraints: constraints(command), steps: steps, completionStepID: "direct", aiInvocationCount: 0)
     }
 
     private func typedPlan(_ command: StructuredCommand) -> DeterministicExecutionPlan? {
         let split = CompoundCommandClauses.split(command.originalText)
-        let commands = split.map(parser.parse).filter { !$0.needsClarification && $0.intent != .unknown && $0.intent != .multiStep }
+        var commands = split.compactMap { clause -> StructuredCommand? in
+            let parsed = parser.parse(clause)
+            if isRouteInstruction(clause) { return derived(parsed, intent: .navigation) }
+            if isStandalonePresentationVerb(parsed.normalizedText) { return nil }
+            return !parsed.needsClarification && parsed.intent != .unknown && parsed.intent != .multiStep ? parsed : nil
+        }
+        let hasRouteClause = commands.contains { [.navigation, .routeSearch, .transportRoute].contains($0.intent) }
+        if hasRouteClause {
+            commands = commands.map { value in
+                let storefront = ["магазин", "крамниц", "store", "shop"].contains(where: value.normalizedText.contains)
+                if storefront { return derived(value, intent: .placeSearch) }
+                if value.intent == .transportRoute { return derived(value, intent: .navigation) }
+                return value
+            }
+        }
         guard commands.count >= 2 else { return nil }
         var steps: [ExecutionPlanStep] = []
         var lastByIntent: [CommandIntent: String] = [:]
@@ -91,12 +104,11 @@ struct DeterministicExecutionPlanBuilder: Sendable {
                 if let prior = lastByIntent[.cameraCapture] { dependencies.insert(prior) }
             default: break
             }
-            steps.append(.init(id: id, capability: .typedCommand, dependencies: dependencies, command: subcommand))
+            steps.append(.init(id: id, capability: concreteCapability(for: subcommand.intent), dependencies: dependencies, command: subcommand))
             lastByIntent[subcommand.intent] = id
         }
-        let composeID = "compose"
-        steps.append(.init(id: composeID, capability: .deterministicCompose, dependencies: Set(steps.map(\.id))))
-        return .init(commandID: command.id, intent: command.intent, constraints: constraints(command), steps: steps, completionStepID: composeID, aiInvocationCount: 0)
+        guard let completionStepID = steps.last?.id else { return nil }
+        return .init(commandID: command.id, intent: command.intent, constraints: constraints(command), steps: steps, completionStepID: completionStepID, aiInvocationCount: 0)
     }
 
     private func travelPlan(_ command: StructuredCommand) -> DeterministicExecutionPlan {
@@ -107,10 +119,34 @@ struct DeterministicExecutionPlanBuilder: Sendable {
             ExecutionPlanStep(id: "candidates", capability: .candidateDiscovery, dependencies: ["date", "location"]),
             ExecutionPlanStep(id: "weather", capability: .weather, dependencies: ["candidates"]),
             ExecutionPlanStep(id: "transport", capability: .transport, dependencies: ["calendar", "candidates"]),
-            ExecutionPlanStep(id: "hotel", capability: .hotel, dependencies: ["calendar", "candidates"]),
-            ExecutionPlanStep(id: "compose", capability: .deterministicCompose, dependencies: ["weather", "transport", "hotel"])
+            ExecutionPlanStep(id: "hotel", capability: .hotel, dependencies: ["calendar", "candidates"])
         ]
-        return .init(commandID: command.id, intent: command.intent, constraints: constraints(command), steps: steps, completionStepID: "compose", aiInvocationCount: 0)
+        return .init(commandID: command.id, intent: command.intent, constraints: constraints(command), steps: steps, completionStepID: "hotel", aiInvocationCount: 0)
+    }
+
+    private func isRouteInstruction(_ clause: String) -> Bool {
+        let value = clause.lowercased(with: .current)
+        let routeVerb = ["доїхати", "доехать", "дістатися", "добраться", "navigate", "directions", "route"].contains(where: value.contains)
+        let routeFraming = ["як ", "маршрут", "проклади", "покажи", "how ", "route", "directions"].contains(where: value.contains)
+        return routeVerb && routeFraming
+    }
+
+    private func isStandalonePresentationVerb(_ value: String) -> Bool {
+        ["покажи", "показати", "покажи як", "show", "show me", "покажи мне"].contains(value.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters)))
+    }
+
+    private func derived(_ command: StructuredCommand, intent: CommandIntent) -> StructuredCommand {
+        .init(id: command.id, originalText: command.originalText, normalizedText: command.normalizedText, language: command.language, intent: intent, entities: command.entities, constraints: command.constraints, risk: command.risk, needsClarification: false)
+    }
+
+    private func concreteCapability(for intent: CommandIntent) -> ExecutionCapability {
+        switch intent {
+        case .calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete, .reminderCreate, .reminderQuery, .reminderComplete, .reminderDelete, .shoppingList, .undo: .calendar
+        case .placeSearch, .restaurantSearch, .serviceSearch: .places
+        case .navigation, .routeSearch, .routeAwareSearch: .route
+        case .weather: .weather
+        default: .directAction
+        }
     }
 
     private func constraints(_ command: StructuredCommand) -> [ResolvedPlanConstraint] {

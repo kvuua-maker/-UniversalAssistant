@@ -218,6 +218,12 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             guard recorder.state != .failed && recorder.state != .denied else { throw CanonicalCapabilityExecutionError.unavailable("recorder_unavailable") }
             return .init(id: step.id, label: command.intent.rawValue, value: String(describing: recorder.state), state: .verified, source: "AudioRecorderController", observedAt: .now, priority: 100)
         }
+        if [.navigation, .routeSearch].contains(command.intent), command.entities["destination"] == nil {
+            guard currentContext.selectFirstResult() != nil, let destination = currentContext.consumeSelectedAction(), destination.host == "maps.apple.com" else {
+                throw CanonicalCapabilityExecutionError.missingParameter("resolved_place_destination")
+            }
+            return .init(id: step.id, label: command.intent.rawValue, value: destination.absoluteString, state: .verified, source: "MapKit", observedAt: .now, priority: 100)
+        }
         let outcome = try await execute(command)
         switch outcome {
         case let .result(value): return .init(id: step.id, label: command.intent.rawValue, value: value.primaryAnswer, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
