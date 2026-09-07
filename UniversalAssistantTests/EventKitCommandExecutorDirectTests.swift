@@ -106,4 +106,16 @@ extension EventKitCommandExecutorDirectTests {
         #expect(deleted.operation == .deleted); #expect(await history.latestUndoable()?.kind == .reminderUpdate)
         #expect(try await executor.execute(command("Відміни останнє", intent: .undo)).operation == .undone); #expect(await reminders.items.contains { $0.identifier == "r1" })
     }
+
+    @Test func relativeReminderCreatesWithCleanTitleAndResolvedDeadline() async throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let reminders = DirectReminderStub()
+        let executor = ProductionEventKitCommandExecutor(calendar: DirectCalendarStub(), reminders: reminders, history: ActionHistory(persistence: DirectMemoryHistoryStore()), now: { start }, timeZone: TimeZone(identifier: "Europe/Kyiv")!)
+        let parsed = LocalCommandEngine().parse("Нагадай мені через 10 хвилин вимкнути духовку")
+        let result = try await executor.execute(parsed)
+        #expect(result.operation == .created)
+        let created = try #require(await reminders.items.first)
+        #expect(created.draft.title == "вимкнути духовку")
+        #expect(created.draft.dueDate?.timeIntervalSince(start) == 600)
+    }
 }

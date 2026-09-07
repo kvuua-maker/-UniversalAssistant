@@ -69,6 +69,22 @@ struct NaturalDateTimeResolverTests {
         #expect(invalid.precision == .day)
     }
 
+    @Test func resolvesRelativeMinutesAndCleansReminderPayload() throws {
+        let result = resolver.resolve("Нагадай мені через 10 хвилин вимкнути духовку", locale: .init(identifier: "uk_UA"), timeZone: zone, relativeTo: reference)
+        guard case let .resolved(value) = result else { Issue.record("Expected relative reminder time"); return }
+        #expect(value.instant.timeIntervalSince(reference) == 600)
+        #expect(value.precision == .minute)
+        let command = LocalCommandEngine().parse("Нагадай мені через 10 хвилин вимкнути духовку")
+        let args = EventKitCommandArgumentExtractor().extract(command, now: reference, timeZone: zone)
+        #expect(args.subject == "вимкнути духовку")
+    }
+
+    @Test func cleansDayPeriodResidueFromReminderTitle() {
+        let command = LocalCommandEngine().parse("Нагадай мені завтра о 9 ранку купити каву")
+        let args = EventKitCommandArgumentExtractor().extract(command, now: reference, timeZone: zone)
+        #expect(args.subject == "купити каву")
+    }
+
     private func resolved(_ input: String) throws -> ResolvedNaturalDateTime {
         try #require({
             if case let .resolved(value) = resolver.resolve(

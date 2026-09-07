@@ -1,7 +1,7 @@
 # Build 26 canonical repair checkpoint
 
 - Baseline physical release: `aab4b308cf79a38626e29bf86cc4a46513f2402a` (0.1.0 Build 25).
-- Latest green source checkpoint: `d0673c998f9910781e5fcafb66b8bcea50c5abe1` (`Preserve first voice tokens and system intent semantics`).
+- Latest green source checkpoint: `f02c9828fdeee1fd8779aa63ba05c3d81cef5ed6` (`Complete system-first device action routing`).
 - Build metadata remains 0.1.0 (25). Build 26 has not been created.
 - Recovery artifacts remain untouched and untracked.
 
@@ -22,12 +22,14 @@
 - Photos/voice/result affected suites passed 31 tests in 4 suites; Development compile passed.
 - Files security-scoped metadata reads now run behind an injectable user-initiated async query boundary with a 3-second interactive deadline, cancellation completion, and late-result suppression. Files/Photos boundary suites passed 14 tests in 2 suites; Development compile passed.
 - Voice recognition now creates the public `SFSpeechRecognitionTask` before audio capture starts, closing the first-buffer readiness race, and supplies bounded domain contextual vocabulary for mixed-language brands, QR/OCR, system nouns, and Ukrainian imperatives.
-- Unsupported flashlight control is now a recognized system intent with a truthful local unavailable result; it no longer becomes clarification or Google fallback. Voice/audio suites passed 17 tests in 2 suites.
+- Voice/audio suites passed 17 tests in 2 suites before the subsequent documented public device-action audit.
+- Remaining SYSTEM-FIRST families now converge locally before web: public AVFoundation torch, UIDevice battery read, volume-capacity storage read, and UIPasteboard write execute through typed mechanisms; Wi-Fi page, Bluetooth toggle, Low Power Mode, system brightness/volume, missed calls, Calculator/Phone app opening, contacts-list and alarms-list requests return truthful public-platform limitations instead of Google. Injected production boundary plus semantic suites passed 19 tests in 2 suites; Development compile passed.
+- Reminder date resolution now supports relative minute/second intervals such as `через 10 хвилин`; EventKit title sanitation removes command, recipient, relative-duration, and day-period residue. NaturalDateTime/EventKit/AlarmKit suites passed 21 tests across 3 suites.
 
 ## Exact continuation point
 
-1. Continue semantic equivalence and remaining SYSTEM-FIRST intent families covering B25-02–B25-71 without phrase-specific production switches.
-2. Continue in master priority order: Reminders/AlarmKit consistency; OCR/QR/Camera; Places/navigation; multi-step lowering; CurrentContext/Share Extension; local utilities; real configured information providers; production UI.
+1. Continue with OCR/QR/Camera production routing and public presentation lifecycle.
+2. Continue in master priority order: Places/navigation; multi-step lowering; CurrentContext/Share Extension; local utilities; Notes/clipboard audit; real configured information providers; production UI.
 3. Persist the exactly 71-row B25 forensic matrix, capability inventory, voice evidence, and VPS correlation artifact.
 4. Run all repository gates and checkpoint green source before incrementing to Build 26.
 

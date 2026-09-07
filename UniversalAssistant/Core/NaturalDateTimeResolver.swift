@@ -21,6 +21,9 @@ struct NaturalDateTimeResolver: Sendable {
         relativeTo reference: Date
     ) -> NaturalDateTimeResolution {
         let text = input.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: locale)
+        if let interval = relativeInterval(in: text) {
+            return .resolved(.init(instant: reference.addingTimeInterval(interval), timeZoneIdentifier: timeZone.identifier, precision: .minute))
+        }
         guard let dayOffset = relativeDayOffset(in: text) else { return .unresolved }
 
         var calendar = Calendar(identifier: .gregorian)
@@ -45,6 +48,16 @@ struct NaturalDateTimeResolver: Sendable {
             timeZoneIdentifier: timeZone.identifier,
             precision: time == nil ? .day : .minute
         ))
+    }
+
+    private func relativeInterval(in text: String) -> TimeInterval? {
+        let pattern = #"(?:через|за|in)\s+(\d+)\s*(хвилин(?:у|и)?|хв|минут(?:у|ы)?|мин|minutes?|mins?|секунд(?:у|и)?|сек|seconds?|secs?)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              let amountRange = Range(match.range(at: 1), in: text), let amount = Int(text[amountRange]),
+              let unitRange = Range(match.range(at: 2), in: text) else { return nil }
+        let unit = String(text[unitRange])
+        return TimeInterval(amount * ((unit.hasPrefix("сек") || unit.hasPrefix("sec")) ? 1 : 60))
     }
 
     private func relativeDayOffset(in text: String) -> Int? {

@@ -29,10 +29,12 @@ struct EventKitCommandArgumentExtractor: Sendable {
         let resolution = NaturalDateTimeResolver().resolve(command.originalText, locale: locale, timeZone: timeZone, relativeTo: now)
         let dateTime: ResolvedNaturalDateTime? = if case let .resolved(value) = resolution { value } else { nil }
         let action = ["запиши", "створи", "додай", "подію", "подія", "зустріч", "перенеси", "видали", "скасуй", "нагадай", "нагадати", "покажи", "календарі", "нагадування", "виконай", "познач", "виконаним", "заверши", "complete", "создай", "событие", "встречу", "удали", "напомни", "календаре", "напоминания", "add", "create", "event", "move", "delete", "remind", "show", "calendar", "reminders", "termin", "erstellen", "verschieben", "löschen", "erinnere", "kalendertermine", "rendez-vous", "ajoute", "déplace", "supprime", "rappelle", "événements", "rappels"]
-        let temporal = ["сьогодні", "завтра", "післязавтра", "сегодня", "послезавтра", "today", "tomorrow", "day after tomorrow", "heute", "morgen", "übermorgen", "aujourd’hui", "demain", "après-demain"]
+        let temporal = ["сьогодні", "завтра", "післязавтра", "сегодня", "послезавтра", "today", "tomorrow", "day after tomorrow", "heute", "morgen", "übermorgen", "aujourd’hui", "demain", "après-demain", "мені", "мне", "через", "ранку", "утра", "вранці", "вечора", "вечером"]
         var subject = command.originalText
         for token in action + temporal { subject = subject.replacingOccurrences(of: token, with: " ", options: [.caseInsensitive, .diacriticInsensitive]) }
         subject = subject.replacingOccurrences(of: #"\b(?:о|об|в|at|um|a)?\s*\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?\b"#, with: " ", options: .regularExpression)
+        subject = subject.replacingOccurrences(of: #"\d+\s*(?:хвилин(?:у|и)?|хв|минут(?:у|ы)?|мин|minutes?|mins?|секунд(?:у|и)?|сек|seconds?|secs?)"#, with: " ", options: [.regularExpression, .caseInsensitive])
+        subject = subject.replacingOccurrences(of: #"(?:хвилин(?:у|и)?|хв|минут(?:у|ы)?|мин|minutes?|mins?|секунд(?:у|и)?|сек|seconds?|secs?)"#, with: " ", options: [.regularExpression, .caseInsensitive])
         subject = subject.replacingOccurrences(
             of: #"\b(?:о|об|в)\s+(?:(?:двадцять|двадцать)\s+)?(?:п['’]?ятнадцят|пятнадцат|дванадцят|двенадцат|одинадцят|одиннадцат|дев['’]?ятнадцят|девятнадцат|вісімнадцят|восемнадцат|сімнадцят|семнадцат|шістнадцят|шестнадцат|чотирнадцят|четырнадцат|тринадцят|тринадцат|десят|дев['’]?ят|девят|восьм|восем|сьом|седьм|шост|шест|п['’]?ят|пят|четверт|чотир|трет|друг|втор|перш|перв)\p{L}*\b"#,
             with: " ",
