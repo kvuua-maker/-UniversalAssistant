@@ -92,6 +92,19 @@ struct PlaceDeduplicator: Sendable {
     }
 }
 
+struct PlaceProximityOrdering: Sendable {
+    func nearestFirst(_ places: [Place]) -> [Place] {
+        places.enumerated().sorted { lhs, rhs in
+            switch (lhs.element.distanceMeters, rhs.element.distanceMeters) {
+            case let (l?, r?): return l == r ? lhs.offset < rhs.offset : l < r
+            case (_?, nil): return true
+            case (nil, _?): return false
+            case (nil, nil): return lhs.offset < rhs.offset
+            }
+        }.map(\.element)
+    }
+}
+
 struct PlaceRanker: Sendable {
     func rank(_ places: [Place], query: PlaceQuery) -> [Place] {
         places.enumerated().sorted { lhs, rhs in

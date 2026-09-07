@@ -1,7 +1,7 @@
 # Build 26 canonical repair checkpoint
 
 - Baseline physical release: `aab4b308cf79a38626e29bf86cc4a46513f2402a` (0.1.0 Build 25).
-- Latest green source checkpoint: `08073e4c0d4c2569c62d11f7e54aac33685d88dd` (`Resolve relative reminder timing and payloads`).
+- Latest green source checkpoint: `29497a166c52bbd6c92cf11e70123a34136fc6c9` (`Recover QR entities within scanner context`).
 - Build metadata remains 0.1.0 (25). Build 26 has not been created.
 - Recovery artifacts remain untouched and untracked.
 
@@ -26,10 +26,11 @@
 - Remaining SYSTEM-FIRST families now converge locally before web: public AVFoundation torch, UIDevice battery read, volume-capacity storage read, and UIPasteboard write execute through typed mechanisms; Wi-Fi page, Bluetooth toggle, Low Power Mode, system brightness/volume, missed calls, Calculator/Phone app opening, contacts-list and alarms-list requests return truthful public-platform limitations instead of Google. Injected production boundary plus semantic suites passed 19 tests in 2 suites; Development compile passed.
 - Reminder date resolution now supports relative minute/second intervals such as `через 10 хвилин`; EventKit title sanitation removes command, recipient, relative-duration, and day-period residue. NaturalDateTime/EventKit/AlarmKit suites passed 21 tests across 3 suites.
 - QR entity recovery now corrects bounded ASR variants (`Q Club`, `Q клуб`, `quad`) only inside scanner/recognition context; public VisionKit scanner, Vision OCR, and in-app camera presentation remain wired. OCR/QR/voice suites passed 29 tests in 3 suites.
+- Explicit nearest-place requests now use stable physical-distance ordering (unknown distances last), while general discovery retains relevance ranking; pharmacy and fuel intents use structured MapKit categories. Places/navigation/route-aware/voice suites passed 26 tests in 4 suites.
 
 ## Exact continuation point
 
-1. Continue with Places/nearest-distance ranking/navigation production routing.
+1. Continue with production multi-step lowering; eliminate abstract planner nodes from execution and UI.
 2. Continue in master priority order: Places/navigation; multi-step lowering; CurrentContext/Share Extension; local utilities; Notes/clipboard audit; real configured information providers; production UI.
 3. Persist the exactly 71-row B25 forensic matrix, capability inventory, voice evidence, and VPS correlation artifact.
 4. Run all repository gates and checkpoint green source before incrementing to Build 26.

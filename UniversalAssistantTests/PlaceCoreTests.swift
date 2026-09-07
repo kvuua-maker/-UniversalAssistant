@@ -50,4 +50,11 @@ struct PlaceCoreTests {
                       confidence: stale.confidence)
         #expect(stale.freshness(now: now, recentFor: 900) == .stale)
     }
+
+    @Test func explicitNearestIntentUsesPhysicalDistanceBeforeProviderScore() {
+        let far = place("far", distance: 1_200, open: true)
+        let unknown = place("unknown", distance: nil, open: true)
+        let near = place("near", distance: 80, open: false)
+        #expect(PlaceProximityOrdering().nearestFirst([far, unknown, near]).map(\.id) == ["near", "far", "unknown"])
+    }
 }

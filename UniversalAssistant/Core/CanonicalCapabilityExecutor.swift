@@ -272,10 +272,12 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let category = placeCategory(in: command.normalizedText)
         let searchText = placeSearchText(for: command, category: category)
         let response = try await placeSearch.search(.init(text: searchText, category: category, location: location, limit: 5))
-        guard !response.places.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_places_found") }
-        let output = try result("Знайдено місця", facts: response.places.prefix(5).enumerated().map { index, place in
+        let nearestRequested = ["найближ", "ближайш", "nearest", "closest"].contains(where: command.normalizedText.contains)
+        let places = nearestRequested ? PlaceProximityOrdering().nearestFirst(response.places) : response.places
+        guard !places.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_places_found") }
+        let output = try result("Знайдено місця", facts: places.prefix(5).enumerated().map { index, place in
             ResultFact(id: place.id, label: place.name, value: place.address ?? place.category.rawValue, state: .verified, source: place.source, observedAt: place.timestamp, priority: 100 - index)
-        }, actions: response.places.prefix(5).compactMap { place in
+        }, actions: places.prefix(5).compactMap { place in
             guard let destination = try? navigation.url(provider: .appleMaps, destination: .init(latitude: place.latitude, longitude: place.longitude, name: place.name), mode: .walking) else { return nil }
             return ResultAction(id: place.id, title: "Маршрут", kind: .open, destination: destination)
         })
@@ -430,6 +432,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         if ["кав", "кафе", "кофе", "coffee", "cafe"].contains(where: text.contains) { return .cafe }
         if ["ресторан", "restaurant"].contains(where: text.contains) { return .restaurant }
         if ["супермаркет", "supermarket", "grocer"].contains(where: text.contains) { return .supermarket }
+        if ["аптек", "pharmacy", "drugstore"].contains(where: text.contains) { return .pharmacy }
+        if ["заправ", "азс", "fuel", "gas station", "petrol"].contains(where: text.contains) { return .fuel }
         if ["магазин", "store", "shop"].contains(where: text.contains) { return .shop }
         return nil
     }
@@ -440,6 +444,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .cafe: return "coffee"
         case .restaurant: return "restaurant"
         case .supermarket: return "supermarket"
+        case .pharmacy: return "pharmacy"
+        case .fuel: return "gas station"
         case .shop: return command.entities["query"] ?? command.entities["brand"] ?? "shop"
         default: return command.entities["query"] ?? command.originalText
         }
