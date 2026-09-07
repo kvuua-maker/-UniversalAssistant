@@ -20,7 +20,14 @@ private actor DirectReminderStub: EventKitReminderExecuting {
     func seed(_ value: ReminderSnapshot) { items.append(value) }
     func requestFullAccessIfNeeded() {}
     func create(_ input: ReminderDraft) -> ReminderSnapshot { let value = ReminderSnapshot(identifier: "reminder-new", draft: input, isCompleted: false); items.append(value); return value }
-    func incomplete(dueFrom: Date?, to: Date?) -> [ReminderSnapshot] { items.filter { !$0.isCompleted } }
+    func incomplete(dueFrom: Date?, to: Date?) -> [ReminderSnapshot] {
+        items.filter { item in
+            guard !item.isCompleted else { return false }
+            if let dueFrom, let due = item.draft.dueDate, due < dueFrom { return false }
+            if let to, let due = item.draft.dueDate, due >= to { return false }
+            return true
+        }
+    }
     func update(identifier: String, with input: ReminderDraft, isCompleted: Bool?) throws -> ReminderSnapshot { guard let i = items.firstIndex(where: { $0.identifier == identifier }) else { throw ReminderServiceError.reminderNotFound }; let value = ReminderSnapshot(identifier: identifier, draft: input, isCompleted: isCompleted ?? items[i].isCompleted); items[i] = value; return value }
     func delete(identifier: String) throws { guard let i = items.firstIndex(where: { $0.identifier == identifier }) else { throw ReminderServiceError.reminderNotFound }; items.remove(at: i) }
     func restore(_ snapshot: ReminderSnapshot) -> ReminderSnapshot { items.removeAll { $0.identifier == snapshot.identifier }; items.append(snapshot); return snapshot }
@@ -143,5 +150,38 @@ extension EventKitCommandExecutorDirectTests {
         #expect(interval.0 <= start)
         #expect(interval.1 > start)
         #expect(interval.1.timeIntervalSince(interval.0) >= 82_800)
+    }
+
+    @Test func naturalTomorrowReminderCreatesCleanTitleAtRequestedTime() async throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let reminders = DirectReminderStub()
+        let zone = TimeZone(identifier: "Europe/Kyiv")!
+        let executor = ProductionEventKitCommandExecutor(calendar: DirectCalendarStub(), reminders: reminders, history: ActionHistory(persistence: DirectMemoryHistoryStore()), now: { start }, timeZone: zone)
+        let parsed = LocalCommandEngine().parse("Будь ласка, нагадай завтра о 08:35 забрати замовлення")
+        #expect(parsed.intent == .reminderCreate)
+        _ = try await executor.execute(parsed)
+        let created = try #require(await reminders.items.first)
+        #expect(created.draft.title == "забрати замовлення")
+        let parts = Calendar(identifier: .gregorian).dateComponents(in: zone, from: try #require(created.draft.dueDate))
+        #expect(parts.hour == 8)
+        #expect(parts.minute == 35)
+    }
+
+    @Test func reminderQueryVariantsUseEventKitAndRequestedDay() async throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let zone = TimeZone(identifier: "Europe/Kyiv")!
+        var localCalendar = Calendar(identifier: .gregorian); localCalendar.timeZone = zone
+        let today = localCalendar.startOfDay(for: start)
+        let reminders = DirectReminderStub([
+            .init(identifier: "today", draft: .init(title: "Сьогодні", dueDate: today.addingTimeInterval(3_600)), isCompleted: false),
+            .init(identifier: "tomorrow", draft: .init(title: "Завтра", dueDate: today.addingTimeInterval(90_000)), isCompleted: false)
+        ])
+        let executor = ProductionEventKitCommandExecutor(calendar: DirectCalendarStub(), reminders: reminders, history: ActionHistory(persistence: DirectMemoryHistoryStore()), now: { start }, timeZone: zone)
+        let todayCommand = LocalCommandEngine().parse("Відкрий мої нагадування на сьогодні")
+        #expect(todayCommand.intent == .reminderQuery)
+        let todayResult = try await executor.execute(todayCommand)
+        #expect(todayResult.itemCount == 1)
+        #expect(todayResult.detail.contains("Сьогодні"))
+        #expect(!todayResult.detail.contains("Завтра"))
     }
 }

@@ -28,7 +28,7 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-14.03 | GREEN |
 | B27-14.04 | GREEN |
 | B27-14.05 | GREEN |
-| B27-14.06 | NOT_STARTED |
+| B27-14.06 | GREEN |
 | B27-14.07 | NOT_STARTED |
 | B27-14.08 | NOT_STARTED |
 | B27-14.09 | NOT_STARTED |
@@ -168,3 +168,24 @@ B27-14.05 is GREEN. Build 27 does not exist.
 Unfinished B27 root groups: B27-10, B27-11, remaining B27-12/B27-13, B27-14.06 through B27-14.19, B27-15 through B27-22, B27-24 and B27-25. B27-14.20 remains EXTERNAL_PROVIDER_DEPENDENCY pending the configured-provider audit.
 
 Exact next code-level operation: begin B27-14.06 Reminders. Trace LocalCommandEngine reminder create/query/open semantics through ProductionEventKitCommandExecutor; repair tomorrow-at-time creation, today/list/open commands and title extraction while preserving the physically passing relative +10 minute path. Add production-boundary EventKit permission/result regressions, then run affected suites and Development compile.
+
+
+## Completed material repair: B27-14.06
+
+Physical evidence: the relative +10 minute reminder path worked, while tomorrow-at-time creation fell to web and reminder open/list/today variants were not classified consistently.
+
+Material repair:
+- Reminder query/open/list semantic variants converge on reminderQuery before generic open/web handling.
+- Date-scoped queries call the public EventKit reminder boundary with the requested local-day interval.
+- Natural absolute-time creation preserves the resolved deadline and strips control, temporal and duration wording from the saved title.
+- Existing relative reminder execution, EventKit authorization refresh, mutation history and undo are preserved.
+
+Verification: EventKitCommandExecutorDirectTests, CalendarServiceTests, ReminderServiceTests, NaturalDateTimeResolverTests and VoiceTextInputQualityTests PASS: 45 tests in 5 suites. Development compile PASS. Owner physical retest remains required.
+
+CLOSED locally disproven test expectation: preserving polite control wording and punctuation in the saved reminder title. Evidence showed the production extractor correctly retained a comma before the material fix. The new mechanism removes localized polite control phrases before payload formation; the unchanged approach will not be repeated.
+
+## Exact continuation point after B27-14.06
+
+B27-14.06 is GREEN. Build 27 does not exist.
+
+Exact next code-level operation: begin B27-14.07 Timer/Alarm consistency. Preserve the physically firing AlarmKit paths, trace voice/typed alarm time and optional label extraction through LocalCommandEngine and SystemQuickActionExecutor, repair equivalent voice convergence and timer/alarm result naming without changing public AlarmKit scheduling, then add unseen-parameter production regressions and run affected suites plus Development compile.

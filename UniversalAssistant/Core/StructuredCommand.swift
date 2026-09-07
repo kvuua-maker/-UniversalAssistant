@@ -122,7 +122,7 @@ struct LocalCommandEngine: CommandParsing {
         (.calendarQuery, ["що в календарі", "що в мене заплановано", "які в мене плани", "что в календаре", "calendar events", "kalendertermine", "événements du calendrier"]),
         (.calendarUpdate, ["перенеси зустріч", "перенеси стоматолога", "перенеси встречу", "move the event", "termin verschieben", "déplace le rendez-vous"]),
         (.calendarDelete, ["видали зустріч", "скасуй завтра стоматолога", "удали встречу", "delete the event", "termin löschen", "supprime le rendez-vous"]),
-        (.reminderQuery, ["покажи нагадування", "покажи напоминания", "show reminders", "erinnerungen zeigen", "affiche les rappels"]),
+        (.reminderQuery, ["покажи нагадування", "покажи мої нагадування", "відкрий нагадування", "нагадування на сьогодні", "нагадування на завтра", "покажи напоминания", "открой напоминания", "напоминания на сегодня", "show reminders", "open reminders", "erinnerungen zeigen", "affiche les rappels"]),
         (.noteCreate, ["створи нотатку", "створи нову нотатку", "создай заметку", "create a note", "notiz erstellen", "crée une note"]),
         (.noteQuery, ["покажи нотатки", "покажи заметки", "show notes", "notizen zeigen", "affiche les notes"]),
         (.shoppingList, ["список покупок", "список покупок", "shopping list", "einkaufsliste", "liste de courses"]),
@@ -336,6 +336,10 @@ struct LocalCommandEngine: CommandParsing {
         let mediaActions = ["увімкни", "включи", "програй", "воспроизведи", "знайди", "найди", "play", "listen"]
         let mediaKinds = ["apple music", "музик", "пісн", "песн", "трек", "альбом", "виконав", "исполнител", "song", "artist"]
         if containsAny(text, mediaActions), containsAny(text, mediaKinds) { return .mediaSearch }
+
+        let reminderKinds = ["нагадув", "напомин", "reminder", "erinner", "rappel"]
+        let reminderQueryActions = ["покажи", "відкрий", "перелік", "список", "що треба", "покажи", "открой", "список", "show", "open", "list"]
+        if containsAny(text, reminderKinds), containsAny(text, reminderQueryActions) { return .reminderQuery }
 
         let calendarActions = ["створи", "создай", "додай", "добавь", "заплануй", "запланируй", "create", "add", "schedule"]
         let calendarKinds = ["подію", "подія", "событие", "зустріч", "встреч", "event", "appointment"]
