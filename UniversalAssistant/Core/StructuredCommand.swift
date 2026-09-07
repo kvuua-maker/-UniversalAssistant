@@ -85,7 +85,7 @@ struct LocalCommandEngine: CommandParsing {
                         "voice recorder", "pause recording", "resume recording", "stop recording",
                         "sprachmemo", "aufnahme pausieren", "aufnahme fortsetzen", "aufnahme stoppen",
                         "enregistre audio", "pause l'enregistrement", "reprends l'enregistrement", "arrête l'enregistrement"]),
-        (.cameraCapture, ["зроби фото", "відкрий камеру", "сфотографуй", "сделай фото", "открой камеру", "take a photo", "open camera", "скануй qr", "відскануй qr", "qr-код", "qr код", "скануй код", "штрихкод", "сканируй qr", "сканируй код", "scan qr", "scan barcode", "розпізнай текст", "розпізнати текст", "распознай текст", "recognize text", "scan text"]),
+        (.cameraCapture, ["зроби фото", "відкрий камеру", "сфотографуй", "сделай фото", "открой камеру", "take a photo", "open camera", "скануй qr", "відскануй qr", "розпізнай qr", "qr-код", "qr код", "скануй код", "штрихкод", "сканируй qr", "сканируй код", "scan qr", "scan barcode", "розпізнай текст", "розпізнати текст", "распознай текст", "recognize text", "scan text"]),
         (.translation, ["переклади", "переведи", "translate ", "übersetze", "traduis"]),
         (.photoSearch, ["знайди фото", "покажи фото", "найди фото", "покажи фотографии", "find photos", "show photos", "відкрий останнє фото", "відкрий останню світлину", "відкрий найновіше фото", "відкрий найсвіжіше фото", "открой последнее фото", "open latest photo"]),
         (.fileSearch, ["знайди файл", "знайди документ", "найди файл", "найди документ", "find file", "find document"]),
@@ -264,7 +264,12 @@ struct LocalCommandEngine: CommandParsing {
     }
 
     private func normalize(_ text: String) -> String {
-        text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().replacingOccurrences(of: "’", with: "'").replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+        var value = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().replacingOccurrences(of: "’", with: "'").replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+        let scannerContext = ["скан", "відскан", "розпіз", "scan", "recogn"].contains(where: value.contains)
+        if scannerContext {
+            value = value.replacingOccurrences(of: #"(?:q\s*(?:club|клуб)|quad)"#, with: "qr", options: [.regularExpression, .caseInsensitive])
+        }
+        return value
     }
     private func detectLanguage(_ text: String) -> CommandLanguage {
         if text.range(of: "[іїєґ]", options: .regularExpression) != nil { return .uk }

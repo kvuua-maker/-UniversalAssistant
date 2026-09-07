@@ -133,4 +133,13 @@ struct VoiceTextInputQualityTests {
             #expect(command.entities["system_action"] == "unsupported_system_control")
         }
     }
+
+    @Test func asrQrVariantsRecoverOnlyInsideScannerContext() {
+        for phrase in ["Відскануй Q Club", "Скануй quad", "Розпізнай Q клуб"] {
+            let command = engine.parse(phrase)
+            #expect(command.intent == .cameraCapture)
+            #expect(command.entities["capture_mode"] == "code_scan")
+        }
+        #expect(engine.parse("Розкажи про Quad").intent != .cameraCapture)
+    }
 }
