@@ -1,7 +1,7 @@
 # Build 26 canonical repair checkpoint
 
 - Baseline physical release: `aab4b308cf79a38626e29bf86cc4a46513f2402a` (0.1.0 Build 25).
-- Latest green source checkpoint: `9585e188f05d9a10cead98110fd5c1303a6267dc` (`Execute deterministic utilities locally`).
+- Latest green source checkpoint: `85fc3815c6cc8a37cbabe3c407530750f5d16cf2` (`Record local utility checkpoint`), plus the pending Notes/provider-audit green block described below.
 - Build metadata remains 0.1.0 (25). Build 26 has not been created.
 - Recovery artifacts remain untouched and untracked.
 
@@ -39,12 +39,13 @@
 - Added a canonical `.localUtility` intent and deterministic local executor for addition, subtraction, multiplication, division, percentage-of, percentage increase/decrease, fixed-ratio unit conversions, and timezone-aware local date/day/time. These paths return native in-app results and cannot reach general web fallback.
 - Currency requests are separately classified as `.currencyConversion`; no fixed-unit logic can fabricate an exchange rate. Until a legitimate current FX source is configured, execution explicitly requires `current_fx_rate` and follows the truthful provider fallback contract.
 - Utility/parser/router production-boundary suites passed 25/25 in 3 suites; Development compile passed.
+- Repository and Production configuration audit found no active FX endpoint/credential, current-information coordinator, or current retail-price endpoint/token. Exact evidence and truthful fallbacks are recorded in `docs/BUILD26_EXTERNAL_PROVIDER_AUDIT.md`; mocks and injectable contracts are not treated as live integrations.
+- Notes synonyms now converge on the public Share Sheet handoff and the note payload is stripped of command punctuation. Clipboard input resolves to the typed public pasteboard action and never reaches web. Notes/clipboard plus affected parser/system suites passed 30/30 in 4 suites; Development compile passed.
 
 ## Exact continuation point
 
-1. Audit the repository/runtime configuration for a legitimate current FX provider and wire it only if real configured access exists; otherwise persist exact external-dependency evidence while preserving truthful fallback.
-2. Continue in master priority order: Notes/clipboard audit; remaining public system-capability reconciliation; real configured general/current-information and product providers; production UI.
-3. Persist the exactly 71-row B25 forensic matrix, capability inventory, voice evidence, and VPS correlation artifact.
-4. Run all repository gates and checkpoint green source before incrementing to Build 26.
+1. Complete production UI/internal-identifier audit and remaining public system-capability reconciliation.
+2. Persist the exactly 71-row B25 forensic matrix, capability inventory, voice evidence, and VPS correlation artifact.
+3. Run all repository gates and checkpoint green source before incrementing to Build 26.
 
 No B25 row is claimed physically fixed. All B25-01 through B25-71 remain in the authoritative acceptance matrix; confirmed Build-25 passes must be preserved.

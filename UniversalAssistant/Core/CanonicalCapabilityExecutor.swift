@@ -142,7 +142,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             ))
         case .noteCreate:
             let value = try required(command.entities["content"] ?? subject(after: ["створи нову нотатку", "створи нотатку", "создай заметку", "create a note"], in: command.originalText), "note_content")
-            return .presentation(.share(value))
+            let content = value.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: ":,-")))
+            return .presentation(.share(try required(content, "note_content")))
         case .noteQuery:
             return .presentation(.documents)
         case .fileSearch:
