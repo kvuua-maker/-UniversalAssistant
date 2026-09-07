@@ -20,13 +20,12 @@ struct CompactResultCard: View {
             .padding(16)
             .accessibilityIdentifier("assistant.processing")
         case .recognized(let summary):
-            card(summary, title: "request_recognized", tint: .blue)
+            EmptyView()
         case .weather(let snapshot):
             WeatherResultCard(snapshot: snapshot, onReportIssue: onReportIssue)
         case .webHandoff(let result):
             VStack(alignment: .leading, spacing: 10) {
-                Text(handoffTitle(result.kind)).font(.headline)
-                Text(result.query).font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
+                if result.kind != .system { Text(result.query).font(.subheadline).foregroundStyle(.secondary).lineLimit(3) }
                 Link(handoffAction(result.kind), destination: result.destination).buttonStyle(.borderedProminent)
                     .accessibilityIdentifier("assistant.web-search.open")
             }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -99,20 +98,12 @@ struct CompactResultCard: View {
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .accessibilityIdentifier("assistant.failure")
         case .expanded(let summary):
-            card(summary, title: "request_recognized", tint: .blue)
+            card(summary, title: "result", tint: .blue)
         }
     }
 
     private func ocrActionTitle(_ action: OCRResultAction) -> String {
         switch action { case .copy: "Копіювати"; case .share: "Поділитися"; case .translate: "Перекласти" }
-    }
-
-    private func handoffTitle(_ kind: HandoffKind) -> LocalizedStringKey {
-        switch kind {
-        case .webSearch: "web_search_ready"
-        case .navigation: "navigation_ready"
-        case .system: "system_handoff_ready"
-        }
     }
 
     private func handoffAction(_ kind: HandoffKind) -> LocalizedStringKey {

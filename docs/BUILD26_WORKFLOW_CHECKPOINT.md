@@ -1,7 +1,7 @@
 # Build 26 canonical repair checkpoint
 
 - Baseline physical release: `aab4b308cf79a38626e29bf86cc4a46513f2402a` (0.1.0 Build 25).
-- Latest green source checkpoint: `85fc3815c6cc8a37cbabe3c407530750f5d16cf2` (`Record local utility checkpoint`), plus the pending Notes/provider-audit green block described below.
+- Latest green source checkpoint: `fae3dddd9ec00320d81613ca57181dd30496192c` (`Verify notes clipboard and external provider boundaries`), plus the pending UI/matrix block described below.
 - Build metadata remains 0.1.0 (25). Build 26 has not been created.
 - Recovery artifacts remain untouched and untracked.
 
@@ -41,11 +41,13 @@
 - Utility/parser/router production-boundary suites passed 25/25 in 3 suites; Development compile passed.
 - Repository and Production configuration audit found no active FX endpoint/credential, current-information coordinator, or current retail-price endpoint/token. Exact evidence and truthful fallbacks are recorded in `docs/BUILD26_EXTERNAL_PROVIDER_AUDIT.md`; mocks and injectable contracts are not treated as live integrations.
 - Notes synonyms now converge on the public Share Sheet handoff and the note payload is stripped of command punctuation. Clipboard input resolves to the typed public pasteboard action and never reaches web. Notes/clipboard plus affected parser/system suites passed 30/30 in 4 suites; Development compile passed.
+- Production renderer no longer displays parser acknowledgement cards or redundant system-handoff narration/raw commands; planner/provider IDs remain filtered. UI/result/canonical suites passed 15/15 in 3 suites after correcting a test-only string literal.
+- Persisted `docs/B25_01_71_FORENSIC_ACCEPTANCE_MATRIX.md` with exactly 71/71 rows, `docs/B25_VPS_DIAGNOSTIC_CORRELATION.md` with privacy-safe Build-25 aggregate evidence, and `docs/BUILD26_CAPABILITY_REACHABILITY_MATRIX.md` covering every `CommandIntent` plus public-iOS limitations.
 
 ## Exact continuation point
 
-1. Complete production UI/internal-identifier audit and remaining public system-capability reconciliation.
-2. Persist the exactly 71-row B25 forensic matrix, capability inventory, voice evidence, and VPS correlation artifact.
-3. Run all repository gates and checkpoint green source before incrementing to Build 26.
+1. Run all repository E2E/regression/canonical/release gates; repair only locally caused failures and rerun.
+2. Commit/push the green UI/matrix block and verify clean source state.
+3. Only after every applicable gate is green, increment Build 25 to Build 26 and enter the authorized release workflow.
 
 No B25 row is claimed physically fixed. All B25-01 through B25-71 remain in the authoritative acceptance matrix; confirmed Build-25 passes must be preserved.
