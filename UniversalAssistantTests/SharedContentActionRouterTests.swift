@@ -45,4 +45,13 @@ struct SharedContentActionRouterTests {
         #expect(store.consume() == item)
         #expect(store.consume() == nil)
     }
+
+      func sharedImageFilePayloadIsReadableByHostWithoutUserDefaultsBlob() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let expected = Data([1, 2, 3, 4])
+        try expected.write(to: url, options: .atomic)
+        defer { try? FileManager.default.removeItem(at: url) }
+        #expect(SharedInboxStore.imageData(from: url.absoluteString) == expected)
+        #expect(SharedInboxStore.imageData(from: expected.base64EncodedString()) == expected)
+    }
 }

@@ -25,17 +25,17 @@ struct ProductionContextContinuationTests {
         #expect(store.consumeSelectedAction(now: now) == nil)
     }
     @Test func productionExecutorShowsAndOpensStoredPersonalResult() async throws {
-        let source = PersonalSearchSourceFixtureForContext()
         let store = CurrentContextStore()
-        let executor = ProductionCanonicalCapabilityExecutor(currentContext: store, personalSearchSources: [source])
+        let contact = ContactCandidate(identifier: "contact-1", displayName: "Mama", phoneNumbers: ["+380501234567"])
+        let executor = ProductionCanonicalCapabilityExecutor(contacts: ContextContactResolverFixture(.resolved(contact)), currentContext: store, personalSearchSources: [])
         let search = StructuredCommand(originalText: "Знайди контакт мама", normalizedText: "знайди контакт мама", language: .uk, intent: .contactLookup, entities: ["contact":"мама"])
         _ = try await executor.execute(search)
         let show = StructuredCommand(originalText: "Покажи перший", normalizedText: "покажи перший", language: .uk, intent: .contextualSelection, constraints: .init(ordinal: 1))
         guard case let .result(value) = try await executor.execute(show) else { Issue.record("Expected result"); return }
-        #expect(value.facts.first?.id == "contact-1")
+        #expect(value.facts.first?.id == "phone-0")
         let open = StructuredCommand(originalText: "Відкрий перший", normalizedText: "відкрий перший", language: .uk, intent: .open, constraints: .init(ordinal: 1))
         guard case let .handoff(value) = try await executor.execute(open) else { Issue.record("Expected handoff"); return }
-        #expect(value.destination.absoluteString == "https://example.com/contact-1")
+        #expect(value.destination.absoluteString == "tel:+380501234567")
         await #expect(throws: CanonicalCapabilityExecutionError.unavailable("context_action_unavailable_or_replayed")) { try await executor.execute(open) }
     }
 
@@ -55,9 +55,10 @@ struct ProductionContextContinuationTests {
     }
 }
 
-private struct PersonalSearchSourceFixtureForContext: PersonalSearchSource {
-    let id: PersonalSearchSourceID = .local(.contacts)
-    func search(query: String, limit: Int) async -> PersonalSearchSourceResponse {
-        .init(source: id, results: [.init(id: "contact-1", title: "Mama", subtitle: nil, source: id, sourceObjectID: "contact-1", openReference: "https://example.com/contact-1", freshness: .local, relevance: 100, exactMatch: true)], isComplete: true, unavailableReason: nil)
-    }
+private actor ContextContactResolverFixture: ContactResolving {
+    let resolution: ContactResolution
+    init(_ resolution: ContactResolution) { self.resolution = resolution }
+    func requestAccessIfNeeded() async throws {}
+    func resolve(name: String) async throws -> ContactResolution { resolution }
+    func resolve(exactIdentifier identifier: String) async throws -> ContactResolution { resolution }
 }

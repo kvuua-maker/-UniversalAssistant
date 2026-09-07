@@ -25,7 +25,7 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-14 | IN_PROGRESS |
 | B27-14.01 | GREEN |
 | B27-14.02 | GREEN |
-| B27-14.03 | NOT_STARTED |
+| B27-14.03 | IN_PROGRESS |
 | B27-14.04 | NOT_STARTED |
 | B27-14.05 | NOT_STARTED |
 | B27-14.06 | NOT_STARTED |
@@ -75,4 +75,20 @@ Material repair:
 - Existing normal-call routing remains `tel:` and explicit WhatsApp remains a separate `https://wa.me/` handoff.
 
 Production-boundary regression: `ProductionPersonalRoutingBoundaryTests` proves Contacts and Files commands do not invoke an injected unrelated Photos source. Affected Contacts lifecycle, call routing, local-source, and Home result tests pass. Physical retest remains required.
+
+## In-progress material repair: B27-14.03
+
+Build 26 evidence closed the UserDefaults-base64-only Share Extension approach: large image payloads could be classified first as file URLs and were not durably represented as image context. Current WIP prioritizes the public image type, writes image bytes atomically into the shared App Group container, stores only a small typed envelope, and keeps host decoding backward-compatible with prior base64 envelopes.
+
+Semantic Photos WIP replaces the physically disproven broad accessible-asset result with confidence-filtered Vision classification, localized category normalization, a five-second production deadline, cancellation, and late-result suppression. Five seconds is bounded below the app request lifecycle while allowing up to twenty local thumbnails; timeout fails closed with no unrelated asset.
+
+### Verification infrastructure note
+
+On 2026-09-07, after compilation, Xcode could not materialize the XCTest runner on either iPhone 17 Pro or iPhone 17 Pro Max (iOS 26.5). Coordinator evidence showed `_IDEInstalliPhoneSimulatorWorker` and `IDELaunchiPhoneSimulatorLauncher` unfinished. A clean boot completed, but direct `xcrun simctl install` also blocked without response. This is recorded as test infrastructure evidence, not as a product PASS or FAIL. The shared CoreSimulator service was not restarted because unrelated simulator workloads were active on the Mac.
+
+### Verification result
+
+After a clean simulator boot and successful direct `simctl install`, the already-built Photos/Share/CurrentContext/OCR suites passed. Contacts/Calls/Home lifecycle regressions also passed on the same test host. The earlier installation stall is CLOSED as an infrastructure incident; no product code was changed to mask it.
+
+Contacts lookup now also stores verified telephone actions in `CurrentContext`, so a selected contact can be acted on without returning to universal personal-source fan-out.
 

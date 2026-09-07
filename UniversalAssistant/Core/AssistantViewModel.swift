@@ -161,7 +161,7 @@ final class AssistantViewModel {
             return
         }
         if isSharedImageTextRequest(submittedInput), let shared = currentContext.freshShared(), shared.kind == .image,
-           let data = Data(base64Encoded: shared.value), let image = UIImage(data: data) {
+           let data = SharedInboxStore.imageData(from: shared.value), let image = UIImage(data: data) {
             input = ""
             processOCR(image, provenance: .sharedImage)
             return

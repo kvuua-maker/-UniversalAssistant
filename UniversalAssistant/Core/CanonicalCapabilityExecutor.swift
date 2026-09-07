@@ -421,9 +421,15 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 }
                 return .handoff(.init(query: value.displayName, destination: try callDestination(number: number, service: requestedService), kind: .system))
             }
-            return .result(try result(value.displayName, facts: value.phoneNumbers.enumerated().map { index, number in
-                ResultFact(id: "phone-\(index)", label: "Телефон", value: number, state: .verified, source: "Contacts", observedAt: .now, priority: 100 - index)
-            }))
+            let facts = value.phoneNumbers.enumerated().map { index, number in
+                ResultFact(id: "phone-\(index)", label: value.displayName, value: number, state: .verified, source: "Contacts", observedAt: .now, priority: 100 - index)
+            }
+            let actions = try value.phoneNumbers.enumerated().map { index, number in
+                ResultAction(id: "phone-\(index)", title: "Подзвонити", kind: .open, destination: try callDestination(number: number, service: nil))
+            }
+            let output = try result(value.displayName, facts: facts, actions: actions)
+            currentContext.replaceResults(output)
+            return .result(output)
         }
     }
 

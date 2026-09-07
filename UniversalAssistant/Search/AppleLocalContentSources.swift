@@ -120,22 +120,80 @@ struct VisionPhotoSemanticLabeler: PhotoSemanticLabeling {
     }
 }
 
+private final class PhotoSemanticSearchCompletion: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<[PhotoAssetReference], Never>?
+    private var result: [PhotoAssetReference]?
+    func install(_ value: CheckedContinuation<[PhotoAssetReference], Never>) {
+        lock.lock(); if let result { lock.unlock(); value.resume(returning: result) } else { continuation = value; lock.unlock() }
+    }
+    func finish(_ value: [PhotoAssetReference]) {
+        lock.lock(); guard result == nil else { lock.unlock(); return }; result = value
+        let continuation = continuation; self.continuation = nil; lock.unlock(); continuation?.resume(returning: value)
+    }
+}
+
 struct PhotoSemanticSearchEngine: Sendable {
     let library: any PhotoLibrarySearching; let loader: any PhotoAssetImageLoading; let labeler: any PhotoSemanticLabeling
-    func search(_ query: String, criteria: PhotoSearchCriteria = .init(), limit: Int = 5) async -> [PhotoAssetReference] {
+
+    func search(_ query: String, criteria: PhotoSearchCriteria = .init(), limit: Int = 5, timeout: Duration = .seconds(5)) async -> [PhotoAssetReference] {
         guard [.permitted, .limited].contains(library.authorization()) else { return [] }
-        let needle = query.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        let terms = Self.semanticTerms(query)
+        guard !terms.isEmpty else { return [] }
         let candidates = await library.search(criteria, limit: min(max(limit * 4, 8), 20))
-        return await withTaskGroup(of: (Int, PhotoAssetReference)?.self) { group in
-            for (index, asset) in candidates.enumerated() { group.addTask {
-                guard let data = try? await loader.imageData(localIdentifier: asset.localIdentifier),
-                      let labels = try? await labeler.labels(imageData: data),
-                      labels.contains(where: { $0.name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(needle) }) else { return nil }
-                return (index, asset)
-            } }
-            var matches: [(Int, PhotoAssetReference)] = []; for await value in group { if let value { matches.append(value) } }
-            return matches.sorted { $0.0 < $1.0 }.prefix(max(1, min(limit, 10))).map { $0.1 }
+        let completion = PhotoSemanticSearchCompletion()
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                completion.install(continuation)
+                Task.detached(priority: .userInitiated) {
+                    let matches = await withTaskGroup(of: (Int, PhotoAssetReference)?.self) { group in
+                        for (index, asset) in candidates.enumerated() {
+                            group.addTask {
+                                guard let data = try? await loader.imageData(localIdentifier: asset.localIdentifier),
+                                      let labels = try? await labeler.labels(imageData: data),
+                                      labels.contains(where: { label in
+                                          guard label.confidence >= 0.45 else { return false }
+                                          let normalized = Self.normalize(label.name)
+                                          return terms.contains { normalized.contains($0) || $0.contains(normalized) }
+                                      }) else { return nil }
+                                return (index, asset)
+                            }
+                        }
+                        var values: [(Int, PhotoAssetReference)] = []
+                        for await value in group { if let value { values.append(value) } }
+                        return values.sorted { $0.0 < $1.0 }.prefix(max(1, min(limit, 10))).map { $0.1 }
+                    }
+                    completion.finish(matches)
+                }
+                Task.detached {
+                    try? await Task.sleep(for: timeout)
+                    completion.finish([])
+                }
+            }
+        } onCancel: {
+            completion.finish([])
         }
+    }
+
+    private static func normalize(_ value: String) -> String {
+        value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .replacingOccurrences(of: "[^\\p{L}\\p{N}]+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func semanticTerms(_ query: String) -> Set<String> {
+        let ignored: Set<String> = ["знайди", "покажи", "моїх", "моих", "фото", "фотографії", "фотографии", "pictures", "photos", "with", "на", "у", "в", "з", "с"]
+        let aliases: [String: Set<String>] = [
+            "машиною": ["car", "automobile", "vehicle"], "машина": ["car", "automobile", "vehicle"], "авто": ["car", "automobile", "vehicle"],
+            "документом": ["document", "text", "receipt", "paper"], "документ": ["document", "text", "receipt", "paper"],
+            "квитанцією": ["receipt", "invoice", "document"], "чеком": ["receipt", "invoice", "document"]
+        ]
+        var output = Set<String>()
+        for token in normalize(query).split(separator: " ").map(String.init) where !ignored.contains(token) {
+            output.insert(token)
+            output.formUnion(aliases[token] ?? [])
+        }
+        return output
     }
 }
 

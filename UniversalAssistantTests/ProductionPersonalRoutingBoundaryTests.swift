@@ -40,7 +40,7 @@ struct ProductionPersonalRoutingBoundaryTests {
             Issue.record("Expected a direct Contacts result")
             return
         }
-        #expect(result.facts.first?.label == "Телефон")
+        #expect(result.facts.first?.label == "Сашко")
         #expect(result.facts.first?.value == "+380501234567")
         #expect(await probe.calls == 0)
     }

@@ -16,6 +16,11 @@ struct SharedInboxStore {
         self.defaults = defaults ?? .standard
     }
 
+    nonisolated static func imageData(from value: String) -> Data? {
+        if let url = URL(string: value), url.isFileURL { return try? Data(contentsOf: url) }
+        return Data(base64Encoded: value)
+    }
+
     func consume() -> SharedInboxEnvelope? {
         guard let data = defaults.data(forKey: Self.inboxKey),
               let value = try? JSONDecoder().decode(SharedInboxEnvelope.self, from: data)

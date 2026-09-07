@@ -23,6 +23,13 @@ import Testing
             labelsByPayload[String(decoding: imageData, as: UTF8.self)] ?? []
         }
     }
+    private struct DelayedSemanticLabelerStub: PhotoSemanticLabeling {
+        let delay: Duration
+        func labels(imageData: Data) async throws -> [PhotoSemanticLabel] {
+            try await Task.sleep(for: delay)
+            return [.init(name: "automobile", confidence: 0.91)]
+        }
+    }
     @Test func fileSearchUsesOnlyExplicitReferencesAndReturnsExactOpenURL() async throws {
         let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
