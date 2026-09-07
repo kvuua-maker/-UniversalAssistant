@@ -76,7 +76,7 @@ struct LocalCommandEngine: CommandParsing {
         (.localUtility, ["скільки буде", "сколько будет", "помножити", "умножить", "поділити", "разделить", "відсотків від", "процентов от", "кілометрів у", "километров в", "який сьогодні день", "какой сегодня день", "котра година", "который час"]),
         (.webSearch, ["пошукай в інтернеті", "поищи в интернете", "search the web", "im web suchen", "recherche sur le web"]),
         (.deviceAction, ["увімкни ліхтарик", "вимкни ліхтарик", "включи фонарик", "выключи фонарик", "turn on flashlight", "turn off flashlight", "taschenlampe einschalten", "allume la lampe",
-                         "постав таймер", "установи таймер", "set a timer", "постав будильник", "установи будильник", "set an alarm",
+                         "постав таймер", "створи таймер", "установи таймер", "создай таймер", "set a timer", "create a timer", "постав будильник", "створи будильник", "установи будильник", "создай будильник", "set an alarm", "create an alarm",
                          "заряд батареї", "уровень батареи", "battery level", "вільного місця", "свободного места", "free storage",
                          "скопіюй у буфер", "скопируй в буфер", "copy to clipboard", "налаштування wi-fi", "настройки wi-fi",
                          "увімкни bluetooth", "включи bluetooth", "режим енергозбереження", "режим энергосбережения",
@@ -208,14 +208,25 @@ struct LocalCommandEngine: CommandParsing {
             if let match = text.range(of: #"([0-9]+)\s*(хв|мин|min|minute|сек|sec)"#, options: .regularExpression) {
                 let value = String(text[match]); let amount = value.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }.first
                 if let amount { entities["duration_seconds"] = String(value.contains("сек") || value.contains("sec") ? amount : amount * 60) }
+                if let label = alarmLabel(in: text, kind: "timer") { entities["label"] = label }
             }
         } else if ["будильник", "alarm"].contains(where: text.contains) {
             entities["system_action"] = "alarm"
             if let match = text.range(of: #"\b([01]?[0-9]|2[0-3])[:.]([0-5][0-9])\b"#, options: .regularExpression) {
                 let parts = text[match].split(whereSeparator: { $0 == ":" || $0 == "." })
                 if parts.count == 2 { entities["hour"] = String(parts[0]); entities["minute"] = String(parts[1]) }
+                if let label = alarmLabel(in: text, kind: "alarm") { entities["label"] = label }
             }
         }
+    }
+
+    private func alarmLabel(in text: String, kind: String) -> String? {
+        var value = text
+        let commandPattern = kind == "timer" ? #"(?:постав|установи|set|створи|создай)?\s*(?:таймер|timer)"# : #"(?:постав|установи|set|створи|создай)?\s*(?:будильник|alarm)"#
+        value = value.replacingOccurrences(of: commandPattern, with: " ", options: [.regularExpression, .caseInsensitive])
+        value = value.replacingOccurrences(of: #"(?:\bна|for|at)?\s*\d{1,2}(?::[0-5]\d)?\s*(?:хвилин\p{L}*|хв|минут\p{L}*|мин|minutes?|mins?|секунд\p{L}*|сек|seconds?|secs?)?"#, with: " ", options: [.regularExpression, .caseInsensitive])
+        value = value.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        return value.isEmpty ? nil : value
     }
 
     private func translationSource(in text: String) -> String? {

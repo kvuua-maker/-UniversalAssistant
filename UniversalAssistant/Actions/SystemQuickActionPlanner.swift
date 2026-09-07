@@ -10,8 +10,8 @@ enum SystemQuickAction: Equatable, Sendable {
     case takePhoto
     case openFiles
     case openApp(verifiedURL: URL)
-    case startTimer(seconds: Int)
-    case createAlarm(hour: Int, minute: Int)
+    case startTimer(seconds: Int, label: String? = nil)
+    case createAlarm(hour: Int, minute: Int, label: String? = nil)
     case flashlight(enabled: Bool)
     case batteryLevel
     case freeStorage
@@ -89,10 +89,10 @@ struct SystemQuickActionPlanner: Sendable {
                 destination: url,
                 reason: "verified_application_destination"
             )
-        case .startTimer(let seconds):
+        case .startTimer(let seconds, _):
             guard seconds > 0 else { return unavailable("invalid_timer_duration") }
             return .init(mechanism: .alarmKit, completion: .readyForUserInteraction, continuation: nil, destination: nil, reason: "public_alarmkit_timer")
-        case .createAlarm(let hour, let minute):
+        case .createAlarm(let hour, let minute, _):
             let validTime = (0...23).contains(hour) && (0...59).contains(minute)
             guard validTime else { return unavailable("invalid_alarm_time") }
             return .init(mechanism: .alarmKit, completion: .readyForUserInteraction, continuation: nil, destination: nil, reason: "public_alarmkit_alarm")
@@ -167,15 +167,19 @@ struct ProductionAlarmKitExecutor {
         let authorization = manager.authorizationState == .notDetermined ? try await manager.requestAuthorization() : manager.authorizationState
         guard authorization == .authorized else { throw ExecutionError.denied }
         let stop = AlarmButton(text: "Stop", textColor: .white, systemImageName: "stop.fill")
-        let presentation = AlarmPresentation(alert: .init(title: "UniversalAssistant", stopButton: stop))
-        let attributes = AlarmAttributes<UniversalAssistantAlarmMetadata>(presentation: presentation, metadata: .init(title: "UniversalAssistant"), tintColor: .blue)
         let id = UUID()
         switch action {
-        case .startTimer(let seconds) where seconds > 0:
+        case .startTimer(let seconds, let label) where seconds > 0:
+            let title = label ?? "UniversalAssistant"
+            let presentation = AlarmPresentation(alert: .init(title: "UniversalAssistant", stopButton: stop))
+            let attributes = AlarmAttributes<UniversalAssistantAlarmMetadata>(presentation: presentation, metadata: .init(title: title), tintColor: .blue)
             _ = try await manager.schedule(id: id, configuration: .timer(duration: TimeInterval(seconds), attributes: attributes))
             return "Таймер встановлено"
-        case .createAlarm(let hour, let minute) where (0...23).contains(hour) && (0...59).contains(minute):
+        case .createAlarm(let hour, let minute, let label) where (0...23).contains(hour) && (0...59).contains(minute):
             let schedule = Alarm.Schedule.relative(.init(time: .init(hour: hour, minute: minute)))
+            let title = label ?? "UniversalAssistant"
+            let presentation = AlarmPresentation(alert: .init(title: "UniversalAssistant", stopButton: stop))
+            let attributes = AlarmAttributes<UniversalAssistantAlarmMetadata>(presentation: presentation, metadata: .init(title: title), tintColor: .blue)
             _ = try await manager.schedule(id: id, configuration: .alarm(schedule: schedule, attributes: attributes))
             return "Будильник встановлено"
         default: throw ExecutionError.invalidAction

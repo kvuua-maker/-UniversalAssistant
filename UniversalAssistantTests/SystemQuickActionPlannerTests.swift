@@ -20,10 +20,25 @@ struct SystemQuickActionPlannerTests {
     }
 
     @Test func timerAndAlarmUsePublicAlarmKitPlansAndRejectInvalidValues() {
-        #expect(planner.plan(.startTimer(seconds: 60)).mechanism == .alarmKit)
-        #expect(planner.plan(.createAlarm(hour: 7, minute: 30)).mechanism == .alarmKit)
-        #expect(planner.plan(.startTimer(seconds: 0)).completion == .unsupported)
-        #expect(planner.plan(.createAlarm(hour: 25, minute: 0)).completion == .unsupported)
+        #expect(planner.plan(.startTimer(seconds: 60, label: nil)).mechanism == .alarmKit)
+        #expect(planner.plan(.createAlarm(hour: 7, minute: 30, label: nil)).mechanism == .alarmKit)
+        #expect(planner.plan(.startTimer(seconds: 0, label: nil)).completion == .unsupported)
+        #expect(planner.plan(.createAlarm(hour: 25, minute: 0, label: nil)).completion == .unsupported)
+    }
+
+    @Test func timerAndAlarmLabelsSurviveCanonicalParsing() {
+        let engine = LocalCommandEngine()
+        let timer = engine.parse("Створи таймер чай на 75 секунд")
+        #expect(timer.intent == .deviceAction)
+        #expect(timer.entities["system_action"] == "timer")
+        #expect(timer.entities["duration_seconds"] == "75")
+        #expect(timer.entities["label"] == "чай")
+        let alarm = engine.parse("Установи будильник на 06:40 ранкова пробіжка")
+        #expect(alarm.intent == .deviceAction)
+        #expect(alarm.entities["system_action"] == "alarm")
+        #expect(alarm.entities["hour"] == "06")
+        #expect(alarm.entities["minute"] == "40")
+        #expect(alarm.entities["label"] == "ранкова пробіжка")
     }
 
     @Test func onlyBoundedVerifiedAppDestinationsArePrepared() throws {

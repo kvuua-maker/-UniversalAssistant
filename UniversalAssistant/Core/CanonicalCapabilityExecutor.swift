@@ -256,8 +256,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let kind = command.entities["system_action"] ?? ""
         if kind == "unsupported_system_control" { throw CanonicalCapabilityExecutionError.unavailable("system_control_not_publicly_available") }
         let action: SystemQuickAction
-        if kind == "timer", let seconds = Int(command.entities["duration_seconds"] ?? "") { action = .startTimer(seconds: seconds) }
-        else if kind == "alarm", let hour = Int(command.entities["hour"] ?? ""), let minute = Int(command.entities["minute"] ?? "") { action = .createAlarm(hour: hour, minute: minute) }
+        if kind == "timer", let seconds = Int(command.entities["duration_seconds"] ?? "") { action = .startTimer(seconds: seconds, label: command.entities["label"]) }
+        else if kind == "alarm", let hour = Int(command.entities["hour"] ?? ""), let minute = Int(command.entities["minute"] ?? "") { action = .createAlarm(hour: hour, minute: minute, label: command.entities["label"]) }
         else if kind == "flashlight" { action = .flashlight(enabled: command.entities["enabled"] != "false") }
         else if kind == "battery" { action = .batteryLevel }
         else if kind == "storage" { action = .freeStorage }

@@ -29,7 +29,7 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-14.04 | GREEN |
 | B27-14.05 | GREEN |
 | B27-14.06 | GREEN |
-| B27-14.07 | NOT_STARTED |
+| B27-14.07 | GREEN |
 | B27-14.08 | NOT_STARTED |
 | B27-14.09 | NOT_STARTED |
 | B27-14.10 | NOT_STARTED |
@@ -189,3 +189,24 @@ CLOSED locally disproven test expectation: preserving polite control wording and
 B27-14.06 is GREEN. Build 27 does not exist.
 
 Exact next code-level operation: begin B27-14.07 Timer/Alarm consistency. Preserve the physically firing AlarmKit paths, trace voice/typed alarm time and optional label extraction through LocalCommandEngine and SystemQuickActionExecutor, repair equivalent voice convergence and timer/alarm result naming without changing public AlarmKit scheduling, then add unseen-parameter production regressions and run affected suites plus Development compile.
+
+
+## Completed material repair: B27-14.07
+
+Physical evidence: AlarmKit timers and one typed alarm physically fired, but equivalent create wording diverged, alarm/timer result identity was inconsistent, and a named timer lost its label.
+
+Material repair:
+- General Ukrainian, Russian and English create/set timer and alarm variants converge on deviceAction.
+- Optional natural labels survive parsing and are carried in typed SystemQuickAction values into AlarmKit metadata.
+- Timer and alarm schedule branches remain distinct and return distinct truthful result strings.
+- Existing iOS 26 availability and AlarmManager authorization gates are unchanged.
+
+CLOSED approach: assigning a runtime String to AlarmPresentation.Alert.title. The public SDK requires LocalizedStringResource and compilation rejected the mechanism. It will not be retried unchanged. The materially different supported mechanism stores the dynamic label in AlarmMetadata while retaining a static localized system presentation title.
+
+Verification: SystemQuickActionPlannerTests and VoiceTextInputQualityTests PASS: 21 tests in 2 suites. Development compile PASS. Physical AlarmKit execution remains owner-retest required.
+
+## Exact continuation point after B27-14.07
+
+B27-14.07 is GREEN. Build 27 does not exist.
+
+Exact next code-level operation: begin B27-14.08 SYSTEM/OPEN_APP. Audit QuickLaunchPolicy, LaunchMarketAppMatrix, UniversalDeviceCommandRouter and Home presentation routing against current public mechanisms. Preserve Spotify, Apple Music, Camera and flashlight passes; repair general open-app/system-destination classification and ensure non-public brightness, volume, Low Power, Bluetooth, Wi-Fi and protected Phone/Calculator destinations terminate locally with precise public limitation rather than web. Add production-boundary unseen variants and renderer regressions.
