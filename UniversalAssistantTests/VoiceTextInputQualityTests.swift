@@ -14,6 +14,7 @@ struct VoiceTextInputQualityTests {
         #expect(request.contextualStrings == VoiceRecognitionRequestConfiguration.contextualVocabulary)
         #expect(request.contextualStrings.count <= 100)
         #expect(request.contextualStrings.allSatisfy { $0.split(separator: " ").count <= 2 })
+        #expect(["NVIDIA", "Baldinini", "Spotify", "Apple Music", "QR-код", "відскануй", "розпізнай"].allSatisfy(request.contextualStrings.contains))
     }
 
     @Test func genericQueryDoesNotAddInternalFindOperator() throws {

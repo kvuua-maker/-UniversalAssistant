@@ -72,7 +72,7 @@ struct LocalCommandEngine: CommandParsing {
         (.emergency, ["112", "швидк", "скорая", "ambulance", "polizei", "police", "пожежа", "пожар"]),
         (.travelPlan, ["сплануй подорож", "спланируй поездку", "plan a trip", "reise planen", "planifie un voyage", "треба бути у", "треба бути в"]),
         (.webSearch, ["пошукай в інтернеті", "поищи в интернете", "search the web", "im web suchen", "recherche sur le web"]),
-        (.deviceAction, ["увімкни ліхтарик", "включи фонарик", "turn on flashlight", "taschenlampe einschalten", "allume la lampe",
+        (.deviceAction, ["увімкни ліхтарик", "вимкни ліхтарик", "включи фонарик", "выключи фонарик", "turn on flashlight", "turn off flashlight", "taschenlampe einschalten", "allume la lampe",
                          "постав таймер", "установи таймер", "set a timer", "постав будильник", "установи будильник", "set an alarm"]),
         (.appAction, ["дія в застосунку", "действие в приложении", "action in app", "aktion in app", "action dans l'app"]),
         (.audioRecord, ["диктофон", "запиши аудіо", "призупини запис", "продовж запис", "зупини запис",
@@ -180,7 +180,9 @@ struct LocalCommandEngine: CommandParsing {
     }
 
     private func extractSystemQuickAction(from text: String, into entities: inout [String: String]) {
-        if ["таймер", "timer"].contains(where: text.contains) {
+        if ["ліхтарик", "фонарик", "flashlight", "taschenlampe", "lampe"].contains(where: text.contains) {
+            entities["system_action"] = "flashlight"
+        } else if ["таймер", "timer"].contains(where: text.contains) {
             entities["system_action"] = "timer"
             if let match = text.range(of: #"([0-9]+)\s*(хв|мин|min|minute|сек|sec)"#, options: .regularExpression) {
                 let value = String(text[match]); let amount = value.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }.first

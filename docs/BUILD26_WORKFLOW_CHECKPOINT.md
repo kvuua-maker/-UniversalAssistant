@@ -21,6 +21,8 @@
 - Removed the non-functional `ph://` path. Photo result actions now open a public PhotoKit-backed in-app sheet; semantic photo search is Photos-only and fails closed instead of returning unrelated Contacts/Files.
 - Photos/voice/result affected suites passed 31 tests in 4 suites; Development compile passed.
 - Files security-scoped metadata reads now run behind an injectable user-initiated async query boundary with a 3-second interactive deadline, cancellation completion, and late-result suppression. Files/Photos boundary suites passed 14 tests in 2 suites; Development compile passed.
+- Voice recognition now creates the public `SFSpeechRecognitionTask` before audio capture starts, closing the first-buffer readiness race, and supplies bounded domain contextual vocabulary for mixed-language brands, QR/OCR, system nouns, and Ukrainian imperatives.
+- Unsupported flashlight control is now a recognized system intent with a truthful local unavailable result; it no longer becomes clarification or Google fallback. Voice/audio suites passed 17 tests in 2 suites.
 
 ## Exact continuation point
 

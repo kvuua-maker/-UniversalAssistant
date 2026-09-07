@@ -235,6 +235,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let action: SystemQuickAction
         if kind == "timer", let seconds = Int(command.entities["duration_seconds"] ?? "") { action = .startTimer(seconds: seconds) }
         else if kind == "alarm", let hour = Int(command.entities["hour"] ?? ""), let minute = Int(command.entities["minute"] ?? "") { action = .createAlarm(hour: hour, minute: minute) }
+        else if !kind.isEmpty { throw CanonicalCapabilityExecutionError.unavailable("system_control_not_publicly_available") }
         else { throw CanonicalCapabilityExecutionError.missingParameter("system_action") }
         guard #available(iOS 26.0, *) else { throw CanonicalCapabilityExecutionError.unavailable("alarmkit_requires_ios_26") }
         #if canImport(AlarmKit)

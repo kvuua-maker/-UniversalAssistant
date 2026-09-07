@@ -100,7 +100,10 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
     static let contextualVocabulary = [
         "UniversalAssistant", "Telegram", "WhatsApp", "Viber", "Signal",
         "Apple Music", "подкаст", "календар", "нагадування", "маршрут",
-        "погода", "контакт", "нотатка", "документ"
+        "погода", "контакт", "нотатка", "документ",
+        "NVIDIA", "Baldinini", "Spotify", "iPhone", "iPhone Pro", "QR-код", "QR code", "OCR",
+        "відкрий", "відскануй", "розпізнай", "знайди", "покажи", "проклади", "подзвони", "набери",
+        "ліхтарик", "файли", "фото", "будильник", "таймер", "калькулятор"
     ]
 
     func apply(to request: SFSpeechAudioBufferRecognitionRequest) {
@@ -281,10 +284,10 @@ final class VoiceInputController {
         self.request = request
         let requestSink = VoiceRecognitionRequestSink(request)
         do {
-            try capture.start { buffer in requestSink.append(buffer) }
-            setState(.listening)
             task = recognizer.recognitionTask(with: request, resultHandler: Self.makeRecognitionHandler(owner: self))
             LocalVoiceDiagnosticReport.shared.record("recognition_task_created")
+            try capture.start { buffer in requestSink.append(buffer) }
+            setState(.listening)
         } catch {
             LocalVoiceDiagnosticReport.shared.record("voice_start_failed", "error_type=\(String(describing: type(of: error)))")
             stop(reason: .startFailure); setState(.failed)
