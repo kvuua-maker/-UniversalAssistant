@@ -6,8 +6,9 @@ struct LocalUtilityEngine: Sendable {
     static func recognizes(_ raw: String) -> Bool {
         let text = normalized(raw)
         let signals = ["скільки буде", "сколько будет", "помнож", "умнож", "поділ", "раздел", "kilometer", "кілометр", "километр", "miles", "мил", "кілограм", "килограмм", "pounds", "фунт", "celsius", "fahrenheit", "цельсі", "цельси", "який сьогодні день", "какой сегодня день", "яка сьогодні дата", "какая сегодня дата", "котра година", "который час", "local time"]
-        let numericExpression = text.range(of: #"[-+]?\d+(?:[.,]\d+)?\s*[+×*/÷-]\s*[-+]?\d+(?:[.,]\d+)?"#, options: .regularExpression) != nil
-        let percentageExpression = text.range(of: #"[-+]?\d+(?:[.,]\d+)?[^\d]{0,20}(?:%|відсот|процент)"#, options: .regularExpression) != nil
+        let range = NSRange(text.startIndex..., in: text)
+        let numericExpression = numericExpressionRegex.firstMatch(in: text, range: range) != nil
+        let percentageExpression = percentageExpressionRegex.firstMatch(in: text, range: range) != nil
         return signals.contains(where: text.contains) || numericExpression || percentageExpression
     }
 
@@ -97,5 +98,7 @@ struct LocalUtilityEngine: Sendable {
     }
 
     private static let numberPattern = #"[-+]?\d+(?:[.,]\d+)?"#
-    private static func normalized(_ raw: String) -> String { raw.lowercased().replacingOccurrences(of: "’", with: "'").replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression) }
+    private static let numericExpressionRegex = try! NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?\s*[+×*\/÷-]\s*[-+]?\d+(?:[.,]\d+)?"#)
+    private static let percentageExpressionRegex = try! NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?[^\d]{0,20}(?:%|відсот|процент)"#, options: [.caseInsensitive])
+    private static func normalized(_ raw: String) -> String { raw.lowercased().replacingOccurrences(of: "’", with: "'").split(whereSeparator: \.isWhitespace).joined(separator: " ") }
 }

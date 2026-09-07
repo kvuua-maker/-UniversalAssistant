@@ -1,7 +1,7 @@
 # Build 26 canonical repair checkpoint
 
 - Baseline physical release: `aab4b308cf79a38626e29bf86cc4a46513f2402a` (0.1.0 Build 25).
-- Latest green source checkpoint: `fae3dddd9ec00320d81613ca57181dd30496192c` (`Verify notes clipboard and external provider boundaries`), plus the pending UI/matrix block described below.
+- Latest green source checkpoint before this gate repair: `8a08c997f80c76780d7c04874327b775a66f0575` (`Complete Build 25 forensic and capability audits`).
 - Build metadata remains 0.1.0 (25). Build 26 has not been created.
 - Recovery artifacts remain untouched and untracked.
 
@@ -44,10 +44,19 @@
 - Production renderer no longer displays parser acknowledgement cards or redundant system-handoff narration/raw commands; planner/provider IDs remain filtered. UI/result/canonical suites passed 15/15 in 3 suites after correcting a test-only string literal.
 - Persisted `docs/B25_01_71_FORENSIC_ACCEPTANCE_MATRIX.md` with exactly 71/71 rows, `docs/B25_VPS_DIAGNOSTIC_CORRELATION.md` with privacy-safe Build-25 aggregate evidence, and `docs/BUILD26_CAPABILITY_REACHABILITY_MATRIX.md` covering every `CommandIntent` plus public-iOS limitations.
 
+## Final gate progress
+
+- Production configuration compile: PASS.
+- Full iOS regression: PASS, 700 tests total in the Xcode result bundle; run with one test worker because sub-150 ms timing fixtures are intentionally scheduler-sensitive under massively parallel Simulator contention.
+- Contacts and Files deadline completion now uses an independent wall-clock Dispatch deadline rather than cooperative `Task.sleep`; late store completion remains single-resume suppressed.
+- Local parser hot path now reuses compiled utility-recognition regular expressions and normalizes whitespace without per-request regex compilation; focused lifecycle/utility/performance suites passed 26 tests.
+- Canonical requirement gates: ZERO-OMISSION 2404/2404, AUDIO 147/147, PRIVACY 168/168, JOBS 97/97, LOYALTY 127/127 PASS.
+- Backend regression and remaining diagnostics-script gate are the next verification operations.
+
 ## Exact continuation point
 
-1. Run all repository E2E/regression/canonical/release gates; repair only locally caused failures and rerun.
-2. Commit/push the green UI/matrix block and verify clean source state.
+1. Run and capture the exact backend regression summary and `Scripts/test_live_diagnostics.py`.
+2. Commit/push this green gate-stability checkpoint and verify clean source state.
 3. Only after every applicable gate is green, increment Build 25 to Build 26 and enter the authorized release workflow.
 
 No B25 row is claimed physically fixed. All B25-01 through B25-71 remain in the authoritative acceptance matrix; confirmed Build-25 passes must be preserved.

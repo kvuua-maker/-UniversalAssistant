@@ -85,7 +85,11 @@ final class SystemContactQuery: ContactQuerying, @unchecked Sendable {
             try await withCheckedThrowingContinuation { continuation in
                 completion.install(continuation)
                 queue.async { do { completion.finish(.success(try operation())) } catch { completion.finish(.failure(error)) } }
-                Task { try? await Task.sleep(for: timeout); completion.finish(.failure(ContactResolutionError.timedOut)) }
+                let components = timeout.components
+                let delay = Double(components.seconds) + Double(components.attoseconds) / 1_000_000_000_000_000_000
+                DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay) {
+                    completion.finish(.failure(ContactResolutionError.timedOut))
+                }
             }
         } onCancel: { completion.finish(.failure(ContactResolutionError.cancelled)) }
     }

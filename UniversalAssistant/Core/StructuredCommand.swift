@@ -267,7 +267,7 @@ struct LocalCommandEngine: CommandParsing {
     }
 
     private func normalize(_ text: String) -> String {
-        var value = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().replacingOccurrences(of: "’", with: "'").replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+        var value = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().replacingOccurrences(of: "’", with: "'").split(whereSeparator: \.isWhitespace).joined(separator: " ")
         let scannerContext = ["скан", "відскан", "розпіз", "scan", "recogn"].contains(where: value.contains)
         if scannerContext {
             value = value.replacingOccurrences(of: #"(?:q\s*(?:club|клуб)|quad)"#, with: "qr", options: [.regularExpression, .caseInsensitive])

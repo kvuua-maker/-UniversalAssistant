@@ -213,7 +213,11 @@ final class SystemAuthorizedFileQuery: AuthorizedFileQuerying, @unchecked Sendab
             try await withCheckedThrowingContinuation { continuation in
                 completion.install(continuation)
                 queue.async { [operation] in completion.finish(.success(operation(references, query))) }
-                Task { try? await Task.sleep(for: timeout); completion.finish(.failure(AuthorizedFileQueryError.timedOut)) }
+                let components = timeout.components
+                let delay = Double(components.seconds) + Double(components.attoseconds) / 1_000_000_000_000_000_000
+                DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay) {
+                    completion.finish(.failure(AuthorizedFileQueryError.timedOut))
+                }
             }
         } onCancel: { completion.finish(.failure(AuthorizedFileQueryError.cancelled)) }
     }
