@@ -243,7 +243,7 @@ final class AssistantViewModel {
                         presentFailure(message: AppText.value("request_unavailable"))
                         LocalVoiceDiagnosticReport.shared.record("execution_failed", "capability=audio_record")
                     } else {
-                        resultState = .recognized(summary)
+                        resultState = .idle
                         statusText = AppText.value("ready")
                         LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=audio_record state=\(String(describing: recorder.state))")
                     }
@@ -332,7 +332,7 @@ final class AssistantViewModel {
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=handoff capability=\(command.intent.rawValue)")
                 case let .presentation(presentation):
                     capabilityPresentation = presentation
-                    resultState = .recognized(summary)
+                    resultState = .idle
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=system_presentation capability=\(command.intent.rawValue)")
                 }
                 statusText = AppText.value("ready")
@@ -345,7 +345,7 @@ final class AssistantViewModel {
                 statusText = AppText.value("clarification_needed")
             } catch let CanonicalCapabilityExecutionError.externalProviderRequired(providerClass) {
                 LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=external_provider_required capability=\(providerClass)")
-                presentFailure(message: AppText.value("request_unavailable"))
+                presentGeneralWebFallback(command)
             } catch let CanonicalCapabilityExecutionError.unavailable(reason) {
                 LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=capability_unavailable capability=\(command.intent.rawValue) detail=\(reason)")
                 presentFailure(message: AppText.value("request_unavailable"))
@@ -445,7 +445,12 @@ final class AssistantViewModel {
 
     func ingestShared(_ envelope: SharedInboxEnvelope) {
         switch envelope.kind {
-        case "url", "text":
+        case "url":
+            guard let url = URL(string: envelope.value), ["https", "http"].contains(url.scheme?.lowercased() ?? ""), url.host != nil else { presentFailure(message: AppText.value("request_unavailable")); return }
+            resultState = .webHandoff(.init(query: url.host ?? envelope.value, destination: url, kind: .system))
+            statusText = AppText.value("ready")
+            return
+        case "text":
             input = envelope.value
         case "vcard":
             input = "Використай переданий контакт"

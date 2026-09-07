@@ -19,9 +19,11 @@ struct SystemQuickActionPlannerTests {
         #expect(plan.continuation == .translateSelection)
     }
 
-    @Test func timerAndAlarmNeverPretendToCompleteWithoutPublicAPI() {
-        #expect(planner.plan(.startTimer(seconds: 60)).completion == .unsupported)
-        #expect(planner.plan(.createAlarm(hour: 7, minute: 30)).completion == .unsupported)
+    @Test func timerAndAlarmUsePublicAlarmKitPlansAndRejectInvalidValues() {
+        #expect(planner.plan(.startTimer(seconds: 60)).mechanism == .alarmKit)
+        #expect(planner.plan(.createAlarm(hour: 7, minute: 30)).mechanism == .alarmKit)
+        #expect(planner.plan(.startTimer(seconds: 0)).completion == .unsupported)
+        #expect(planner.plan(.createAlarm(hour: 25, minute: 0)).completion == .unsupported)
     }
 
     @Test func onlyBoundedVerifiedAppDestinationsArePrepared() throws {

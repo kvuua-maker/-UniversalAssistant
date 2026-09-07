@@ -72,15 +72,16 @@ struct LocalCommandEngine: CommandParsing {
         (.emergency, ["112", "швидк", "скорая", "ambulance", "polizei", "police", "пожежа", "пожар"]),
         (.travelPlan, ["сплануй подорож", "спланируй поездку", "plan a trip", "reise planen", "planifie un voyage", "треба бути у", "треба бути в"]),
         (.webSearch, ["пошукай в інтернеті", "поищи в интернете", "search the web", "im web suchen", "recherche sur le web"]),
-        (.deviceAction, ["увімкни ліхтарик", "включи фонарик", "turn on flashlight", "taschenlampe einschalten", "allume la lampe"]),
+        (.deviceAction, ["увімкни ліхтарик", "включи фонарик", "turn on flashlight", "taschenlampe einschalten", "allume la lampe",
+                         "постав таймер", "установи таймер", "set a timer", "постав будильник", "установи будильник", "set an alarm"]),
         (.appAction, ["дія в застосунку", "действие в приложении", "action in app", "aktion in app", "action dans l'app"]),
         (.audioRecord, ["диктофон", "запиши аудіо", "призупини запис", "продовж запис", "зупини запис",
                         "voice recorder", "pause recording", "resume recording", "stop recording",
                         "sprachmemo", "aufnahme pausieren", "aufnahme fortsetzen", "aufnahme stoppen",
                         "enregistre audio", "pause l'enregistrement", "reprends l'enregistrement", "arrête l'enregistrement"]),
-        (.cameraCapture, ["зроби фото", "відкрий камеру", "сфотографуй", "сделай фото", "открой камеру", "take a photo", "open camera", "скануй qr", "скануй код", "штрихкод", "сканируй qr", "сканируй код", "scan qr", "scan barcode", "розпізнай текст", "розпізнати текст", "распознай текст", "recognize text", "scan text"]),
+        (.cameraCapture, ["зроби фото", "відкрий камеру", "сфотографуй", "сделай фото", "открой камеру", "take a photo", "open camera", "скануй qr", "відскануй qr", "qr-код", "qr код", "скануй код", "штрихкод", "сканируй qr", "сканируй код", "scan qr", "scan barcode", "розпізнай текст", "розпізнати текст", "распознай текст", "recognize text", "scan text"]),
         (.translation, ["переклади", "переведи", "translate ", "übersetze", "traduis"]),
-        (.photoSearch, ["знайди фото", "покажи фото", "найди фото", "покажи фотографии", "find photos", "show photos"]),
+        (.photoSearch, ["знайди фото", "покажи фото", "найди фото", "покажи фотографии", "find photos", "show photos", "відкрий останнє фото", "відкрий останню світлину", "открой последнее фото", "open latest photo"]),
         (.fileSearch, ["знайди файл", "знайди документ", "найди файл", "найди документ", "find file", "find document"]),
         (.reminderComplete, ["виконай нагадування", "познач нагадування виконаним", "заверши напоминание", "complete reminder"]),
         (.reminderDelete, ["видали нагадування", "скасуй нагадування", "удали напоминание", "delete reminder"]),
@@ -153,17 +154,41 @@ struct LocalCommandEngine: CommandParsing {
         if [.navigation, .routeSearch, .transportRoute].contains(intent), let value = target(after: ["веди", "маршрут до", "navigate", "route to", "побудуй маршрут до", "покажи маршрут до", "построй маршрут до", "як доїхати до", "как доехать до"], in: text) { entities["destination"] = value }
         if [.placeSearch, .restaurantSearch, .serviceSearch].contains(intent), let value = locality(in: text) { entities["location"] = value }
         if intent == .audioRecord { entities["recorder_action"] = recorderAction(in: normalized) }
-        if intent == .cameraCapture, ["qr", "штрихкод", "barcode", "скануй код", "сканируй код"].contains(where: normalized.contains) { entities["capture_mode"] = "code_scan" }
+        if intent == .deviceAction { extractSystemQuickAction(from: normalized, into: &entities) }
+        if intent == .cameraCapture, ["qr", "q r", "ку ар", "штрихкод", "barcode", "скануй код", "сканируй код"].contains(where: normalized.contains) { entities["capture_mode"] = "code_scan" }
         if intent == .cameraCapture, ["розпізнай текст", "розпізнати текст", "распознай текст", "recognize text", "scan text"].contains(where: normalized.contains) {
             entities["capture_mode"] = "text_scan"
             if ["файл", "документ", "file", "document"].contains(where: normalized.contains) { entities["input_source"] = "document" }
         }
         if intent == .translation {
-            if let value = target(after: ["переклади", "переведи", "translate", "übersetze", "traduis"], in: text) { entities["source_text"] = value }
+            if let value = translationSource(in: text) { entities["source_text"] = value }
             if let target = translationTarget(in: normalized) { entities["target_language"] = target }
         }
         let risk: ActionRisk = intent == .emergency ? .emergency : ([.calendarCreate, .reminderCreate, .reminderComplete, .reminderDelete, .shoppingList, .cancel, .undo].contains(intent) ? .reversible : .informational)
         return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: intent, entities: entities, constraints: constraints, risk: risk, needsClarification: intent == .unknown)
+    }
+
+    private func extractSystemQuickAction(from text: String, into entities: inout [String: String]) {
+        if ["таймер", "timer"].contains(where: text.contains) {
+            entities["system_action"] = "timer"
+            if let match = text.range(of: #"([0-9]+)\s*(хв|мин|min|minute|сек|sec)"#, options: .regularExpression) {
+                let value = String(text[match]); let amount = value.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }.first
+                if let amount { entities["duration_seconds"] = String(value.contains("сек") || value.contains("sec") ? amount : amount * 60) }
+            }
+        } else if ["будильник", "alarm"].contains(where: text.contains) {
+            entities["system_action"] = "alarm"
+            if let match = text.range(of: #"\b([01]?[0-9]|2[0-3])[:.]([0-5][0-9])\b"#, options: .regularExpression) {
+                let parts = text[match].split(whereSeparator: { $0 == ":" || $0 == "." })
+                if parts.count == 2 { entities["hour"] = String(parts[0]); entities["minute"] = String(parts[1]) }
+            }
+        }
+    }
+
+    private func translationSource(in text: String) -> String? {
+        guard var value = target(after: ["переклади", "переведи", "translate", "übersetze", "traduis"], in: text) else { return nil }
+        value = value.replacingOccurrences(of: #"^\s*(?:англійською|на англійську|на английский|into english|to english|німецькою|на німецьку|на немецкий|into german|французькою|на французьку|українською|на українську|на украинский)\s*[:,-]?\s*"#, with: "", options: [.regularExpression, .caseInsensitive])
+        let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        return cleaned.isEmpty ? nil : cleaned
     }
 
     private func recorderAction(in text: String) -> String {

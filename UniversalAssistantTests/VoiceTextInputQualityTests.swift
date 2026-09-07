@@ -75,4 +75,23 @@ struct VoiceTextInputQualityTests {
         #expect(RequestComposerLayoutPolicy.maximumLines >= 4)
         #expect(RequestComposerLayoutPolicy.maximumLines <= 8)
     }
+
+    @Test func build24PhysicalParserRegressionsUseCanonicalRoutes() {
+        let qr = engine.parse("Відскануй QR-код")
+        #expect(qr.intent == .cameraCapture); #expect(qr.entities["capture_mode"] == "code_scan")
+        let ocr = engine.parse("Розпізнай текст камерою")
+        #expect(ocr.intent == .cameraCapture); #expect(ocr.entities["capture_mode"] == "text_scan")
+        let timer = engine.parse("Постав таймер на 2 хвилини")
+        #expect(timer.intent == .deviceAction); #expect(timer.entities["duration_seconds"] == "120")
+        let alarm = engine.parse("Постав будильник на 4:00")
+        #expect(alarm.intent == .deviceAction); #expect(alarm.entities["hour"] == "4"); #expect(alarm.entities["minute"] == "00")
+        #expect(engine.parse("Відкрий останнє фото").intent == .photoSearch)
+    }
+
+    @Test func translationControlLanguageDoesNotLeakIntoPayload() {
+        let command = engine.parse("Переклади англійською: Добрий вечір, як справи?")
+        #expect(command.intent == .translation)
+        #expect(command.entities["target_language"] == "en")
+        #expect(command.entities["source_text"] == "Добрий вечір, як справи")
+    }
 }

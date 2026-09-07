@@ -54,11 +54,11 @@ struct CompactResultCard: View {
         case .deterministic(let result):
             VStack(alignment: .leading, spacing: 10) {
                 Text(result.primaryAnswer).font(.headline)
-                ForEach(result.facts.prefix(5)) { fact in
+                ForEach(result.facts.filter { !["typedCommand", "deterministicCompose", "voice", "command"].contains($0.label) }.prefix(5)) { fact in
                     VStack(alignment: .leading, spacing: 2) {
                         Text(fact.label).font(.subheadline.weight(.semibold))
                         if let value = fact.value { Text(value).font(.subheadline) }
-                        if let source = fact.source { Text(source).font(.caption).foregroundStyle(.secondary) }
+                        if let source = fact.source, !source.hasPrefix("apple-"), !["UniversalAssistant", "NaturalDateTimeResolver"].contains(source) { Text(source).font(.caption).foregroundStyle(.secondary) }
                     }
                 }
                 ForEach(result.actions.prefix(3)) { action in

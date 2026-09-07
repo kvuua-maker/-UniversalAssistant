@@ -1,4 +1,8 @@
 import Foundation
+#if canImport(AlarmKit)
+import AlarmKit
+import SwiftUI
+#endif
 
 enum SystemQuickAction: Equatable, Sendable {
     case takePhoto
@@ -19,6 +23,7 @@ enum SystemQuickActionMechanism: String, Equatable, Sendable {
     case avFoundationCapture
     case documentPicker
     case verifiedApplicationURL
+    case alarmKit
     case unavailable
 }
 
@@ -75,17 +80,19 @@ struct SystemQuickActionPlanner: Sendable {
                 reason: "verified_application_destination"
             )
         case .startTimer(let seconds):
-            return unavailable(seconds > 0 ? "no_public_ios_timer_creation_api" : "invalid_timer_duration")
+            guard seconds > 0 else { return unavailable("invalid_timer_duration") }
+            return .init(mechanism: .alarmKit, completion: .readyForUserInteraction, continuation: nil, destination: nil, reason: "public_alarmkit_timer")
         case .createAlarm(let hour, let minute):
             let validTime = (0...23).contains(hour) && (0...59).contains(minute)
-            return unavailable(validTime ? "no_public_ios_alarm_creation_api" : "invalid_alarm_time")
+            guard validTime else { return unavailable("invalid_alarm_time") }
+            return .init(mechanism: .alarmKit, completion: .readyForUserInteraction, continuation: nil, destination: nil, reason: "public_alarmkit_alarm")
         }
     }
 
     private func isVerifiedApplicationURL(_ url: URL) -> Bool {
         guard let scheme = url.scheme?.lowercased(), !scheme.isEmpty else { return false }
         if scheme == "https" { return url.host != nil }
-        return ["maps", "comgooglemaps", "waze", "tg", "viber"].contains(scheme)
+        return ["maps", "comgooglemaps", "waze", "tg", "viber", "spotify"].contains(scheme)
     }
 
     private func unavailable(_ reason: String) -> SystemQuickActionPlan {
@@ -98,3 +105,36 @@ struct SystemQuickActionPlanner: Sendable {
         )
     }
 }
+
+#if canImport(AlarmKit)
+@available(iOS 26.0, *)
+private struct UniversalAssistantAlarmMetadata: AlarmMetadata { let title: String }
+
+
+@available(iOS 26.0, *)
+@MainActor
+struct ProductionAlarmKitExecutor {
+    enum ExecutionError: Error { case unsupportedOS, denied, invalidAction }
+
+    func execute(_ action: SystemQuickAction) async throws -> String {
+        guard #available(iOS 26.0, *) else { throw ExecutionError.unsupportedOS }
+        let manager = AlarmManager.shared
+        let authorization = manager.authorizationState == .notDetermined ? try await manager.requestAuthorization() : manager.authorizationState
+        guard authorization == .authorized else { throw ExecutionError.denied }
+        let stop = AlarmButton(text: "Stop", textColor: .white, systemImageName: "stop.fill")
+        let presentation = AlarmPresentation(alert: .init(title: "UniversalAssistant", stopButton: stop))
+        let attributes = AlarmAttributes<UniversalAssistantAlarmMetadata>(presentation: presentation, metadata: .init(title: "UniversalAssistant"), tintColor: .blue)
+        let id = UUID()
+        switch action {
+        case .startTimer(let seconds) where seconds > 0:
+            _ = try await manager.schedule(id: id, configuration: .timer(duration: TimeInterval(seconds), attributes: attributes))
+            return "Таймер встановлено"
+        case .createAlarm(let hour, let minute) where (0...23).contains(hour) && (0...59).contains(minute):
+            let schedule = Alarm.Schedule.relative(.init(time: .init(hour: hour, minute: minute)))
+            _ = try await manager.schedule(id: id, configuration: .alarm(schedule: schedule, attributes: attributes))
+            return "Будильник встановлено"
+        default: throw ExecutionError.invalidAction
+        }
+    }
+}
+#endif

@@ -29,12 +29,12 @@ struct AssistantResultStateTests {
         #expect(summary.request == "Щось цікаве")
     }
 
-    @Test func newerParserOnlySubmissionRemainsTruthfullyUnavailable() async throws {
+    @Test func systemPresentationDoesNotExposeParserAcknowledgement() async throws {
         let model = AssistantViewModel(compactResultDuration: .milliseconds(200))
         model.input = "Покажи нотатки"
         model.submit()
         try await waitUntil { model.capabilityPresentation == .documents }
-        guard case .recognized = model.resultState,
+        guard case .idle = model.resultState,
               case .documents? = model.capabilityPresentation else {
             Issue.record("Expected the typed system document presentation")
             return
@@ -92,6 +92,15 @@ struct AssistantResultStateTests {
             Issue.record("Expected bounded clarification")
             return
         }
+    }
+
+     func sharedURLRemainsTypedURLAndIsNeverConvertedToSearchText() {
+        let model = AssistantViewModel()
+        model.ingestShared(.init(kind: "url", value: "https://www.apple.com/iphone", receivedAt: .now))
+        guard case let .webHandoff(result) = model.resultState else { Issue.record("Expected exact shared URL handoff"); return }
+        #expect(result.destination.absoluteString == "https://www.apple.com/iphone")
+        #expect(result.destination.host == "www.apple.com")
+        #expect(result.kind == .system)
     }
 
     private func waitUntil(_ condition:   () -> Bool) async throws {

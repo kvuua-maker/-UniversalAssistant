@@ -71,6 +71,8 @@ struct UniversalDeviceCommandRouter: Sendable {
 
 enum LaunchDeviceApplications {
     static let verified: [DeviceApplicationDescriptor] = [
+        .init(id: "spotify", aliases: ["spotify", "спотіфай", "спотифай"], launchURL: URL(string: "spotify://")!, exactContext: nil),
+        .init(id: "apple-music", aliases: ["apple music", "епл мюзік", "эппл мьюзик"], launchURL: URL(string: "https://music.apple.com")!, exactContext: nil),
         .init(id: "telegram", aliases: ["telegram", "телеграм", "телега"],
               launchURL: URL(string: "tg://")!, exactContext: { value in
                   var components = URLComponents(string: "tg://resolve")

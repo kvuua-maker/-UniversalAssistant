@@ -46,12 +46,12 @@ struct CanonicalCapabilityExecutionTests {
         #expect(executor.received == [.cameraCapture])
     }
 
-    @Test func externalProviderRequirementFailsTruthfully() async throws {
+    @Test func externalProviderRequirementUsesTruthfulWebFallback() async throws {
         let executor = CapabilityExecutorStub(.failure(CanonicalCapabilityExecutionError.externalProviderRequired("productSearch")))
         let model = AssistantViewModel(capabilityExecutor: executor)
         model.input = "Знайди черевики"
         model.submit()
-        try await waitUntil { if case .failure = model.resultState { true } else { false } }
+        try await waitUntil { if case .webHandoff = model.resultState { true } else { false } }
         #expect(executor.received == [.productSearch])
     }
 

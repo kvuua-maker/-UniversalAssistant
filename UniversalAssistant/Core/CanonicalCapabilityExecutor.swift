@@ -124,7 +124,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         switch command.intent {
         case .open, .appAction:
             if command.constraints.ordinal != nil { return try await contextual(command, opensSelection: true) }
-            return try app(command)
+            return try await app(command)
         case .contactLookup:
             return try await personal(command, query: try required(command.entities["contact"], "contact_name"), immediateOpen: true)
         case .contactCall:
@@ -194,6 +194,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             throw CanonicalCapabilityExecutionError.unavailable("canonical_mutation_context_required")
         case .calendarUpdate:
             return try await contextualReschedule(command)
+        case .deviceAction:
+            return try await systemQuickAction(command)
         case .calendarCreate, .calendarQuery, .calendarDelete, .reminderCreate,
              .reminderQuery, .weather, .webSearch, .deviceAction, .audioRecord, .unknown:
             throw CanonicalCapabilityExecutionError.unavailable("handled_by_specialized_executor")
@@ -226,6 +228,27 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         }
     }
 
+    private func systemQuickAction(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        let kind = command.entities["system_action"] ?? ""
+        let action: SystemQuickAction
+        if kind == "timer", let seconds = Int(command.entities["duration_seconds"] ?? "") { action = .startTimer(seconds: seconds) }
+        else if kind == "alarm", let hour = Int(command.entities["hour"] ?? ""), let minute = Int(command.entities["minute"] ?? "") { action = .createAlarm(hour: hour, minute: minute) }
+        else { throw CanonicalCapabilityExecutionError.missingParameter("system_action") }
+        guard #available(iOS 26.0, *) else { throw CanonicalCapabilityExecutionError.unavailable("alarmkit_requires_ios_26") }
+        #if canImport(AlarmKit)
+        do {
+            let detail = try await ProductionAlarmKitExecutor().execute(action)
+            return .result(try result(detail, facts: []))
+        } catch ProductionAlarmKitExecutor.ExecutionError.denied {
+            throw CanonicalCapabilityExecutionError.unavailable("alarmkit_permission_denied")
+        } catch {
+            throw CanonicalCapabilityExecutionError.unavailable("alarmkit_execution_failed")
+        }
+        #else
+        throw CanonicalCapabilityExecutionError.unavailable("alarmkit_unavailable")
+        #endif
+    }
+
     private func places(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         let location: ValidatedLocation
         if let area = command.entities["location"], !area.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -234,14 +257,17 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             location = try await currentLocation.resolveCurrent(for: .nearbySearch)
         }
         let category = placeCategory(in: command.normalizedText)
-        let response = try await placeSearch.search(.init(text: command.entities["serviceCategory"] ?? command.originalText, category: category, location: location, limit: 5))
+        let searchText = placeSearchText(for: command, category: category)
+        let response = try await placeSearch.search(.init(text: searchText, category: category, location: location, limit: 5))
         guard !response.places.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_places_found") }
-        return .result(try result("Знайдено місця", facts: response.places.prefix(5).enumerated().map { index, place in
+        let output = try result("Знайдено місця", facts: response.places.prefix(5).enumerated().map { index, place in
             ResultFact(id: place.id, label: place.name, value: place.address ?? place.category.rawValue, state: .verified, source: place.source, observedAt: place.timestamp, priority: 100 - index)
         }, actions: response.places.prefix(5).compactMap { place in
             guard let destination = try? navigation.url(provider: .appleMaps, destination: .init(latitude: place.latitude, longitude: place.longitude, name: place.name), mode: .walking) else { return nil }
             return ResultAction(id: place.id, title: "Маршрут", kind: .open, destination: destination)
-        }))
+        })
+        currentContext.replaceResults(output)
+        return .result(output)
     }
 
     private func route(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
@@ -255,13 +281,22 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private func routeAware(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         guard let (origin, route) = currentContext.freshRoute(), let latitude = route.destination.latitude, let longitude = route.destination.longitude else { throw CanonicalCapabilityExecutionError.missingParameter("active_route_context") }
         let location = ValidatedLocation(sample: .init(latitude: origin.latitude, longitude: origin.longitude, horizontalAccuracy: origin.horizontalAccuracyMeters, timestamp: route.provenance.observedAt, speed: -1, course: -1, source: .device), quality: .good, isSafeForLocationActions: true, manualLabel: nil)
-        let response = try await placeSearch.search(.init(text: command.originalText, category: placeCategory(in: command.normalizedText), location: location, limit: 8))
+        let category = placeCategory(in: command.normalizedText)
+        let response = try await placeSearch.search(.init(text: placeSearchText(for: command, category: category), category: category, location: location, limit: 8))
         let values = try await routeAwareSearch.evaluate(origin: .init(latitude: origin.latitude, longitude: origin.longitude, name: "origin"), destination: .init(latitude: latitude, longitude: longitude, name: route.destination.displayName), candidates: response.places, mode: .driving)
         guard !values.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_route_aware_places") }
         return .result(try result("Знайдено по дорозі", facts: values.prefix(3).enumerated().map { index, value in ResultFact(id: value.place.id, label: value.place.name, value: "\(Int(value.detourSeconds * 0.0166667)) хв відхилення", state: .verified, source: value.place.source, observedAt: value.place.timestamp, priority: 100 - index) }, actions: values.prefix(3).compactMap { value in try? ResultAction(id: value.place.id, title: "Маршрут", kind: .open, destination: navigation.url(provider: .appleMaps, destination: .init(latitude: value.place.latitude, longitude: value.place.longitude, name: value.place.name), mode: .driving)) }))
     }
 
-    private func app(_ command: StructuredCommand) throws -> CapabilityExecutionOutcome {
+    private func app(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        let target = (command.entities["app"] ?? "").folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        if ["файли", "файлы", "files"].contains(target) { return .presentation(.documents) }
+        if ["камера", "camera"].contains(target) { return .presentation(.camera) }
+        if ["календар", "календарь", "calendar"].contains(target) {
+            let query = StructuredCommand(originalText: command.originalText, normalizedText: command.normalizedText, language: command.language, intent: .calendarQuery)
+            let value = try await eventKit.execute(query)
+            return .result(try result(value.title, facts: [.init(id: command.id.uuidString, label: value.title, value: value.detail, state: .verified, source: "EventKit", observedAt: .now, priority: 100)]))
+        }
         switch deviceRouter.route(command) {
         case let .deviceApplication(_, destination, _): return .handoff(.init(query: command.originalText, destination: destination, kind: .system))
         case let .clarification(values): throw CanonicalCapabilityExecutionError.ambiguous(values)
@@ -348,6 +383,17 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         if ["супермаркет", "supermarket", "grocer"].contains(where: text.contains) { return .supermarket }
         if ["магазин", "store", "shop"].contains(where: text.contains) { return .shop }
         return nil
+    }
+
+    private func placeSearchText(for command: StructuredCommand, category: PlaceCategory?) -> String {
+        if let explicit = command.entities["serviceCategory"]?.trimmingCharacters(in: .whitespacesAndNewlines), !explicit.isEmpty { return explicit }
+        switch category {
+        case .cafe: return "coffee"
+        case .restaurant: return "restaurant"
+        case .supermarket: return "supermarket"
+        case .shop: return command.entities["query"] ?? command.entities["brand"] ?? "shop"
+        default: return command.entities["query"] ?? command.originalText
+        }
     }
 
     private func required(_ value: String?, _ key: String) throws -> String {

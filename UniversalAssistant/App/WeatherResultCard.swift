@@ -22,9 +22,6 @@ struct WeatherResultCard: View {
                             snapshot.current.apparentTemperatureCelsius))
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text(String(format: String(localized: "weather_source_format", table: "Weather"), snapshot.source))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
                 Button(action: onReportIssue) {
                     Text("feedback_wrong_result", tableName: "Feedback")
                 }
