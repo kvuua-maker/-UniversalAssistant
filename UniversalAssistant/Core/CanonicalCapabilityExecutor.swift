@@ -131,7 +131,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             if command.constraints.ordinal != nil { return try await contextual(command, opensSelection: true) }
             return try await app(command)
         case .contactLookup:
-            return try await personal(command, query: try required(command.entities["contact"], "contact_name"), immediateOpen: true)
+            return try await contact(command, preparesCall: false)
         case .contactCall:
             if command.entities["contact"] == nil { return try await contextual(command, opensSelection: true) }
             return try await contact(command, preparesCall: true)
@@ -147,7 +147,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .noteQuery:
             return .presentation(.documents)
         case .fileSearch:
-            return try await personal(command, query: try required(command.entities["query"], "file_query"), immediateOpen: true)
+            // iOS does not expose a public API for silently searching every Files provider.
+            // The document picker is the system-owned, security-scoped production boundary.
+            return .presentation(.documents)
         case .cameraCapture:
             if command.entities["capture_mode"] == "code_scan" { return .presentation(.scanner) }
             if command.entities["capture_mode"] == "text_scan" { return .presentation(command.entities["input_source"] == "document" ? .ocrDocuments : .ocrCamera) }
