@@ -76,4 +76,26 @@ import Testing
         #expect((await denied.search("receipt")).isEmpty)
         #expect((await permitted.search("receipt")).isEmpty)
     }
+    @Test func filesQueryDeadlineTerminatesBeforeLateSynchronousCompletion() async {
+        let query = SystemAuthorizedFileQuery { _, _ in Thread.sleep(forTimeInterval: 0.15); return [] }
+        let source = AuthorizedFileSearchSource(query: query, timeout: .milliseconds(20))
+        let clock = ContinuousClock(); let start = clock.now
+        let response = await source.search(.init(text: "PDF"))
+        #expect(response.access == .unavailable)
+        #expect(response.results.isEmpty)
+        #expect(start.duration(to: clock.now) < .milliseconds(100))
+        try? await Task.sleep(for: .milliseconds(170))
+        #expect(response.results.isEmpty)
+    }
+
+    @Test func filesQueryCancellationTerminatesWithoutPublishingLateResults() async {
+        let late = LocalSearchResult(id: "late", source: .files, title: "late.pdf", subtitle: nil, occurredAt: nil, exactNameMatch: true, relevance: 100, openReference: "file:///late.pdf")
+        let query = SystemAuthorizedFileQuery { _, _ in Thread.sleep(forTimeInterval: 0.15); return [late] }
+        let source = AuthorizedFileSearchSource(query: query, timeout: .seconds(1))
+        let task = Task { await source.search(.init(text: "late")) }
+        try? await Task.sleep(for: .milliseconds(10)); task.cancel()
+        let response = await task.value
+        #expect(response.access == .unavailable)
+        #expect(response.results.isEmpty)
+    }
 }

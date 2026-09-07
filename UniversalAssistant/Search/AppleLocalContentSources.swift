@@ -183,31 +183,65 @@ struct AuthorizedDocumentPicker: UIViewControllerRepresentable {
     }
 }
 
+enum AuthorizedFileQueryError: Error, Equatable { case timedOut, cancelled }
+
+protocol AuthorizedFileQuerying: Sendable {
+    func search(references: [AuthorizedFileReference], query: LocalSearchQuery, timeout: Duration) async throws -> [LocalSearchResult]
+}
+
+private final class FileQueryCompletion<Value: Sendable>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Value, Error>?
+    private var result: Result<Value, Error>?
+    func install(_ value: CheckedContinuation<Value, Error>) {
+        lock.lock(); if let result { lock.unlock(); value.resume(with: result) } else { continuation = value; lock.unlock() }
+    }
+    func finish(_ value: Result<Value, Error>) {
+        lock.lock(); guard result == nil else { lock.unlock(); return }; result = value
+        let continuation = continuation; self.continuation = nil; lock.unlock(); continuation?.resume(with: value)
+    }
+}
+
+final class SystemAuthorizedFileQuery: AuthorizedFileQuerying, @unchecked Sendable {
+    typealias Operation = @Sendable ([AuthorizedFileReference], LocalSearchQuery) -> [LocalSearchResult]
+    private let queue = DispatchQueue(label: "com.universalassistant.files.query", qos: .userInitiated)
+    private let operation: Operation
+    init(operation: @escaping Operation = SystemAuthorizedFileQuery.searchSynchronously) { self.operation = operation }
+    func search(references: [AuthorizedFileReference], query: LocalSearchQuery, timeout: Duration) async throws -> [LocalSearchResult] {
+        let completion = FileQueryCompletion<[LocalSearchResult]>()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                completion.install(continuation)
+                queue.async { [operation] in completion.finish(.success(operation(references, query))) }
+                Task { try? await Task.sleep(for: timeout); completion.finish(.failure(AuthorizedFileQueryError.timedOut)) }
+            }
+        } onCancel: { completion.finish(.failure(AuthorizedFileQueryError.cancelled)) }
+    }
+    private static func searchSynchronously(references: [AuthorizedFileReference], query: LocalSearchQuery) -> [LocalSearchResult] {
+        let needle = query.text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        return references.compactMap { reference -> LocalSearchResult? in
+            let accessed = reference.url.startAccessingSecurityScopedResource()
+            defer { if accessed { reference.url.stopAccessingSecurityScopedResource() } }
+            guard FileManager.default.fileExists(atPath: reference.url.path) else { return nil }
+            let name = reference.url.lastPathComponent
+            guard name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(needle) else { return nil }
+            let values = try? reference.url.resourceValues(forKeys: [.contentModificationDateKey])
+            return .init(id: reference.url.absoluteString, source: .files, title: name, subtitle: nil, occurredAt: values?.contentModificationDate, exactNameMatch: name.localizedCaseInsensitiveCompare(query.text) == .orderedSame, relevance: 70, openReference: reference.url.absoluteString)
+        }
+    }
+}
+
 actor AuthorizedFileSearchSource: LocalSearchSource {
     let kind: LocalSearchSourceKind = .files
     private var references: [AuthorizedFileReference]
-
-    init(references: [AuthorizedFileReference] = []) { self.references = references }
-
+    private let query: any AuthorizedFileQuerying
+    /// Local metadata reads should finish immediately; three seconds matches the bounded interactive Contacts lifecycle.
+    private let timeout: Duration
+    init(references: [AuthorizedFileReference] = [], query: any AuthorizedFileQuerying = SystemAuthorizedFileQuery(), timeout: Duration = .seconds(3)) { self.references = references; self.query = query; self.timeout = timeout }
     func replaceAuthorizedReferences(_ values: [AuthorizedFileReference]) { references = values }
-
-    func search(_ query: LocalSearchQuery) async -> LocalSearchSourceResponse {
-        let needle = query.text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-        let snapshot = references
-        let matches = await Task.detached(priority: .userInitiated) {
-            snapshot.compactMap { reference -> LocalSearchResult? in
-                let accessed = reference.url.startAccessingSecurityScopedResource()
-                defer { if accessed { reference.url.stopAccessingSecurityScopedResource() } }
-                guard FileManager.default.fileExists(atPath: reference.url.path) else { return nil }
-                let name = reference.url.lastPathComponent
-                guard name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(needle) else { return nil }
-                let values = try? reference.url.resourceValues(forKeys: [.contentModificationDateKey])
-                return .init(id: reference.url.absoluteString, source: .files, title: name, subtitle: nil,
-                             occurredAt: values?.contentModificationDate, exactNameMatch: name.localizedCaseInsensitiveCompare(query.text) == .orderedSame,
-                             relevance: 70, openReference: reference.url.absoluteString)
-            }
-        }.value
-        return .init(source: kind, access: .permitted, results: Array(matches.prefix(query.limit)))
+    func search(_ value: LocalSearchQuery) async -> LocalSearchSourceResponse {
+        do { return .init(source: kind, access: .permitted, results: Array(try await query.search(references: references, query: value, timeout: timeout).prefix(value.limit))) }
+        catch { return .init(source: kind, access: .unavailable, results: []) }
     }
 }
 

@@ -20,6 +20,7 @@
 - Photos latest/newest intents now converge, request and immediately re-evaluate authorization, accept full or limited access, select exactly one newest accessible PhotoKit asset, and fail truthfully for denied or empty libraries.
 - Removed the non-functional `ph://` path. Photo result actions now open a public PhotoKit-backed in-app sheet; semantic photo search is Photos-only and fails closed instead of returning unrelated Contacts/Files.
 - Photos/voice/result affected suites passed 31 tests in 4 suites; Development compile passed.
+- Files security-scoped metadata reads now run behind an injectable user-initiated async query boundary with a 3-second interactive deadline, cancellation completion, and late-result suppression. Files/Photos boundary suites passed 14 tests in 2 suites; Development compile passed.
 
 ## Exact continuation point
 
