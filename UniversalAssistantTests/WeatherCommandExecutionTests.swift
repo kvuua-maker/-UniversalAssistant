@@ -66,11 +66,27 @@ struct WeatherCommandExecutionTests {
 
         let snapshot = try await executor.execute(command)
 
-        #expect(snapshot.locationLabel == "Київ")
+        #expect(snapshot.locationLabel == "Києві")
         #expect(snapshot.locationSource == .manual)
         #expect(snapshot.context == .manualLocation)
         #expect(snapshot.source == "weather-test")
-        #expect(await geocoder.labels == ["Київ"])
+        #expect(await geocoder.labels == ["Києві"])
+    }
+
+    @MainActor
+    @Test func arbitraryAndCurrentLocationsUseCanonicalWeatherBoundaries() async throws {
+        let geocoder = WeatherExecutionGeocoder()
+        let current = ValidatedLocation(sample: .init(latitude: 48.29, longitude: 25.94, horizontalAccuracy: 8, timestamp: .now, speed: -1, course: -1, source: .device), quality: .precise, isSafeForLocationActions: true, manualLabel: nil)
+        let executor = ProductionWeatherCommandExecutor(locationResolver: .init(geocoder: geocoder), weatherEngine: .init(provider: WeatherExecutionProvider()), currentLocation: { _ in current })
+        let arbitrary = LocalCommandEngine().parse("Покажи погоду у Чернівцях")
+        #expect(arbitrary.entities["location"] == "Чернівцях")
+        #expect(try await executor.execute(arbitrary).context == .manualLocation)
+        #expect(await geocoder.labels == ["Чернівцях"])
+        let local = LocalCommandEngine().parse("Яка зараз погода?")
+        #expect(local.entities["near_current_location"] == "true")
+        let snapshot = try await executor.execute(local)
+        #expect(snapshot.context == .currentLocation)
+        #expect(snapshot.locationSource == .device)
     }
 
     @MainActor

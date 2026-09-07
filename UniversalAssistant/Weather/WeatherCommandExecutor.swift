@@ -11,22 +11,22 @@ protocol WeatherCommandExecuting: Sendable {
 
 struct ProductionWeatherCommandExecutor: WeatherCommandExecuting, Sendable {
     private let router: UniversalDeviceCommandRouter
-    private let intentParser: GenericIntentParser
     private let locationResolver: ManualLocationContextResolver
     private let weatherEngine: WeatherContextEngine
+    private let currentLocation: @MainActor @Sendable (LocationPurpose) async throws -> ValidatedLocation
 
     init(
         router: UniversalDeviceCommandRouter = .init(
             applications: .init(applications: LaunchDeviceApplications.verified)
         ),
-        intentParser: GenericIntentParser = .init(),
         locationResolver: ManualLocationContextResolver = .init(),
-        weatherEngine: WeatherContextEngine = .init(provider: AppleWeatherKitProvider())
+        weatherEngine: WeatherContextEngine = .init(provider: AppleWeatherKitProvider()),
+        currentLocation: @escaping @MainActor @Sendable (LocationPurpose) async throws -> ValidatedLocation = { purpose in try await AppleCurrentLocationResolver().resolveCurrent(for: purpose) }
     ) {
         self.router = router
-        self.intentParser = intentParser
         self.locationResolver = locationResolver
         self.weatherEngine = weatherEngine
+        self.currentLocation = currentLocation
     }
 
     func execute(_ command: StructuredCommand) async throws -> WeatherSnapshot {
@@ -34,15 +34,16 @@ struct ProductionWeatherCommandExecutor: WeatherCommandExecuting, Sendable {
             throw WeatherCommandExecutionError.unsupportedRoute
         }
         LocalVoiceDiagnosticReport.shared.record("weather_route_validated", "status=success")
-        let intent = try intentParser.parse(command.originalText)
         LocalVoiceDiagnosticReport.shared.record("weather_intent_parsed", "status=success")
-        guard let locality = intent.location?.locality, !locality.isEmpty else {
-            throw WeatherCommandExecutionError.missingLocation
-        }
         LocalVoiceDiagnosticReport.shared.record("weather_location_resolution_started")
         let location: ValidatedLocation
+        let context: WeatherContextKind
         do {
-            location = try await locationResolver.resolve(locality)
+            if let locality = command.entities["location"], !locality.isEmpty {
+                location = try await locationResolver.resolve(locality); context = .manualLocation
+            } else {
+                location = try await currentLocation(.general); context = .currentLocation
+            }
             LocalVoiceDiagnosticReport.shared.record("weather_location_resolution_succeeded", "status=success")
         } catch {
             Self.recordFailure("weather_location_resolution_failed", error: error)
@@ -50,7 +51,7 @@ struct ProductionWeatherCommandExecutor: WeatherCommandExecuting, Sendable {
         }
         LocalVoiceDiagnosticReport.shared.record("weather_context_started")
         do {
-            let snapshot = try await weatherEngine.weather(for: .init(location: location, context: .manualLocation))
+            let snapshot = try await weatherEngine.weather(for: .init(location: location, context: context))
             LocalVoiceDiagnosticReport.shared.record("weather_context_succeeded", "status=success")
             return snapshot
         } catch {

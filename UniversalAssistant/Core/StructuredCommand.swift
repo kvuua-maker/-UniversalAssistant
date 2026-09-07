@@ -170,7 +170,8 @@ struct LocalCommandEngine: CommandParsing {
         if intent == .parcelTrack, let tracking = normalized.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init).first(where: { $0.count >= 5 && $0.rangeOfCharacter(from: .decimalDigits) != nil }) { entities["tracking_number"] = tracking }
         if intent == .serviceSearch, let category = serviceCategory(in: normalized) { entities["serviceCategory"] = category }
         if [.navigation, .routeSearch, .transportRoute].contains(intent), let value = target(after: ["веди мене до", "проклади маршрут до", "побудуй маршрут до", "покажи маршрут до", "построй маршрут до", "як доїхати до", "как доехать до", "маршрут до", "navigate", "route to", "веди"], in: text) { entities["destination"] = value }
-        if [.placeSearch, .restaurantSearch, .serviceSearch].contains(intent), let value = locality(in: text) { entities["location"] = value }
+        if [.placeSearch, .restaurantSearch, .serviceSearch, .weather].contains(intent), let value = locality(in: text) { entities["location"] = value }
+        if intent == .weather, entities["location"] == nil { entities["near_current_location"] = "true" }
         if intent == .audioRecord { entities["recorder_action"] = recorderAction(in: normalized) }
         if intent == .deviceAction { extractSystemQuickAction(from: text, normalized: normalized, into: &entities) }
         if intent == .cameraCapture, ["qr", "q r", "ку ар", "штрихкод", "barcode", "скануй код", "сканируй код"].contains(where: normalized.contains) { entities["capture_mode"] = "code_scan" }
