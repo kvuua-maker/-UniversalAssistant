@@ -4,10 +4,11 @@ import Testing
 
 private actor DirectCalendarStub: EventKitCalendarExecuting {
     var items: [CalendarEventSnapshot] = []
+    var queriedIntervals: [(Date, Date)] = []
     func seed(_ value: CalendarEventSnapshot) { items.append(value) }
     func requestFullAccessIfNeeded() {}
     func create(_ input: CalendarEventDraft) -> CalendarEventSnapshot { let value = CalendarEventSnapshot(identifier: "calendar-new", draft: input); items.append(value); return value }
-    func events(from: Date, to: Date) -> [CalendarEventSnapshot] { items }
+    func events(from: Date, to: Date) -> [CalendarEventSnapshot] { queriedIntervals.append((from, to)); return items }
     func update(identifier: String, with input: CalendarEventDraft) throws -> CalendarEventSnapshot { guard let i = items.firstIndex(where: { $0.identifier == identifier }) else { throw CalendarServiceError.eventNotFound }; let value = CalendarEventSnapshot(identifier: identifier, draft: input); items[i] = value; return value }
     func delete(identifier: String) throws { guard let i = items.firstIndex(where: { $0.identifier == identifier }) else { throw CalendarServiceError.eventNotFound }; items.remove(at: i) }
     func restore(_ snapshot: CalendarEventSnapshot) -> CalendarEventSnapshot { items.removeAll { $0.identifier == snapshot.identifier }; items.append(snapshot); return snapshot }
@@ -117,5 +118,30 @@ extension EventKitCommandExecutorDirectTests {
         let created = try #require(await reminders.items.first)
         #expect(created.draft.title == "вимкнути духовку")
         #expect(created.draft.dueDate?.timeIntervalSince(start) == 600)
+    }
+
+    @Test func naturalCalendarCreatePreservesSubjectAndExplicitDuration() async throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let calendar = DirectCalendarStub()
+        let executor = ProductionEventKitCommandExecutor(calendar: calendar, reminders: DirectReminderStub(), history: ActionHistory(persistence: DirectMemoryHistoryStore()), now: { start }, timeZone: TimeZone(identifier: "Europe/Kyiv")!)
+        let parsed = LocalCommandEngine().parse("Заплануй на завтра о 16:20 зустріч Командна синхронізація на 45 хвилин")
+        #expect(parsed.intent == .calendarCreate)
+        _ = try await executor.execute(parsed)
+        let created = try #require(await calendar.items.first)
+        #expect(created.draft.title == "Командна синхронізація")
+        #expect(created.draft.end.timeIntervalSince(created.draft.start) == 2_700)
+    }
+
+    @Test func todayCalendarQueryUsesCurrentLocalDayThroughProductionExecutor() async throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let calendar = DirectCalendarStub()
+        let executor = ProductionEventKitCommandExecutor(calendar: calendar, reminders: DirectReminderStub(), history: ActionHistory(persistence: DirectMemoryHistoryStore()), now: { start }, timeZone: TimeZone(identifier: "Europe/Kyiv")!)
+        let parsed = LocalCommandEngine().parse("Що в мене заплановано сьогодні?")
+        #expect(parsed.intent == .calendarQuery)
+        _ = try await executor.execute(parsed)
+        let interval = try #require(await calendar.queriedIntervals.first)
+        #expect(interval.0 <= start)
+        #expect(interval.1 > start)
+        #expect(interval.1.timeIntervalSince(interval.0) >= 82_800)
     }
 }

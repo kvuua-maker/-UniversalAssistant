@@ -27,7 +27,7 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-14.02 | GREEN |
 | B27-14.03 | GREEN |
 | B27-14.04 | GREEN |
-| B27-14.05 | NOT_STARTED |
+| B27-14.05 | GREEN |
 | B27-14.06 | NOT_STARTED |
 | B27-14.07 | NOT_STARTED |
 | B27-14.08 | NOT_STARTED |
@@ -147,3 +147,24 @@ Checkpoint source HEAD before commit: `35e735f`. B27-14.04 is GREEN. Build 27 do
 Unfinished B27 root groups: B27-10, B27-11, remaining B27-12/B27-13, B27-14.05 through B27-14.20 except the external-provider status already recorded, B27-15 through B27-22, B27-24 and B27-25.
 
 Exact next code-level operation: begin B27-14.05 Calendar. Trace `LocalCommandEngine` calendar action/date/time/title/duration extraction through `ProductionEventKitCommandExecutor`; repair today/tomorrow query and natural create commands independently of word order, preserve the physically passing tomorrow query/create paths, and add Home production-boundary permission/query/create tests before marking GREEN.
+
+
+## Completed material repair: B27-14.05
+
+Physical evidence: Build 26 could read tomorrow but clarified on today, while natural calendar creation failed despite EventKit access.
+
+Material repair:
+- Calendar action, local date/time, title and duration are extracted independently from natural word order before EventKit execution.
+- Fixed minute/hour durations produce exact event end dates; temporal and duration clauses no longer leak into the event title.
+- Today/tomorrow queries use the requested local calendar-day interval.
+- The existing public EventKit full-access request, immediate authorization refresh and pending-command continuation remain the production permission path.
+
+Verification: EventKitCommandExecutorDirectTests, CalendarServiceTests, NaturalDateTimeResolverTests and VoiceTextInputQualityTests PASS: 38 tests in 4 suites. Development compile PASS. Owner physical retest remains required.
+
+## Exact continuation point after B27-14.05
+
+B27-14.05 is GREEN. Build 27 does not exist.
+
+Unfinished B27 root groups: B27-10, B27-11, remaining B27-12/B27-13, B27-14.06 through B27-14.19, B27-15 through B27-22, B27-24 and B27-25. B27-14.20 remains EXTERNAL_PROVIDER_DEPENDENCY pending the configured-provider audit.
+
+Exact next code-level operation: begin B27-14.06 Reminders. Trace LocalCommandEngine reminder create/query/open semantics through ProductionEventKitCommandExecutor; repair tomorrow-at-time creation, today/list/open commands and title extraction while preserving the physically passing relative +10 minute path. Add production-boundary EventKit permission/result regressions, then run affected suites and Development compile.

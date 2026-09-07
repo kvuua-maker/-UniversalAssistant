@@ -21,27 +21,43 @@ protocol EventKitReminderExecuting: ReminderMutating {
 }
 extension EventKitCalendarService: EventKitCalendarExecuting {}
 extension EventKitReminderService: EventKitReminderExecuting {}
-struct EventKitCommandArguments: Equatable, Sendable { let subject: String?; let dateTime: ResolvedNaturalDateTime? }
+struct EventKitCommandArguments: Equatable, Sendable { let subject: String?; let dateTime: ResolvedNaturalDateTime?; let durationSeconds: TimeInterval? }
 
 struct EventKitCommandArgumentExtractor: Sendable {
     func extract(_ command: StructuredCommand, now: Date = .now, timeZone: TimeZone = .autoupdatingCurrent) -> EventKitCommandArguments {
         let locale = LanguageConfiguration(uiLanguage: .uk, commandLanguage: command.language).voiceLocale
         let resolution = NaturalDateTimeResolver().resolve(command.originalText, locale: locale, timeZone: timeZone, relativeTo: now)
         let dateTime: ResolvedNaturalDateTime? = if case let .resolved(value) = resolution { value } else { nil }
-        let action = ["запиши", "створи", "додай", "подію", "подія", "зустріч", "перенеси", "видали", "скасуй", "нагадай", "нагадати", "покажи", "календарі", "нагадування", "виконай", "познач", "виконаним", "заверши", "complete", "создай", "событие", "встречу", "удали", "напомни", "календаре", "напоминания", "add", "create", "event", "move", "delete", "remind", "show", "calendar", "reminders", "termin", "erstellen", "verschieben", "löschen", "erinnere", "kalendertermine", "rendez-vous", "ajoute", "déplace", "supprime", "rappelle", "événements", "rappels"]
-        let temporal = ["сьогодні", "завтра", "післязавтра", "сегодня", "послезавтра", "today", "tomorrow", "day after tomorrow", "heute", "morgen", "übermorgen", "aujourd’hui", "demain", "après-demain", "мені", "мне", "через", "ранку", "утра", "вранці", "вечора", "вечером"]
+        let action = ["запиши", "створи", "додай", "заплануй", "запланируй", "подію", "подія", "зустріч", "перенеси", "видали", "скасуй", "нагадай", "нагадати", "покажи", "календарі", "нагадування", "виконай", "познач", "виконаним", "заверши", "complete", "создай", "событие", "встречу", "удали", "напомни", "календаре", "напоминания", "add", "create", "event", "move", "delete", "remind", "show", "calendar", "reminders", "termin", "erstellen", "verschieben", "löschen", "erinnere", "kalendertermine", "rendez-vous", "ajoute", "déplace", "supprime", "rappelle", "événements", "rappels"]
+        let temporal = ["на сьогодні", "на завтра", "на післязавтра", "на сегодня", "на послезавтра", "сьогодні", "завтра", "післязавтра", "сегодня", "послезавтра", "today", "tomorrow", "day after tomorrow", "heute", "morgen", "übermorgen", "aujourd’hui", "demain", "après-demain", "мені", "мне", "через", "ранку", "утра", "вранці", "вечора", "вечером"]
         var subject = command.originalText
+        subject = subject.replacingOccurrences(
+            of: #"(?:\bна|\bfor)\s+\d+\s*(?:годин(?:у|и)?|hours?|хвилин(?:у|и)?|хв|минут(?:у|ы)?|мин|minutes?|mins?)"#,
+            with: " ",
+            options: [.regularExpression, .caseInsensitive]
+        )
         for token in action + temporal { subject = subject.replacingOccurrences(of: token, with: " ", options: [.caseInsensitive, .diacriticInsensitive]) }
         subject = subject.replacingOccurrences(of: #"\b(?:о|об|в|at|um|a)?\s*\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?\b"#, with: " ", options: .regularExpression)
-        subject = subject.replacingOccurrences(of: #"\d+\s*(?:хвилин(?:у|и)?|хв|минут(?:у|ы)?|мин|minutes?|mins?|секунд(?:у|и)?|сек|seconds?|secs?)"#, with: " ", options: [.regularExpression, .caseInsensitive])
-        subject = subject.replacingOccurrences(of: #"(?:хвилин(?:у|и)?|хв|минут(?:у|ы)?|мин|minutes?|mins?|секунд(?:у|и)?|сек|seconds?|secs?)"#, with: " ", options: [.regularExpression, .caseInsensitive])
+        subject = subject.replacingOccurrences(of: #"\d+\s*(?:годин(?:у|и)?|hours?|хвилин(?:у|и)?|хв|минут(?:у|ы)?|мин|minutes?|mins?|секунд(?:у|и)?|сек|seconds?|secs?)"#, with: " ", options: [.regularExpression, .caseInsensitive])
+        subject = subject.replacingOccurrences(of: #"(?:годин(?:у|и)?|hours?|хвилин(?:у|и)?|хв|минут(?:у|ы)?|мин|minutes?|mins?|секунд(?:у|и)?|сек|seconds?|secs?)"#, with: " ", options: [.regularExpression, .caseInsensitive])
         subject = subject.replacingOccurrences(
             of: #"\b(?:о|об|в)\s+(?:(?:двадцять|двадцать)\s+)?(?:п['’]?ятнадцят|пятнадцат|дванадцят|двенадцат|одинадцят|одиннадцат|дев['’]?ятнадцят|девятнадцат|вісімнадцят|восемнадцат|сімнадцят|семнадцат|шістнадцят|шестнадцат|чотирнадцят|четырнадцат|тринадцят|тринадцат|десят|дев['’]?ят|девят|восьм|восем|сьом|седьм|шост|шест|п['’]?ят|пят|четверт|чотир|трет|друг|втор|перш|перв)\p{L}*\b"#,
             with: " ",
             options: [.regularExpression, .caseInsensitive]
         )
         subject = subject.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
-        return .init(subject: subject.isEmpty ? nil : subject, dateTime: dateTime)
+        let durationSeconds = duration(in: command.originalText)
+        return .init(subject: subject.isEmpty ? nil : subject, dateTime: dateTime, durationSeconds: durationSeconds)
+    }
+
+    private func duration(in text: String) -> TimeInterval? {
+        let pattern = "(?:\\bна|for)\\s+(\\d+)\\s*(годин(?:у|и)?|hours?|хвилин(?:у|и)?|хв|минут(?:у|ы)?|мин|minutes?|mins?)"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              let amountRange = Range(match.range(at: 1), in: text), let amount = Int(text[amountRange]),
+              let unitRange = Range(match.range(at: 2), in: text) else { return nil }
+        let unit = String(text[unitRange]).lowercased()
+        return TimeInterval(amount * (unit.hasPrefix("год") || unit.hasPrefix("hour") ? 3600 : 60))
     }
 }
 
@@ -59,7 +75,7 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
             guard let title = args.subject else { throw EventKitExecutionError.missingSubject }
             guard let date = args.dateTime, date.precision == .minute else { throw EventKitExecutionError.unresolvedDateTime }
             try await calendar.requestFullAccessIfNeeded()
-            let value = try await calendar.create(.init(title: title, start: date.instant, end: date.instant.addingTimeInterval(3600), notes: nil))
+            let value = try await calendar.create(.init(title: title, start: date.instant, end: date.instant.addingTimeInterval(args.durationSeconds ?? 3600), notes: nil))
             await recordHistory(.init(kind: .calendarCreate, externalIdentifier: value.identifier))
             return result(.calendar, .created, value.draft.title, value.draft.start, 1)
         case .calendarQuery:
