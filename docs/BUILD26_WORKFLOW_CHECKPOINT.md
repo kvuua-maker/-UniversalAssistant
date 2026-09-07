@@ -51,12 +51,11 @@
 - Contacts and Files deadline completion now uses an independent wall-clock Dispatch deadline rather than cooperative `Task.sleep`; late store completion remains single-resume suppressed.
 - Local parser hot path now reuses compiled utility-recognition regular expressions and normalizes whitespace without per-request regex compilation; focused lifecycle/utility/performance suites passed 26 tests.
 - Canonical requirement gates: ZERO-OMISSION 2404/2404, AUDIO 147/147, PRIVACY 168/168, JOBS 97/97, LOYALTY 127/127 PASS.
-- Backend regression and remaining diagnostics-script gate are the next verification operations.
+- Backend regression: 114/114 in 28 suites PASS. Diagnostics-script regression: 2/2 PASS. All applicable source gates are green.
 
 ## Exact continuation point
 
-1. Run and capture the exact backend regression summary and `Scripts/test_live_diagnostics.py`.
-2. Commit/push this green gate-stability checkpoint and verify clean source state.
-3. Only after every applicable gate is green, increment Build 25 to Build 26 and enter the authorized release workflow.
+1. Commit/push this final green source-gate record and verify clean source state.
+2. Increment Build 25 to Build 26 only, commit/push, then execute Production compile and authorized release workflow.
 
 No B25 row is claimed physically fixed. All B25-01 through B25-71 remain in the authoritative acceptance matrix; confirmed Build-25 passes must be preserved.
