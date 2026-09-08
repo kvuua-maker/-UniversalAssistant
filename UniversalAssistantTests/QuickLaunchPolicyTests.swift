@@ -36,6 +36,18 @@ struct QuickLaunchPolicyTests {
         #expect(!store.consumeVoiceLaunch())
     }
 
+    @Test func canonicalCommandRequestIsTrimmedPersistentAndConsumedOnce() {
+        let suite = "quick-launch-command-tests-\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = QuickLaunchRequestStore(defaults: defaults)
+        store.requestCommand("  Порахуй сім помножити на девʼять  ")
+        #expect(store.consumeCommand() == "Порахуй сім помножити на девʼять")
+        #expect(store.consumeCommand() == nil)
+        store.requestCommand("   ")
+        #expect(store.consumeCommand() == nil)
+    }
+
     private func capabilities(action: SystemCapabilityAvailability) -> QuickLaunchCapabilities {
         .init(actionButton: action, backTap: .available, appShortcut: .available, homeScreenShortcut: .available, assistiveTouch: .available)
     }

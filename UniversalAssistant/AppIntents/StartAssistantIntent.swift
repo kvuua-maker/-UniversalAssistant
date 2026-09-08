@@ -10,8 +10,33 @@ struct StartAssistantIntent: AppIntent {
     }
 }
 
+struct RunAssistantCommandIntent: AppIntent {
+    static let title: LocalizedStringResource = "Run a command in UniversalAssistant"
+    static let description = IntentDescription("Send a command through the same canonical UniversalAssistant pipeline used by typed and voice input.")
+    static let openAppWhenRun = true
+
+    @Parameter(title: "Command") var command: String
+    static var parameterSummary: some ParameterSummary { Summary("Run \(\.$command)") }
+
+    init() {}
+    init(command: String) { self.command = command }
+
+    func perform() async throws -> some IntentResult {
+        QuickLaunchRequestStore().requestCommand(command)
+        return .result()
+    }
+}
+
+struct OpenAssistantForTypingIntent: AppIntent {
+    static let title: LocalizedStringResource = "Open UniversalAssistant for typing"
+    static let description = IntentDescription("Open UniversalAssistant without starting the microphone.")
+    static let openAppWhenRun = true
+    func perform() async throws -> some IntentResult { .result() }
+}
+
 struct UniversalAssistantShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(intent: StartAssistantIntent(), phrases: ["Start \(.applicationName)", "Ask \(.applicationName)"], shortTitle: "Start Assistant", systemImageName: "mic.circle")
+        AppShortcut(intent: OpenAssistantForTypingIntent(), phrases: ["Open \(.applicationName) for typing", "Type in \(.applicationName)"], shortTitle: "Type a Command", systemImageName: "keyboard")
     }
 }

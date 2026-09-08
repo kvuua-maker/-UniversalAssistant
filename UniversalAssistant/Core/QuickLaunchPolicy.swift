@@ -37,11 +37,22 @@ struct QuickLaunchPolicy: Sendable {
 
 struct QuickLaunchRequestStore {
     private let defaults: UserDefaults
-    private let key = "quick-launch.voice-requested"
+    private let voiceKey = "quick-launch.voice-requested"
+    private let commandKey = "quick-launch.typed-command"
     init(defaults: UserDefaults = .standard) { self.defaults = defaults }
-    func requestVoiceLaunch() { defaults.set(true, forKey: key) }
+    func requestVoiceLaunch() { defaults.set(true, forKey: voiceKey) }
+    func requestCommand(_ command: String) {
+        let value = command.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return }
+        defaults.set(value, forKey: commandKey)
+    }
     func consumeVoiceLaunch() -> Bool {
-        guard defaults.bool(forKey: key) else { return false }
-        defaults.removeObject(forKey: key); return true
+        guard defaults.bool(forKey: voiceKey) else { return false }
+        defaults.removeObject(forKey: voiceKey); return true
+    }
+    func consumeCommand() -> String? {
+        guard let value = defaults.string(forKey: commandKey) else { return nil }
+        defaults.removeObject(forKey: commandKey)
+        return value
     }
 }
