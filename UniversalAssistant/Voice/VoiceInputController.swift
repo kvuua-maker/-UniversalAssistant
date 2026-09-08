@@ -35,7 +35,10 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
     func record(_ marker: String, _ details: String = "") {
         lock.lock()
         entries.append(.init(timestamp: .now, marker: marker, details: details))
-        if entries.count > 200 { entries.removeFirst(entries.count - 200) }
+        // Keep enough privacy-safe stage markers for one busy end-to-end request.
+        // Parallel providers can otherwise evict the voice ingress markers before
+        // the diagnostic is inspected, making the real pipeline unverifiable.
+        if entries.count > 1_000 { entries.removeFirst(entries.count - 1_000) }
         lock.unlock()
         VoiceDiagnostic.logger.notice("\(marker, privacy: .public) \(details, privacy: .public)")
     }

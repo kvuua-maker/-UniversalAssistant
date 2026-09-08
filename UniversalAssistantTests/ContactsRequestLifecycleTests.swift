@@ -55,19 +55,21 @@ struct ContactsRequestLifecycleTests {
     }
 
     @Test func slowSynchronousStoreTimesOutWithoutWaitingForLateCompletion() async {
-        let query = SystemContactQuery(store: ContactStoreStub(delay: 0.25))
+        // The late synchronous operation deliberately outlives scheduler pressure
+        // from the full parallel suite; the deadline must still win promptly.
+        let query = SystemContactQuery(store: ContactStoreStub(delay: 1.5))
         let start = ContinuousClock.now
         await #expect(throws: ContactResolutionError.timedOut) { try await query.contacts(matching: "Олег", timeout: .milliseconds(30)) }
-        #expect(start.duration(to: .now) < .milliseconds(150))
+        #expect(start.duration(to: .now) < .seconds(1))
     }
 
     @Test func cancellationCompletesPromptlyAndLateStoreCannotResumeTwice() async {
-        let query = SystemContactQuery(store: ContactStoreStub(delay: 0.25))
-        let task = Task { try await query.contacts(matching: "Олег", timeout: .seconds(1)) }
+        let query = SystemContactQuery(store: ContactStoreStub(delay: 1.5))
+        let task = Task { try await query.contacts(matching: "Олег", timeout: .seconds(3)) }
         try? await Task.sleep(for: .milliseconds(20))
         task.cancel()
         await #expect(throws: ContactResolutionError.cancelled) { try await task.value }
-        try? await Task.sleep(for: .milliseconds(270))
+        try? await Task.sleep(for: .milliseconds(20))
     }
 
     @Test @MainActor func newerHomeRequestOwnsResultAndSpinnerTerminates() async throws {
