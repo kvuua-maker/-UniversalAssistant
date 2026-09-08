@@ -610,7 +610,7 @@ final class AssistantViewModel {
         }
     }
     func startTranslation(_ text: String, _ targetLanguage: String) {
-        do { capabilityPresentation = .translation(try CameraIntelligenceCore().translationPlan(text: text, sourceLanguage: nil, targetLanguage: targetLanguage)) }
+        do { capabilityPresentation = .translation(try CameraIntelligenceCore().translationPlan(text: text, sourceLanguage: TranslationSourceLanguageResolver().resolve(text), targetLanguage: targetLanguage)) }
         catch { capabilityPresentation = nil; presentFailure(message: AppText.value("request_unavailable")) }
     }
     func handleTranslationResult(_ result: TranslationProductionResult) { currentContext.replaceTranslation(sourceText: result.sourceText, sourceLanguage: result.sourceLanguage); capabilityPresentation = nil; resultState = .translation(result); statusText = AppText.value("ready"); LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=translation") }

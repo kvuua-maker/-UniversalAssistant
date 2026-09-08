@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import NaturalLanguage
 @preconcurrency import Translation
 
 struct TranslationProductionResult: Equatable, Sendable {
@@ -10,6 +11,20 @@ struct TranslationProductionResult: Equatable, Sendable {
 }
 
 enum TranslationProductionError: Error, Equatable { case unsupportedLanguage, emptyResult, failed }
+
+struct TranslationSourceLanguageResolver: Sendable {
+    func resolve(_ text: String) -> String? {
+        let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard value.unicodeScalars.filter({ scalar in CharacterSet.letters.contains(scalar) }).count >= 4 else { return nil }
+        let recognizer = NLLanguageRecognizer()
+        recognizer.languageConstraints = ["uk", "ru", "en", "de", "fr"].map(NLLanguage.init(rawValue:))
+        recognizer.processString(value)
+        let ranked = recognizer.languageHypotheses(withMaximum: 2).sorted { lhs, rhs in lhs.value > rhs.value }
+        guard let best = ranked.first, best.value >= 0.35 else { return nil }
+        if ranked.count > 1, best.value - ranked[1].value < 0.10 { return nil }
+        return best.key.rawValue
+    }
+}
 
 struct TranslationProductionBoundary: Sendable {
     func result(plan: LocalTranslationPlan, translatedText: String, sourceLanguage: Locale.Language, targetLanguage: Locale.Language) throws -> TranslationProductionResult {

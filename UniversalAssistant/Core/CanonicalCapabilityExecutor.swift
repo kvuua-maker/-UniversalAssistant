@@ -256,7 +256,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .translation:
             let text = try required(command.entities["source_text"], "translation_source_text")
             let target = try required(command.entities["target_language"], "translation_target_language")
-            return .presentation(.translation(try CameraIntelligenceCore().translationPlan(text: text, sourceLanguage: nil, targetLanguage: target)))
+            let source = command.entities["source_language"] ?? TranslationSourceLanguageResolver().resolve(text)
+            return .presentation(.translation(try CameraIntelligenceCore().translationPlan(text: text, sourceLanguage: source, targetLanguage: target)))
         case .photoSearch:
             return try await photo(command)
         case .podcastSearch:

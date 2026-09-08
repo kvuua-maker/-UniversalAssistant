@@ -104,3 +104,26 @@ struct ProductionTranslationTests {
         #expect(plan.targetLanguage == "de")
     }
 }
+
+
+extension ProductionTranslationTests {
+    @Test func confidenceBearingSourceLanguageReachesAppleTranslationPlan() async throws {
+        let ukrainianText = "Сьогодні ми обговорюємо підготовку нового проєкту"
+        let russianText = "Сегодня мы обсуждаем подготовку нового проекта"
+        #expect(TranslationSourceLanguageResolver().resolve(ukrainianText) == "uk")
+        #expect(TranslationSourceLanguageResolver().resolve(russianText) == "ru")
+
+        let command = LocalCommandEngine().parse("Переклади французькою: \(ukrainianText)")
+        let executor = ProductionCanonicalCapabilityExecutor(personalSearchSources: [])
+        guard case let .presentation(.translation(plan)) = try await executor.execute(command) else {
+            Issue.record("Expected Apple Translation presentation")
+            return
+        }
+        #expect(plan.sourceLanguage == "uk")
+        #expect(plan.targetLanguage == "fr")
+    }
+
+    @Test func weakSourceLanguageEvidenceLeavesAppleClarificationAvailable() {
+        #expect(TranslationSourceLanguageResolver().resolve("OK") == nil)
+    }
+}
