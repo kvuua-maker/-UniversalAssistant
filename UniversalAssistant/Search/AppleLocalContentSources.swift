@@ -277,6 +277,7 @@ private final class FileQueryCompletion<Value: Sendable>: @unchecked Sendable {
 }
 
 final class SystemAuthorizedFileQuery: AuthorizedFileQuerying, @unchecked Sendable {
+    private static let deadlineQueue = DispatchQueue(label: "com.universalassistant.files.deadline", qos: .userInteractive)
     typealias Operation = @Sendable ([AuthorizedFileReference], LocalSearchQuery) -> [LocalSearchResult]
     private let queue = DispatchQueue(label: "com.universalassistant.files.query", qos: .userInitiated)
     private let operation: Operation
@@ -289,7 +290,7 @@ final class SystemAuthorizedFileQuery: AuthorizedFileQuerying, @unchecked Sendab
                 queue.async { [operation] in completion.finish(.success(operation(references, query))) }
                 let components = timeout.components
                 let delay = Double(components.seconds) + Double(components.attoseconds) / 1_000_000_000_000_000_000
-                DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay) {
+                Self.deadlineQueue.asyncAfter(deadline: .now() + delay) {
                     completion.finish(.failure(AuthorizedFileQueryError.timedOut))
                 }
             }

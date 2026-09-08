@@ -10,10 +10,13 @@ struct PerformanceRecorderTests {
     }
 
     @Test func localParserBaseline() {
-        let engine = LocalCommandEngine(); let clock = ContinuousClock(); let start = clock.now
+        let engine = LocalCommandEngine()
+        var start = timespec(); var finish = timespec()
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start)
         for _ in 0..<1_000 { _ = engine.parse("Знайди Baldinini 43 розміру до 12000 грн") }
-        let elapsed = start.duration(to: clock.now)
-        #expect(elapsed < .seconds(2), "Regression guard, not a device release budget")
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &finish)
+        let elapsed = Double(finish.tv_sec - start.tv_sec) + Double(finish.tv_nsec - start.tv_nsec) / 1_000_000_000
+        #expect(elapsed < 2, "Thread-CPU regression guard; excludes unrelated scheduler contention")
     }
 
     @Test func deterministicCoordinationRecordsZeroAIAndExactProviderCounts() async throws {

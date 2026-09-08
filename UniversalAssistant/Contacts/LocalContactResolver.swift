@@ -70,6 +70,7 @@ private final class ContactQueryCompletion<Value: Sendable>: @unchecked Sendable
 }
 
 final class SystemContactQuery: ContactQuerying, @unchecked Sendable {
+    private static let deadlineQueue = DispatchQueue(label: "com.universalassistant.contacts.deadline", qos: .userInteractive)
     private let store: any ContactStoreQuerying
     private let queue = DispatchQueue(label: "com.universalassistant.contacts.query", qos: .userInitiated)
     init(store: any ContactStoreQuerying = SystemContactStoreQuery()) { self.store = store }
@@ -87,7 +88,7 @@ final class SystemContactQuery: ContactQuerying, @unchecked Sendable {
                 queue.async { do { completion.finish(.success(try operation())) } catch { completion.finish(.failure(error)) } }
                 let components = timeout.components
                 let delay = Double(components.seconds) + Double(components.attoseconds) / 1_000_000_000_000_000_000
-                DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay) {
+                Self.deadlineQueue.asyncAfter(deadline: .now() + delay) {
                     completion.finish(.failure(ContactResolutionError.timedOut))
                 }
             }

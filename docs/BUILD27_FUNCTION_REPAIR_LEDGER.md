@@ -346,3 +346,14 @@ Repository and Production configuration audit confirms no active general/current
 Internally resolvable path is complete: canonical intents and parameters are preserved; deterministic/local/system families have priority; missing current-data classes surface only an explicit provider dependency or exact controlled browser handoff; no answer, rate, price, availability, credential, or provenance is fabricated. Exact evidence remains in `docs/BUILD26_EXTERNAL_PROVIDER_AUDIT.md` and the updated Build-27 capability matrix.
 
 B27-14.20 remains EXTERNAL_PROVIDER_DEPENDENCY. This status does not exempt the remaining source, acceptance, matrix, or gate requirements.
+
+## Full-gate corrective checkpoint
+
+The first complete iOS regression exposed scheduler-dependent deadline and performance failures that focused suites did not reveal. Unchanged retry is CLOSED.
+
+Material corrections:
+- Contacts and authorized-Files deadlines now use dedicated `.userInteractive` serial deadline queues rather than the shared global work queue, so timeout ownership is not starved behind synchronous provider work. Completion remains exactly-once and cancellation/late result suppression are preserved.
+- Local parser performance measurement now uses thread CPU time instead of wall-clock scheduler delay.
+- The parser no longer compiles price/size/wait regular expressions per request, avoids compound parsing when no compound marker exists, and scans the fallback intent table once. Canonical precedence and multi-step semantics are protected by regression tests.
+
+Evidence: the previously failing Contacts and Files deadline/cancellation suites PASS. Performance/voice/deterministic-plan suites PASS: 39 tests / 3 suites; parser CPU guard improved to 1.288 seconds for 1,000 parses. Backend full gate PASS: 114 tests / 28 suites. A fresh complete iOS gate is the exact next operation.

@@ -66,6 +66,13 @@ enum CompoundCommandClauses {
 }
 
 struct LocalCommandEngine: CommandParsing {
+    private static let priceRegex = try! NSRegularExpression(pattern: #"(?:до|max(?:imum)?|under|bis|jusqu[’']?à)\s*([0-9]+(?:[.,][0-9]+)?)\s*(грн|uah|usd|eur|€|\$|₴|гривень)?"#)
+    private static let sizeRegexes = [
+        try! NSRegularExpression(pattern: #"(?:розмір|размер|size|größe|taille)\s*([0-9]{1,3}|[xsml]{1,3})"#),
+        try! NSRegularExpression(pattern: #"([0-9]{2})\s*(?:розміру|размера)"#)
+    ]
+    private static let maximumWaitRegex = try! NSRegularExpression(pattern: #"(?:чекати|ждать|wait|warten|attendre)[^0-9]{0,24}([0-9]{1,3})\s*(?:хв|мин|min)"#)
+
     private static let intentPatterns: [(CommandIntent, [String])] = [
         (.multiStep, ["коли я кажу", "когда я говорю", "when i say", "wenn ich", "quand je dis",
                       "стоматолог і купи", "купи sensodyne по дорозі"]),
@@ -148,15 +155,14 @@ struct LocalCommandEngine: CommandParsing {
             if locationAction == "travel_time", let destination = target(after: ["до", "to"], in: text) { entities["destination"] = destination }
             return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: .deviceAction, entities: entities)
         }
-        let specificPatternIntent = Self.intentPatterns.first { intent, patterns in
-            intent != .productSearch && patterns.contains { normalized.contains($0) }
-        }?.0
+        let patternIntent = Self.intentPatterns.first { _, patterns in patterns.contains { normalized.contains($0) } }?.0
+        let specificPatternIntent = patternIntent == .productSearch ? nil : patternIntent
         let semanticIntent = semanticCapabilityIntent(normalized)
         let resolvedIntent = resolveSpecificAndSemantic(specific: specificPatternIntent, semantic: semanticIntent)
         let intent = priorityIntent(normalized)
             ?? (resolvedIntent == .placeSearch ? .placeSearch : compoundIntent(normalized))
             ?? resolvedIntent
-            ?? Self.intentPatterns.first { _, patterns in patterns.contains { normalized.contains($0) } }?.0
+            ?? patternIntent
             ?? contextualIntent(normalized)
         var entities: [String: String] = [:]; var constraints = CommandConstraints()
         extractPrice(from: normalized, into: &constraints); extractSize(from: normalized, into: &constraints)
@@ -289,6 +295,8 @@ struct LocalCommandEngine: CommandParsing {
     }
 
     private func compoundIntent(_ text: String) -> CommandIntent? {
+        let compoundMarkers = [",", ";", " і ", " та ", " потім ", " затем ", " and then ", " then ", " und dann ", " puis "]
+        guard compoundMarkers.contains(where: text.contains) else { return nil }
         let clauses = CompoundCommandClauses.split(text)
         guard clauses.count >= 2 else { return nil }
         let recognized = clauses.filter { clause in
@@ -426,6 +434,11 @@ struct LocalCommandEngine: CommandParsing {
         return .productSearch
     }
 
+    private func firstRange(_ regex: NSRegularExpression, in text: String) -> Range<String.Index>? {
+        guard let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) else { return nil }
+        return Range(match.range, in: text)
+    }
+
     private func containsAny(_ text: String, _ signals: [String]) -> Bool {
         signals.contains(where: text.contains)
     }
@@ -439,8 +452,7 @@ struct LocalCommandEngine: CommandParsing {
     }
 
     private func extractPrice(from text: String, into constraints: inout CommandConstraints) {
-        let pattern = #"(?:до|max(?:imum)?|under|bis|jusqu['’]?à)\s*([0-9]+(?:[.,][0-9]+)?)\s*(грн|uah|usd|eur|€|\$|₴|гривень)?"#
-        guard let range = text.range(of: pattern, options: .regularExpression) else { return }
+        guard let range = firstRange(Self.priceRegex, in: text) else { return }
         let match = String(text[range]); let parts = match.split(separator: " ")
         guard let numberToken = parts.first(where: { $0.contains(where: \.isNumber) }) else { return }
         constraints.maximumPrice = Decimal(string: numberToken.replacingOccurrences(of: ",", with: "."))
@@ -450,16 +462,14 @@ struct LocalCommandEngine: CommandParsing {
         constraints.hardConstraintKeys.insert("maximumPrice")
     }
     private func extractSize(from text: String, into constraints: inout CommandConstraints) {
-        let patterns = [#"(?:розмір|размер|size|größe|taille)\s*([0-9]{1,3}|[xsml]{1,3})"#, #"([0-9]{2})\s*(?:розміру|размера)"#]
-        for pattern in patterns {
-            guard let match = text.range(of: pattern, options: .regularExpression) else { continue }
+        for regex in Self.sizeRegexes {
+            guard let match = firstRange(regex, in: text) else { continue }
             let value = String(text[match]).split(separator: " ").first(where: { $0.contains(where: \.isNumber) || $0.allSatisfy { "xsml".contains($0) } })
             if let value { constraints.size = String(value); constraints.hardConstraintKeys.insert("size"); return }
         }
     }
     private func extractMaximumWait(from text: String, into constraints: inout CommandConstraints) {
-        let pattern = #"(?:чекати|ждать|wait|warten|attendre)[^0-9]{0,24}([0-9]{1,3})\s*(?:хв|мин|min)"#
-        guard let range = text.range(of: pattern, options: .regularExpression),
+        guard let range = firstRange(Self.maximumWaitRegex, in: text),
               let value = String(text[range]).split(whereSeparator: { !$0.isNumber }).compactMap({ Int($0) }).first else { return }
         constraints.maximumWaitMinutes = value
         constraints.hardConstraintKeys.insert("maximumWaitMinutes")
