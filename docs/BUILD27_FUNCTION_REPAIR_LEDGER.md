@@ -50,10 +50,10 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-19 | GREEN |
 | B27-20 | GREEN |
 | B27-21 | GREEN |
-| B27-22 | EXTERNAL_PROVIDER_DEPENDENCY |
+| B27-22 | GREEN |
 | B27-23 | GREEN |
 | B27-24 | GREEN |
-| B27-25 | EXTERNAL_PROVIDER_DEPENDENCY |
+| B27-25 | GREEN |
 
 ## CLOSED approaches
 
@@ -377,3 +377,8 @@ Exact next operation: commit and push this completed source ledger, verify HEAD 
 ## Build 27 release checkpoint
 
 B27-22 reached archive/export verification but upload is externally blocked. Build source HEAD `0819b686e9361292a61092660517194d059fec61`; archive and IPA paths, SHA-256, signing/profile/entitlement evidence, exact account failure and continuation are persisted in `docs/BUILD27_RELEASE_VERIFICATION.md`. Upload attempt 1 did not reach Apple validation because Xcode has no App Store Connect account access for team 9V5XXDXF3N, and no local JWT/app-password upload credential is available. The unchanged account approach is CLOSED until credentials/account state materially changes. Build 28 was not created.
+
+
+## Build 27 upload completion
+
+After the owner restored the Xcode Apple Account, upload attempt 2 passed the App Store Connect account step, package analysis and SPI analysis. Exact Xcode result: Upload succeeded; Uploaded UniversalAssistant. App Store Connect state at completion: Uploaded package is processing. Logs are preserved at /Users/Shared/UniversalAssistantBuild27UploadRetry2/Build27UploadAttempt2.xcdistributionlogs. Version 0.1.0 Build 27 was uploaded; Build 28 was not created. TestFlight physical verification remains pending.
