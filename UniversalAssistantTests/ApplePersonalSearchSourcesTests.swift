@@ -52,7 +52,7 @@ private struct LocalSourceStub: LocalSearchSource {
         let asset = PhotoAssetReference(localIdentifier: "p1", creationDate: .init(timeIntervalSince1970: 1), coordinate: nil, album: nil)
         let source = PhotosPersonalSearchSource(library: PhotoLibraryStub(access: .limited, values: [asset]), loader: ImageLoaderStub(), labeler: LabelerStub())
         let response = await source.search(query: "receipt", limit: 3)
-        #expect(response.isComplete); #expect(response.results.first?.sourceObjectID == "p1"); #expect(response.results.first?.openReference == "photo-asset:p1")
+        #expect(response.isComplete); #expect(response.results.first?.sourceObjectID == "p1"); #expect(response.results.first?.openReference == "photo-asset:p1"); #expect(response.results.first?.relevance == 100)
     }
     @Test func filesAdapterRejectsUnauthorizedAndPreservesOpenReference() async {
         let item = LocalSearchResult(id: "f1", source: .files, title: "Contract.pdf", subtitle: nil, occurredAt: nil, exactNameMatch: true, relevance: 70, openReference: "file:///authorized/Contract.pdf")

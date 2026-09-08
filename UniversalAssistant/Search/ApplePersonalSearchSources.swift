@@ -37,8 +37,19 @@ struct PhotosPersonalSearchSource: PersonalSearchSource {
     func search(query: String, limit: Int) async -> PersonalSearchSourceResponse {
         let access = library.authorization() == .permissionRequired ? await library.requestAuthorization() : library.authorization()
         guard access == .permitted || access == .limited else { return .init(source: id, results: [], isComplete: false, unavailableReason: "photos_access_unavailable") }
-        let assets = query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? await library.search(.init(), limit: limit) : await PhotoSemanticSearchEngine(library: library, loader: loader, labeler: labeler).search(query, limit: limit)
-        let values = assets.enumerated().map { index, asset in PersonalSearchResult(id: "photos:\(asset.localIdentifier)", title: "Фото \(index + 1)", subtitle: asset.creationDate?.formatted(), source: id, sourceObjectID: asset.localIdentifier, openReference: "photo-asset:" + asset.localIdentifier, freshness: .local, relevance: 80 - index, exactMatch: false) }
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let ranked: [(PhotoAssetReference, Int)]
+        if trimmed.isEmpty {
+            ranked = await library.search(.init(), limit: limit).enumerated().map { ($0.element, 80 - $0.offset) }
+        } else {
+            ranked = await PhotoSemanticSearchEngine(library: library, loader: loader, labeler: labeler)
+                .matches(query, limit: limit)
+                .map { ($0.asset, Int(($0.confidence * 100).rounded())) }
+        }
+        let values = ranked.enumerated().map { index, rankedAsset in
+            let (asset, relevance) = rankedAsset
+            return PersonalSearchResult(id: "photos:\(asset.localIdentifier)", title: "Фото \(index + 1)", subtitle: asset.creationDate?.formatted(), source: id, sourceObjectID: asset.localIdentifier, openReference: "photo-asset:" + asset.localIdentifier, freshness: .local, relevance: relevance, exactMatch: false)
+        }
         return .init(source: id, results: values, isComplete: true, unavailableReason: nil)
     }
 }

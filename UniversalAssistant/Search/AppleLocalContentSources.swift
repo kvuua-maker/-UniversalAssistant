@@ -94,6 +94,11 @@ struct PhotoKitLibrarySearch: PhotoLibrarySearching {
 }
 
 struct PhotoSemanticLabel: Equatable, Sendable { let name: String; let confidence: Float }
+struct PhotoSemanticMatch: Equatable, Sendable {
+    let asset: PhotoAssetReference
+    let confidence: Float
+    let matchedLabels: [String]
+}
 protocol PhotoAssetImageLoading: Sendable { func imageData(localIdentifier: String) async throws -> Data }
 protocol PhotoSemanticLabeling: Sendable { func labels(imageData: Data) async throws -> [PhotoSemanticLabel] }
 
@@ -120,14 +125,14 @@ struct VisionPhotoSemanticLabeler: PhotoSemanticLabeling {
     }
 }
 
-private final class PhotoSemanticSearchCompletion: @unchecked Sendable {
+private final class PhotoSemanticSearchCompletion<Value: Sendable>: @unchecked Sendable {
     private let lock = NSLock()
-    private var continuation: CheckedContinuation<[PhotoAssetReference], Never>?
-    private var result: [PhotoAssetReference]?
-    func install(_ value: CheckedContinuation<[PhotoAssetReference], Never>) {
+    private var continuation: CheckedContinuation<[Value], Never>?
+    private var result: [Value]?
+    func install(_ value: CheckedContinuation<[Value], Never>) {
         lock.lock(); if let result { lock.unlock(); value.resume(returning: result) } else { continuation = value; lock.unlock() }
     }
-    func finish(_ value: [PhotoAssetReference]) {
+    func finish(_ value: [Value]) {
         lock.lock(); guard result == nil else { lock.unlock(); return }; result = value
         let continuation = continuation; self.continuation = nil; lock.unlock(); continuation?.resume(returning: value)
     }
@@ -137,31 +142,39 @@ struct PhotoSemanticSearchEngine: Sendable {
     let library: any PhotoLibrarySearching; let loader: any PhotoAssetImageLoading; let labeler: any PhotoSemanticLabeling
 
     func search(_ query: String, criteria: PhotoSearchCriteria = .init(), limit: Int = 5, timeout: Duration = .seconds(5)) async -> [PhotoAssetReference] {
+        await matches(query, criteria: criteria, limit: limit, timeout: timeout).map(\.asset)
+    }
+
+    func matches(_ query: String, criteria: PhotoSearchCriteria = .init(), limit: Int = 5, timeout: Duration = .seconds(5)) async -> [PhotoSemanticMatch] {
         guard [.permitted, .limited].contains(library.authorization()) else { return [] }
         let terms = Self.semanticTerms(query)
         guard !terms.isEmpty else { return [] }
         let candidates = await library.search(criteria, limit: min(max(limit * 4, 8), 20))
-        let completion = PhotoSemanticSearchCompletion()
+        let completion = PhotoSemanticSearchCompletion<PhotoSemanticMatch>()
         return await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
                 completion.install(continuation)
                 Task.detached(priority: .userInitiated) {
-                    let matches = await withTaskGroup(of: (Int, PhotoAssetReference)?.self) { group in
+                    let matches = await withTaskGroup(of: (Int, PhotoSemanticMatch)?.self) { group in
                         for (index, asset) in candidates.enumerated() {
                             group.addTask {
                                 guard let data = try? await loader.imageData(localIdentifier: asset.localIdentifier),
-                                      let labels = try? await labeler.labels(imageData: data),
-                                      labels.contains(where: { label in
-                                          guard label.confidence >= 0.45 else { return false }
+                                      let labels = try? await labeler.labels(imageData: data) else { return nil }
+                                let evidence = labels.filter { label in
                                           let normalized = Self.normalize(label.name)
                                           return terms.contains { normalized.contains($0) || $0.contains(normalized) }
-                                      }) else { return nil }
-                                return (index, asset)
+                                      }.sorted { $0.confidence > $1.confidence }
+                                guard let confidence = evidence.first?.confidence,
+                                      confidence >= Self.minimumReliableConfidence else { return nil }
+                                return (index, .init(asset: asset, confidence: confidence, matchedLabels: evidence.map(\.name)))
                             }
                         }
-                        var values: [(Int, PhotoAssetReference)] = []
+                        var values: [(Int, PhotoSemanticMatch)] = []
                         for await value in group { if let value { values.append(value) } }
-                        return values.sorted { $0.0 < $1.0 }.prefix(max(1, min(limit, 10))).map { $0.1 }
+                        return values.sorted {
+                            if $0.1.confidence != $1.1.confidence { return $0.1.confidence > $1.1.confidence }
+                            return $0.0 < $1.0
+                        }.prefix(max(1, min(limit, 10))).map { $0.1 }
                     }
                     completion.finish(matches)
                 }
@@ -174,6 +187,8 @@ struct PhotoSemanticSearchEngine: Sendable {
             completion.finish([])
         }
     }
+
+    private static let minimumReliableConfidence: Float = 0.65
 
     private static func normalize(_ value: String) -> String {
         value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)

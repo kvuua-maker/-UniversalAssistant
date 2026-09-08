@@ -83,6 +83,33 @@ import Testing
         #expect((await denied.search("receipt")).isEmpty)
         #expect((await permitted.search("receipt")).isEmpty)
     }
+    @Test func semanticPhotoSearchRejectsWeakClassificationInsteadOfReturningAnAsset() async {
+        let asset = PhotoAssetReference(localIdentifier: "weak", creationDate: nil, coordinate: nil, album: nil)
+        let engine = PhotoSemanticSearchEngine(
+            library: PhotoLibraryStub(access: .permitted, assets: [asset]),
+            loader: ImageLoaderStub(dataByIdentifier: ["weak": Data("weak".utf8)]),
+            labeler: SemanticLabelerStub(labelsByPayload: ["weak": [.init(name: "invoice document", confidence: 0.64)]])
+        )
+        #expect((await engine.matches("document", limit: 3)).isEmpty)
+    }
+
+    @Test func semanticPhotoSearchCarriesConfidenceAndRanksStrongestEvidenceFirst() async {
+        let older = PhotoAssetReference(localIdentifier: "older", creationDate: nil, coordinate: nil, album: nil)
+        let newer = PhotoAssetReference(localIdentifier: "newer", creationDate: nil, coordinate: nil, album: nil)
+        let engine = PhotoSemanticSearchEngine(
+            library: PhotoLibraryStub(access: .limited, assets: [newer, older]),
+            loader: ImageLoaderStub(dataByIdentifier: ["newer": Data("newer".utf8), "older": Data("older".utf8)]),
+            labeler: SemanticLabelerStub(labelsByPayload: [
+                "newer": [.init(name: "domestic animal", confidence: 0.73)],
+                "older": [.init(name: "domestic animal", confidence: 0.94)]
+            ])
+        )
+        let matches = await engine.matches("animal", limit: 3)
+        #expect(matches.map(\.asset.localIdentifier) == ["older", "newer"])
+        #expect(matches.map(\.confidence) == [0.94, 0.73])
+        #expect(matches.first?.matchedLabels == ["domestic animal"])
+    }
+
     @Test func filesQueryDeadlineTerminatesBeforeLateSynchronousCompletion() async {
         // Keep the simulated provider slower than worst-case parallel-suite
         // scheduling so this proves the independent deadline rather than timing luck.
