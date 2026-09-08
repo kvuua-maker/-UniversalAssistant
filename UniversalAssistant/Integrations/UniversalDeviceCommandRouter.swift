@@ -25,7 +25,32 @@ struct DeviceApplicationResolver: Sendable {
         let matches = applications.filter { app in app.aliases.map(Self.normalize).contains(value) }
         if matches.count == 1 { return .direct(matches[0]) }
         if matches.count > 1 { return .clarification(matches.map(\.id).sorted()) }
-        return .unsupported
+
+        let ranked = applications.map { app in
+            let score = app.aliases.map { Self.similarity(value, Self.normalize($0)) }.max() ?? 0
+            return (app, score)
+        }.sorted { $0.1 > $1.1 }
+        guard let best = ranked.first, best.1 >= 0.48 else { return .unsupported }
+        let runnerUp = ranked.dropFirst().first?.1 ?? 0
+        if best.1 >= 0.72, best.1 - runnerUp >= 0.12 { return .direct(best.0) }
+        let candidates = ranked.filter { $0.1 >= max(0.48, best.1 - 0.08) }.map { $0.0.id }.sorted()
+        return .clarification(candidates)
+    }
+
+    private static func similarity(_ lhs: String, _ rhs: String) -> Double {
+        guard !lhs.isEmpty, !rhs.isEmpty else { return 0 }
+        if lhs == rhs { return 1 }
+        if min(lhs.count, rhs.count) >= 5, (lhs.hasPrefix(rhs) || rhs.hasPrefix(lhs)) { return 0.84 }
+        let left = Array(lhs), right = Array(rhs)
+        var previous = Array(0...right.count)
+        for (i, l) in left.enumerated() {
+            var current = [i + 1]
+            for (j, r) in right.enumerated() {
+                current.append(min(current[j] + 1, previous[j + 1] + 1, previous[j] + (l == r ? 0 : 1)))
+            }
+            previous = current
+        }
+        return 1 - Double(previous[right.count]) / Double(max(left.count, right.count))
     }
 
     private static func normalize(_ value: String) -> String {

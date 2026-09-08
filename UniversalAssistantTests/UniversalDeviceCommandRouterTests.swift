@@ -19,13 +19,15 @@ struct UniversalDeviceCommandRouterTests {
         #expect(app.id == "telegram" && destination.scheme == "tg" && silent)
     }
 
-    @Test func exactAliasDoesNotUseArbitraryFuzzySelection() {
+    @Test func scopedConfidenceRecoveryPreservesExactAmbiguityAndRejectsWeakCandidates() {
         let apps = LaunchDeviceApplications.verified + [
             .init(id: "telegram-alt", aliases: ["телега"], launchURL: URL(string: "https://example.com/telegram")!, exactContext: nil)
         ]
         #expect(DeviceApplicationResolver(applications: apps).resolve(spokenName: "телега") ==
                 .clarification(["telegram", "telegram-alt"]))
-        #expect(DeviceApplicationResolver(applications: apps).resolve(spokenName: "telegrm") == .unsupported)
+        guard case let .direct(recovered) = DeviceApplicationResolver(applications: apps).resolve(spokenName: "telegrm") else { Issue.record("Expected high-confidence registry recovery"); return }
+        #expect(recovered.id == "telegram")
+        #expect(DeviceApplicationResolver(applications: apps).resolve(spokenName: "unrelated assistant") == .unsupported)
     }
 
     @Test func appWordVariantsResolveOnlyVerifiedPublicDestinations() {
