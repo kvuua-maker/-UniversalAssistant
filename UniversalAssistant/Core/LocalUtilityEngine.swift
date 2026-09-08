@@ -36,6 +36,7 @@ struct LocalUtilityEngine: Sendable {
     }
 
     private func arithmetic(_ text: String) throws -> Double? {
+        if let value = try chainedArithmetic(text) { return value }
         let operators: [(String, (Double, Double) throws -> Double)] = [
             (#"(?:(?:помножити|помнож|умножить|умножь)(?:\s+на)?|times|multiplied by|×|\*)"#, { $0 * $1 }),
             (#"(?:поділити на|подели на|разделить на|divided by|÷|/)"#, { guard $1 != 0 else { throw LocalUtilityError.divisionByZero }; return $0 / $1 }),
@@ -47,6 +48,28 @@ struct LocalUtilityEngine: Sendable {
             if let values = captures(pattern, text), values.count == 2 { return try operation(values[0], values[1]) }
         }
         return nil
+    }
+
+    private func chainedArithmetic(_ text: String) throws -> Double? {
+        let operatorPattern = #"(?:помножити|помнож|умножить|умножь)(?:\s+на)?|times|multiplied by|×|\*|поділити на|подели на|разделить на|divided by|÷|/|додати|додай|сложить|прибавить|плюс|plus|\+|відняти|відніми|вычесть|отнять|мінус|минус|minus|-"#
+        let pattern = "(" + Self.numberPattern + ")|(" + operatorPattern + ")"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return nil }
+        let matches = regex.matches(in: text, range: NSRange(text.startIndex..., in: text))
+        var numbers: [Double] = []; var operations: [String] = []
+        for match in matches {
+            if match.range(at: 1).location != NSNotFound, let range = Range(match.range(at: 1), in: text), let value = Double(text[range].replacingOccurrences(of: ",", with: ".")) { numbers.append(value) }
+            else if match.range(at: 2).location != NSNotFound, let range = Range(match.range(at: 2), in: text) { operations.append(String(text[range]).lowercased()) }
+        }
+        guard numbers.count >= 2, operations.count == numbers.count - 1 else { return nil }
+        var result = numbers[0]
+        for index in operations.indices {
+            let op = operations[index], rhs = numbers[index + 1]
+            if op.contains("помнож") || op.contains("умнож") || op.contains("times") || op.contains("multiplied") || op == "×" || op == "*" { result *= rhs }
+            else if op.contains("поділ") || op.contains("подел") || op.contains("раздел") || op.contains("divided") || op == "÷" || op == "/" { guard rhs != 0 else { throw LocalUtilityError.divisionByZero }; result /= rhs }
+            else if op.contains("дод") || op.contains("слож") || op.contains("прибав") || op.contains("плюс") || op.contains("plus") || op == "+" { result += rhs }
+            else { result -= rhs }
+        }
+        return result
     }
 
     private func percentage(_ text: String) throws -> Double? {

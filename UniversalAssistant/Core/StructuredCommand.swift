@@ -173,6 +173,12 @@ struct LocalCommandEngine: CommandParsing {
             return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: .open, entities: ["direct_url": directURL.absoluteString])
         }
         let semanticFrame = CanonicalSemanticFrameAnalyzer().analyze(original: text, normalized: normalized)
+        // Deterministic mathematics is authoritative before compound planning or
+        // temporal noun routing. Conjunctions join operations inside one local
+        // expression; they are not automatically assistant plan boundaries.
+        if LocalUtilityEngine.recognizes(normalized) {
+            return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: .localUtility, entities: semanticFrame.entities)
+        }
         // Location facts and travel-time are explicit local/MapKit operations.
         // They must remain authoritative even when a movement verb also gives
         // the semantic frame a broad navigation action.

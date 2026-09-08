@@ -5,13 +5,14 @@ import Foundation
 /// a digit sequence rather than an additive cardinal number.
 enum StructuredNumberNormalizer {
     static func normalize(_ text: String) -> String {
-        let folded = text.lowercased()
+        let spoken = SpokenCardinalNormalizer.normalize(text)
+        let folded = spoken.lowercased()
         let telephoneContext = ["телефон", "номер", "подзвон", "зателефон", "набер", "позвон", "call", "dial"]
             .contains(where: folded.contains)
-        guard !telephoneContext,
-              let regex = try? NSRegularExpression(pattern: #"(?<![\d.,])(\d{1,})\s+(\d{3})(?![\d.,])"#) else { return text }
-        var value = text
-        for match in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
+        guard !telephoneContext else { return spoken }
+        guard let regex = try? NSRegularExpression(pattern: #"(?<![\d.,])(\d{1,})\s+(\d{3})(?![\d.,])"#) else { return spoken }
+        var value = spoken
+        for match in regex.matches(in: spoken, range: NSRange(spoken.startIndex..., in: spoken)).reversed() {
             guard let whole = Range(match.range(at: 0), in: value),
                   let leftRange = Range(match.range(at: 1), in: value),
                   let rightRange = Range(match.range(at: 2), in: value),

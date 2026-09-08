@@ -70,6 +70,16 @@ struct LocalUtilityEngineTests {
         #expect(LocalCommandEngine().parse("Покажи курс долара до гривні").intent == .currencyConversion)
     }
 
+    @Test func spokenCardinalsAndChainedOperationsUseOneDeterministicPath() throws {
+        #expect(try engine.execute("Дев’яносто поділити на три і додати сім", locale: locale, timeZone: utc, now: .now) == "37")
+        #expect(try engine.execute("Сто двадцять відняти двадцять і помножити на чотири", locale: locale, timeZone: utc, now: .now) == "400")
+        let command = LocalCommandEngine().parse("Вісімдесят поділити на чотири і додати шість")
+        #expect(command.intent == .localUtility)
+        #expect(command.normalizedText.contains("80"))
+        #expect(command.normalizedText.contains("4"))
+        #expect(command.normalizedText.contains("6"))
+    }
+
     @Test func naturalHomeInputReturnsInAppResultWithoutWebHandoff() async throws {
         let model = AssistantViewModel()
         model.input = "Скільки буде 347 помножити на 28?"

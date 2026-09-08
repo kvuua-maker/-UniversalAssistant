@@ -41,6 +41,19 @@ struct SystemQuickActionPlannerTests {
         #expect(alarm.entities["label"] == "ранкова пробіжка")
     }
 
+    @Test func spokenDurationAndUnseenAlarmTimeConvergeOnDistinctSystemActions() {
+        let engine = LocalCommandEngine()
+        let timer = engine.parse("Запусти таймер для настою на одну хвилину")
+        #expect(timer.intent == .deviceAction)
+        #expect(timer.entities["system_action"] == "timer")
+        #expect(timer.entities["duration_seconds"] == "60")
+        let alarm = engine.parse("Встанови будильник на 05:47 ранній виїзд")
+        #expect(alarm.intent == .deviceAction)
+        #expect(alarm.entities["system_action"] == "alarm")
+        #expect(alarm.entities["hour"] == "05")
+        #expect(alarm.entities["minute"] == "47")
+    }
+
     @Test func onlyBoundedVerifiedAppDestinationsArePrepared() throws {
         let telegram = try #require(URL(string: "tg://resolve?domain=telegram"))
         #expect(planner.plan(.openApp(verifiedURL: telegram)).mechanism == .verifiedApplicationURL)

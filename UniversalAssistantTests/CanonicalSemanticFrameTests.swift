@@ -74,4 +74,15 @@ struct CanonicalSemanticFrameTests {
         let shared = parser.parse("Прочитай текст на цій фотографії")
         #expect(shared.entities["context_reference"] == "sharedContent")
     }
+
+    @Test func temporalActionObjectCompositionSeparatesCreatesFromQueries() {
+        let recordedEvent = parser.parse("Запиши на післязавтра о 16:20 огляд проєкту")
+        #expect(recordedEvent.intent == .calendarCreate)
+        let setEvent = parser.parse("Додай у календар наступного понеділка о 11:10 консультацію")
+        #expect(setEvent.intent == .calendarCreate)
+        let query = parser.parse("Покажи календар на наступний понеділок")
+        #expect(query.intent == .calendarQuery)
+        let arithmetic = parser.parse("Сто поділити на п’ять і помножити на дев’ять")
+        #expect(arithmetic.intent == .localUtility)
+    }
 }

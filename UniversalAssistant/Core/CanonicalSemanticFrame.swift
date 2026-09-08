@@ -181,7 +181,12 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         }
 
         if frame.object == .calendar {
-            if frame.action == .create { return (.calendarCreate, entities) }
+            // Record/add/set plus a declarative event with a concrete temporal role are creates.
+            // Query/show/open remain reads, preventing noun-only cross-family theft.
+            if frame.action == .create || frame.action == .record || frame.action == .set ||
+                (frame.action == nil && frame.temporal != nil) {
+                return (.calendarCreate, entities)
+            }
             if frame.action == .update { return (.calendarUpdate, entities) }
             if frame.action == .delete { return (.calendarDelete, entities) }
             return (.calendarQuery, entities)
