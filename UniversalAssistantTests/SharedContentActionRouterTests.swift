@@ -46,6 +46,19 @@ struct SharedContentActionRouterTests {
         #expect(store.consume() == nil)
     }
 
+    @MainActor @Test func initialActiveHostLaunchConsumesPendingSharedImage() throws {
+        let suite = "ua-share-host-test-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let item = SharedInboxEnvelope(kind: "image", value: "file:///tmp/shared-image.jpg", receivedAt: .now)
+        defaults.set(try JSONEncoder().encode(item), forKey: SharedInboxStore.inboxKey)
+        let model = AssistantViewModel()
+
+        #expect(model.ingestPendingShare(from: SharedInboxStore(defaults: defaults)))
+        #expect(!model.ingestPendingShare(from: SharedInboxStore(defaults: defaults)))
+        #expect(model.resultState == .idle)
+    }
+
       func sharedImageFilePayloadIsReadableByHostWithoutUserDefaultsBlob() throws {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let expected = Data([1, 2, 3, 4])

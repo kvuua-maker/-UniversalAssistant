@@ -8,13 +8,16 @@ struct UniversalAssistantApp: App {
     var body: some Scene {
         WindowGroup {
             AssistantHomeView(model: model)
-                .task { await PhysicalDiagnosticDelivery.shared.flush() }
+                .task {
+                    _ = model.ingestPendingShare()
+                    await PhysicalDiagnosticDelivery.shared.flush()
+                }
         }
             .onChange(of: scenePhase) { _, phase in
                 if phase != .active {
                     model.handleSceneBecameInactive()
-                } else if let shared = SharedInboxStore().consume() {
-                    model.ingestShared(shared)
+                } else if model.ingestPendingShare() {
+                    return
                 } else {
                     model.handleQuickLaunch()
                 }

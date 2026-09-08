@@ -20,7 +20,7 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 | B28-09 | IN_PROGRESS | Official credential-free ECB SDMX boundary now serves supported informational FX reference conversions in-app with provenance; unsupported currencies remain provider-required. General, stocks, catalog and retail providers remain under audit. |
 | B28-10 | REQUIRED_OWNER_ACTION | No repository credential is present. Initial API access requires Account Holder; a least-privilege team/individual key and secure out-of-Git `.p8` placement are required for JWT automation. |
 | B28-11 | IN_PROGRESS | Active Codex Remote Control policy audit pending. |
-| B28-12 | IN_PROGRESS | New `AssistantViewModel` production-boundary tests prove temporal and route-context roles reach canonical executors; full unseen family matrix remains pending. |
+| B28-12 | IN_PROGRESS | New `AssistantViewModel` tests prove temporal/route-context roles reach canonical executors; Share Extension pending-image host ingestion now works both on initial active launch and later scene activation, with exactly-once tests 6/6. Full unseen family matrix remains pending. |
 | B28-13 | GREEN | Durable stable-ID ledger created; CLOSED history preserved below. |
 | B28-14 | NOT_STARTED | Full gates run only after source repair. |
 | B28-15 | NOT_STARTED | Build 28 forbidden until complete gate. |
@@ -63,4 +63,4 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 
 Current active blocks: **B28-05 semantic-frame consumption across remaining physical defect families**, **B28-07 Apple live capability configuration**, and **B28-09 provider audit**.
 
-Exact next code-level action: trace the remaining Build-27 physical source families against the new typed roles, beginning with Contacts/Calls and Files/Photos/Share collisions in `CanonicalSemanticFrameAnalyzer`, `LocalCommandEngine` and `ProductionCanonicalCapabilityExecutor`; add unseen Home-boundary tests. In parallel, continue live Apple App ID/profile readback where account access permits and provider audit. Do not recreate Build 28.
+Exact next code-level action: continue Build-27 physical family reconciliation using the typed frame: verify Contacts normal-call action isolation, Files/Photos action-source collisions, then Calendar/Reminder/Alarm and OCR/QR/Document production boundaries with unseen Home tests. Continue provider and Apple live-capability audits independently. Do not create Build 28.

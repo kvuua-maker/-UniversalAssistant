@@ -554,6 +554,13 @@ final class AssistantViewModel {
         submit()
     }
 
+    @discardableResult
+    func ingestPendingShare(from store: SharedInboxStore = SharedInboxStore()) -> Bool {
+        guard let envelope = store.consume() else { return false }
+        ingestShared(envelope)
+        return true
+    }
+
     private func translationFollowUpTarget(_ text: String) -> String? {
         let value = text.lowercased()
         guard ["а тепер", "тепер", "now in", "and now"].contains(where: value.contains) else { return nil }
