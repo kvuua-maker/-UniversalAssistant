@@ -6,7 +6,7 @@ import Foundation
 struct CanonicalSemanticFrame: Equatable, Sendable {
     enum Action: String, Sendable { case open, choose, search, show, create, call, message, scan, recognize, share, navigate, query, set, record }
     enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, url, place, weather, text, code, note, audio, media }
-    enum Source: String, Sendable { case files, photos, clipboard, camera, calendar, reminders }
+    enum Source: String, Sendable { case files, photos, documents, clipboard, camera, calendar, reminders }
     enum ContextReference: String, Sendable { case currentLocation, activeRoute, selectedResult, sharedContent, previousResult }
 
     struct TemporalRole: Equatable, Sendable { let expression: String; let durationSeconds: Int? }
@@ -41,6 +41,10 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         frame.action = action(in: tokens)
         frame.object = object(in: tokens)
         frame.source = source(in: tokens)
+        if frame.object == .text, frame.action == .recognize,
+           tokens.contains(where: { $0.hasPrefix("документ") || $0.hasPrefix("document") }) {
+            frame.source = .documents
+        }
         frame.service = service(in: tokens)
         frame.app = application(in: tokens)
         frame.modifiers = modifiers(in: tokens)
@@ -104,6 +108,11 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             if frame.object == .document { entities["input_source"] = "document_camera" }
             return (.cameraCapture, entities)
         }
+        if frame.source == .documents, frame.action == .recognize {
+            entities["capture_mode"] = "text_scan"
+            entities["input_source"] = "document"
+            return (.cameraCapture, entities)
+        }
 
         if frame.object == .photo {
             if frame.action == .create {
@@ -156,7 +165,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             }
             if frame.object == .document || frame.object == .text {
                 entities["capture_mode"] = "text_scan"
-                entities["input_source"] = "document_camera"
+                if frame.object == .document { entities["input_source"] = "document_camera" }
                 return (.cameraCapture, entities)
             }
         }

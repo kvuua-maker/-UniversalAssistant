@@ -34,6 +34,7 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 | Voice entities | Contextual strings plus narrow post-ASR substitutions | Imperatives, WhatsApp, words and grouped numbers still corrupted | Vocabulary hints cannot own audio lifecycle or safely reconstruct arbitrary entities | Session-owned Speech lifecycle, alternative/transcription evidence and confidence-aware structured normalization |
 | System fallback | Generic unavailable/web after broad device intent | Recognized system/device commands still reached Google | Capability resolution occurred too late | Typed public-capability classification before any web fallback |
 | Cross-family composition | Independent keyword-triggered intent selection | Photos/Files, Location/Weather, Contact/Call, Clipboard/URL and Route/Place collided | Whole-command roles and dependencies were discarded | Semantic frame plus deterministic dependency lowering into existing canonical executors |
+| OCR input selection | Treat every recognized text object as a document-camera scan | Existing production regression required plain “recognize text” to use camera OCR, while an existing document must use the picker | Object type alone cannot distinguish capture from an existing source | Separate `OBJECT=text`, `SOURCE=documents`, and `ACTION=scan + OBJECT=document`; route to camera OCR, document-picker OCR, or VisionKit respectively |
 
 ## Build-27 physical evidence carried forward
 
@@ -52,6 +53,7 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 - Official ECB current-FX boundary: parser/executor tests 11/11 PASS together with protected local utilities; Development compile PASS. Supported ECB currencies return sourced in-app reference conversions, while UAH remains a truthful provider dependency.
 - Camera-source semantic roles now select OCR/QR/document capture before legacy fallback, and audio-record resolution preserves temporal/context roles. `CanonicalSemanticFrameTests`, `CanonicalCapabilityExecutionTests`, and `ProductionCallRoutingTests`: 24/24 PASS; separate Development compile PASS.
 - External provider research and exact non-secret owner boundaries are persisted in `BUILD28_EXTERNAL_PROVIDER_AUDIT.md`.
+- OCR execution now owns a cancellable task and request generation. A superseding Home request cancels waiting OCR and stale completion cannot mutate the renderer. Camera OCR, existing-document OCR and multi-page VisionKit scan are role-distinct; frame/OCR/scanner suites pass 30/30.
 
 ## Current checkpoint
 
@@ -65,4 +67,4 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 
 Current active blocks: **B28-05 semantic-frame consumption across remaining physical defect families**, **B28-07 Apple live capability configuration**, and **B28-09 provider audit**.
 
-Exact next code-level action: continue the remaining Build-27 physical families after the now-green role collisions: verify Calendar/Reminder natural parameter consumption and Alarm label/time consistency through their specialized production boundaries, then complete OCR/QR/document result continuations and CurrentContext composition. Continue live Apple capability/account readback and provider boundary work independently. Do not create Build 28.
+Exact next code-level action: perform live Apple App ID/profile capability readback for the main app and Share Extension, enabling only audit-classified `REQUIRED_CAN_ENABLE` services; continue remaining provider-boundary and physical-family reconciliation. Calendar/Reminder production parameter tests and Alarm extraction remain protected; OCR/QR/document lifecycle is green but requires physical retest. Do not create Build 28.

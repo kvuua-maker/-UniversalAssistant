@@ -111,6 +111,25 @@ struct ProductionOCRTests {
         #expect(result.actions == [.copy, .share, .translate])
     }
 
+    @Test func supersedingHomeRequestCannotBeOverwrittenByLateOCR() async throws {
+        let processor = DeferredOCRProcessorStub()
+        let model = AssistantViewModel(ocrProcessor: processor, compactResultDuration: .seconds(60))
+        model.handleCapturedOCRImage(image())
+        try await waitUntil { processor.isWaiting }
+
+        model.input = "Скільки буде 9 помножити на 7?"
+        model.submit()
+        try await waitUntil { if case .deterministic = model.resultState { true } else { false } }
+        processor.finish(["stale private OCR"])
+        try await Task.sleep(for: .milliseconds(50))
+
+        guard case let .deterministic(result) = model.resultState else {
+            Issue.record("Late OCR replaced the newer Home result")
+            return
+        }
+        #expect(result.primaryAnswer.contains("63"))
+    }
+
     private func image() -> UIImage {
         UIGraphicsImageRenderer(size: CGSize(width: 4, height: 4)).image { context in UIColor.white.setFill(); context.fill(CGRect(x: 0, y: 0, width: 4, height: 4)) }
     }
@@ -126,5 +145,17 @@ private final class OCRProcessorStub: DocumentOCRProcessing {
     private(set) var callCount = 0
     init(_ result: Result<[String], Error>) { self.result = result }
     func recognize(cgImage: CGImage) async throws -> [String] { callCount += 1; return try result.get() }
+}
+@MainActor
+private final class DeferredOCRProcessorStub: DocumentOCRProcessing {
+    private var continuation: CheckedContinuation<[String], Error>?
+    var isWaiting: Bool { continuation != nil }
+    func recognize(cgImage: CGImage) async throws -> [String] {
+        try await withCheckedThrowingContinuation { continuation = $0 }
+    }
+    func finish(_ lines: [String]) {
+        continuation?.resume(returning: lines)
+        continuation = nil
+    }
 }
 private struct TestFailure: Error {}

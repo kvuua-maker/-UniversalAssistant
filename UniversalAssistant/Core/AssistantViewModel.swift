@@ -39,6 +39,7 @@ final class AssistantViewModel {
     private var capabilityExecutionInFlight = false
     private var activeRequestGeneration: UInt64 = 0
     private var capabilityExecutionTask: Task<Void, Never>?
+    private var ocrExecutionTask: Task<Void, Never>?
 
     init(
         commandEngine: any CommandParsing = LocalCommandEngine(),
@@ -160,6 +161,7 @@ final class AssistantViewModel {
         activeRequestGeneration &+= 1
         let requestGeneration = activeRequestGeneration
         capabilityExecutionTask?.cancel()
+        ocrExecutionTask?.cancel()
         let submittedInput = input
         if let target = translationFollowUpTarget(submittedInput), let translation = currentContext.freshTranslation() {
             input = ""
@@ -460,14 +462,21 @@ final class AssistantViewModel {
     func handleScannedOCRDocument(_ pages: [UIImage]) {
         capabilityPresentation = nil
         guard !pages.isEmpty else { presentFailure(message: AppText.value("request_unavailable")); return }
+        activeRequestGeneration &+= 1
+        let requestGeneration = activeRequestGeneration
+        ocrExecutionTask?.cancel()
         resultState = .processing
-        Task { [weak self] in
+        ocrExecutionTask = Task { [weak self] in
             guard let self else { return }
             do {
                 let result = try await ocrPipeline.process(pages, provenance: .document)
+                guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
                 resultState = .ocr(result); statusText = AppText.value("ready")
                 LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=ocr source=document pages=\(pages.count)")
-            } catch { presentFailure(message: AppText.value("request_unavailable")) }
+            } catch {
+                guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
+                presentFailure(message: AppText.value("request_unavailable"))
+            }
         }
     }
     func handleDocumentScannerFailure(_ error: Error) {
@@ -477,14 +486,21 @@ final class AssistantViewModel {
     private func processOCR(_ image: UIImage?, provenance: OCRInputProvenance) {
         capabilityPresentation = nil
         guard image != nil else { presentFailure(message: AppText.value("request_unavailable")); return }
+        activeRequestGeneration &+= 1
+        let requestGeneration = activeRequestGeneration
+        ocrExecutionTask?.cancel()
         resultState = .processing
-        Task { [weak self] in
+        ocrExecutionTask = Task { [weak self] in
             guard let self else { return }
             do {
                 let result = try await ocrPipeline.process(image, provenance: provenance)
+                guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
                 resultState = .ocr(result); statusText = AppText.value("ready")
                 LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=ocr source=\(provenance.rawValue)")
-            } catch { presentFailure(message: AppText.value("request_unavailable")) }
+            } catch {
+                guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
+                presentFailure(message: AppText.value("request_unavailable"))
+            }
         }
     }
     func performOCRAction(_ result: OCRProductionResult, _ action: OCRResultAction) {
