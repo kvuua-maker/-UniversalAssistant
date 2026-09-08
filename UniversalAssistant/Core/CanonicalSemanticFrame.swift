@@ -54,7 +54,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
                 original,
                 afterActionFamilies: [
                     ["контакт", "contact"], ["подзвон", "зателефон", "набер", "позвон", "call", "dial"],
-                    ["напиш", "повідом", "сообщ", "message"]
+                    ["напиш", "надішл", "відправ", "повідом", "сообщ", "message", "send"]
                 ],
                 stoppingAt: [" через ", " у whatsapp", " в whatsapp", " via whatsapp", " по whatsapp"]
             )
@@ -198,6 +198,13 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     }
 
     private func action(in tokens: [String]) -> CanonicalSemanticFrame.Action? {
+        let messageObject = tokens.contains { token in
+            ["повідом", "сообщ", "message", "sms"].contains { token.hasPrefix($0) }
+        }
+        let sendVerb = tokens.contains { token in
+            ["напиш", "надішл", "відправ", "отправ", "message", "send"].contains { token.hasPrefix($0) }
+        }
+        if messageObject && sendVerb { return .message }
         let families: [(CanonicalSemanticFrame.Action, [String])] = [
             (.choose, ["вибер", "обер", "выбер", "select", "choose"]),
             (.share, ["поділ", "подел", "надішл", "відправ", "отправ", "share", "send"]),

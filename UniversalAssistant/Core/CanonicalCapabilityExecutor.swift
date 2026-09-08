@@ -151,10 +151,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             if command.entities["contact"] == nil { return try await contextual(command, opensSelection: true) }
             return try await contact(command, preparesCall: true)
         case .messageCompose:
-            return .presentation(.message(
-                recipients: command.entities["recipient"].map { [$0] } ?? [],
-                body: command.entities["message_body"]
-            ))
+            return try await message(command)
         case .noteCreate:
             let value = try required(command.entities["content"] ?? subject(after: ["створи нову нотатку", "створи нотатку", "создай заметку", "create a note"], in: command.originalText), "note_content")
             let content = value.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: ":,-")))
@@ -501,6 +498,55 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             let output = try result(value.displayName, facts: facts, actions: actions)
             currentContext.replaceResults(output)
             return .result(output)
+        }
+    }
+
+    private func message(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        let service = command.entities["message_service"]?.lowercased()
+        let body = command.entities["message_body"]
+        guard let rawRecipient = command.entities["recipient"]?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !rawRecipient.isEmpty else {
+            guard service == nil || service == "messages" else {
+                throw CanonicalCapabilityExecutionError.missingParameter("message_recipient")
+            }
+            return .presentation(.message(recipients: [], body: body))
+        }
+
+        let directDigits = rawRecipient.filter(\.isNumber)
+        let phoneNumber: String
+        if directDigits.count >= 7 {
+            phoneNumber = rawRecipient
+        } else {
+            try await contacts.requestAccessIfNeeded()
+            switch try await contacts.resolve(name: rawRecipient) {
+            case .notFound:
+                throw CanonicalCapabilityExecutionError.unavailable("message_contact_not_found")
+            case let .ambiguous(values):
+                throw CanonicalCapabilityExecutionError.ambiguous(values.map(\.displayName))
+            case let .resolved(value):
+                guard value.phoneNumbers.count == 1, let number = value.phoneNumbers.first else {
+                    throw CanonicalCapabilityExecutionError.ambiguous(value.phoneNumbers)
+                }
+                phoneNumber = number
+            }
+        }
+
+        let messenger: MessengerKind
+        switch service {
+        case nil, "messages": messenger = .messages
+        case "whatsapp": messenger = .whatsapp
+        case "telegram": messenger = .telegram
+        case "viber": messenger = .viber
+        case "signal": messenger = .signal
+        default: throw CanonicalCapabilityExecutionError.unavailable("unsupported_message_service")
+        }
+        switch try MessengerHandoffPlanner().plan(messenger: messenger, recipient: phoneNumber, body: body) {
+        case let .systemComposer(recipients, body):
+            return .presentation(.message(recipients: recipients, body: body))
+        case let .verifiedHandoff(url):
+            return .handoff(.init(query: command.originalText, destination: url, kind: .system))
+        case let .unavailable(reason):
+            throw CanonicalCapabilityExecutionError.unavailable(reason)
         }
     }
 

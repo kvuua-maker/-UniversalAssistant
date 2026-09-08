@@ -24,3 +24,12 @@ Audit date: 2026-09-08. Deployment target: iOS 18.0. This is source/account evid
 - Apple App Store Connect API: Account Holder requests initial access; team keys require Account Holder/Admin; private keys are downloadable once and must be protected.
 
 No private API, undocumented system URL scheme, or wildcard entitlement was introduced by this audit.
+
+## Live App Store provisioning readback (2026-09-08)
+
+The four locally installed target-specific App Store profiles were decoded directly with `security cms`; this is physical profile evidence rather than an inference from project text.
+
+- Main profile `UniversalAssistantAppStore` authorizes `9V5XXDXF3N.com.universalassistant.app`, expires 2027-09-06, has `get-task-allow=false`, production APNs, WeatherKit, App Attest development/production, Sign in with Apple, App Group, and the configured iCloud container. Profile authorization wildcards for iCloud services/KVS remain profile-side only; executable entitlements use concrete values.
+- Share profile `UniversalAssistantShareAppStore` authorizes `9V5XXDXF3N.com.universalassistant.app.share`, expires 2027-09-06, has `get-task-allow=false`, and authorizes only the shared App Group plus standard signing keys.
+- Neither profile authorizes ShazamKit. No source entitlement was added because doing so without App ID authorization would create a signing mismatch. This remains the exact `REQUIRED_OWNER_ACTION` boundary.
+- No additional `REQUIRED_CAN_ENABLE` service was missing. No unrelated capability was enabled.
