@@ -541,6 +541,7 @@ struct LocalCommandEngine: CommandParsing {
         _ = original // Preserve original casing for future open-catalog brand extraction.
     }
     private func ordinal(in text: String) -> Int? {
+        if ["передостан", "предпослед", "penultimate"].contains(where: text.contains) { return 2 }
         if ["другий", "друга", "второй", "second", "zweite", "deuxième"].contains(where: text.contains) { return 2 }
         if ["перший", "первая", "first", "erste", "premier"].contains(where: text.contains) { return 1 }
         return nil

@@ -102,7 +102,8 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         // SOURCE controls the domain. “documents in Photos” is a Photos query;
         // the object alone must never redirect it to Files.
         if frame.source == .photos {
-            entities["query"] = frame.modifiers.contains("latest") ? "latest" : semanticPhotoSubject(original)
+            entities["query"] = (frame.modifiers.contains("latest") || frame.modifiers.contains("penultimate") || frame.action.map { [.open, .show].contains($0) } == true) ? "recent" : semanticPhotoSubject(original)
+            if frame.action == .open { entities["requested_action"] = "open" }
             if frame.action == .share { entities["requested_action"] = "share" }
             if frame.action == .recognize { entities["requested_action"] = "ocr" }
             return (.photoSearch, entities)
@@ -139,7 +140,9 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
                 return (.cameraCapture, entities)
             }
             guard frame.action != nil || frame.modifiers.contains("latest") else { return (nil, entities) }
-            entities["query"] = frame.modifiers.contains("latest") ? "latest" : semanticPhotoSubject(original)
+            let recentSelection = frame.modifiers.contains("latest") || frame.modifiers.contains("penultimate") || [.open, .show].contains(frame.action)
+            entities["query"] = recentSelection ? "recent" : semanticPhotoSubject(original)
+            if frame.action == .open { entities["requested_action"] = "open" }
             if frame.action == .share { entities["requested_action"] = "share" }
             if frame.action == .recognize { entities["requested_action"] = "ocr" }
             return (.photoSearch, entities)
@@ -319,6 +322,10 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         var output: Set<String> = []
         if tokens.contains(where: { token in ["остан", "найнов", "найсвіж", "щойно", "послед", "latest", "newest", "recent"].contains(where: token.hasPrefix) }) {
             output.insert("latest")
+        }
+        if tokens.contains(where: { token in ["передостан", "предпослед", "penultimate"].contains(where: token.hasPrefix) }) {
+            output.remove("latest")
+            output.insert("penultimate")
         }
         if tokens.contains(where: { ["тут", "поруч", "зараз", "моє", "моему", "current", "here"].contains($0) }) {
             output.insert("current_location")

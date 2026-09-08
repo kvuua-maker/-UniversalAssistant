@@ -90,6 +90,10 @@ struct AssistantHomeView: View {
                 TranslationTargetPickerView(text: text, onSelect: model.startTranslation)
             case let .photoAsset(identifier):
                 PhotoAssetPresentationView(localIdentifier: identifier, onOCR: model.handlePhotoOCRImage)
+            case let .photoOCR(identifier):
+                PhotoAssetPresentationView(localIdentifier: identifier, onOCR: model.handlePhotoOCRImage, automaticAction: .ocr)
+            case let .photoShare(identifier):
+                PhotoAssetPresentationView(localIdentifier: identifier, onOCR: model.handlePhotoOCRImage, automaticAction: .share)
             case let .audioFile(url):
                 SystemShareSheet(items: [url])
             case let .translation(plan):

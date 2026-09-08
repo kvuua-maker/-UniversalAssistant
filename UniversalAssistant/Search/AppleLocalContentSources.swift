@@ -198,14 +198,18 @@ struct PhotoSemanticSearchEngine: Sendable {
 }
 
 struct PhotoAssetPresentationView: View {
+    enum AutomaticAction { case none, ocr, share }
     let localIdentifier: String
     let onOCR: @MainActor (UIImage?) -> Void
+    let automaticAction: AutomaticAction
     @State private var image: UIImage?
     @State private var showsShareSheet = false
+    @State private var automaticActionPerformed = false
 
-    init(localIdentifier: String, onOCR: @escaping @MainActor (UIImage?) -> Void = { _ in }) {
+    init(localIdentifier: String, onOCR: @escaping @MainActor (UIImage?) -> Void = { _ in }, automaticAction: AutomaticAction = .none) {
         self.localIdentifier = localIdentifier
         self.onOCR = onOCR
+        self.automaticAction = automaticAction
     }
 
     var body: some View {
@@ -225,6 +229,13 @@ struct PhotoAssetPresentationView: View {
         .task {
             guard image == nil, let data = try? await PhotoKitAssetImageLoader().imageData(localIdentifier: localIdentifier) else { return }
             image = UIImage(data: data)
+            guard !automaticActionPerformed else { return }
+            automaticActionPerformed = true
+            switch automaticAction {
+            case .none: break
+            case .ocr: onOCR(image)
+            case .share: showsShareSheet = image != nil
+            }
         }
     }
 }

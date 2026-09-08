@@ -48,7 +48,8 @@ struct CanonicalSemanticFrameTests {
     @Test func latestPhotoActionIsRetained() {
         let command = parser.parse("Надішли найсвіжіший знімок із Photos")
         #expect(command.intent == .photoSearch)
-        #expect(command.entities["query"] == "latest")
+        #expect(command.entities["query"] == "recent")
+        #expect(command.entities["requested_action"] == "share")
     }
 
     @Test func temporalAndNumericRolesPreserveOrderedParameters() {

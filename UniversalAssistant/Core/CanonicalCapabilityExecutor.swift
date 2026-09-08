@@ -18,6 +18,8 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case translationTarget(String)
     case translation(LocalTranslationPlan)
     case photoAsset(String)
+    case photoOCR(String)
+    case photoShare(String)
     case audioFile(URL)
 
     var id: String {
@@ -34,6 +36,8 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
         case .translationTarget: "translation-target"
         case .translation: "translation"
         case .photoAsset: "photo-asset"
+        case .photoOCR: "photo-ocr"
+        case .photoShare: "photo-share"
         case .audioFile: "audio-file"
         }
     }
@@ -92,6 +96,34 @@ enum CanonicalCapabilityExecutionError: Error, Equatable, Sendable {
     case externalProviderRequired(String)
 }
 
+private enum PhotoSearchDeadlineResult: Sendable {
+    case values([PhotoAssetReference])
+    case timedOut
+    case cancelled
+}
+
+private final class PhotoSearchDeadlineCompletion: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<PhotoSearchDeadlineResult, Never>?
+    private var result: PhotoSearchDeadlineResult?
+
+    func install(_ continuation: CheckedContinuation<PhotoSearchDeadlineResult, Never>) {
+        lock.lock()
+        if let result { lock.unlock(); continuation.resume(returning: result) }
+        else { self.continuation = continuation; lock.unlock() }
+    }
+
+    func finish(_ result: PhotoSearchDeadlineResult) {
+        lock.lock()
+        guard self.result == nil else { lock.unlock(); return }
+        self.result = result
+        let continuation = continuation
+        self.continuation = nil
+        lock.unlock()
+        continuation?.resume(returning: result)
+    }
+}
+
 @MainActor
 protocol CanonicalCapabilityExecuting: AnyObject {
     func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome
@@ -127,6 +159,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let publicDeviceExecute: @MainActor (SystemQuickAction) throws -> String
     private let clipboardRead: @MainActor () throws -> SharedContent
     private let fx: any CurrentFXProviding
+    private let photoSearchTimeout: Duration
 
     init(
         deviceRouter: UniversalDeviceCommandRouter = .init(applications: .init(applications: LaunchDeviceApplications.verified)),
@@ -145,6 +178,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         publicDeviceExecute: @escaping @MainActor (SystemQuickAction) throws -> String = { try ProductionPublicDeviceExecutor().execute($0) },
         clipboardRead: @escaping @MainActor () throws -> SharedContent = { try SystemUserInitiatedClipboardReader().readAfterUserAction() },
         fx: any CurrentFXProviding = ECBCurrentFXProvider(),
+        photoSearchTimeout: Duration = .seconds(3),
         personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())]
     ) {
         self.deviceRouter = deviceRouter
@@ -164,6 +198,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.publicDeviceExecute = publicDeviceExecute
         self.clipboardRead = clipboardRead
         self.fx = fx
+        self.photoSearchTimeout = photoSearchTimeout
         self.multiStepOperationFactory = multiStepOperationFactory
         if let multiStepOperationFactory {
             self.multiStep = ProductionMultiStepCoordinator(operationFactory: multiStepOperationFactory)
@@ -369,7 +404,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case let .handoff(value): return .init(id: step.id, label: command.intent.rawValue, value: value.destination.absoluteString, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
         case let .presentation(value):
             switch value {
-            case .message, .share, .documents, .contactImport, .photoAsset, .audioFile:
+            case .message, .share, .documents, .contactImport, .photoAsset, .photoOCR, .photoShare, .audioFile:
                 return .init(id: step.id, label: command.intent.rawValue, value: value.id, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
             case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .translationTarget, .translation:
                 throw CoordinationOperationError.confirmationRequired
@@ -516,19 +551,46 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         }
     }
 
+    private func boundedPhotoSearch(_ criteria: PhotoSearchCriteria, limit: Int) async throws -> [PhotoAssetReference] {
+        let completion = PhotoSearchDeadlineCompletion()
+        let result = await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                completion.install(continuation)
+                Task { [photos] in completion.finish(.values(await photos.search(criteria, limit: limit))) }
+                Task { [photoSearchTimeout] in
+                    try? await Task.sleep(for: photoSearchTimeout)
+                    completion.finish(.timedOut)
+                }
+            }
+        } onCancel: {
+            completion.finish(.cancelled)
+        }
+        switch result {
+        case let .values(values): return values
+        case .timedOut: throw CanonicalCapabilityExecutionError.unavailable("photos_search_timeout")
+        case .cancelled: throw CancellationError()
+        }
+    }
+
     private func photo(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         let query = command.entities["query"] ?? ""
-        let latest = query.isEmpty || query == "latest"
+        let latest = query.isEmpty || query == "latest" || query == "recent"
         let access = photos.authorization() == .permissionRequired ? await photos.requestAuthorization() : photos.authorization()
         guard access == .permitted || access == .limited else { throw CanonicalCapabilityExecutionError.unavailable("photos_access_unavailable") }
-        let assets = await photos.search(.init(), limit: latest ? 1 : 20)
-        guard let newest = assets.first else { throw CanonicalCapabilityExecutionError.unavailable("photos_empty") }
+        let recentIndex = max(0, (command.constraints.ordinal ?? 1) - 1)
+        let assets = try await boundedPhotoSearch(.init(), limit: latest ? recentIndex + 1 : 20)
+        guard !assets.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("photos_empty") }
         if latest {
-            let action = ResultAction(id: "photos:" + newest.localIdentifier, title: "Відкрити", kind: .showPhoto, destination: nil)
-            let output = try result("Найновіше фото", facts: [.init(id: action.id, label: "Фото", value: newest.creationDate?.formatted(), state: .verified, source: "Photos", observedAt: newest.creationDate ?? .now, priority: 100)], actions: [action])
+            guard assets.indices.contains(recentIndex) else { throw CanonicalCapabilityExecutionError.unavailable("photos_ordinal_unavailable") }
+            let selected = assets[recentIndex]
+            let action = ResultAction(id: "photos:" + selected.localIdentifier, title: "Відкрити", kind: .showPhoto, destination: nil)
+            let output = try result(recentIndex == 0 ? "Найновіше фото" : "Вибране недавнє фото", facts: [.init(id: action.id, label: "Фото", value: selected.creationDate?.formatted(), state: .verified, source: "Photos", observedAt: selected.creationDate ?? .now, priority: 100)], actions: [action])
             currentContext.replacePhotoResults(output)
-            if command.entities["requested_action"] != nil {
-                return .presentation(.photoAsset(newest.localIdentifier))
+            switch command.entities["requested_action"] {
+            case "open": return .presentation(.photoAsset(selected.localIdentifier))
+            case "ocr": return .presentation(.photoOCR(selected.localIdentifier))
+            case "share": return .presentation(.photoShare(selected.localIdentifier))
+            default: break
             }
             return .result(output)
         }
@@ -540,8 +602,13 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let actions = response.results.map { ResultAction(id: $0.id, title: "Відкрити", kind: .showPhoto, destination: nil) }
         let output = try result("Знайдено у Фото", facts: facts, actions: actions)
         currentContext.replacePhotoResults(output)
-        if command.entities["requested_action"] != nil, let first = response.results.first {
-            return .presentation(.photoAsset(first.sourceObjectID))
+        if let first = response.results.first {
+            switch command.entities["requested_action"] {
+            case "open": return .presentation(.photoAsset(first.sourceObjectID))
+            case "ocr": return .presentation(.photoOCR(first.sourceObjectID))
+            case "share": return .presentation(.photoShare(first.sourceObjectID))
+            default: break
+            }
         }
         return .result(output)
     }

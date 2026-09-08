@@ -25,6 +25,16 @@ private final class TransitioningPhotoLibraryStub: PhotoLibrarySearching, @unche
     func requestAuthorization() async -> LocalSearchAccess { lock.withLock { requestCount += 1; current = granted; return current } }
     func search(_ criteria: PhotoSearchCriteria, limit: Int) async -> [PhotoAssetReference] { Array(values.prefix(limit)) }
 }
+private struct DelayedPhotoLibraryStub: PhotoLibrarySearching {
+    let delay: Duration
+    let values: [PhotoAssetReference]
+    func authorization() -> LocalSearchAccess { .permitted }
+    func requestAuthorization() async -> LocalSearchAccess { .permitted }
+    func search(_ criteria: PhotoSearchCriteria, limit: Int) async -> [PhotoAssetReference] {
+        try? await Task.sleep(for: delay)
+        return Array(values.prefix(limit))
+    }
+}
 private struct ImageLoaderStub: PhotoAssetImageLoading { func imageData(localIdentifier: String) async throws -> Data { Data() } }
 private struct LabelerStub: PhotoSemanticLabeling { func labels(imageData: Data) async throws -> [PhotoSemanticLabel] { [.init(name: "receipt", confidence: 1)] } }
 private struct LocalSourceStub: LocalSearchSource {
@@ -74,21 +84,30 @@ extension ApplePersonalSearchSourcesTests {
         let newest = PhotoAssetReference(localIdentifier: "new", creationDate: .init(timeIntervalSince1970: 2), coordinate: nil, album: nil)
         let executor = ProductionCanonicalCapabilityExecutor(photos: PhotoLibraryStub(access: .limited, values: [newest, older]), personalSearchSources: [])
         let command = LocalCommandEngine().parse("Відкрий найновіше фото")
-        guard case let .result(result) = try await executor.execute(command) else { Issue.record("Expected native photo result"); return }
-        #expect(result.facts.count == 1)
-        #expect(result.facts.first?.id == "photos:new")
-        #expect(result.actions == [.init(id: "photos:new", title: "Відкрити", kind: .showPhoto, destination: nil)])
-        let model = AssistantViewModel(capabilityExecutor: executor)
-        model.performResultAction(result.actions[0])
-        #expect(model.capabilityPresentation == .photoAsset("new"))
+        #expect(try await executor.execute(command) == .presentation(.photoAsset("new")))
     }
     @Test @MainActor func photoPermissionGrantContinuesPendingLatestRequest() async throws {
         let asset = PhotoAssetReference(localIdentifier: "granted", creationDate: .now, coordinate: nil, album: nil)
         let library = TransitioningPhotoLibraryStub(initial: .permissionRequired, granted: .permitted, values: [asset])
         let executor = ProductionCanonicalCapabilityExecutor(photos: library, personalSearchSources: [])
-        guard case let .result(result) = try await executor.execute(LocalCommandEngine().parse("Відкрий останнє фото")) else { Issue.record("Expected resumed photo result"); return }
+        let outcome = try await executor.execute(LocalCommandEngine().parse("Відкрий останнє фото"))
         #expect(library.requestCount == 1)
-        #expect(result.facts.map(\.id) == ["photos:granted"])
+        #expect(outcome == .presentation(.photoAsset("granted")))
+    }
+
+    @Test @MainActor func photoMetadataQueryDeadlineTerminatesBeforeLateCompletion() async {
+        let late = PhotoAssetReference(localIdentifier: "late", creationDate: .now, coordinate: nil, album: nil)
+        let executor = ProductionCanonicalCapabilityExecutor(
+            photos: DelayedPhotoLibraryStub(delay: .seconds(1), values: [late]),
+            photoSearchTimeout: .milliseconds(20),
+            personalSearchSources: []
+        )
+        do {
+            _ = try await executor.execute(LocalCommandEngine().parse("Покажи недавній знімок"))
+            Issue.record("Expected bounded PhotoKit timeout")
+        } catch let error as CanonicalCapabilityExecutionError {
+            #expect(error == .unavailable("photos_search_timeout"))
+        } catch { Issue.record("Unexpected error: \(error)") }
     }
 
     @Test @MainActor func latestPhotoFailsTruthfullyForDeniedAndEmptyLibrary() async {

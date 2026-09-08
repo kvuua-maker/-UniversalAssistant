@@ -95,7 +95,35 @@ struct ProductionPhotoActionCompositionTests {
         let command = LocalCommandEngine().parse("Надішли щойно зроблену світлину")
         #expect(command.intent == .photoSearch)
         #expect(command.entities["requested_action"] == "share")
-        #expect(try await executor.execute(command) == .presentation(.photoAsset("asset-new")))
+        #expect(try await executor.execute(command) == .presentation(.photoShare("asset-new")))
+    }
+
+    @Test func genericOpenAndOrdinalRecentPhotoUseMetadataSelectionWithoutSemanticClassification() async throws {
+        let newest = PhotoAssetReference(localIdentifier: "asset-new", creationDate: .now, coordinate: nil, album: nil)
+        let previous = PhotoAssetReference(localIdentifier: "asset-previous", creationDate: .now.addingTimeInterval(-10), coordinate: nil, album: nil)
+        let executor = ProductionCanonicalCapabilityExecutor(
+            photos: ContextPhotoLibraryFixture(assets: [newest, previous]),
+            personalSearchSources: []
+        )
+        let generic = LocalCommandEngine().parse("Покажи мою фотографію")
+        #expect(generic.entities["query"] == "recent")
+        #expect(try await executor.execute(generic) == .result(try DeterministicResultComposer().compose(
+            primaryAnswer: "Найновіше фото",
+            facts: [.init(id: "photos:asset-new", label: "Фото", value: newest.creationDate?.formatted(), state: .verified, source: "Photos", observedAt: newest.creationDate, priority: 100)],
+            actions: [.init(id: "photos:asset-new", title: "Відкрити", kind: .showPhoto, destination: nil)]
+        )))
+        let penultimate = LocalCommandEngine().parse("Покажи передостанню світлину")
+        #expect(penultimate.constraints.ordinal == 2)
+        guard case let .result(result) = try await executor.execute(penultimate) else { Issue.record("Expected ordinal photo result"); return }
+        #expect(result.facts.first?.id == "photos:asset-previous")
+    }
+
+    @Test func naturalPhotoOCRCarriesTypedAutomaticAction() async throws {
+        let asset = PhotoAssetReference(localIdentifier: "receipt", creationDate: .now, coordinate: nil, album: nil)
+        let executor = ProductionCanonicalCapabilityExecutor(photos: ContextPhotoLibraryFixture(assets: [asset]), personalSearchSources: [])
+        let command = LocalCommandEngine().parse("Прочитай текст на найсвіжішій світлині")
+        #expect(command.entities["requested_action"] == "ocr")
+        #expect(try await executor.execute(command) == .presentation(.photoOCR("receipt")))
     }
 
     @Test func demonstrativePhotoOCRUsesTypedSharedContextRole() {
