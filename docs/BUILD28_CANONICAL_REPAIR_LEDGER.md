@@ -15,10 +15,10 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 | B28-04 | IN_PROGRESS | Protected-pass regression list retained; full gate pending. |
 | B28-05 | IN_PROGRESS | Role-based `CanonicalSemanticFrameAnalyzer` is connected before legacy classification; unseen cross-family parser tests pass. Remaining roles and compound production execution still require reconciliation. |
 | B28-06 | IN_PROGRESS | Session-generation ownership suppresses stale authorization, recognition and stop continuations; focused race tests and Development compile pass. Device crash evidence is unavailable locally; interruption and route-change lifecycle remain pending. |
-| B28-07 | IN_PROGRESS | Current Apple capability/account/profile audit pending. |
-| B28-08 | IN_PROGRESS | ShazamKit App ID/profile authorization audit pending. |
+| B28-07 | IN_PROGRESS | Source entitlement and official-mechanism audit persisted in `BUILD28_APPLE_CAPABILITY_AUDIT.md`; Developer-account App ID/profile readback remains pending. |
+| B28-08 | REQUIRED_OWNER_ACTION | Official Apple authority requires ShazamKit service on the main App ID. Current executable entitlements lack that authorization; truthful local fallback remains protected. |
 | B28-09 | IN_PROGRESS | Provider research/configuration audit pending. |
-| B28-10 | IN_PROGRESS | App Store Connect API access audit pending. |
+| B28-10 | REQUIRED_OWNER_ACTION | No repository credential is present. Initial API access requires Account Holder; a least-privilege team/individual key and secure out-of-Git `.p8` placement are required for JWT automation. |
 | B28-11 | IN_PROGRESS | Active Codex Remote Control policy audit pending. |
 | B28-12 | NOT_STARTED | Unseen cross-family production-boundary acceptance pending. |
 | B28-13 | GREEN | Durable stable-ID ledger created; CLOSED history preserved below. |
@@ -54,4 +54,4 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 
 Current active blocks: **B28-05 material semantic repair** and **B28-06 microphone/Speech lifecycle**.
 
-Exact next code-level action: extend `CanonicalSemanticFrame` to temporal, numeric, compound and context roles and lower those roles through the existing router; add `AssistantViewModel` production-boundary collision tests. Also inspect accessible device diagnostics and add interruption lifecycle coverage without changing the green ownership mechanism.
+Exact next code-level action: extend `CanonicalSemanticFrame` to temporal, numeric, compound and context roles and lower those roles through the existing router; add `AssistantViewModel` production-boundary collision tests. Also inspect accessible device diagnostics and add interruption lifecycle coverage without changing the green ownership mechanism. Apple App ID/profile live readback and ShazamKit enablement remain at the recorded owner boundary.
