@@ -378,7 +378,7 @@ struct LocalCommandEngine: CommandParsing {
         if scannerContext {
             value = value.replacingOccurrences(of: #"(?:q\s*(?:club|клуб)|quad)"#, with: "qr", options: [.regularExpression, .caseInsensitive])
         }
-        return value
+        return StructuredNumberNormalizer.normalize(value)
     }
     private func detectLanguage(_ text: String) -> CommandLanguage {
         if text.range(of: "[іїєґ]", options: .regularExpression) != nil { return .uk }

@@ -99,7 +99,7 @@ struct VoiceTextInputQualityTests {
 
     @Test func build25SemanticVariantsConvergeOnCanonicalIntents() {
         #expect(engine.parse("Відкрий найновіше фото").intent == .photoSearch)
-        #expect(engine.parse("Відкрий найновіше фото").entities["query"] == "latest")
+        #expect(engine.parse("Відкрий найновіше фото").entities["query"] == "recent")
         #expect(engine.parse("Що в мене заплановано на завтра?").intent == .calendarQuery)
         let navigation = engine.parse("Проклади маршрут до залізничного вокзалу")
         #expect(navigation.intent == .navigation)

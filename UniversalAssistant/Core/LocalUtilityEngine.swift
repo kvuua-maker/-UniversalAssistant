@@ -102,20 +102,6 @@ struct LocalUtilityEngine: Sendable {
     private static let percentageExpressionRegex = try! NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?[^\d]{0,20}(?:%|відсот|процент)"#, options: [.caseInsensitive])
     private static func normalized(_ raw: String) -> String {
         let compact = raw.lowercased().replacingOccurrences(of: "’", with: "\u{27}").split(whereSeparator: \.isWhitespace).joined(separator: " ")
-        return reconcileStructuredNumberGroups(in: compact)
-    }
-
-    private static func reconcileStructuredNumberGroups(in text: String) -> String {
-        guard let regex = try? NSRegularExpression(pattern: #"(?<![\d.,])(\d{1,})\s+(\d{3})(?![\d.,])"#) else { return text }
-        var value = text
-        for match in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
-            guard let whole = Range(match.range(at: 0), in: value),
-                  let leftRange = Range(match.range(at: 1), in: value),
-                  let rightRange = Range(match.range(at: 2), in: value),
-                  let left = Int(value[leftRange]), let right = Int(value[rightRange]) else { continue }
-            let reconstructed: Int? = left >= 1_000 && left.isMultiple(of: 1_000) ? left + right : (left < 1_000 ? left * 1_000 + right : nil)
-            if let reconstructed { value.replaceSubrange(whole, with: String(reconstructed)) }
-        }
-        return value
+        return StructuredNumberNormalizer.normalize(compact)
     }
 }

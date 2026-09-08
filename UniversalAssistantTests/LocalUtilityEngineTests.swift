@@ -51,6 +51,20 @@ struct LocalUtilityEngineTests {
         #expect(LocalCommandEngine().parse("Сколько сейчас времени?").intent == .localUtility)
     }
 
+    @Test func sharedStructuredNumberNormalizationFeedsSemanticConstraintsWithoutChangingPhoneGroups() {
+        let product = LocalCommandEngine().parse("Підбери туристичний рюкзак до 7000 800 гривень")
+        #expect(product.constraints.maximumPrice == 7800)
+        #expect(product.normalizedText.contains("7800"))
+
+        let percentage = LocalCommandEngine().parse("Обчисли 12,5 відсотка від 5000 600")
+        #expect(percentage.intent == .localUtility)
+        #expect(percentage.entities["numeric_tokens"] == "12.5|5600")
+
+        let phone = LocalCommandEngine().parse("Зателефонуй на номер 380 501 234 567")
+        #expect(phone.entities["phone_number"] == "380501234567")
+        #expect(phone.normalizedText.contains("380 501 234 567"))
+    }
+
     @Test func currencyIsRecognizedSeparatelyAndNeverComputedAsAUnit() {
         #expect(LocalCommandEngine().parse("Переведи 150 доларів у гривні").intent == .currencyConversion)
         #expect(LocalCommandEngine().parse("Покажи курс долара до гривні").intent == .currencyConversion)
