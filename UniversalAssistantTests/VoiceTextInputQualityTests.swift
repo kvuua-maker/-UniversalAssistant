@@ -46,7 +46,7 @@ struct VoiceTextInputQualityTests {
     @Test("Build 23 capability routing regressions", arguments: [
         ("Знайди найближчу кав'ярню", CommandIntent.placeSearch),
         ("Найди ближайшую кофейню", .placeSearch),
-        ("Знайди магазин спортивного бренду у Києві, який сьогодні працює, і покажи маршрут", .placeSearch),
+        ("Знайди магазин спортивного бренду у Києві, який сьогодні працює, і покажи маршрут", .multiStep),
         ("Створи завтра о п'ятнадцятій подію Тест", .calendarCreate),
         ("Запиши голосову замітку", .audioRecord),
         ("Покажи мої останні фотографії", .photoSearch),
@@ -60,7 +60,8 @@ struct VoiceTextInputQualityTests {
         let contact = engine.parse("Знайди контакт Мама на моєму iPhone")
         #expect(contact.entities["contact"] == "Мама")
         let place = engine.parse("Знайди магазин у Києві, який сьогодні працює, і покажи маршрут")
-        #expect(place.entities["location"] == "Києві")
+        let placePlan = try? DeterministicExecutionPlanBuilder().plan(for: place)
+        #expect(placePlan?.steps.compactMap(\.command?.entities["location"]) == ["Києві"])
         let media = engine.parse("Увімкни композицію Example Artist в Apple Music")
         #expect(media.entities["query"] == "композицію Example Artist")
     }
@@ -98,7 +99,7 @@ struct VoiceTextInputQualityTests {
 
     @Test func build25SemanticVariantsConvergeOnCanonicalIntents() {
         #expect(engine.parse("Відкрий найновіше фото").intent == .photoSearch)
-        #expect(engine.parse("Відкрий найновіше фото").entities["query"] == "")
+        #expect(engine.parse("Відкрий найновіше фото").entities["query"] == "latest")
         #expect(engine.parse("Що в мене заплановано на завтра?").intent == .calendarQuery)
         let navigation = engine.parse("Проклади маршрут до залізничного вокзалу")
         #expect(navigation.intent == .navigation)

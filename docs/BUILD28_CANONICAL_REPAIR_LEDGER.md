@@ -12,7 +12,7 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 | B28-01 | GREEN | HEAD/origin/tree verified; three recovery artifacts preserved. |
 | B28-02 | GREEN | Keyword/stem/regex-only semantic repair is CLOSED by Build-27 physical evidence. |
 | B28-03 | GREEN | Authoritative physical evidence recorded in this ledger. |
-| B28-04 | IN_PROGRESS | Protected-pass regression list retained; full gate pending. |
+| B28-04 | GREEN | Protected-pass regression list retained; complete iOS regression passed 753 tests in 134 suites after semantic/compound repairs. |
 | B28-05 | IN_PROGRESS | Typed frame carries action/object/source/person/service/location plus temporal, ordered numeric, compound and CurrentContext-reference roles through `LocalCommandEngine`. Structured roles now retain authority over legacy system extraction; app-content, clipboard-to-URL, current-location Weather, Photo action/context, and typed compound dependency outputs are connected. Place discovery emits a selected typed place with coordinates for navigation; OCR suspends and resumes the same plan with observed text for Apple Translation. Remaining physical families will consume these roles without reverting to keyword-only routing. |
 | B28-06 | GREEN | Session ownership plus atomic realtime request-sink deactivation now prevent queued audio buffers from appending after `endAudio`/cancel; interruption, harmless route-change, scene transition, re-entry and stale authorization tests pass 5/5. No historical device crash report is accessible, so physical crash retest remains mandatory. |
 | B28-07 | GREEN | Source entitlements and all four installed App Store profiles were read back. Main authorization includes production APNs, WeatherKit, App Attest, Sign in with Apple, App Group and iCloud; Share authorizes only App Group. No autonomously enableable required service is missing. ShazamKit is absent and remains the explicit B28-08 owner boundary. |
@@ -20,9 +20,9 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 | B28-09 | IN_PROGRESS | Official credential-free ECB SDMX boundary serves supported informational FX reference conversions in-app with provenance. `BUILD28_EXTERNAL_PROVIDER_AUDIT.md` records verified Brave Search/Answers, Alpha Vantage, NewsAPI and retail/provider boundaries; production credentials or commercial authorization remain external. |
 | B28-10 | REQUIRED_OWNER_ACTION | No repository credential is present. Initial API access requires Account Holder; a least-privilege team/individual key and secure out-of-Git `.p8` placement are required for JWT automation. |
 | B28-11 | GREEN | Installed CLI is `codex-cli 0.152.1`, while the active owner workflow is the Desktop app-server process, not a CLI `remote-control` invocation. CLI supports `--ask-for-approval never --sandbox workspace-write`, but those flags cannot govern the already-running app-server session. Effective host policy is already `workspace-write`; no unsafe sandbox weakening or unverified config mutation was made. |
-| B28-12 | IN_PROGRESS | `AssistantViewModel` tests prove temporal/route-context roles plus Photos/Files, Contacts/Calls, Alarm and Camera OCR/QR/document collisions reach canonical executors. Message recipient/service resolves through bounded Contacts into public Messages composer or explicit WhatsApp handoff. Photo share/OCR variants use typed action/context roles. Weather, EventKit, OCR and canonical execution are request-generation owned, so superseded work cannot replace a newer renderer result. Share Extension pending-image ingestion works on initial and later scene activation, exactly once. Unseen place→navigation and document OCR→translation production-boundary chains now pass through typed outputs with no pseudo-step; full unseen family matrix remains pending. |
+| B28-12 | GREEN | `AssistantViewModel` production-boundary tests cover temporal/numeric/context roles and unseen Photos/Files, Contacts/Calls/Messaging, Timer/Alarm, Camera/OCR/QR/document, Clipboard/URL, Location/Weather and typed compound collisions. Place→navigation and OCR→Translation consume typed producer output; all 753 iOS tests pass. |
 | B28-13 | GREEN | Durable stable-ID ledger created; CLOSED history preserved below. |
-| B28-14 | NOT_STARTED | Full gates run only after source repair. |
+| B28-14 | IN_PROGRESS | Complete iOS regression 753/753 PASS, backend 114/114 PASS and unsigned Production simulator compile PASS. Named repository release/diagnostic gate reconciliation remains. |
 | B28-15 | NOT_STARTED | Build 28 forbidden until complete gate. |
 | B28-16 | GREEN | Durable continuation mechanism active. |
 
@@ -39,6 +39,9 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 | Calendar destructive action | Let a create/query-only semantic frame reinterpret delete verbs as calendar query | The affected confirmation regression showed `Видали зустріч …` reaching `.calendarQuery` | The typed action vocabulary had no delete role and calendar resolution defaulted every non-create action to query | A typed `.delete` action now resolves calendar/reminder delete and carries reversible risk into the existing confirmation gate |
 | Compound output propagation | Execute concrete steps sequentially while relying on implicit `CurrentContext` side effects | Place→navigation failed with `missingParameter("active_result_context")`; OCR completed but the dependent Translation step never received recognized text | A plan dependency did not define the type or ownership of its producer output | `CanonicalDependencyOutput` and `CanonicalDependencyBinder` bind selected place coordinates or recognized OCR text into the dependent typed command; UI-required work suspends as `CanonicalCapabilityContinuation` and resumes generation-safely |
 | Compound clause detection | Foundation regex word boundaries around multilingual conjunctions | The unseen `потім` chain passed while the Ukrainian `і … як …` chain stayed a single product request | `NSRegularExpression` word boundaries and a second weaker clause classifier diverged from the canonical parser | Unicode-native connector splitting plus one shared dependency-role classifier is consumed by both `LocalCommandEngine` and `DeterministicExecutionPlanBuilder` |
+| Compound separators | Treat every comma as an executable boundary | Calendar titles, questions and note/list payloads fragmented; removing comma boundaries then exposed a comma adjacent to a genuine `then` connector | Punctuation is data unless attached to an independently recognized connector | Unicode connector splitting preserves internal commas and trims separator-adjacent punctuation only |
+| Semantic precedence | Let any current-location wording override the complete semantic frame | “cold where I am” executed coordinates instead of Weather | A context producer is not the requested consumer capability | Explicit travel-time remains authoritative; Weather consumes `currentLocation` as a typed context role |
+| Parser performance | Compile numeric and percentage regex objects for every command | Full regression exceeded the thread-CPU parser guard | Immutable grammar fragments were repeatedly compiled | Shared immutable numeric/percentage regex instances retain semantics and restore the CPU budget |
 
 ## Build-27 physical evidence carried forward
 
@@ -65,17 +68,18 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 - Weather, EventKit and generic-discovery tasks are now cancelled and guarded by the active Home request generation. Late Weather/EventKit completion is physically prevented from replacing a newer deterministic result. The affected Weather/Calendar/semantic suites pass 24/24; Calendar delete again reaches its reversible confirmation gate; Development compile passes.
 - Compound plans now expose typed producer outputs rather than UI labels or implicit side effects. Place search selects a concrete `ContextEntity.place` and binds its coordinates into Apple Maps navigation; OCR retains a suspended continuation and binds actual Vision output into Apple Translation. New independent submissions and presentation dismissal invalidate stale continuations. Multi-step, Translation, OCR and CurrentContext suites pass 45/45; Development compile passes.
 - Compound continuation is part of `CanonicalCapabilityExecuting`, not a concrete production-class cast. Alternate executors therefore either implement typed resume or fail closed through the protocol default; canonical execution plus Translation suites pass 20/20.
+- Semantic/compound regression reconciliation now keeps comma-bearing payloads intact, retains contact→call dependencies, normalizes type-directed place locality, routes travel time through CoreLocation/MapKit, treats Clock alarm browsing as a public-iOS limitation, composes current-location Weather, and preserves timer temporal roles. Focused suites pass; full iOS regression passes 753 tests in 134 suites, backend regression passes 114 tests in 28 suites, and Production simulator compile passes.
 
 ## Current checkpoint
 
-- HEAD before this checkpoint commit: `767f497f784484a89c44d47fce59b910d8389578`; verify current Git after commit/push.
-- `HEAD == origin/main`: PASS at checkpoint creation.
-- Tracked tree: CLEAN; only the three intentional recovery/handoff artifacts remain untracked and untouched.
+- HEAD before this checkpoint commit: `7157cd1885276d2e41b4df50a09b811c661d3b62`; verify current Git after commit/push.
+- `HEAD == origin/main`: pending this checkpoint push.
+- Tracked semantic/compound reconciliation is green and ready to commit; the three intentional recovery/handoff artifacts remain untracked and untouched.
 - Build 28: NOT CREATED.
 - Latest green blocks: voice session ownership, atomic Speech request-sink shutdown, temporal/numeric/compound/context semantic roles, Apple capability boundary audit, credential-free ECB FX provider.
 
 ## Exact continuation point
 
-Current active blocks: **B28-05 semantic-frame consumption across remaining physical defect families**, **B28-07 Apple live capability configuration**, and **B28-09 provider audit**.
+Current active blocks: **B28-05 remaining physical-family reconciliation**, **B28-09 production provider boundaries**, and **B28-14 named canonical/release gates**.
 
-Exact next code-level action: reconcile the remaining Build-27 physical function families against the typed semantic/output contract, beginning with unseen AssistantViewModel cross-family acceptance and provider-boundary behavior; then finish the full B28 gates. Do not create Build 28.
+Exact next operation: inventory and execute every repository-defined ZERO-OMISSION/AUDIO/PRIVACY/JOBS/LOYALTY/diagnostic/UI-leakage gate, then reconcile remaining provider-boundary and physical-family ledger rows. Do not create Build 28.

@@ -78,7 +78,7 @@ struct DeterministicExecutionPlanBuilder: Sendable {
         if hasRouteClause {
             commands = commands.map { value in
                 let storefront = ["магазин", "крамниц", "store", "shop"].contains(where: value.normalizedText.contains)
-                if storefront { return derived(value, intent: .placeSearch) }
+                if storefront { return derivedPlace(value) }
                 if value.intent == .transportRoute { return derived(value, intent: .navigation) }
                 return value
             }
@@ -126,6 +126,39 @@ struct DeterministicExecutionPlanBuilder: Sendable {
 
     private func derived(_ command: StructuredCommand, intent: CommandIntent) -> StructuredCommand {
         .init(id: command.id, originalText: command.originalText, normalizedText: command.normalizedText, language: command.language, intent: intent, entities: command.entities, constraints: command.constraints, risk: command.risk, needsClarification: false)
+    }
+
+    private func derivedPlace(_ command: StructuredCommand) -> StructuredCommand {
+        var entities = command.entities
+        if entities["location"] == nil {
+            entities["location"] = placeLocality(in: command.originalText)
+        }
+        if let location = entities["location"] {
+            let boundary = [",", " який ", " яка ", " яке ", " который ", " которая ", " which "]
+                .compactMap { location.range(of: $0, options: [.caseInsensitive, .diacriticInsensitive])?.lowerBound }
+                .min()
+            let value = boundary.map { String(location[..<$0]) } ?? location
+            let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+            if cleaned.isEmpty { entities.removeValue(forKey: "location") }
+            else { entities["location"] = cleaned }
+        }
+        return .init(id: command.id, originalText: command.originalText, normalizedText: command.normalizedText,
+                     language: command.language, intent: .placeSearch, entities: entities,
+                     constraints: command.constraints, risk: command.risk, needsClarification: false)
+    }
+
+    private func placeLocality(in original: String) -> String? {
+        for marker in [" поруч у ", " поруч в ", " рядом в ", " у ", " в ", " in ", " near "] {
+            guard let range = original.range(of: marker, options: [.caseInsensitive, .diacriticInsensitive]) else { continue }
+            let suffix = String(original[range.upperBound...])
+            let boundary = [",", " який ", " яка ", " яке ", " который ", " которая ", " which "]
+                .compactMap { suffix.range(of: $0, options: [.caseInsensitive, .diacriticInsensitive])?.lowerBound }
+                .min()
+            let value = boundary.map { String(suffix[..<$0]) } ?? suffix
+            let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+            if !cleaned.isEmpty { return cleaned }
+        }
+        return nil
     }
 
     private func concreteCapability(for intent: CommandIntent) -> ExecutionCapability {

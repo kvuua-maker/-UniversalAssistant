@@ -72,10 +72,10 @@ struct ProductionRouteAwareSearchTests {
         #expect(addressResult.primaryAnswer == "Fixture Address")
 
         let travelCommand = parser.parse("Скільки їхати до нового вокзалу?")
-        #expect(travelCommand.entities["destination"] == "нового вокзалу?")
+        #expect(travelCommand.entities["destination"] == "нового вокзалу")
         guard case let .result(travelResult) = try await value.execute(travelCommand) else { Issue.record("Expected travel result"); return }
         #expect(travelResult.primaryAnswer == "Приблизно 6 хв")
-        #expect(context.freshRoute()?.1.destination.displayName == "нового вокзалу?")
+        #expect(context.freshRoute()?.1.destination.displayName == "нового вокзалу")
     }
 
     @Test func freshRouteInvokesDetourEngineAndReturnsTypedMapsAction() async throws {

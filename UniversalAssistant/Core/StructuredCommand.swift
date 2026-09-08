@@ -61,11 +61,14 @@ enum CompoundCommandClauses {
                 options: [.caseInsensitive, .diacriticInsensitive]
             )
         }
-        separated = separated.replacingOccurrences(of: ",", with: boundary)
+        // A comma commonly separates titles, clauses inside a question, and
+        // list payloads. It is not an execution boundary by itself.
         separated = separated.replacingOccurrences(of: ";", with: boundary)
         return separated
             .components(separatedBy: boundary)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            // Punctuation adjacent to a real connector belongs to the clause
+            // separator, while commas elsewhere remain part of the payload.
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: ","))) }
             .filter { !$0.isEmpty }
     }
 
@@ -170,9 +173,15 @@ struct LocalCommandEngine: CommandParsing {
             return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: .open, entities: ["direct_url": directURL.absoluteString])
         }
         let semanticFrame = CanonicalSemanticFrameAnalyzer().analyze(original: text, normalized: normalized)
-        if semanticFrame.intent == nil, let locationAction = locationSystemIntent(normalized) {
+        // Location facts and travel-time are explicit local/MapKit operations.
+        // They must remain authoritative even when a movement verb also gives
+        // the semantic frame a broad navigation action.
+        if let locationAction = locationSystemIntent(normalized),
+           locationAction == "travel_time" || semanticFrame.intent != .weather {
             var entities = ["system_action": locationAction]
-            if locationAction == "travel_time", let destination = target(after: ["до", "to"], in: text) { entities["destination"] = destination }
+            if locationAction == "travel_time", let destination = target(after: ["до", "to"], in: text) {
+                entities["destination"] = destination.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+            }
             return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: .deviceAction, entities: entities)
         }
         let patternIntent = Self.intentPatterns.first { _, patterns in patterns.contains { normalized.contains($0) } }?.0
@@ -180,7 +189,9 @@ struct LocalCommandEngine: CommandParsing {
         let semanticIntent = semanticCapabilityIntent(normalized)
         let resolvedIntent = resolveSpecificAndSemantic(specific: specificPatternIntent, semantic: semanticIntent)
         let structuredCompoundIntent = semanticFrame.frame.compound == nil ? nil : compoundIntent(normalized)
-        let intent = structuredCompoundIntent
+        let authoritativePatternIntent: CommandIntent? = [.emergency, .multiStep].contains(patternIntent) ? patternIntent : nil
+        let intent = authoritativePatternIntent
+            ?? structuredCompoundIntent
             ?? semanticFrame.intent
             ?? priorityIntent(normalized)
             ?? (resolvedIntent == .placeSearch ? .placeSearch : compoundIntent(normalized))
@@ -192,8 +203,11 @@ struct LocalCommandEngine: CommandParsing {
         extractMaximumWait(from: normalized, into: &constraints)
         extractFashionFilters(from: text, normalized: normalized, into: &constraints)
         constraints.ordinal = ordinal(in: normalized)
-        if intent == .open, entities["app"] == nil, let target = target(after: ["відкрий", "открой", "open", "öffne", "ouvre"], in: text) { entities["app"] = target }
+        if intent == .open, let target = target(after: ["відкрий", "открой", "open", "öffne", "ouvre"], in: text) { entities["app"] = target }
         if [.contactLookup, .contactCall].contains(intent), entities["contact"] == nil, let value = target(after: ["знайди контакт", "найди контакт", "find contact", "подзвони", "зателефонуй", "набери", "набрати", "позвони", "call", "dial"], in: text) { entities["contact"] = contactSubject(value) }
+        if [.contactLookup, .contactCall].contains(intent), let value = entities["contact"] {
+            entities["contact"] = contactSubject(value)
+        }
         if intent == .contactCall { extractCallDetails(from: text, normalized: normalized, into: &entities) }
         if intent == .messageCompose, entities["recipient"] == nil, let value = target(after: ["напиши", "отправь сообщение", "message", "schreib", "écris"], in: text) { entities["recipient"] = value }
         if [.photoSearch, .fileSearch, .mediaSearch, .podcastSearch].contains(intent), entities["query"] == nil { entities["query"] = querySubject(for: intent, in: text) }
@@ -203,8 +217,10 @@ struct LocalCommandEngine: CommandParsing {
         if [.placeSearch, .restaurantSearch, .serviceSearch, .weather].contains(intent), let value = locality(in: text) { entities["location"] = value }
         if intent == .weather, entities["location"] == nil { entities["near_current_location"] = "true" }
         if intent == .audioRecord { entities["recorder_action"] = recorderAction(in: normalized) }
-        if intent == .deviceAction, entities["system_action"] == nil {
-            extractSystemQuickAction(from: text, normalized: normalized, into: &entities)
+        if intent == .deviceAction {
+            var extracted: [String: String] = [:]
+            extractSystemQuickAction(from: text, normalized: normalized, into: &extracted)
+            for (key, value) in extracted where entities[key] == nil { entities[key] = value }
         }
         if intent == .cameraCapture, ["qr", "q r", "ку ар", "штрихкод", "barcode", "скануй код", "сканируй код"].contains(where: normalized.contains) { entities["capture_mode"] = "code_scan" }
         if intent == .cameraCapture, ["розпізнай текст", "розпізнати текст", "распознай текст", "recognize text", "scan text"].contains(where: normalized.contains) {

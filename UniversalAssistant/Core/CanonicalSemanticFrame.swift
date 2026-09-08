@@ -4,7 +4,7 @@ import Foundation
 /// It intentionally describes the whole command instead of treating any one
 /// noun (for example “document”) as an intent.
 struct CanonicalSemanticFrame: Equatable, Sendable {
-    enum Action: String, Sendable { case open, choose, search, show, create, delete, call, message, scan, recognize, share, navigate, query, set, record }
+    enum Action: String, Sendable { case open, choose, search, show, create, update, delete, copy, call, message, scan, recognize, share, navigate, query, set, record }
     enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, url, place, weather, text, code, note, audio, media }
     enum Source: String, Sendable { case files, photos, documents, clipboard, camera, calendar, reminders }
     enum ContextReference: String, Sendable { case currentLocation, activeRoute, selectedResult, sharedContent, previousResult }
@@ -35,6 +35,12 @@ struct CanonicalSemanticFrameResult: Equatable, Sendable {
 }
 
 struct CanonicalSemanticFrameAnalyzer: Sendable {
+    private static let numericRegex = try! NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?"#)
+    private static let percentageRegex = try! NSRegularExpression(
+        pattern: #"([-+]?\d+(?:[.,]\d+)?)\s*(?:%|відсот\p{L}*|процент\p{L}*|percent\p{L}*)"#,
+        options: [.caseInsensitive]
+    )
+
     func analyze(original: String, normalized: String) -> CanonicalSemanticFrameResult {
         let tokens = lexicalTokens(normalized)
         var frame = CanonicalSemanticFrame()
@@ -60,6 +66,9 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             )
         }
         frame.location = locationPhrase(in: original)
+        if frame.action == .navigate, frame.location == nil {
+            frame.location = navigationDestination(in: original)
+        }
         frame.temporal = temporalRole(in: original, normalized: normalized)
         frame.numeric = numericRole(in: normalized)
         frame.contextReference = contextReference(in: normalized)
@@ -114,7 +123,9 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             return (.cameraCapture, entities)
         }
         if frame.source == .clipboard {
-            if frame.action == .open || frame.object == .url {
+            if frame.action == .copy {
+                entities["system_action"] = "clipboard"
+            } else if frame.action == .open || frame.object == .url {
                 entities["system_action"] = "clipboard_open_url"
             } else {
                 entities["system_action"] = "clipboard_read"
@@ -134,8 +145,11 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             return (.photoSearch, entities)
         }
 
-        if frame.object == .contact && frame.action.map { [.search, .show, .query].contains($0) } == true {
-            if let person = frame.person, !person.isEmpty { entities["contact"] = person }
+        if frame.object == .contact && frame.action.map({ [.search, .show, .query].contains($0) }) == true {
+            guard let person = frame.person, !person.isEmpty else {
+                return (.deviceAction, ["system_action": "unsupported_system_control"])
+            }
+            entities["contact"] = person
             return (.contactLookup, entities)
         }
         if frame.action == .call {
@@ -159,6 +173,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
 
         if frame.object == .calendar {
             if frame.action == .create { return (.calendarCreate, entities) }
+            if frame.action == .update { return (.calendarUpdate, entities) }
             if frame.action == .delete { return (.calendarDelete, entities) }
             return (.calendarQuery, entities)
         }
@@ -168,6 +183,11 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             return (.reminderQuery, entities)
         }
         if frame.object == .timer || frame.object == .alarm {
+            guard frame.action == .set || frame.action == .create else {
+                // AlarmKit supports app-created alarms, but it is not a public
+                // replacement for browsing the user's Clock alarm database.
+                return (.deviceAction, ["system_action": "unsupported_system_control"])
+            }
             entities["system_action"] = frame.object == .timer ? "timer" : "alarm"
             return (.deviceAction, entities)
         }
@@ -200,7 +220,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
 
         if frame.action == .navigate {
             if let location = frame.location { entities["destination"] = location }
-            return (.navigation, entities)
+            return (frame.location == nil ? .routeSearch : .navigation, entities)
         }
         return (nil, entities)
     }
@@ -228,16 +248,18 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         if messageObject && sendVerb { return .message }
         let families: [(CanonicalSemanticFrame.Action, [String])] = [
             (.delete, ["видал", "скас", "удал", "отмен", "delete", "remove", "cancel"]),
+            (.update, ["перенес", "перенос", "змін", "измени", "move", "reschedul", "update"]),
             (.choose, ["вибер", "обер", "выбер", "select", "choose"]),
             (.share, ["поділ", "подел", "надішл", "відправ", "отправ", "share", "send"]),
             (.recognize, ["розпіз", "распозн", "прочит", "recogn", "read"]),
+            (.copy, ["скопію", "копію", "скопир", "copy"]),
             (.scan, ["скан", "оцифр", "digitiz"]),
             (.record, ["аудіозап", "аудиозап", "запис", "розпоч", "начн", "record"]),
             (.call, ["подзвон", "зателефон", "набер", "позвон", "call", "dial"]),
             (.message, ["напиш", "повідом", "сообщ", "message"]),
             (.navigate, ["маршрут", "вед", "проклад", "їхат", "ехать", "navigat", "route"]),
-            (.create, ["створ", "дод", "созд", "добав", "create", "add", "schedule"]),
-            (.set, ["постав", "встанов", "установ", "set"]),
+            (.create, ["створ", "дод", "заплан", "созд", "добав", "create", "add", "schedule"]),
+            (.set, ["постав", "встанов", "установ", "запуст", "запуст", "start", "set"]),
             (.open, ["відкр", "откр", "open", "перейд"]),
             (.search, ["знайд", "пошук", "найд", "search", "find"]),
             (.show, ["покаж", "show", "display"]),
@@ -324,17 +346,14 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     }
 
     private func numericRole(in normalized: String) -> CanonicalSemanticFrame.NumericRole? {
-        guard let regex = try? NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?"#) else { return nil }
         let range = NSRange(normalized.startIndex..., in: normalized)
-        let values = regex.matches(in: normalized, range: range).compactMap { match -> String? in
+        let values = Self.numericRegex.matches(in: normalized, range: range).compactMap { match -> String? in
             guard let valueRange = Range(match.range, in: normalized) else { return nil }
             return String(normalized[valueRange]).replacingOccurrences(of: ",", with: ".")
         }
         guard !values.isEmpty else { return nil }
         var percentage: Decimal?
-        let percentPattern = #"([-+]?\d+(?:[.,]\d+)?)\s*(?:%|відсот\p{L}*|процент\p{L}*|percent\p{L}*)"#
-        if let percentRegex = try? NSRegularExpression(pattern: percentPattern, options: [.caseInsensitive]),
-           let match = percentRegex.firstMatch(in: normalized, range: range), match.numberOfRanges > 1,
+        if let match = Self.percentageRegex.firstMatch(in: normalized, range: range), match.numberOfRanges > 1,
            let valueRange = Range(match.range(at: 1), in: normalized) {
             let value = String(normalized[valueRange]).replacingOccurrences(of: ",", with: ".")
             percentage = Decimal(string: value, locale: Locale(identifier: "en_US_POSIX"))
@@ -392,8 +411,24 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         }.first
     }
 
+    private func navigationDestination(in original: String) -> String? {
+        let patterns = [
+            #"^\s*(?:веди|проведи|navigate|take me|приведи)\s+(?:мене\s+|меня\s+)?(.+?)\s*$"#,
+            #"^\s*(?:їхати|ехать|go)\s+(.+?)\s*$"#
+        ]
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+                  let match = regex.firstMatch(in: original, range: NSRange(original.startIndex..., in: original)),
+                  match.numberOfRanges > 1,
+                  let range = Range(match.range(at: 1), in: original) else { continue }
+            let value = original[range].trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+            if !value.isEmpty { return value }
+        }
+        return nil
+    }
+
     private func weatherQuestion(_ text: String) -> Bool {
-        ["температур", "чи буде дощ", "будет дождь", "weather", "rain"].contains(where: text.contains)
+        ["температур", "холодн", "спекотн", "жарк", "чи буде дощ", "будет дождь", "weather", "rain", "cold", "hot"].contains(where: text.contains)
     }
 
     private func semanticPhotoSubject(_ original: String) -> String {
