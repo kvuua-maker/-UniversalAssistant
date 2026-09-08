@@ -13,6 +13,14 @@ Verified on 2026-09-08. This artifact records production boundaries; it does not
 | News-specific feed | NewsAPI evaluated but not selected for production default | Official free Developer plan is development-only and 24-hour delayed; production Business plan is currently USD 449/month | Not connected; Brave current-search candidate avoids claiming a dedicated licensed news feed | Only if a dedicated feed is required, owner must authorize a production NewsAPI Business plan and privacy/attribution terms |
 | Tickets, hotels, appointments, food/grocery, taxi and parcel providers | Existing typed provider-neutral engines and official HTTP adapters | Each requires provider-specific OAuth/API/business agreement; repository contains no production credentials | Typed intent/constraints, bounded provider interfaces and truthful unavailable/handoff states exist; no fake inventory, price or booking | Select each commercial provider, accept terms, create least-privilege credential and place it in the VPS secret store under the deployment-specific documented name |
 
+## Current official-source revalidation (2026-09-08)
+
+- Brave Search currently requires an activated plan and `X-Subscription-Token`; Search is listed at USD 5 per 1,000 requests with USD 5 monthly credits. Search queries may be retained for up to 90 days for billing/troubleshooting, and storage rights are not implied.
+- Brave results do not grant rights to third-party page content. Catalog/retail guarantees therefore still require authorized retailer evidence or feed contracts.
+- Alpha Vantage terms direct commercial users to commercial licensing; no App Store production entitlement or credential exists in this repository.
+- Apple confirms Shazam catalog recognition requires enabling ShazamKit for the App ID; current main and Share profiles do not authorize it.
+- Production-boundary provider, commerce, authentication and degradation verification: 161/161 PASS after structural currency-role precedence was repaired.
+
 ## Security and product rules
 
 - No secret belongs in the iOS app, repository, test fixture, diagnostic event or result renderer.

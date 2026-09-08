@@ -36,6 +36,7 @@ struct CurrentFXProviderTests {
             personalSearchSources: []
         )
         let command = LocalCommandEngine().parse("Переведи 80 доларів у гривні")
+        #expect(command.intent == .currencyConversion)
         await #expect(throws: CanonicalCapabilityExecutionError.externalProviderRequired("current_fx_rate_for_currency")) {
             try await executor.execute(command)
         }

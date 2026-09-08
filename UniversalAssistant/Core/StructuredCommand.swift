@@ -179,6 +179,11 @@ struct LocalCommandEngine: CommandParsing {
         if LocalUtilityEngine.recognizes(normalized) {
             return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: .localUtility, entities: semanticFrame.entities)
         }
+        // Currency has a typed amount and ordered source/destination currencies.
+        // That structure is authoritative over translation verbs such as “convert”.
+        if LocalUtilityEngine.recognizesCurrency(normalized) {
+            return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: .currencyConversion, entities: semanticFrame.entities)
+        }
         // Location facts and travel-time are explicit local/MapKit operations.
         // They must remain authoritative even when a movement verb also gives
         // the semantic frame a broad navigation action.
