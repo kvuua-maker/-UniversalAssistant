@@ -292,7 +292,12 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             guard let url = URL(string: "tel:112") else { throw CanonicalCapabilityExecutionError.unavailable("invalid_emergency_handoff") }
             return .handoff(.init(query: command.originalText, destination: url, kind: .system))
         case .settings:
-            guard let url = URL(string: "app-settings:") else { throw CanonicalCapabilityExecutionError.unavailable("settings_unavailable") }
+            guard command.entities["settings_target"] == "application" else {
+                throw CanonicalCapabilityExecutionError.unavailable("system_settings_destination_not_publicly_available")
+            }
+            guard let url = URL(string: UIApplication.openSettingsURLString) else {
+                throw CanonicalCapabilityExecutionError.unavailable("app_settings_unavailable")
+            }
             return .handoff(.init(query: command.originalText, destination: url, kind: .system))
         case .help:
             return .result(try result("Скажіть або введіть, що потрібно зробити", facts: []))

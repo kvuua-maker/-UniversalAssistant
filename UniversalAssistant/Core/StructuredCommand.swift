@@ -242,6 +242,9 @@ struct LocalCommandEngine: CommandParsing {
             if let value = translationSource(in: text) { entities["source_text"] = value }
             if let target = translationTarget(in: normalized) { entities["target_language"] = target }
         }
+        if intent == .settings {
+            entities["settings_target"] = settingsTarget(in: normalized)
+        }
         let risk: ActionRisk = intent == .emergency ? .emergency : ([.calendarCreate, .calendarDelete, .reminderCreate, .reminderComplete, .reminderDelete, .shoppingList, .cancel, .undo].contains(intent) ? .reversible : .informational)
         return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: intent, entities: entities, constraints: constraints, risk: risk, needsClarification: intent == .unknown || entities["clarification_options"] != nil)
     }
@@ -256,6 +259,18 @@ struct LocalCommandEngine: CommandParsing {
         let locationStem = ["місцезнаход", "местополож", "location", "де я", "где я"].contains(where: text.contains)
         if locationStem && selfLocation { return "current_location" }
         return nil
+    }
+
+    /// Settings are a system-first family. iOS publicly exposes only this
+    /// application settings page to third-party apps; a device or system
+    /// target must never be reinterpreted as UniversalAssistant settings.
+    private func settingsTarget(in text: String) -> String {
+        let applicationReferences = [
+            "universalassistant", "universal assistant", "цього застосунку",
+            "цьому застосунку", "цього додатку", "цьому додатку",
+            "этого приложения", "этому приложению", "this app", "the app"
+        ]
+        return applicationReferences.contains(where: text.contains) ? "application" : "system"
     }
 
     private func validatedWebURL(_ text: String) -> URL? {

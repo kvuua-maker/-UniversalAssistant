@@ -5,7 +5,7 @@ import Foundation
 /// noun (for example “document”) as an intent.
 struct CanonicalSemanticFrame: Equatable, Sendable {
     enum Action: String, Sendable { case open, choose, search, show, create, update, delete, copy, call, message, scan, recognize, share, navigate, query, set, record }
-    enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, url, place, weather, text, code, note, audio, media }
+    enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, settings, url, place, weather, text, code, note, audio, media }
     enum Source: String, Sendable { case files, photos, documents, clipboard, camera, calendar, reminders }
     enum ContextReference: String, Sendable { case currentLocation, activeRoute, selectedResult, sharedContent, previousResult }
 
@@ -47,6 +47,9 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         var frame = CanonicalSemanticFrame()
         frame.action = action(in: tokens)
         frame.object = object(in: tokens)
+        if isApplicationSettingsRequest(tokens: tokens, normalized: normalized) {
+            frame.object = .settings
+        }
         let hasVisualObject = tokens.contains { token in
             ["фото", "світлин", "знім", "сним", "photo", "image", "picture"].contains { token.hasPrefix($0) }
         }
@@ -145,6 +148,14 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
                 entities["system_action"] = "clipboard_read"
             }
             return (.deviceAction, entities)
+        }
+
+        // Settings are modeled as an object/target family before generic
+        // open/show actions are considered. Public iOS exposes this app's
+        // settings page, but not arbitrary system-settings destinations.
+        if frame.object == .settings {
+            entities["settings_target"] = settingsTarget(in: normalized)
+            return (.settings, entities)
         }
 
         if frame.object == .photo {
@@ -297,6 +308,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.calendar, ["календар", "поді", "зустр", "событ", "event", "appointment"]),
             (.timer, ["таймер", "timer"]),
             (.alarm, ["будильник", "alarm"]),
+            (.settings, ["налаштуван", "настрой", "параметр", "settings", "preferences", "einstellungen", "réglages"]),
             (.code, ["qr", "barcode", "штрихкод", "код"]),
             (.text, ["текст", "text"]),
             (.weather, ["погод", "температур", "дощ", "дожд", "холод", "спек", "жарк", "weather", "rain", "cold", "hot"]),
@@ -309,6 +321,22 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.app, ["програм", "застос", "прилож", "app"])
         ]
         return families.first { _, roots in tokens.contains { token in roots.contains { token.hasPrefix($0) } } }?.0
+    }
+
+    private func isApplicationSettingsRequest(tokens: [String], normalized: String) -> Bool {
+        let permissionRole = tokens.contains { token in
+            ["дозвол", "доступ", "разреш", "permission", "access", "berechtigung", "autorisation"].contains { token.hasPrefix($0) }
+        }
+        return permissionRole && settingsTarget(in: normalized) == "application"
+    }
+
+    private func settingsTarget(in text: String) -> String {
+        let applicationReferences = [
+            "universalassistant", "universal assistant", "цього застосунку",
+            "цьому застосунку", "цього додатку", "цьому додатку",
+            "этого приложения", "этому приложению", "this app", "the app"
+        ]
+        return applicationReferences.contains(where: text.contains) ? "application" : "system"
     }
 
     private func source(in tokens: [String]) -> CanonicalSemanticFrame.Source? {

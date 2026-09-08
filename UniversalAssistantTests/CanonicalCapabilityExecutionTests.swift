@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UIKit
 @testable import UniversalAssistant
 
 @MainActor
@@ -61,6 +62,30 @@ struct CanonicalCapabilityExecutionTests {
         model.submit()
         try await waitUntil { if case .deterministic = model.resultState { true } else { false } }
         #expect(executor.received == [.contactLookup])
+    }
+
+    @Test func settingsTargetUsesOnlyDocumentedTargetSpecificHandoff() async throws {
+        let parser = LocalCommandEngine()
+        let executor = ProductionCanonicalCapabilityExecutor(personalSearchSources: [])
+
+        let application = parser.parse("Відкрий дозволи цього застосунку")
+        #expect(application.intent == .settings)
+        #expect(application.entities["settings_target"] == "application")
+        guard case let .handoff(handoff) = try await executor.execute(application) else {
+            Issue.record("Expected the documented application-settings handoff")
+            return
+        }
+        #expect(handoff.destination.absoluteString == UIApplication.openSettingsURLString)
+
+        for phrase in ["Покажи системні параметри телефону", "Перейди до параметрів мережі", "Open the device privacy settings"] {
+            let command = parser.parse(phrase)
+            #expect(command.intent == .settings)
+            #expect(command.entities["settings_target"] == "system")
+            await #expect(throws: CanonicalCapabilityExecutionError.unavailable("system_settings_destination_not_publicly_available")) {
+                try await executor.execute(command)
+            }
+            #expect(command.intent != .webSearch)
+        }
     }
 
     @Test func unseenTemporalNumericAndContextRolesReachProductionBoundary() async throws {

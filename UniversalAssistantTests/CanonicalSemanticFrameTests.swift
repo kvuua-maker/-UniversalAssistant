@@ -75,6 +75,19 @@ struct CanonicalSemanticFrameTests {
         #expect(shared.entities["context_reference"] == "sharedContent")
     }
 
+    @Test func settingsTargetsRemainStructurallyDistinct() {
+        let application = parser.parse("Покажи параметри для цього додатку")
+        #expect(application.intent == .settings)
+        #expect(application.entities["settings_target"] == "application")
+
+        for phrase in ["Відкрий системні параметри пристрою", "Параметри мобільної мережі", "Show general phone settings"] {
+            let system = parser.parse(phrase)
+            #expect(system.intent == .settings)
+            #expect(system.entities["settings_target"] == "system")
+            #expect(system.intent != .webSearch)
+        }
+    }
+
     @Test func temporalActionObjectCompositionSeparatesCreatesFromQueries() {
         let recordedEvent = parser.parse("Запиши на післязавтра о 16:20 огляд проєкту")
         #expect(recordedEvent.intent == .calendarCreate)
