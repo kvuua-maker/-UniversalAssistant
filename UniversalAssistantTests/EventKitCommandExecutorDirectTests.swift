@@ -220,3 +220,43 @@ extension EventKitCommandExecutorDirectTests {
         #expect(!todayResult.detail.contains("Завтра"))
     }
 }
+
+
+extension EventKitCommandExecutorDirectTests {
+    @Test func calendarAfternoonQueryUsesTypedTemporalWindow() async throws {
+        let start = ISO8601DateFormatter().date(from: "2026-09-08T08:00:00Z")!
+        let calendar = DirectCalendarStub()
+        let zone = TimeZone(secondsFromGMT: 0)!
+        let executor = ProductionEventKitCommandExecutor(
+            calendar: calendar, reminders: DirectReminderStub(),
+            history: ActionHistory(persistence: DirectMemoryHistoryStore()),
+            now: { start }, timeZone: zone
+        )
+        let parsed = LocalCommandEngine().parse("Які події заплановані завтра після обіду?")
+        #expect(parsed.intent == .calendarQuery)
+        #expect(parsed.entities["day_period"] == "afternoon")
+        _ = try await executor.execute(parsed)
+        let interval = try #require(await calendar.queriedIntervals.first)
+        let components = Calendar(identifier: .gregorian).dateComponents(in: zone, from: interval.0)
+        #expect(components.hour == 12)
+        #expect(interval.1.timeIntervalSince(interval.0) == 21_600)
+    }
+
+    @Test func naturalCalendarDeletePreservesSubjectForBoundedMatch() async throws {
+        let start = ISO8601DateFormatter().date(from: "2026-09-08T08:00:00Z")!
+        let calendar = DirectCalendarStub()
+        await calendar.seed(.init(identifier: "review-1", draft: .init(
+            title: "Ревю бюджету", start: start, end: start.addingTimeInterval(1_800)
+        )))
+        let executor = ProductionEventKitCommandExecutor(
+            calendar: calendar, reminders: DirectReminderStub(),
+            history: ActionHistory(persistence: DirectMemoryHistoryStore()),
+            now: { start }, timeZone: TimeZone(secondsFromGMT: 0)!
+        )
+        let parsed = LocalCommandEngine().parse("Скасуй подію Ревю бюджету")
+        #expect(parsed.intent == .calendarDelete)
+        let result = try await executor.execute(parsed)
+        #expect(result.operation == .deleted)
+        #expect(await calendar.items.isEmpty)
+    }
+}

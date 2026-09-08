@@ -92,7 +92,7 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
             await recordHistory(.init(kind: .calendarCreate, externalIdentifier: value.identifier))
             return result(.calendar, .created, value.draft.title, value.draft.start, 1)
         case .calendarQuery:
-            try await calendar.requestFullAccessIfNeeded(); let interval = day(args.dateTime?.instant ?? now())
+            try await calendar.requestFullAccessIfNeeded(); let interval = queryInterval(dayPeriod: command.entities["day_period"], instant: args.dateTime?.instant ?? now())
             let values = try await calendar.events(from: interval.start, to: interval.end)
             return .init(kind: .calendar, operation: .queried, title: String(localized: "eventkit_calendar"), detail: list(values.map { "\($0.draft.title) — \(format($0.draft.start))" }), itemCount: values.count)
         case .calendarUpdate:
@@ -209,6 +209,20 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
         guard !matches.isEmpty else { throw EventKitExecutionError.itemNotFound }
         guard matches.count == 1 else { throw EventKitExecutionError.ambiguousItem }
         return matches[0]
+    }
+    private func queryInterval(dayPeriod: String?, instant: Date) -> DateInterval {
+        let wholeDay = day(instant)
+        guard let dayPeriod else { return wholeDay }
+        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = timeZone
+        let hours: (Int, Int)? = switch dayPeriod {
+        case "morning": (6, 12)
+        case "afternoon": (12, 18)
+        case "evening": (18, 24)
+        default: nil
+        }
+        guard let hours, let start = calendar.date(bySettingHour: hours.0, minute: 0, second: 0, of: instant),
+              let end = hours.1 == 24 ? calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: instant)) : calendar.date(bySettingHour: hours.1, minute: 0, second: 0, of: instant) else { return wholeDay }
+        return .init(start: start, end: end)
     }
     private func day(_ date: Date) -> DateInterval { var cal = Calendar.autoupdatingCurrent; cal.timeZone = timeZone; let start = cal.startOfDay(for: date); return .init(start: start, end: cal.date(byAdding: .day, value: 1, to: start)!) }
     private func format(_ date: Date) -> String { date.formatted(date: .abbreviated, time: .shortened) }

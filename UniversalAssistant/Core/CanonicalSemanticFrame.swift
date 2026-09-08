@@ -14,6 +14,7 @@ struct CanonicalSemanticFrame: Equatable, Sendable {
         let durationSeconds: Int?
         let hour: Int?
         let minute: Int?
+        let dayPeriod: String?
     }
     struct NumericRole: Equatable, Sendable { let orderedTokens: [String]; let percentage: Decimal? }
     struct CompoundRole: Equatable, Sendable { let clauses: [String]; let isSequential: Bool }
@@ -112,6 +113,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
                 entities["hour"] = String(format: "%02d", hour)
                 entities["minute"] = String(format: "%02d", minute)
             }
+            if let dayPeriod = temporal.dayPeriod { entities["day_period"] = dayPeriod }
         }
         if let numeric = frame.numeric {
             entities["numeric_tokens"] = numeric.orderedTokens.joined(separator: "|")
@@ -422,11 +424,19 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             }
         }
         let clock = explicitClock(in: normalized)
+        let dayPeriod: String? = if ["після обіду", "по обіді", "пополудні", "после обеда", "afternoon"].contains(where: normalized.contains) {
+            "afternoon"
+        } else if ["увечері", "вечором", "вечером", "evening"].contains(where: normalized.contains) {
+            "evening"
+        } else if ["вранці", "зранку", "утром", "morning"].contains(where: normalized.contains) {
+            "morning"
+        } else { nil }
         return .init(
             expression: original.trimmingCharacters(in: .whitespacesAndNewlines),
             durationSeconds: durationSeconds,
             hour: clock?.hour,
-            minute: clock?.minute
+            minute: clock?.minute,
+            dayPeriod: dayPeriod
         )
     }
 
