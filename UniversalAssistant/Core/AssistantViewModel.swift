@@ -540,8 +540,7 @@ final class AssistantViewModel {
     }
 
     private func resumeCapabilityContinuation(with output: CanonicalDependencyOutput) {
-        guard let continuation = capabilityContinuation,
-              let executor = capabilityExecutor as? ProductionCanonicalCapabilityExecutor else { return }
+        guard let continuation = capabilityContinuation else { return }
         capabilityContinuation = nil
         activeRequestGeneration &+= 1
         let generation = activeRequestGeneration
@@ -549,7 +548,7 @@ final class AssistantViewModel {
         capabilityExecutionTask = Task { [weak self] in
             guard let self else { return }
             do {
-                let outcome = try await executor.resume(continuation, with: output)
+                let outcome = try await capabilityExecutor.resume(continuation, with: output)
                 guard !Task.isCancelled, activeRequestGeneration == generation else { return }
                 switch outcome {
                 case let .result(value): resultState = .deterministic(value)

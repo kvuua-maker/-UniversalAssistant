@@ -95,6 +95,13 @@ enum CanonicalCapabilityExecutionError: Error, Equatable, Sendable {
 @MainActor
 protocol CanonicalCapabilityExecuting: AnyObject {
     func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome
+    func resume(_ continuation: CanonicalCapabilityContinuation, with output: CanonicalDependencyOutput) async throws -> CapabilityExecutionOutcome
+}
+
+extension CanonicalCapabilityExecuting {
+    func resume(_ continuation: CanonicalCapabilityContinuation, with output: CanonicalDependencyOutput) async throws -> CapabilityExecutionOutcome {
+        throw CanonicalCapabilityExecutionError.unavailable("compound_continuation_unsupported")
+    }
 }
 
 @MainActor
