@@ -14,7 +14,7 @@ struct LocalUtilityEngine: Sendable {
 
     static func recognizesCurrency(_ raw: String) -> Bool {
         let text = normalized(raw)
-        let currency = ["долар", "доллар", "гривн", "євро", "евро", "usd", "uah", "eur", "курс валют"].filter { text.contains($0) }.count
+        let currency = ["долар", "доллар", "гривн", "євро", "евро", "злот", "фунт", "франк", "крон", "ієн", "иен", "usd", "uah", "eur", "pln", "gbp", "chf", "czk", "jpy", "курс валют"].filter { text.contains($0) }.count
         return currency >= 2 || text.contains("курс долара") || text.contains("курс евро") || text.contains("курс євро")
     }
 

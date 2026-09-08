@@ -79,6 +79,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let eventKit: any EventKitCommandExecuting
     private let publicDeviceExecute: @MainActor (SystemQuickAction) throws -> String
     private let clipboardRead: @MainActor () throws -> SharedContent
+    private let fx: any CurrentFXProviding
 
     init(
         deviceRouter: UniversalDeviceCommandRouter = .init(applications: .init(applications: LaunchDeviceApplications.verified)),
@@ -96,6 +97,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         recorder: AudioRecorderController = AudioRecorderController(),
         publicDeviceExecute: @escaping @MainActor (SystemQuickAction) throws -> String = { try ProductionPublicDeviceExecutor().execute($0) },
         clipboardRead: @escaping @MainActor () throws -> SharedContent = { try SystemUserInitiatedClipboardReader().readAfterUserAction() },
+        fx: any CurrentFXProviding = ECBCurrentFXProvider(),
         personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())]
     ) {
         self.deviceRouter = deviceRouter
@@ -114,6 +116,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.recorder = recorder
         self.publicDeviceExecute = publicDeviceExecute
         self.clipboardRead = clipboardRead
+        self.fx = fx
         self.multiStepOperationFactory = multiStepOperationFactory
         if let multiStepOperationFactory {
             self.multiStep = ProductionMultiStepCoordinator(operationFactory: multiStepOperationFactory)
@@ -202,7 +205,17 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             let value = try LocalUtilityEngine().execute(command.originalText, locale: Locale(identifier: command.language == .ru ? "ru_RU" : "uk_UA"), timeZone: .autoupdatingCurrent, now: .now)
             return .result(try result(value, facts: []))
         case .currencyConversion:
-            throw CanonicalCapabilityExecutionError.externalProviderRequired("current_fx_rate")
+            guard let request = FXConversionRequestParser().parse(command.originalText) else {
+                throw CanonicalCapabilityExecutionError.missingParameter("currency_conversion")
+            }
+            do {
+                let conversion = try await fx.convert(request)
+                let formatted = conversion.convertedAmount.formatted(.number.precision(.fractionLength(0...4)))
+                let fact = ResultFact(id: "fx", label: "\(request.source) → \(request.destination)", value: "\(formatted) \(request.destination)", state: .verified, source: conversion.provider, observedAt: conversion.observedAt, priority: 100)
+                return .result(try result("\(formatted) \(request.destination)", facts: [fact]))
+            } catch CurrentFXError.unsupportedCurrency {
+                throw CanonicalCapabilityExecutionError.externalProviderRequired("current_fx_rate_for_currency")
+            }
         case .show, .contextualSelection:
             return try await contextual(command, opensSelection: command.normalizedText.contains("відк") || command.normalizedText.contains("откр") || command.normalizedText.contains("open"))
         case .cancel:

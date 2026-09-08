@@ -69,7 +69,7 @@ struct LocalUtilityEngineTests {
     @Test func currencyWithoutConfiguredRateUsesTruthfulProviderFallback() async throws {
         let executor = ProductionCanonicalCapabilityExecutor(personalSearchSources: [])
         let command = LocalCommandEngine().parse("Переведи 150 доларів у гривні")
-        await #expect(throws: CanonicalCapabilityExecutionError.externalProviderRequired("current_fx_rate")) { try await executor.execute(command) }
+        await #expect(throws: CanonicalCapabilityExecutionError.externalProviderRequired("current_fx_rate_for_currency")) { try await executor.execute(command) }
     }
 
     private func waitUntil(_ condition: @escaping @MainActor () -> Bool) async throws {
