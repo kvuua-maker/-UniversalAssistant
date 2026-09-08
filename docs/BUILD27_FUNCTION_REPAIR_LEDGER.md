@@ -264,3 +264,22 @@ Verification: ProductionRouteAwareSearchTests, PlaceCoreTests and VoiceTextInput
 B27-14.12 is GREEN. Build 27 does not exist.
 
 Exact next code-level operation: begin B27-14.13 Weather. Preserve the physically working Kyiv WeatherKit path; trace arbitrary-location and current-location parsing through the production weather executor, remove city special-casing or missing-location divergence, and add production-boundary tests with unseen locations plus current-location permission outcomes.
+
+## Completed checkpoints B27-14.13 through B27-14.16
+
+B27-14.13 Weather — GREEN. Root cause: ProductionWeatherCommandExecutor reparsed through the city-limited GenericIntentParser and rejected current-location weather. Material repair: canonical StructuredCommand now preserves arbitrary locality or current-location semantics; production uses ManualLocationContextResolver or AppleCurrentLocationResolver, then bounded WeatherContextEngine/AppleWeatherKitProvider. The fixed-city reparse approach is CLOSED. WeatherCommandExecutionTests, WeatherContextTests and VoiceTextInputQualityTests PASS; Development compile PASS.
+
+B27-14.14 Translation — GREEN. Root cause: exact imperative patterns and an incomplete target-language ontology let equivalent voice/morphological variants escape to web. Material repair: morphology-aware translation action family, shared Ukrainian/Russian/English target ontology, canonical source extraction that strips control language, and unchanged Apple Translation plus original-source CurrentContext. Exact-imperative-only matching is CLOSED. ProductionTranslationTests, ProductionContextContinuationTests and VoiceTextInputQualityTests PASS: 26 tests; Development compile PASS.
+
+B27-14.15 Local Utilities — GREEN. Root cause: adjacent ASR numeric groups were parsed as separate numbers, while natural current-time/day-of-month forms were absent. Material repair: utility-local confident grouped-thousands reconciliation, natural Ukrainian/Russian clock/date semantics, preserved deterministic arithmetic/percentage/fixed units, and explicit externalProviderRequired(current_fx_rate) without fabricated FX. LocalUtilityEngineTests and VoiceTextInputQualityTests PASS: 21 tests; Development compile PASS.
+
+B27-14.16 CurrentContext — GREEN. Verified one typed CurrentContextStore for route, selected PhotoKit asset, shared URL/image, original translation source, selected result/action and last answer. Replacement, expiry, explicit continuation and replay protection are covered; independent requests do not implicitly consume stale context. ProductionContextContinuationTests, ProductionRouteAwareSearchTests and NotesClipboardProductionTests PASS: 15 tests. The preceding Development compile remains applicable because this verification introduced no source change.
+
+All four GREEN statuses are source-level only; owner physical retest remains required. Build 27 does not exist.
+
+## Exact continuation point after B27-14.16
+
+Exact HEAD at checkpoint: 8f7fb29ae67c0c4366531176b63de8615af0aeba before this documentation-only follow-up commit.
+
+Exact next code-level operation: begin B27-14.17 Voice Memo. In StructuredCommand and the open-app/device registry, separate OPEN_APP Voice Memos semantics from internal VOICE_MEMO_RECORD. In AudioRecorderController, trace public AVFoundation start-pause-resume-stop, durable file/result publication and recovery after scene/app lifecycle. Add Home production-boundary lifecycle tests, crash/disappearance regression, and Development compile. Do not repeat any CLOSED approach.
+
