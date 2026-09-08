@@ -121,7 +121,9 @@ struct CanonicalCapabilityExecutionTests {
             ("Встанови будильник на 06:40", .deviceAction, ["system_action": "alarm"]),
             ("Прочитай текст камерою", .cameraCapture, ["capture_mode": "text_scan"]),
             ("Проскануй штрихкод упаковки", .cameraCapture, ["capture_mode": "code_scan"]),
-            ("Оцифруй паперовий документ", .cameraCapture, ["input_source": "document_camera"])
+            ("Оцифруй паперовий документ", .cameraCapture, ["input_source": "document_camera"]),
+            ("Скільки доступного простору лишилося на пристрої", .deviceAction, ["system_action": "storage"]),
+            ("Покажи стан акумулятора пристрою", .deviceAction, ["system_action": "battery"])
         ]
 
         for item in cases {

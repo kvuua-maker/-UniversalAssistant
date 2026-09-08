@@ -5,7 +5,7 @@ import Foundation
 /// noun (for example “document”) as an intent.
 struct CanonicalSemanticFrame: Equatable, Sendable {
     enum Action: String, Sendable { case open, choose, search, show, create, update, delete, copy, call, message, scan, recognize, share, navigate, query, set, record }
-    enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, settings, url, place, weather, text, code, note, audio, media }
+    enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, settings, battery, storage, url, place, weather, text, code, note, audio, media }
     enum Source: String, Sendable { case files, photos, documents, clipboard, camera, calendar, reminders }
     enum ContextReference: String, Sendable { case currentLocation, activeRoute, selectedResult, sharedContent, previousResult }
 
@@ -168,6 +168,10 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             entities["settings_target"] = settingsTarget(in: normalized)
             return (.settings, entities)
         }
+        if frame.object == .battery || frame.object == .storage {
+            entities["system_action"] = frame.object == .battery ? "battery" : "storage"
+            return (.deviceAction, entities)
+        }
 
         if frame.object == .photo {
             if frame.action == .create {
@@ -328,6 +332,8 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.timer, ["таймер", "timer"]),
             (.alarm, ["будильник", "розбуд", "alarm", "wake"]),
             (.settings, ["налаштуван", "настрой", "параметр", "settings", "preferences", "einstellungen", "réglages"]),
+            (.battery, ["батаре", "акумулятор", "battery"]),
+            (.storage, ["сховищ", "простор", "памят", "storage", "diskspace"]),
             (.code, ["qr", "barcode", "штрихкод", "код"]),
             (.text, ["текст", "text"]),
             (.weather, ["погод", "температур", "дощ", "дожд", "холод", "спек", "жарк", "weather", "rain", "cold", "hot"]),
