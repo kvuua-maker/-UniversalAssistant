@@ -92,6 +92,19 @@ struct NaturalDateTimeResolver: Sendable {
     }
 
     private func explicitTime(in text: String) -> (hour: Int, minute: Int)? {
+        // A clock token is structurally stronger than an earlier quantity
+        // (for example an event duration). Resolve it before the general
+        // spoken/bare-hour form so quantities cannot steal the time role.
+        let clockPattern = #"(?<!\d)(\d{1,2})[:.](\d{2})\b"#
+        if let clockRegex = try? NSRegularExpression(pattern: clockPattern),
+           let clockMatch = clockRegex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+           let hourRange = Range(clockMatch.range(at: 1), in: text),
+           let minuteRange = Range(clockMatch.range(at: 2), in: text),
+           let hour = Int(text[hourRange]), let minute = Int(text[minuteRange]),
+           (0...23).contains(hour), (0...59).contains(minute) {
+            return (hour, minute)
+        }
+
         let pattern = #"(?<!\d)(?:о|об|в|at|um|a)?\s*(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)?\b"#
         guard let regex = try? NSRegularExpression(pattern: pattern),
               let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),

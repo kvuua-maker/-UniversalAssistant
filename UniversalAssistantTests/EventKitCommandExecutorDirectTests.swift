@@ -139,6 +139,26 @@ extension EventKitCommandExecutorDirectTests {
         #expect(created.draft.end.timeIntervalSince(created.draft.start) == 2_700)
     }
 
+    @Test func declarativeCalendarPayloadKeepsPersonAndDurationAcrossWordOrder() async throws {
+        let start = ISO8601DateFormatter().date(from: "2026-09-08T08:00:00Z")!
+        let calendar = DirectCalendarStub()
+        let zone = TimeZone(secondsFromGMT: 0)!
+        let executor = ProductionEventKitCommandExecutor(
+            calendar: calendar, reminders: DirectReminderStub(),
+            history: ActionHistory(persistence: DirectMemoryHistoryStore()),
+            now: { start }, timeZone: zone
+        )
+        let parsed = LocalCommandEngine().parse("Зустріч на 30 хвилин завтра о 17:25 з Іриною щодо контракту")
+        #expect(parsed.intent == .calendarCreate)
+        _ = try await executor.execute(parsed)
+        let created = try #require((await calendar.items).first)
+        #expect(created.draft.title == "з Іриною щодо контракту")
+        #expect(created.draft.end.timeIntervalSince(created.draft.start) == 1_800)
+        let parts = Calendar(identifier: .gregorian).dateComponents(in: zone, from: created.draft.start)
+        #expect(parts.hour == 17)
+        #expect(parts.minute == 25)
+    }
+
     @Test func todayCalendarQueryUsesCurrentLocalDayThroughProductionExecutor() async throws {
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         let calendar = DirectCalendarStub()

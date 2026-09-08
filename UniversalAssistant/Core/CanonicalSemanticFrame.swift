@@ -287,6 +287,15 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             ["напиш", "надішл", "відправ", "отправ", "message", "send"].contains { token.hasPrefix($0) }
         }
         if messageObject && sendVerb { return .message }
+        // Interrogatives are closed lexical tokens. Prefix matching `що`
+        // would incorrectly classify role-bearing words such as `щодо` as a
+        // query and turn a declarative event payload into a calendar read.
+        let interrogatives: Set<String> = [
+            "чи", "що", "який", "яка", "яке", "які", "котрий", "котра",
+            "есть", "какой", "какая", "какие", "which", "what"
+        ]
+        if !interrogatives.isDisjoint(with: tokens) { return .query }
+
         let families: [(CanonicalSemanticFrame.Action, [String])] = [
             (.delete, ["видал", "скас", "удал", "отмен", "delete", "remove", "cancel"]),
             (.update, ["перенес", "перенос", "змін", "измени", "move", "reschedul", "update"]),
@@ -303,8 +312,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.set, ["постав", "встанов", "установ", "запуст", "увімк", "включ", "розбуд", "start", "activate", "set"]),
             (.open, ["відкр", "откр", "open", "перейд"]),
             (.search, ["знайд", "пошук", "найд", "search", "find"]),
-            (.show, ["покаж", "show", "display"]),
-            (.query, ["чи", "який", "яка", "що", "есть", "which", "what"])
+            (.show, ["покаж", "show", "display"])
         ]
         return families.first { _, roots in tokens.contains { token in roots.contains { token.hasPrefix($0) } } }?.0
     }
