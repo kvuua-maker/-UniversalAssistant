@@ -186,3 +186,20 @@ This audit establishes architecture choices from source and official
 documentation. It does not establish physical iPhone success. Changed and
 physically failed families still require a new TestFlight physical retest after
 implementation and the full completion gate.
+
+
+## Final 96-function implementation reconciliation
+
+Reconciliation checkpoint: post-PB28-08 automated verification. Every numbered row above remains authoritative and is accounted for exactly once:
+
+- Rows 1–96: 96/96 reconciled; no canonical function omitted.
+- APPLE_NATIVE_CORRECT (54): current public executor retained and protected by the full iOS/backend/canonical gates.
+- APPLE_NATIVE_IMPROVEMENT (4; rows 5, 6, 12, 31): App Intents, App Shortcuts, iOS 18 limited Contacts continuation and fail-closed confidence-bearing semantic Photos are implemented and AUTOMATED GREEN.
+- APPLE_HANDOFF_REQUIRED (11; rows 7, 8, 13–15, 18, 28, 39, 41, 55, 59): documented system/provider UI boundaries are implemented truthfully; no direct-execution claim.
+- PUBLIC_API_UNAVAILABLE (9; rows 10, 24, 42, 67–72): terminal local limitations are preserved; no private API, fake success or accidental web fallback.
+- EXTERNAL_PROVIDER_REQUIRED (15; rows 63, 76–89): provider-neutral typed boundaries, constraint preservation and truthful missing-provider behavior are implemented; ECB is live only for supported currencies. Commercial credentials/contracts remain external.
+- OWNER_OR_APPLE_ACTION_REQUIRED (3; rows 56, 94, 96): ShazamKit App ID/profile enablement, policy-qualified CarPlay entitlement and App Store Connect API credentials remain exact owner/Apple boundaries. No secret or entitlement was fabricated.
+
+Final automated evidence: full iOS 785/785 in 135 suites; backend 114/114; ZERO-OMISSION 2404/2404; AUDIO 147/147; PRIVACY 168/168; JOBS 97/97; LOYALTY 127/127; diagnostics 2/2; 1787 evidence requirements reconciled; Development and Production compiles PASS. An initial parallel iOS run was invalid for shared simulator-state/timing tests and also exposed real semantic regressions. The material source correction scopes fuzzy messenger recovery to CALL/MESSAGE roles, restores the canonical zero-padded clock contract, and accelerates unbound catalog search without stealing Files, Contacts, Podcasts, route-aware or taxi families. The serial full gate is authoritative.
+
+AUTOMATED VERIFIED is not PHYSICAL IPHONE VERIFIED. All changed families still require owner physical retesting in a later TestFlight artifact.

@@ -86,7 +86,7 @@ struct VoiceTextInputQualityTests {
         let timer = engine.parse("Постав таймер на 2 хвилини")
         #expect(timer.intent == .deviceAction); #expect(timer.entities["duration_seconds"] == "120")
         let alarm = engine.parse("Постав будильник на 4:00")
-        #expect(alarm.intent == .deviceAction); #expect(alarm.entities["hour"] == "4"); #expect(alarm.entities["minute"] == "00")
+        #expect(alarm.intent == .deviceAction); #expect(alarm.entities["hour"] == "04"); #expect(alarm.entities["minute"] == "00")
         #expect(engine.parse("Відкрий останнє фото").intent == .photoSearch)
     }
 
@@ -122,8 +122,13 @@ struct VoiceTextInputQualityTests {
             #expect(command.intent == .deviceAction)
             #expect(command.entities["system_action"] == action)
         }
+        for phrase in ["Відкрий налаштування Wi-Fi", "Налаштування Wi-Fi"] {
+            let command = engine.parse(phrase)
+            #expect(command.intent == .settings)
+            #expect(command.entities["settings_target"] == "system")
+        }
         let limited = [
-            "Відкрий налаштування Wi-Fi", "Налаштування Wi-Fi", "Увімкни Bluetooth",
+            "Увімкни Bluetooth",
             "Увімкни режим енергозбереження", "Зменш яскравість екрана",
             "Збільш гучність до половини", "Покажи мої пропущені дзвінки",
             "Відкрий калькулятор", "Відкрий програму Телефон", "Покажи мої контакти", "Покажи мої будильники"

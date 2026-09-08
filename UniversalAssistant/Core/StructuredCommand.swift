@@ -195,7 +195,31 @@ struct LocalCommandEngine: CommandParsing {
             }
             return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: .deviceAction, entities: entities)
         }
-        let patternIntent = Self.intentPatterns.first { _, patterns in patterns.contains { normalized.contains($0) } }?.0
+        // A structurally unbound search action is the canonical product/catalog
+        // fallback. Resolve it before scanning the full legacy pattern catalog;
+        // specific sources and capability families have already been selected
+        // by the semantic frame above.
+        let firstToken = normalized.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).first.map(String.init)
+        let broadSearchAction = firstToken.map { token in
+            token.hasPrefix("знайд") || ["найди", "найдите", "найти", "find", "finde", "trouve"].contains(token)
+        } == true
+        let broadSearchFallback = semanticFrame.intent == nil && broadSearchAction
+        let patternIntent: CommandIntent?
+        if broadSearchFallback {
+            if normalized.contains("по дорозі") || normalized.contains("по пути") || normalized.contains("along the route") {
+                patternIntent = .routeAwareSearch
+            } else if ["контакт", "contact"].contains(where: normalized.contains) {
+                patternIntent = .contactLookup
+            } else if ["файл", "документ", "file", "document"].contains(where: normalized.contains) {
+                patternIntent = .fileSearch
+            } else if ["подкаст", "podcast"].contains(where: normalized.contains) {
+                patternIntent = .podcastSearch
+            } else {
+                patternIntent = .productSearch
+            }
+        } else {
+            patternIntent = Self.intentPatterns.first { _, patterns in patterns.contains { normalized.contains($0) } }?.0
+        }
         let specificPatternIntent = patternIntent == .productSearch ? nil : patternIntent
         let semanticIntent = semanticCapabilityIntent(normalized)
         let resolvedIntent = resolveSpecificAndSemantic(specific: specificPatternIntent, semantic: semanticIntent)

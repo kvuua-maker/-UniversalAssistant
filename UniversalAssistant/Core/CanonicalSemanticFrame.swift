@@ -68,10 +68,15 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
            tokens.contains(where: { $0.hasPrefix("документ") || $0.hasPrefix("document") }) {
             frame.source = .documents
         }
-        switch service(in: tokens) {
-        case let .resolved(service): frame.service = service.rawValue
-        case let .ambiguous(values): frame.entityAmbiguity = values
-        case .unresolved: break
+        // Messenger recovery is meaningful only after the structural action
+        // establishes a CALL/MESSAGE service role. Running fuzzy recovery over
+        // every token in unrelated commands can manufacture an ambiguity.
+        if frame.action == .call || frame.action == .message {
+            switch service(in: tokens) {
+            case let .resolved(service): frame.service = service.rawValue
+            case let .ambiguous(values): frame.entityAmbiguity = values
+            case .unresolved: break
+            }
         }
         frame.app = application(in: tokens)
         frame.modifiers = modifiers(in: tokens)
