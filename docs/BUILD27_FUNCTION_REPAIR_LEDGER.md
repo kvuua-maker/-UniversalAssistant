@@ -282,4 +282,3 @@ All four GREEN statuses are source-level only; owner physical retest remains req
 Exact HEAD at checkpoint: 8f7fb29ae67c0c4366531176b63de8615af0aeba before this documentation-only follow-up commit.
 
 Exact next code-level operation: begin B27-14.17 Voice Memo. In StructuredCommand and the open-app/device registry, separate OPEN_APP Voice Memos semantics from internal VOICE_MEMO_RECORD. In AudioRecorderController, trace public AVFoundation start-pause-resume-stop, durable file/result publication and recovery after scene/app lifecycle. Add Home production-boundary lifecycle tests, crash/disappearance regression, and Development compile. Do not repeat any CLOSED approach.
-
