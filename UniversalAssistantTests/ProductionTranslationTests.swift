@@ -1,6 +1,12 @@
 import Testing
 import Foundation
+import UIKit
 @testable import UniversalAssistant
+
+@MainActor
+private final class CompoundOCRProcessor: DocumentOCRProcessing {
+    func recognize(cgImage: CGImage) async throws -> [String] { ["Bonjour depuis le document"] }
+}
 
 @Suite("Production local Apple translation")
 @MainActor
@@ -73,6 +79,28 @@ struct ProductionTranslationTests {
             return
         }
         #expect(plan.text == "Гарного ранку")
+        #expect(plan.targetLanguage == "de")
+    }
+
+    @Test func unseenDocumentOCRCompoundResumesWithObservedTextAtHomeBoundary() async throws {
+        let model = AssistantViewModel(ocrProcessor: CompoundOCRProcessor(), compactResultDuration: .seconds(60))
+        model.input = "Оцифруй цей документ, потім переклади німецькою"
+        model.submit()
+        for _ in 0..<100 {
+            if model.capabilityPresentation == .scanDocument { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(model.capabilityPresentation == .scanDocument)
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 2, height: 2)).image { context in
+            UIColor.white.setFill(); context.fill(CGRect(x: 0, y: 0, width: 2, height: 2))
+        }
+        model.handleScannedOCRDocument([image])
+        for _ in 0..<100 {
+            if case .translation = model.capabilityPresentation { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        guard case let .translation(plan) = model.capabilityPresentation else { Issue.record("Expected Apple Translation continuation"); return }
+        #expect(plan.text == "Bonjour depuis le document")
         #expect(plan.targetLanguage == "de")
     }
 }

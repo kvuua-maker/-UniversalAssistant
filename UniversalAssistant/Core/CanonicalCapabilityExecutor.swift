@@ -43,6 +43,46 @@ enum CapabilityExecutionOutcome: Equatable, Sendable {
     case result(DeterministicResult)
     case handoff(WebHandoffResult)
     case presentation(CapabilityPresentation)
+    case suspended(CapabilityPresentation, CanonicalCapabilityContinuation)
+}
+
+enum CanonicalDependencyOutput: Equatable, Sendable {
+    case recognizedText(String)
+    case selectedEntity(ContextEntity)
+}
+
+enum CanonicalDependencyBinder {
+    static func bind(_ command: StructuredCommand, output: CanonicalDependencyOutput) throws -> StructuredCommand {
+        var entities = command.entities
+        switch output {
+        case let .recognizedText(text):
+            guard command.intent == .translation else {
+                throw CanonicalCapabilityExecutionError.unavailable("dependency_output_type_mismatch")
+            }
+            entities["source_text"] = text
+        case let .selectedEntity(entity):
+            guard [.navigation, .routeSearch].contains(command.intent),
+                  let latitude = entity.latitude, let longitude = entity.longitude else {
+                throw CanonicalCapabilityExecutionError.unavailable("dependency_output_type_mismatch")
+            }
+            entities["destination"] = entity.displayName
+            entities["destination_latitude"] = String(latitude)
+            entities["destination_longitude"] = String(longitude)
+        }
+        return .init(id: command.id, originalText: command.originalText, normalizedText: command.normalizedText,
+                     language: command.language, intent: command.intent, entities: entities,
+                     constraints: command.constraints, risk: command.risk, needsClarification: false)
+    }
+}
+
+struct CanonicalCapabilityContinuation: Equatable, Sendable {
+    let remainingCommands: [StructuredCommand]
+
+    func consuming(_ output: CanonicalDependencyOutput) throws -> [StructuredCommand] {
+        guard let command = remainingCommands.first else { return [] }
+        let first = try CanonicalDependencyBinder.bind(command, output: output)
+        return [first] + remainingCommands.dropFirst()
+    }
 }
 
 enum CanonicalCapabilityExecutionError: Error, Equatable, Sendable {
@@ -245,7 +285,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .routeAwareSearch:
             return try await routeAware(command)
         case .multiStep:
-            return .result(try await multiStep.execute(command))
+            return try await executeCompound(command)
         case .reminderComplete, .reminderDelete, .shoppingList, .undo:
             throw CanonicalCapabilityExecutionError.unavailable("canonical_mutation_context_required")
         case .calendarUpdate:
@@ -255,6 +295,47 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .calendarCreate, .calendarQuery, .calendarDelete, .reminderCreate,
              .reminderQuery, .weather, .webSearch, .deviceAction, .audioRecord, .unknown:
             throw CanonicalCapabilityExecutionError.unavailable("handled_by_specialized_executor")
+        }
+    }
+
+    private func executeCompound(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        let plan = try DeterministicExecutionPlanBuilder().plan(for: command)
+        let commands = plan.steps.compactMap(\.command)
+        guard commands.count == plan.steps.count, !commands.isEmpty else {
+            return .result(try await multiStep.execute(command))
+        }
+        return try await executeCompound(commands, aggregate: [], dependencyOutput: nil)
+    }
+
+    func resume(_ continuation: CanonicalCapabilityContinuation, with output: CanonicalDependencyOutput) async throws -> CapabilityExecutionOutcome {
+        try await executeCompound(continuation.consuming(output), aggregate: [], dependencyOutput: nil)
+    }
+
+    private func executeCompound(_ commands: [StructuredCommand], aggregate: [ResultFact], dependencyOutput: CanonicalDependencyOutput?) async throws -> CapabilityExecutionOutcome {
+        guard var command = commands.first else {
+            return .result(try result("Виконано", facts: aggregate))
+        }
+        if let dependencyOutput { command = try CanonicalDependencyBinder.bind(command, output: dependencyOutput) }
+        let outcome = try await execute(command)
+        let remaining = Array(commands.dropFirst())
+        switch outcome {
+        case let .result(value):
+            let fact = ResultFact(id: command.id.uuidString, label: value.primaryAnswer, value: value.primaryAnswer,
+                                  state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100 - aggregate.count)
+            if remaining.isEmpty { return .result(value) }
+            let output: CanonicalDependencyOutput? = [.placeSearch, .restaurantSearch, .serviceSearch].contains(command.intent)
+                ? currentContext.selectFirstResult().map(CanonicalDependencyOutput.selectedEntity)
+                : nil
+            return try await executeCompound(remaining, aggregate: aggregate + [fact], dependencyOutput: output)
+        case let .handoff(value):
+            if remaining.isEmpty { return .handoff(value) }
+            let fact = ResultFact(id: command.id.uuidString, label: command.intent.rawValue, value: value.destination.absoluteString,
+                                  state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100 - aggregate.count)
+            return try await executeCompound(remaining, aggregate: aggregate + [fact], dependencyOutput: nil)
+        case let .presentation(presentation):
+            return remaining.isEmpty ? .presentation(presentation) : .suspended(presentation, .init(remainingCommands: remaining))
+        case .suspended:
+            throw CanonicalCapabilityExecutionError.unavailable("nested_compound_continuation")
         }
     }
 
@@ -286,6 +367,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .translationTarget, .translation:
                 throw CoordinationOperationError.confirmationRequired
             }
+        case .suspended:
+            throw CoordinationOperationError.confirmationRequired
 
         }
     }
@@ -376,13 +459,21 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             guard let destination = try? navigation.url(provider: .appleMaps, destination: .init(latitude: place.latitude, longitude: place.longitude, name: place.name), mode: .walking) else { return nil }
             return ResultAction(id: place.id, title: "Маршрут", kind: .open, destination: destination)
         })
-        currentContext.replaceResults(output)
+        currentContext.replacePlaceResults(output, places: Array(places.prefix(5)))
         return .result(output)
     }
 
     private func route(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         let destinationName = try required(command.entities["destination"], "destination")
-        let destination = try await locationResolver.resolve(destinationName)
+        let destination: ValidatedLocation
+        if let latitude = command.entities["destination_latitude"].flatMap(Double.init),
+           let longitude = command.entities["destination_longitude"].flatMap(Double.init) {
+            destination = .init(sample: .init(latitude: latitude, longitude: longitude, horizontalAccuracy: 0,
+                                              timestamp: .now, speed: -1, course: -1, source: .manual),
+                                quality: .precise, isSafeForLocationActions: true, manualLabel: destinationName)
+        } else {
+            destination = try await locationResolver.resolve(destinationName)
+        }
         if let origin = try? await currentLocation.resolveCurrent(for: .navigation) { currentContext.replaceRoute(origin: origin, destination: destination, destinationName: destinationName) }
         let url = try navigation.url(provider: .appleMaps, destination: .init(latitude: destination.sample.latitude, longitude: destination.sample.longitude, name: destinationName), mode: .driving)
         return .handoff(.init(query: command.originalText, destination: url, kind: .navigation))

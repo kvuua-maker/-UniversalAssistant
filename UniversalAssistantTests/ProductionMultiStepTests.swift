@@ -175,10 +175,25 @@ extension ProductionMultiStepTests {
             currentLocation: location, currentContext: context, personalSearchSources: []
         )
         let command = LocalCommandEngine().parse("Знайди магазин Nike у Києві і покажи, як до нього доїхати")
-        guard case let .result(result) = try await executor.execute(command) else { Issue.record("Expected aggregate"); return }
-        #expect(result.facts.count == 2)
-        #expect(result.facts.allSatisfy { $0.state == .verified })
-        #expect(!result.facts.contains { ["typedCommand", "deterministicCompose"].contains($0.label) })
-        #expect(result.facts.contains { $0.value?.contains("maps.apple.com") == true })
+        #expect(command.intent == .multiStep)
+        let planned = try DeterministicExecutionPlanBuilder().plan(for: command)
+        #expect(planned.steps.compactMap(\.command?.intent) == [.placeSearch, .navigation])
+        guard case let .handoff(result) = try await executor.execute(command) else { Issue.record("Expected final navigation handoff"); return }
+        #expect(result.kind == .navigation)
+        #expect(result.destination.host == "maps.apple.com")
+        #expect(result.destination.absoluteString.contains("50.46"))
+    }
+
+    @Test func unseenPlaceCompositionBindsResolvedCoordinatesWithoutSecondGeocode() async throws {
+        let executor = ProductionCanonicalCapabilityExecutor(
+            locationResolver: .init(geocoder: MultiStepGeocoderStub()),
+            placeSearch: .init(providers: [MultiStepPlaceStub()]),
+            currentLocation: MultiStepLocationStub(), personalSearchSources: []
+        )
+        let command = LocalCommandEngine().parse("Знайди найближчий ресторан у Львові, потім проклади до нього маршрут")
+        #expect(command.intent == .multiStep)
+        guard case let .handoff(result) = try await executor.execute(command) else { Issue.record("Expected typed navigation handoff"); return }
+        #expect(result.kind == .navigation)
+        #expect(result.destination.absoluteString.contains("50.46"))
     }
 }

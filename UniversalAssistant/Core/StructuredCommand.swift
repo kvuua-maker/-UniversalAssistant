@@ -49,19 +49,38 @@ protocol CommandParsing: Sendable { func parse(_ text: String) -> StructuredComm
 
 enum CompoundCommandClauses {
     static func split(_ text: String) -> [String] {
-        let pattern = #"\s*(?:[,;]|\b(?:and then|und dann|і|та|потім|затем|then|puis)\b)\s*"#
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return [text] }
-        let range = NSRange(text.startIndex..., in: text)
-        var output: [String] = [], cursor = text.startIndex
-        for match in regex.matches(in: text, range: range) {
-            guard let valueRange = Range(match.range, in: text) else { continue }
-            let value = text[cursor..<valueRange.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
-            if !value.isEmpty { output.append(value) }
-            cursor = valueRange.upperBound
+        let boundary = "\u{001F}"
+        var separated = text
+        // Longest-first replacement preserves multiword connectors. Requiring
+        // surrounding whitespace prevents conjunction letters inside entities
+        // and brand names from becoming accidental plan boundaries.
+        for connector in ["and then", "und dann", "потім", "затем", "then", "puis", "і", "та"] {
+            separated = separated.replacingOccurrences(
+                of: " \(connector) ",
+                with: boundary,
+                options: [.caseInsensitive, .diacriticInsensitive]
+            )
         }
-        let tail = text[cursor...].trimmingCharacters(in: .whitespacesAndNewlines)
-        if !tail.isEmpty { output.append(tail) }
-        return output
+        separated = separated.replacingOccurrences(of: ",", with: boundary)
+        separated = separated.replacingOccurrences(of: ";", with: boundary)
+        return separated
+            .components(separatedBy: boundary)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    static func dependencyIntent(for clause: String) -> CommandIntent? {
+        let value = clause.lowercased(with: .current)
+        let movement = ["доїхати", "доехать", "дістатися", "добраться", "navigate", "directions", "route"]
+            .contains(where: value.contains)
+        let routeRole = ["як ", "маршрут", "проклади", "побудуй", "построй", "navigate", "route", "directions"]
+            .contains(where: value.contains)
+        return movement && routeRole ? .navigation : nil
+    }
+
+    static func isPresentationOnly(_ clause: StructuredCommand) -> Bool {
+        clause.intent == .show && ["покажи", "показати", "show", "show me", "покажи мне"]
+            .contains(clause.normalizedText.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters)))
     }
 }
 
@@ -160,7 +179,9 @@ struct LocalCommandEngine: CommandParsing {
         let specificPatternIntent = patternIntent == .productSearch ? nil : patternIntent
         let semanticIntent = semanticCapabilityIntent(normalized)
         let resolvedIntent = resolveSpecificAndSemantic(specific: specificPatternIntent, semantic: semanticIntent)
-        let intent = semanticFrame.intent
+        let structuredCompoundIntent = semanticFrame.frame.compound == nil ? nil : compoundIntent(normalized)
+        let intent = structuredCompoundIntent
+            ?? semanticFrame.intent
             ?? priorityIntent(normalized)
             ?? (resolvedIntent == .placeSearch ? .placeSearch : compoundIntent(normalized))
             ?? resolvedIntent
@@ -299,22 +320,18 @@ struct LocalCommandEngine: CommandParsing {
     }
 
     private func compoundIntent(_ text: String) -> CommandIntent? {
-        let compoundMarkers = [",", ";", " і ", " та ", " потім ", " затем ", " and then ", " then ", " und dann ", " puis "]
-        guard compoundMarkers.contains(where: text.contains) else { return nil }
         let clauses = CompoundCommandClauses.split(text)
         guard clauses.count >= 2 else { return nil }
-        let recognized = clauses.filter { clause in
-            let specific = Self.intentPatterns.first { intent, patterns in
-                intent != .multiStep && intent != .productSearch && patterns.contains { clause.contains($0) }
-            }?.0
-            let semantic = semanticCapabilityIntent(clause)
-            let value = priorityIntent(clause)
-                ?? resolveSpecificAndSemantic(specific: specific, semantic: semantic)
-                ?? Self.intentPatterns.first { intent, patterns in intent != .multiStep && patterns.contains { clause.contains($0) } }?.0
-                ?? contextualIntent(clause)
-            return value != .unknown
+        // Reuse the complete canonical parser for every clause. This keeps compound
+        // recognition aligned with single-command semantics instead of maintaining
+        // a second, weaker keyword classifier. Individual clauses cannot recurse
+        // into this branch because the splitter has removed compound boundaries.
+        let commands = zip(clauses, clauses.map(parse)).compactMap { clause, parsed -> CommandIntent? in
+            if CompoundCommandClauses.isPresentationOnly(parsed) { return nil }
+            if let dependency = CompoundCommandClauses.dependencyIntent(for: clause) { return dependency }
+            return !parsed.needsClarification && ![.unknown, .multiStep].contains(parsed.intent) ? parsed.intent : nil
         }
-        return recognized.count >= 2 ? .multiStep : nil
+        return commands.count >= 2 ? .multiStep : nil
     }
 
     private func translationTarget(in text: String) -> String? {

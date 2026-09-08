@@ -70,8 +70,8 @@ struct DeterministicExecutionPlanBuilder: Sendable {
         let split = CompoundCommandClauses.split(command.originalText)
         var commands = split.compactMap { clause -> StructuredCommand? in
             let parsed = parser.parse(clause)
-            if isRouteInstruction(clause) { return derived(parsed, intent: .navigation) }
-            if isStandalonePresentationVerb(parsed.normalizedText) { return nil }
+            if let dependency = CompoundCommandClauses.dependencyIntent(for: clause) { return derived(parsed, intent: dependency) }
+            if CompoundCommandClauses.isPresentationOnly(parsed) { return nil }
             return !parsed.needsClarification && parsed.intent != .unknown && parsed.intent != .multiStep ? parsed : nil
         }
         let hasRouteClause = commands.contains { [.navigation, .routeSearch, .transportRoute].contains($0.intent) }
@@ -122,17 +122,6 @@ struct DeterministicExecutionPlanBuilder: Sendable {
             ExecutionPlanStep(id: "hotel", capability: .hotel, dependencies: ["calendar", "candidates"])
         ]
         return .init(commandID: command.id, intent: command.intent, constraints: constraints(command), steps: steps, completionStepID: "hotel", aiInvocationCount: 0)
-    }
-
-    private func isRouteInstruction(_ clause: String) -> Bool {
-        let value = clause.lowercased(with: .current)
-        let routeVerb = ["доїхати", "доехать", "дістатися", "добраться", "navigate", "directions", "route"].contains(where: value.contains)
-        let routeFraming = ["як ", "маршрут", "проклади", "покажи", "how ", "route", "directions"].contains(where: value.contains)
-        return routeVerb && routeFraming
-    }
-
-    private func isStandalonePresentationVerb(_ value: String) -> Bool {
-        ["покажи", "показати", "покажи як", "show", "show me", "покажи мне"].contains(value.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters)))
     }
 
     private func derived(_ command: StructuredCommand, intent: CommandIntent) -> StructuredCommand {

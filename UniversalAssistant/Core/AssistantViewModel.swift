@@ -43,6 +43,7 @@ final class AssistantViewModel {
     private var weatherExecutionTask: Task<Void, Never>?
     private var eventKitExecutionTask: Task<Void, Never>?
     private var genericDiscoveryTask: Task<Void, Never>?
+    private var capabilityContinuation: CanonicalCapabilityContinuation?
 
     init(
         commandEngine: any CommandParsing = LocalCommandEngine(),
@@ -168,6 +169,9 @@ final class AssistantViewModel {
         weatherExecutionTask?.cancel()
         eventKitExecutionTask?.cancel()
         genericDiscoveryTask?.cancel()
+        // A newly submitted command supersedes any UI-bound compound continuation.
+        // Late scanner/OCR callbacks therefore cannot resume an obsolete plan.
+        capabilityContinuation = nil
         weatherExecutionInFlight = false
         eventKitExecutionInFlight = false
         capabilityExecutionInFlight = false
@@ -414,6 +418,11 @@ final class AssistantViewModel {
                     capabilityPresentation = presentation
                     resultState = .idle
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=system_presentation capability=\(command.intent.rawValue)")
+                case let .suspended(presentation, continuation):
+                    capabilityContinuation = continuation
+                    capabilityPresentation = presentation
+                    resultState = .idle
+                    LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=compound_presentation capability=\(command.intent.rawValue)")
                 }
                 statusText = AppText.value("ready")
             } catch is CancellationError {
@@ -496,6 +505,7 @@ final class AssistantViewModel {
                 let result = try await ocrPipeline.process(pages, provenance: .document)
                 guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
                 resultState = .ocr(result); statusText = AppText.value("ready")
+                resumeCapabilityContinuation(with: .recognizedText(result.recognizedText))
                 LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=ocr source=document pages=\(pages.count)")
             } catch {
                 guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
@@ -520,9 +530,42 @@ final class AssistantViewModel {
                 let result = try await ocrPipeline.process(image, provenance: provenance)
                 guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
                 resultState = .ocr(result); statusText = AppText.value("ready")
+                resumeCapabilityContinuation(with: .recognizedText(result.recognizedText))
                 LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=ocr source=\(provenance.rawValue)")
             } catch {
                 guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
+                presentFailure(message: AppText.value("request_unavailable"))
+            }
+        }
+    }
+
+    private func resumeCapabilityContinuation(with output: CanonicalDependencyOutput) {
+        guard let continuation = capabilityContinuation,
+              let executor = capabilityExecutor as? ProductionCanonicalCapabilityExecutor else { return }
+        capabilityContinuation = nil
+        activeRequestGeneration &+= 1
+        let generation = activeRequestGeneration
+        capabilityExecutionTask?.cancel()
+        capabilityExecutionTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let outcome = try await executor.resume(continuation, with: output)
+                guard !Task.isCancelled, activeRequestGeneration == generation else { return }
+                switch outcome {
+                case let .result(value): resultState = .deterministic(value)
+                case let .handoff(value):
+                    if value.kind == .system || value.kind == .navigation {
+                        systemHandoffOpen(value.destination)
+                        resultState = .idle
+                    } else {
+                        resultState = .webHandoff(value)
+                    }
+                case let .presentation(value): capabilityPresentation = value; resultState = .idle
+                case let .suspended(value, next): capabilityContinuation = next; capabilityPresentation = value; resultState = .idle
+                }
+                statusText = AppText.value("ready")
+            } catch {
+                guard !Task.isCancelled, activeRequestGeneration == generation else { return }
                 presentFailure(message: AppText.value("request_unavailable"))
             }
         }
@@ -546,7 +589,10 @@ final class AssistantViewModel {
     func performTranslationAction(_ result: TranslationProductionResult, _ action: OCRResultAction) {
         switch action { case .copy: UIPasteboard.general.string = result.translatedText; case .share: capabilityPresentation = .share(result.translatedText); case .translate: break }
     }
-    func dismissCapabilityPresentation() { capabilityPresentation = nil }
+    func dismissCapabilityPresentation() {
+        capabilityPresentation = nil
+        capabilityContinuation = nil
+    }
 
     func beginProcessing() {
         resultDismissTask?.cancel()

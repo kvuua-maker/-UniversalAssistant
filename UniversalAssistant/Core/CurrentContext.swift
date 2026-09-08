@@ -223,6 +223,21 @@ final class CurrentContextStore {
         context.update(now: now, lifetime: lifetime, results: entities)
         consumedActionIDs.removeAll()
     }
+    func replacePlaceResults(_ result: DeterministicResult, places: [Place], now: Date = .now, lifetime: TimeInterval = 300) {
+        let expires = now.addingTimeInterval(lifetime)
+        let actions = Dictionary(uniqueKeysWithValues: result.actions.map { ($0.id, $0) })
+        let byID = Dictionary(uniqueKeysWithValues: places.map { ($0.id, $0) })
+        let entities = result.facts.prefix(20).compactMap { fact -> ContextEntity? in
+            guard let place = byID[fact.id] else { return nil }
+            let provenance = ContextProvenance(source: fact.source ?? place.source, objectID: place.id,
+                                               observedAt: fact.observedAt ?? place.timestamp, expiresAt: expires)
+            return .init(id: place.id, kind: .place, displayName: place.name, phoneNumber: nil,
+                         provenance: provenance, latitude: place.latitude, longitude: place.longitude,
+                         actionID: actions[place.id]?.id, openReference: actions[place.id]?.destination?.absoluteString)
+        }
+        context.update(now: now, lifetime: lifetime, results: entities)
+        consumedActionIDs.removeAll()
+    }
     func select(_ command: StructuredCommand, now: Date = .now) -> ContextEntity? {
         _ = context.resolve(command, now: now)
         return context.selectedEntity
