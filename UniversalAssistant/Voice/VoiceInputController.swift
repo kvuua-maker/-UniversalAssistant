@@ -198,17 +198,29 @@ private final class VoiceRecognitionRequestSink: @unchecked Sendable {
     private let request: SFSpeechAudioBufferRecognitionRequest
     private let lock = NSLock()
     private var appendedCount = 0
+    private var active = true
 
     init(_ request: SFSpeechAudioBufferRecognitionRequest) {
         self.request = request
     }
 
     func append(_ buffer: AVAudioPCMBuffer) {
+        lock.lock()
+        guard active else { lock.unlock(); return }
+        appendedCount += 1
+        let current = appendedCount
         request.append(buffer)
-        lock.lock(); appendedCount += 1; let current = appendedCount; lock.unlock()
+        lock.unlock()
         if current == 1 || current.isMultiple(of: 100) {
             LocalVoiceDiagnosticReport.shared.record("buffer_appended", "count=\(current)")
         }
+    }
+
+    /// Audio-tap callbacks run on a realtime queue. Deactivation must happen
+    /// before `endAudio`/task cancellation so a queued callback cannot append
+    /// to a request whose Speech lifecycle has already ended.
+    func deactivate() {
+        lock.lock(); active = false; lock.unlock()
     }
 }
 
@@ -245,6 +257,7 @@ final class VoiceInputController {
     private let capture: VoiceAudioCaptureLifecycle
     private let authorization: @Sendable () async -> Bool
     private var request: SFSpeechAudioBufferRecognitionRequest?
+    private var requestSink: VoiceRecognitionRequestSink?
     private var task: SFSpeechRecognitionTask?
     private var recognizer: SFSpeechRecognizer?
     // start() suspends for permissions; a newer mic tap can supersede it.
@@ -307,6 +320,7 @@ final class VoiceInputController {
         )
         self.request = request
         let requestSink = VoiceRecognitionRequestSink(request)
+        self.requestSink = requestSink
         do {
             task = recognizer.recognitionTask(with: request, resultHandler: Self.makeRecognitionHandler(owner: self, sessionID: sessionID))
             LocalVoiceDiagnosticReport.shared.record("recognition_task_created")
@@ -338,6 +352,7 @@ final class VoiceInputController {
         LocalVoiceDiagnosticReport.shared.record("stop_invoked", "reason=\(reason.rawValue)")
         let hadTask = task != nil
         let hadRequest = request != nil
+        requestSink?.deactivate(); requestSink = nil
         task?.cancel(); task = nil; request?.endAudio(); request = nil
         LocalVoiceDiagnosticReport.shared.record("recognition_task_cancelled", "reason=\(reason.rawValue) had_task=\(hadTask)")
         LocalVoiceDiagnosticReport.shared.record("end_audio_called", "reason=\(reason.rawValue) had_request=\(hadRequest)")
@@ -387,6 +402,7 @@ final class VoiceInputController {
         guard owns(sessionID), state == .listening, !isFinalizingRecognition,
               let request, let task else { return }
         isFinalizingRecognition = true
+        requestSink?.deactivate()
         LocalVoiceDiagnosticReport.shared.record("end_audio_called", "reason=endOfSpeech had_request=true")
         request.endAudio()
         LocalVoiceDiagnosticReport.shared.record("recognition_task_finished", "reason=endOfSpeech")

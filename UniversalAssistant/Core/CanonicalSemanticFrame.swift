@@ -7,6 +7,11 @@ struct CanonicalSemanticFrame: Equatable, Sendable {
     enum Action: String, Sendable { case open, choose, search, show, create, call, message, scan, recognize, share, navigate, query, set, record }
     enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, url, place, weather, text, code, note, audio, media }
     enum Source: String, Sendable { case files, photos, clipboard, camera, calendar, reminders }
+    enum ContextReference: String, Sendable { case currentLocation, activeRoute, selectedResult, sharedContent, previousResult }
+
+    struct TemporalRole: Equatable, Sendable { let expression: String; let durationSeconds: Int? }
+    struct NumericRole: Equatable, Sendable { let orderedTokens: [String]; let percentage: Decimal? }
+    struct CompoundRole: Equatable, Sendable { let clauses: [String]; let isSequential: Bool }
 
     var action: Action?
     var object: Object?
@@ -15,6 +20,10 @@ struct CanonicalSemanticFrame: Equatable, Sendable {
     var person: String?
     var app: String?
     var location: String?
+    var temporal: TemporalRole?
+    var numeric: NumericRole?
+    var contextReference: ContextReference?
+    var compound: CompoundRole?
     var modifiers: Set<String> = []
     var confidence: Double = 0
 }
@@ -47,6 +56,10 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             )
         }
         frame.location = locationPhrase(in: original)
+        frame.temporal = temporalRole(in: original, normalized: normalized)
+        frame.numeric = numericRole(in: normalized)
+        frame.contextReference = contextReference(in: normalized)
+        frame.compound = compoundRole(in: original, normalized: normalized)
 
         let resolved = resolve(frame: frame, original: original, normalized: normalized)
         frame.confidence = resolved.0 == nil ? 0 : confidence(frame)
@@ -59,6 +72,19 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         normalized: String
     ) -> (CommandIntent?, [String: String]) {
         var entities: [String: String] = [:]
+        if let temporal = frame.temporal {
+            entities["temporal_expression"] = temporal.expression
+            if let duration = temporal.durationSeconds { entities["duration_seconds"] = String(duration) }
+        }
+        if let numeric = frame.numeric {
+            entities["numeric_tokens"] = numeric.orderedTokens.joined(separator: "|")
+            if let percentage = numeric.percentage { entities["percentage"] = NSDecimalNumber(decimal: percentage).stringValue }
+        }
+        if let reference = frame.contextReference { entities["context_reference"] = reference.rawValue }
+        if let compound = frame.compound {
+            entities["compound_clause_count"] = String(compound.clauses.count)
+            entities["compound_order"] = compound.isSequential ? "sequential" : "parallel"
+        }
 
         // SOURCE controls the domain. “documents in Photos” is a Photos query;
         // the object alone must never redirect it to Files.
@@ -76,9 +102,10 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
 
         if frame.object == .photo {
             if frame.action == .create {
-                return (.cameraCapture, ["capture_mode": "visible_camera"])
+                entities["capture_mode"] = "visible_camera"
+                return (.cameraCapture, entities)
             }
-            guard frame.action != nil || frame.modifiers.contains("latest") else { return (nil, [:]) }
+            guard frame.action != nil || frame.modifiers.contains("latest") else { return (nil, entities) }
             entities["query"] = frame.modifiers.contains("latest") ? "latest" : semanticPhotoSubject(original)
             if frame.action == .share { entities["requested_action"] = "share" }
             if frame.action == .recognize { entities["requested_action"] = "ocr" }
@@ -113,15 +140,19 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             return (frame.action == .create || frame.action == .set ? .reminderCreate : .reminderQuery, entities)
         }
         if frame.object == .timer || frame.object == .alarm {
-            return (.deviceAction, ["system_action": frame.object == .timer ? "timer" : "alarm"])
+            entities["system_action"] = frame.object == .timer ? "timer" : "alarm"
+            return (.deviceAction, entities)
         }
 
         if frame.action == .scan || frame.action == .recognize {
             if frame.object == .code {
-                return (.cameraCapture, ["capture_mode": "code_scan"])
+                entities["capture_mode"] = "code_scan"
+                return (.cameraCapture, entities)
             }
             if frame.object == .document || frame.object == .text {
-                return (.cameraCapture, ["capture_mode": "text_scan", "input_source": "document_camera"])
+                entities["capture_mode"] = "text_scan"
+                entities["input_source"] = "document_camera"
+                return (.cameraCapture, entities)
             }
         }
 
@@ -142,7 +173,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             if let location = frame.location { entities["destination"] = location }
             return (.navigation, entities)
         }
-        return (nil, [:])
+        return (nil, entities)
     }
 
     private func lexicalTokens(_ text: String) -> [String] {
@@ -229,6 +260,60 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         return output
     }
 
+    private func temporalRole(in original: String, normalized: String) -> CanonicalSemanticFrame.TemporalRole? {
+        let signals = ["сьогодні", "завтра", "післязавтра", "вчора", "через", "сегодня", "послезавтра", "вчера", "today", "tomorrow", "tonight", "yesterday", "in "]
+        let timePattern = #"\b(?:[01]?\d|2[0-3])[:.]([0-5]\d)\b"#
+        let durationPattern = #"\b([0-9]+(?:[.,][0-9]+)?)\s*(секунд\p{L}*|сек|seconds?|secs?|хвилин\p{L}*|хв|минут\p{L}*|мин|minutes?|mins?|годин\p{L}*|час\p{L}*|hours?|hrs?)\b"#
+        guard signals.contains(where: normalized.contains)
+                || normalized.range(of: timePattern, options: .regularExpression) != nil
+                || normalized.range(of: durationPattern, options: .regularExpression) != nil else { return nil }
+        var durationSeconds: Int?
+        if let range = normalized.range(of: durationPattern, options: [.regularExpression, .caseInsensitive]) {
+            let match = String(normalized[range])
+            let parts = match.split(whereSeparator: { !$0.isNumber && $0 != "." && $0 != "," })
+            if let number = parts.first.flatMap({ Double($0.replacingOccurrences(of: ",", with: ".")) }) {
+                let multiplier: Double = match.contains("сек") || match.contains("sec") ? 1 : (match.contains("год") || match.contains("час") || match.contains("hour") || match.contains("hr") ? 3_600 : 60)
+                durationSeconds = Int((number * multiplier).rounded())
+            }
+        }
+        return .init(expression: original.trimmingCharacters(in: .whitespacesAndNewlines), durationSeconds: durationSeconds)
+    }
+
+    private func numericRole(in normalized: String) -> CanonicalSemanticFrame.NumericRole? {
+        guard let regex = try? NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?"#) else { return nil }
+        let range = NSRange(normalized.startIndex..., in: normalized)
+        let values = regex.matches(in: normalized, range: range).compactMap { match -> String? in
+            guard let valueRange = Range(match.range, in: normalized) else { return nil }
+            return String(normalized[valueRange]).replacingOccurrences(of: ",", with: ".")
+        }
+        guard !values.isEmpty else { return nil }
+        var percentage: Decimal?
+        let percentPattern = #"([-+]?\d+(?:[.,]\d+)?)\s*(?:%|відсот\p{L}*|процент\p{L}*|percent\p{L}*)"#
+        if let percentRegex = try? NSRegularExpression(pattern: percentPattern, options: [.caseInsensitive]),
+           let match = percentRegex.firstMatch(in: normalized, range: range), match.numberOfRanges > 1,
+           let valueRange = Range(match.range(at: 1), in: normalized) {
+            let value = String(normalized[valueRange]).replacingOccurrences(of: ",", with: ".")
+            percentage = Decimal(string: value, locale: Locale(identifier: "en_US_POSIX"))
+        }
+        return .init(orderedTokens: values, percentage: percentage)
+    }
+
+    private func contextReference(in normalized: String) -> CanonicalSemanticFrame.ContextReference? {
+        if normalized.contains("по дорозі") || normalized.contains("по пути") || normalized.contains("along the route") { return .activeRoute }
+        if normalized.contains("де я") || normalized.contains("где я") || normalized.contains("where i am") || normalized.contains("моє місцезнаходження") { return .currentLocation }
+        if normalized.contains("останній результат") || normalized.contains("последний результат") || normalized.contains("last result") { return .previousResult }
+        if normalized.contains("цій фотографії") || normalized.contains("shared image") || normalized.contains("цим посиланням") { return .sharedContent }
+        if normalized.contains("цей результат") || normalized.contains("обраний") || normalized.contains("selected result") { return .selectedResult }
+        return nil
+    }
+
+    private func compoundRole(in original: String, normalized: String) -> CanonicalSemanticFrame.CompoundRole? {
+        let clauses = CompoundCommandClauses.split(original)
+        guard clauses.count > 1 else { return nil }
+        let sequential = ["потім", "затем", "then", "danach", "puis"].contains(where: normalized.contains)
+        return .init(clauses: clauses, isSequential: sequential)
+    }
+
     private func trailingEntity(_ original: String, afterActionFamilies: [[String]], stoppingAt stops: [String]) -> String? {
         let folded = original.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
         let allRoots = afterActionFamilies.flatMap { $0 }
@@ -269,7 +354,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     }
 
     private func confidence(_ frame: CanonicalSemanticFrame) -> Double {
-        let filled = [frame.action != nil, frame.object != nil, frame.source != nil, frame.person != nil, frame.service != nil, frame.app != nil, frame.location != nil].filter { $0 }.count
+        let filled = [frame.action != nil, frame.object != nil, frame.source != nil, frame.person != nil, frame.service != nil, frame.app != nil, frame.location != nil, frame.temporal != nil, frame.numeric != nil, frame.contextReference != nil, frame.compound != nil].filter { $0 }.count
         return min(1, 0.55 + Double(filled) * 0.08)
     }
 }

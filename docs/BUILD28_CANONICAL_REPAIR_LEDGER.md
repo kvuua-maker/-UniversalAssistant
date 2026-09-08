@@ -13,14 +13,14 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 | B28-02 | GREEN | Keyword/stem/regex-only semantic repair is CLOSED by Build-27 physical evidence. |
 | B28-03 | GREEN | Authoritative physical evidence recorded in this ledger. |
 | B28-04 | IN_PROGRESS | Protected-pass regression list retained; full gate pending. |
-| B28-05 | IN_PROGRESS | Role-based `CanonicalSemanticFrameAnalyzer` is connected before legacy classification; unseen cross-family parser tests pass. Remaining roles and compound production execution still require reconciliation. |
-| B28-06 | IN_PROGRESS | Session-generation ownership suppresses stale authorization, recognition and stop continuations; focused race tests and Development compile pass. Device crash evidence is unavailable locally; interruption and route-change lifecycle remain pending. |
+| B28-05 | IN_PROGRESS | Typed frame now carries action/object/source/person/service/location plus temporal, ordered numeric, compound and CurrentContext-reference roles through `LocalCommandEngine`; 7/7 parser and production-boundary coverage pass. Remaining physical families will consume these roles without reverting to keyword-only routing. |
+| B28-06 | GREEN | Session ownership plus atomic realtime request-sink deactivation now prevent queued audio buffers from appending after `endAudio`/cancel; interruption, harmless route-change, scene transition, re-entry and stale authorization tests pass 5/5. No historical device crash report is accessible, so physical crash retest remains mandatory. |
 | B28-07 | IN_PROGRESS | Source entitlement and official-mechanism audit persisted in `BUILD28_APPLE_CAPABILITY_AUDIT.md`; Developer-account App ID/profile readback remains pending. |
 | B28-08 | REQUIRED_OWNER_ACTION | Official Apple authority requires ShazamKit service on the main App ID. Current executable entitlements lack that authorization; truthful local fallback remains protected. |
 | B28-09 | IN_PROGRESS | Official credential-free ECB SDMX boundary now serves supported informational FX reference conversions in-app with provenance; unsupported currencies remain provider-required. General, stocks, catalog and retail providers remain under audit. |
 | B28-10 | REQUIRED_OWNER_ACTION | No repository credential is present. Initial API access requires Account Holder; a least-privilege team/individual key and secure out-of-Git `.p8` placement are required for JWT automation. |
 | B28-11 | IN_PROGRESS | Active Codex Remote Control policy audit pending. |
-| B28-12 | NOT_STARTED | Unseen cross-family production-boundary acceptance pending. |
+| B28-12 | IN_PROGRESS | New `AssistantViewModel` production-boundary tests prove temporal and route-context roles reach canonical executors; full unseen family matrix remains pending. |
 | B28-13 | GREEN | Durable stable-ID ledger created; CLOSED history preserved below. |
 | B28-14 | NOT_STARTED | Full gates run only after source repair. |
 | B28-15 | NOT_STARTED | Build 28 forbidden until complete gate. |
@@ -45,22 +45,22 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 ## Verified green checkpoint evidence
 
 - `VoiceInputController` owns start, stop and finalization callbacks by UUID generation; request A cannot mutate request B.
-- `VoiceInputSessionOwnershipTests`: 2/2 PASS.
-- `CanonicalSemanticFrameTests`: 5/5 PASS for unseen cross-family collisions.
+- `VoiceInputSessionOwnershipTests`: 5/5 PASS, including interruption, route-change, scene transition and re-entry ownership.
+- `CanonicalSemanticFrameTests`: 7/7 PASS; combined semantic + `AssistantViewModel` production-boundary suites: 17/17 PASS.
 - Development simulator compile: PASS.
 - Physical iPhone verification remains pending.
 - Official ECB current-FX boundary: parser/executor tests 11/11 PASS together with protected local utilities; Development compile PASS. Supported ECB currencies return sourced in-app reference conversions, while UAH remains a truthful provider dependency.
 
 ## Current checkpoint
 
-- HEAD: `e67fe635a9bd33670044989c33b5dcc6496d1882` (verify with Git before resuming).
+- HEAD before this checkpoint commit: `2b54456aba35fceac2bfba8f2029897d781c1eaf`; verify current Git after commit/push.
 - `HEAD == origin/main`: PASS at checkpoint creation.
 - Tracked tree: CLEAN; only the three intentional recovery/handoff artifacts remain untracked and untouched.
 - Build 28: NOT CREATED.
-- Latest green blocks: voice session ownership, initial role-based semantic frame, official Apple capability boundary audit, credential-free ECB FX provider for its supported currencies.
+- Latest green blocks: voice session ownership, atomic Speech request-sink shutdown, temporal/numeric/compound/context semantic roles, Apple capability boundary audit, credential-free ECB FX provider.
 
 ## Exact continuation point
 
-Current active blocks: **B28-05 material semantic repair** and **B28-06 microphone/Speech lifecycle**.
+Current active blocks: **B28-05 semantic-frame consumption across remaining physical defect families**, **B28-07 Apple live capability configuration**, and **B28-09 provider audit**.
 
-Exact next code-level action: extend `CanonicalSemanticFrame` to temporal, numeric, compound and context roles and lower those roles through the existing router; add `AssistantViewModel` production-boundary collision tests. Also inspect accessible device diagnostics and add interruption lifecycle coverage without changing the green ownership mechanism. Apple App ID/profile live readback and ShazamKit enablement remain at the recorded owner boundary.
+Exact next code-level action: trace the remaining Build-27 physical source families against the new typed roles, beginning with Contacts/Calls and Files/Photos/Share collisions in `CanonicalSemanticFrameAnalyzer`, `LocalCommandEngine` and `ProductionCanonicalCapabilityExecutor`; add unseen Home-boundary tests. In parallel, continue live Apple App ID/profile readback where account access permits and provider audit. Do not recreate Build 28.

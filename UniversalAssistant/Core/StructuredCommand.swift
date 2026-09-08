@@ -255,7 +255,7 @@ struct LocalCommandEngine: CommandParsing {
         } else if ["wi-fi", "bluetooth", "енергозбереження", "энергосбережения", "яскравість", "яркость", "гучність", "громкость", "пропущені дзвінки", "пропущенные звонки", "калькулятор", "програму телефон", "покажи мої контакти", "покажи мои контакты", "покажи мої будильники"].contains(where: text.contains) { entities["system_action"] = "unsupported_system_control"
         } else if ["таймер", "timer"].contains(where: text.contains) {
             entities["system_action"] = "timer"
-            if let match = text.range(of: #"([0-9]+)\s*(хв|мин|min|minute|сек|sec)"#, options: .regularExpression) {
+            if entities["duration_seconds"] == nil, let match = text.range(of: #"([0-9]+)\s*(хв|мин|min|minute|сек|sec)"#, options: .regularExpression) {
                 let value = String(text[match]); let amount = value.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }.first
                 if let amount { entities["duration_seconds"] = String(value.contains("сек") || value.contains("sec") ? amount : amount * 60) }
                 if let label = alarmLabel(in: text, kind: "timer") { entities["label"] = label }

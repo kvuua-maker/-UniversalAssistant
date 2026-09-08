@@ -28,7 +28,7 @@ final class AssistantViewModel {
     private let capabilityExecutor: any CanonicalCapabilityExecuting
     private let currentContext: CurrentContextStore
     private let ocrPipeline: OCRProductionPipeline
-    private let voiceInput = VoiceInputController()
+    private let voiceInput: VoiceInputController
     private let feedbackStore: UserFeedbackStore
     private let compactResultDuration: Duration
     private let presentationPreferenceStore: PresentationPreferenceStore
@@ -53,6 +53,7 @@ final class AssistantViewModel {
         feedbackStore: UserFeedbackStore = .shared,
         compactResultDuration: Duration = .seconds(2),
         presentationPreferenceStore: PresentationPreferenceStore = PresentationPreferenceStore(),
+        voiceInput: VoiceInputController = VoiceInputController(),
         systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
     ) {
         self.commandEngine = commandEngine
@@ -69,6 +70,7 @@ final class AssistantViewModel {
         self.feedbackStore = feedbackStore
         self.compactResultDuration = compactResultDuration
         self.presentationPreferenceStore = presentationPreferenceStore
+        self.voiceInput = voiceInput
         self.systemHandoffOpen = systemHandoffOpen
         voiceInput.setEventHandler { [weak self] event in
             self?.handleVoiceEvent(event)

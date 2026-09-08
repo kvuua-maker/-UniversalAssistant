@@ -6,9 +6,11 @@ import Testing
 private final class CapabilityExecutorStub: CanonicalCapabilityExecuting {
     let outcome: Result<CapabilityExecutionOutcome, Error>
     private(set) var received: [CommandIntent] = []
+    private(set) var commands: [StructuredCommand] = []
     init(_ outcome: Result<CapabilityExecutionOutcome, Error>) { self.outcome = outcome }
     func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         received.append(command.intent)
+        commands.append(command)
         return try outcome.get()
     }
 }
@@ -59,6 +61,26 @@ struct CanonicalCapabilityExecutionTests {
         model.submit()
         try await waitUntil { if case .deterministic = model.resultState { true } else { false } }
         #expect(executor.received == [.contactLookup])
+    }
+
+    @Test func unseenTemporalNumericAndContextRolesReachProductionBoundary() async throws {
+        let fact = ResultFact(id: "roles", label: "Result", value: "Verified", state: .verified,
+                              source: "test-source", observedAt: .now, priority: 1)
+        let value = try DeterministicResultComposer().compose(primaryAnswer: "Done", facts: [fact])
+        let executor = CapabilityExecutorStub(.success(.result(value)))
+        let model = AssistantViewModel(capabilityExecutor: executor)
+
+        model.input = "Запусти таймер на 1,5 хвилини для заварювання"
+        model.submit()
+        try await waitUntil { executor.commands.count == 1 }
+        #expect(executor.commands[0].intent == .deviceAction)
+        #expect(executor.commands[0].entities["temporal_expression"] != nil)
+
+        model.input = "Покажи банкомати по дорозі"
+        model.submit()
+        try await waitUntil { executor.commands.count == 2 }
+        #expect(executor.commands[1].entities["context_reference"] == "activeRoute")
+        #expect(executor.commands[1].intent != .webSearch)
     }
 
     @Test func systemPresentationIsTypedAndDoesNotMasqueradeAsCompletedAction() async throws {

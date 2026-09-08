@@ -50,4 +50,27 @@ struct CanonicalSemanticFrameTests {
         #expect(command.intent == .photoSearch)
         #expect(command.entities["query"] == "latest")
     }
+
+    @Test func temporalAndNumericRolesPreserveOrderedParameters() {
+        let timer = parser.parse("Встанови таймер на 2,5 хвилини для чаю")
+        #expect(timer.intent == .deviceAction)
+        #expect(timer.entities["duration_seconds"] == "150")
+        #expect(timer.entities["numeric_tokens"] == "2.5")
+        #expect(timer.entities["temporal_expression"] == "Встанови таймер на 2,5 хвилини для чаю")
+
+        let percentage = parser.parse("Зменш 880 на 12,5 відсотка")
+        #expect(percentage.intent == .localUtility)
+        #expect(percentage.entities["numeric_tokens"] == "880|12.5")
+        #expect(percentage.entities["percentage"] == "12.5")
+    }
+
+    @Test func compoundAndContextRolesSurviveCapabilitySelection() {
+        let route = parser.parse("Проклади маршрут до музею, потім знайди каву по дорозі")
+        #expect(route.entities["context_reference"] == "activeRoute")
+        #expect(route.entities["compound_clause_count"] == "2")
+        #expect(route.entities["compound_order"] == "sequential")
+
+        let shared = parser.parse("Прочитай текст на цій фотографії")
+        #expect(shared.entities["context_reference"] == "sharedContent")
+    }
 }

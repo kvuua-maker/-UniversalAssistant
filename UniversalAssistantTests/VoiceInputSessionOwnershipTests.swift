@@ -71,6 +71,57 @@ struct VoiceInputSessionOwnershipTests {
         #expect(deniedEvents == 0)
     }
 
+    @Test func audioInterruptionInvalidatesPendingSessionAndSuppressesLateAuthorization() async {
+        let gate = VoiceAuthorizationGate()
+        let capture = IdleVoiceCaptureBackend()
+        let controller = VoiceInputController(captureBackend: capture, authorization: { await gate.wait() })
+        let pending = Task { @MainActor in await controller.start() }
+        await waitForCount(1, gate: gate)
+
+        controller.handleAudioInterruptionBegan()
+        #expect(controller.state == .idle)
+        await gate.resume(at: 0, granted: true)
+        await pending.value
+
+        #expect(controller.state == .idle)
+        #expect(capture.stopCount == 2)
+    }
+
+    @Test func sceneTransitionInvalidatesPendingVoiceSession() async {
+        let gate = VoiceAuthorizationGate()
+        let capture = IdleVoiceCaptureBackend()
+        let controller = VoiceInputController(captureBackend: capture, authorization: { await gate.wait() })
+        let model = AssistantViewModel(voiceInput: controller)
+        model.toggleListening()
+        await waitForCount(1, gate: gate)
+
+        model.handleSceneBecameInactive()
+        await gate.resume(at: 0, granted: true)
+        await Task.yield()
+
+        #expect(controller.state == .idle)
+        #expect(!model.isListening)
+    }
+
+    @Test func harmlessRouteChangeDoesNotCancelPermissionOrCreateSecondSession() async {
+        let gate = VoiceAuthorizationGate()
+        let capture = IdleVoiceCaptureBackend()
+        let controller = VoiceInputController(captureBackend: capture, authorization: { await gate.wait() })
+        let pending = Task { @MainActor in await controller.start() }
+        await waitForCount(1, gate: gate)
+        controller.handleAudioRouteChanged(.init(
+            reasonRawValue: AVAudioSession.RouteChangeReason.categoryChange.rawValue,
+            reasonName: "categoryChange", previousInputs: [], previousOutputs: [],
+            currentInputs: ["BuiltInMic"], currentOutputs: [], inputAvailable: true
+        ))
+        #expect(controller.state == .requestingPermission)
+        #expect(await gate.count == 1)
+        controller.stop(reason: .externalRequest)
+        await gate.resume(at: 0, granted: true)
+        await pending.value
+        #expect(controller.state == .idle)
+    }
+
     private func waitForCount(_ expected: Int, gate: VoiceAuthorizationGate) async {
         for _ in 0..<100 {
             if await gate.count == expected { return }
