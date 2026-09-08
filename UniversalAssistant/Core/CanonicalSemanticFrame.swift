@@ -5,7 +5,7 @@ import Foundation
 /// noun (for example “document”) as an intent.
 struct CanonicalSemanticFrame: Equatable, Sendable {
     enum Action: String, Sendable { case open, choose, search, show, create, update, delete, copy, call, message, scan, recognize, share, navigate, query, set, record }
-    enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, settings, battery, storage, url, place, weather, text, code, note, audio, media }
+    enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, settings, battery, storage, url, place, weather, travelTime, text, code, note, audio, media }
     enum Source: String, Sendable { case files, photos, documents, clipboard, camera, calendar, reminders }
     enum ContextReference: String, Sendable { case currentLocation, activeRoute, selectedResult, sharedContent, previousResult }
 
@@ -251,7 +251,13 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             }
         }
 
-        if frame.action == .record && frame.object == .audio {
+        if frame.object == .travelTime {
+            entities["system_action"] = "travel_time"
+            if let location = frame.location { entities["destination"] = location }
+            return (.deviceAction, entities)
+        }
+
+        if frame.object == .audio && frame.action.map({ [.record, .set, .create].contains($0) }) == true {
             entities["recorder_action"] = "start"
             return (.audioRecord, entities)
         }
@@ -320,13 +326,25 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.search, ["знайд", "пошук", "найд", "search", "find"]),
             (.show, ["покаж", "show", "display"])
         ]
-        return families.first { _, roots in tokens.contains { token in roots.contains { token.hasPrefix($0) } } }?.0
+        if let leading = tokens.first,
+           let explicit = families.first(where: { _, roots in roots.contains { actionToken(leading, matches: $0) } }) {
+            return explicit.0
+        }
+        return families.first { _, roots in tokens.contains { token in roots.contains { actionToken(token, matches: $0) } } }?.0
+    }
+
+    private func actionToken(_ token: String, matches root: String) -> Bool {
+        if token.hasPrefix(root) { return true }
+        let prefixes = ["пере", "про", "при", "від", "вы", "ви", "за", "по"]
+        return prefixes.contains { prefix in
+            token.hasPrefix(prefix) && token.dropFirst(prefix.count).hasPrefix(root)
+        }
     }
 
     private func object(in tokens: [String]) -> CanonicalSemanticFrame.Object? {
         let families: [(CanonicalSemanticFrame.Object, [String])] = [
             (.contact, ["контакт"]),
-            (.audio, ["аудіозап", "аудиозап", "voice", "recording"]),
+            (.audio, ["аудіозап", "аудиозап", "голосов", "голосов", "звукозап", "voice", "recording"]),
             (.reminder, ["нагадув", "напомин", "reminder"]),
             (.calendar, ["календар", "поді", "зустр", "событ", "event", "appointment"]),
             (.timer, ["таймер", "timer"]),
@@ -334,6 +352,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.settings, ["налаштуван", "настрой", "параметр", "settings", "preferences", "einstellungen", "réglages"]),
             (.battery, ["батаре", "акумулятор", "battery"]),
             (.storage, ["сховищ", "простор", "памят", "storage", "diskspace"]),
+            (.travelTime, ["триваліст", "час-дорозі", "traveltime", "duration"]),
             (.code, ["qr", "barcode", "штрихкод", "код"]),
             (.text, ["текст", "text"]),
             (.weather, ["погод", "температур", "дощ", "дожд", "холод", "спек", "жарк", "weather", "rain", "cold", "hot"]),
