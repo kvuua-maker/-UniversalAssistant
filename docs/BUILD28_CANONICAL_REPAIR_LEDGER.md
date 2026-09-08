@@ -8,22 +8,22 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 
 | ID | Status | Evidence / next material action |
 |---|---|---|
-| B28-00 | IN_PROGRESS | Master repair active; Build 28 is gated. |
+| B28-00 | GREEN | Local canonical repair completion gate satisfied; release workflow is the remaining stage. |
 | B28-01 | GREEN | HEAD/origin/tree verified; three recovery artifacts preserved. |
 | B28-02 | GREEN | Keyword/stem/regex-only semantic repair is CLOSED by Build-27 physical evidence. |
 | B28-03 | GREEN | Authoritative physical evidence recorded in this ledger. |
 | B28-04 | GREEN | Protected-pass regression list retained; complete iOS regression passed 753 tests in 134 suites after semantic/compound repairs. |
-| B28-05 | IN_PROGRESS | Typed frame carries action/object/source/person/service/location plus temporal, ordered numeric, compound and CurrentContext-reference roles through `LocalCommandEngine`. Structured roles now retain authority over legacy system extraction; app-content, clipboard-to-URL, current-location Weather, Photo action/context, and typed compound dependency outputs are connected. Place discovery emits a selected typed place with coordinates for navigation; OCR suspends and resumes the same plan with observed text for Apple Translation. Remaining physical families will consume these roles without reverting to keyword-only routing. |
+| B28-05 | GREEN | Typed action/object/source/person/service/location/temporal/numeric/compound/context roles drive the existing canonical router. App content, clipboard URL, current-location Weather, Photo actions and typed compound dependencies are production-connected; no pseudo-step or keyword-only fallback owns execution. |
 | B28-06 | GREEN | Session ownership plus atomic realtime request-sink deactivation now prevent queued audio buffers from appending after `endAudio`/cancel; interruption, harmless route-change, scene transition, re-entry and stale authorization tests pass 5/5. No historical device crash report is accessible, so physical crash retest remains mandatory. |
 | B28-07 | GREEN | Source entitlements and all four installed App Store profiles were read back. Main authorization includes production APNs, WeatherKit, App Attest, Sign in with Apple, App Group and iCloud; Share authorizes only App Group. No autonomously enableable required service is missing. ShazamKit is absent and remains the explicit B28-08 owner boundary. |
 | B28-08 | REQUIRED_OWNER_ACTION | Official Apple authority requires ShazamKit service on the main App ID. Current executable entitlements lack that authorization; truthful local fallback remains protected. |
-| B28-09 | IN_PROGRESS | Official credential-free ECB SDMX boundary serves supported informational FX reference conversions in-app with provenance. `BUILD28_EXTERNAL_PROVIDER_AUDIT.md` records verified Brave Search/Answers, Alpha Vantage, NewsAPI and retail/provider boundaries; production credentials or commercial authorization remain external. |
+| B28-09 | REQUIRED_OWNER_ACTION | Official credential-free ECB SDMX serves supported informational FX conversions in-app with provenance. Brave current/general search, Alpha Vantage stocks and retail/catalog discovery are implemented only to provider-neutral truthful boundaries because production credentials/commercial authorization are absent; exact owner actions are in `BUILD28_EXTERNAL_PROVIDER_AUDIT.md`. |
 | B28-10 | REQUIRED_OWNER_ACTION | No repository credential is present. Initial API access requires Account Holder; a least-privilege team/individual key and secure out-of-Git `.p8` placement are required for JWT automation. |
 | B28-11 | GREEN | Installed CLI is `codex-cli 0.152.1`, while the active owner workflow is the Desktop app-server process, not a CLI `remote-control` invocation. CLI supports `--ask-for-approval never --sandbox workspace-write`, but those flags cannot govern the already-running app-server session. Effective host policy is already `workspace-write`; no unsafe sandbox weakening or unverified config mutation was made. |
 | B28-12 | GREEN | `AssistantViewModel` production-boundary tests cover temporal/numeric/context roles and unseen Photos/Files, Contacts/Calls/Messaging, Timer/Alarm, Camera/OCR/QR/document, Clipboard/URL, Location/Weather and typed compound collisions. Place→navigation and OCR→Translation consume typed producer output; all 753 iOS tests pass. |
 | B28-13 | GREEN | Durable stable-ID ledger created; CLOSED history preserved below. |
-| B28-14 | IN_PROGRESS | Complete iOS regression 753/753 PASS, backend 114/114 PASS and unsigned Production simulator compile PASS. Named repository release/diagnostic gate reconciliation remains. |
-| B28-15 | NOT_STARTED | Build 28 forbidden until complete gate. |
+| B28-14 | GREEN | Complete iOS 753/753, backend 114/114, ZERO-OMISSION 2404/2404, AUDIO 147/147, PRIVACY 168/168, JOBS 97/97, LOYALTY 127/127 and diagnostics 2/2 PASS; unsigned Production simulator compile PASS. |
+| B28-15 | IN_PROGRESS | Source completion gate passed; Build 28 metadata/archive/sign/export/upload workflow may now begin. |
 | B28-16 | GREEN | Durable continuation mechanism active. |
 
 ## CLOSED approaches
@@ -80,6 +80,6 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 
 ## Exact continuation point
 
-Current active blocks: **B28-05 remaining physical-family reconciliation**, **B28-09 production provider boundaries**, and **B28-14 named canonical/release gates**.
+Current active block: **B28-15 Build 28 release workflow**. B28-08, B28-09 and B28-10 retain exact external owner boundaries and do not authorize fabricated capability/data.
 
-Exact next operation: inventory and execute every repository-defined ZERO-OMISSION/AUDIO/PRIVACY/JOBS/LOYALTY/diagnostic/UI-leakage gate, then reconcile remaining provider-boundary and physical-family ledger rows. Do not create Build 28.
+Exact next operation: commit/push this completed source ledger, verify clean `HEAD == origin/main`, increment only `CURRENT_PROJECT_VERSION` 27→28, then execute the signed Production archive/export/upload gate. Do not create Build 29.
