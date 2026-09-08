@@ -44,6 +44,10 @@ final class AssistantViewModel {
     private var eventKitExecutionTask: Task<Void, Never>?
     private var genericDiscoveryTask: Task<Void, Never>?
     private var capabilityContinuation: CanonicalCapabilityContinuation?
+    // Own the permission-suspending microphone start from the UI lifecycle.
+    // Controller generation guards suppress stale callbacks; this task ownership
+    // also prevents abandoned starts surviving re-entry or scene transitions.
+    private var voiceStartTask: Task<Void, Never>?
 
     init(
         commandEngine: any CommandParsing = LocalCommandEngine(),
@@ -91,12 +95,18 @@ final class AssistantViewModel {
             voiceInput.stop(reason: .voiceDisabled); isListening = false; statusText = AppText.value("voice_disabled")
             return
         }
-        if isListening {
+        if isListening || voiceInput.state == .requestingPermission {
+            voiceStartTask?.cancel()
+            voiceStartTask = nil
             voiceInput.stop(reason: .userPressedStop); isListening = false; input = voiceInput.transcript; statusText = AppText.value("ready")
         } else {
-            Task {
+            voiceStartTask?.cancel()
+            voiceStartTask = Task { [weak self] in
+                guard let self else { return }
                 await voiceInput.start()
+                guard !Task.isCancelled else { return }
                 applyVoiceState(voiceInput.state)
+                voiceStartTask = nil
             }
         }
     }
@@ -155,6 +165,9 @@ final class AssistantViewModel {
 
     func handleSceneBecameInactive() {
         recorder.finalizeForLifecycleTransition()
+        voiceStartTask?.cancel()
+        voiceStartTask = nil
+        LocalVoiceDiagnosticReport.shared.record("scene_transition", "state=inactive")
         voiceInput.stop(reason: .sceneInactive)
         isListening = false
         resultDismissTask?.cancel()

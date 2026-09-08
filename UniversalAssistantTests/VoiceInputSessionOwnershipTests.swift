@@ -71,6 +71,25 @@ struct VoiceInputSessionOwnershipTests {
         #expect(deniedEvents == 0)
     }
 
+    @Test func secondMicTapCancelsPendingStartInsteadOfCreatingAnotherSession() async {
+        let gate = VoiceAuthorizationGate()
+        let capture = IdleVoiceCaptureBackend()
+        let controller = VoiceInputController(captureBackend: capture, authorization: { await gate.wait() })
+        let model = AssistantViewModel(voiceInput: controller)
+
+        model.toggleListening()
+        await waitForCount(1, gate: gate)
+        model.toggleListening()
+        #expect(controller.state == .idle)
+        #expect(!model.isListening)
+        #expect(await gate.count == 1)
+
+        await gate.resume(at: 0, granted: true)
+        await Task.yield()
+        #expect(controller.state == .idle)
+        #expect(!model.isListening)
+    }
+
     @Test func audioInterruptionInvalidatesPendingSessionAndSuppressesLateAuthorization() async {
         let gate = VoiceAuthorizationGate()
         let capture = IdleVoiceCaptureBackend()

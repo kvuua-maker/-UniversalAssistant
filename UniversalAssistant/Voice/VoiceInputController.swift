@@ -167,6 +167,7 @@ final class AppleVoiceAudioCaptureBackend: VoiceAudioCaptureBackend {
     }
 
     func stop() {
+        LocalVoiceDiagnosticReport.shared.record("audio_capture_stop", "running=\(audioEngine.isRunning)")
         if audioEngine.isRunning { audioEngine.stop() }
         if tapInstalled {
             audioEngine.inputNode.removeTap(onBus: 0)
@@ -410,7 +411,10 @@ final class VoiceInputController {
         capture.stop()
     }
 
-    func handleAudioInterruptionBegan() { stop(reason: .audioInterruption) }
+    func handleAudioInterruptionBegan() {
+        LocalVoiceDiagnosticReport.shared.record("audio_interruption", "state=began")
+        stop(reason: .audioInterruption)
+    }
     func handleAudioRouteChanged() {
         if state == .listening, !isFinalizingRecognition { stop(reason: .routeChange) }
     }
