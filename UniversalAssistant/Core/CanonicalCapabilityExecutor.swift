@@ -18,6 +18,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case translationTarget(String)
     case translation(LocalTranslationPlan)
     case photoAsset(String)
+    case audioFile(URL)
 
     var id: String {
         switch self {
@@ -33,6 +34,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
         case .translationTarget: "translation-target"
         case .translation: "translation"
         case .photoAsset: "photo-asset"
+        case .audioFile: "audio-file"
         }
     }
 }
@@ -251,7 +253,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case let .handoff(value): return .init(id: step.id, label: command.intent.rawValue, value: value.destination.absoluteString, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
         case let .presentation(value):
             switch value {
-            case .message, .share, .documents, .contactImport, .photoAsset:
+            case .message, .share, .documents, .contactImport, .photoAsset, .audioFile:
                 return .init(id: step.id, label: command.intent.rawValue, value: value.id, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
             case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .translationTarget, .translation:
                 throw CoordinationOperationError.confirmationRequired

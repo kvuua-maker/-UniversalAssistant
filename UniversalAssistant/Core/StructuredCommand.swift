@@ -283,7 +283,7 @@ struct LocalCommandEngine: CommandParsing {
     private func recorderAction(in text: String) -> String {
         if ["призупини", "pause recording", "aufnahme pausieren", "pause l'enregistrement"].contains(where: text.contains) { return "pause" }
         if ["продовж", "resume recording", "aufnahme fortsetzen", "reprends l'enregistrement"].contains(where: text.contains) { return "resume" }
-        if ["зупини", "stop recording", "aufnahme stoppen", "arrête l'enregistrement"].contains(where: text.contains) { return "stop" }
+        if ["зупини", "заверш", "закінч", "останови", "заверши", "stop recording", "aufnahme stoppen", "arrête l'enregistrement"].contains(where: text.contains) { return "stop" }
         return "start"
     }
 
@@ -349,6 +349,8 @@ struct LocalCommandEngine: CommandParsing {
         ["другий", "друга", "второй", "second", "zweite", "deuxième", "цей", "this"].contains(text) ? .contextualSelection : .unknown
     }
     private func priorityIntent(_ text: String) -> CommandIntent? {
+        let openVoiceMemos = ["відкрий", "открой", "open"].contains(where: text.contains) && ["диктофон", "voice memos", "голосові записи", "голосовые записи"].contains(where: text.contains)
+        if openVoiceMemos { return .open }
         if LocalUtilityEngine.recognizes(text) { return .localUtility }
         if LocalUtilityEngine.recognizesCurrency(text) { return .currencyConversion }
         let informationalGoals = ["інформац", "відомо про", "хто зараз", "свежую информацию", "информацию о", "кто сейчас", "information about", "latest information", "who is", "informationen über", "wer ist", "informations sur", "qui est"]
@@ -388,7 +390,7 @@ struct LocalCommandEngine: CommandParsing {
         let photoKinds = ["фото", "фотограф", "світлин", "снимк", "photos", "pictures"]
         if containsAny(text, showActions), containsAny(text, photoKinds) { return .photoSearch }
 
-        let recordActions = ["запиши", "записати", "почни запис", "запиши голос", "запиши аудіо", "запиши аудио", "record"]
+        let recordActions = ["запиши", "записати", "почни запис", "запиши голос", "запиши аудіо", "запиши аудио", "заверш", "закінч", "останов", "stop recording", "finish recording", "record"]
         let recordKinds = ["голосов", "аудіо", "аудио", "диктофон", "voice note", "recording"]
         if containsAny(text, recordActions), containsAny(text, recordKinds) { return .audioRecord }
 

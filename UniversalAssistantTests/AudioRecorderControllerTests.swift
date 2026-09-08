@@ -86,6 +86,42 @@ struct AudioRecorderControllerTests {
         #expect(throws: AudioRecorderError.invalidState) { try controller.rename(to: "Name") }
         #expect(throws: AudioRecorderError.noRecording) { try controller.delete() }
     }
+
+    @Test func finalizedRecordingRecoversAfterControllerRecreation() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        let first = AudioRecorderController(backend: RecorderBackendSpy(), directory: directory, permission: { true })
+        await first.start(); first.stop()
+        let finalized = try first.shareURL()
+        let recovered = AudioRecorderController(backend: RecorderBackendSpy(), directory: directory, permission: { true })
+        #expect(recovered.state == .stopped)
+        #expect(try recovered.shareURL() == finalized)
+    }
+
+    @Test func openVoiceMemosIsNeverInternalRecording() async {
+        let backend = RecorderBackendSpy()
+        let recorder = AudioRecorderController(backend: backend, directory: FileManager.default.temporaryDirectory.appending(path: UUID().uuidString), permission: { true })
+        let command = LocalCommandEngine().parse("Відкрий голосові записи")
+        #expect(command.intent == .open)
+        let executor = ProductionCanonicalCapabilityExecutor(recorder: recorder, personalSearchSources: [])
+        await #expect(throws: CanonicalCapabilityExecutionError.unavailable("no_verified_public_app_mechanism")) { try await executor.execute(command) }
+        #expect(backend.events.isEmpty)
+    }
+
+    @Test func homeLifecycleFinalizesPublishesAndRecoversAudioFile() async throws {
+        let backend = RecorderBackendSpy()
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        let recorder = AudioRecorderController(backend: backend, directory: directory, permission: { true })
+        let model = AssistantViewModel(recorder: recorder)
+        model.input = "Почни запис голосової нотатки"; model.submit()
+        for _ in 0..<100 { if recorder.state == .recording { break }; try await Task.sleep(for: .milliseconds(10)) }
+        model.input = "Заверши запис аудіо"; model.submit()
+        for _ in 0..<100 { if recorder.state == .stopped { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .audioFile(url) = model.capabilityPresentation else { Issue.record("Expected finalized audio file presentation"); return }
+        #expect(url == recorder.recordingURL)
+        let reopened = AudioRecorderController(backend: RecorderBackendSpy(), directory: directory, permission: { true })
+        #expect(reopened.recordingURL == url)
+    }
+
 }
 
 

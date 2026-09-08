@@ -147,6 +147,7 @@ final class AssistantViewModel {
     }
 
     func handleSceneBecameInactive() {
+        recorder.finalizeForLifecycleTransition()
         voiceInput.stop(reason: .sceneInactive)
         isListening = false
         resultDismissTask?.cancel()
@@ -280,6 +281,10 @@ final class AssistantViewModel {
                     } else {
                         resultState = .idle
                         statusText = AppText.value("ready")
+                        if action == .stop, recorder.state == .stopped, let url = recorder.recordingURL {
+                            currentContext.replaceShared(kind: .document, value: url.path)
+                            capabilityPresentation = .audioFile(url)
+                        }
                         LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=audio_record state=\(String(describing: recorder.state))")
                     }
                     capabilityExecutionInFlight = false

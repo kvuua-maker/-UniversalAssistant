@@ -90,6 +90,8 @@ struct AssistantHomeView: View {
                 TranslationTargetPickerView(text: text, onSelect: model.startTranslation)
             case let .photoAsset(identifier):
                 PhotoAssetPresentationView(localIdentifier: identifier, onOCR: model.handlePhotoOCRImage)
+            case let .audioFile(url):
+                SystemShareSheet(items: [url])
             case let .translation(plan):
                 AppleTranslationExecutionView(plan: plan, onResult: model.handleTranslationResult, onFailure: model.handleTranslationFailure)
             case let .message(recipients, body):

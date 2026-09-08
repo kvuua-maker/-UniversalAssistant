@@ -39,7 +39,7 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-14.14 | GREEN |
 | B27-14.15 | GREEN |
 | B27-14.16 | GREEN |
-| B27-14.17 | NOT_STARTED |
+| B27-14.17 | GREEN |
 | B27-14.18 | NOT_STARTED |
 | B27-14.19 | NOT_STARTED |
 | B27-14.20 | EXTERNAL_PROVIDER_DEPENDENCY |
@@ -282,3 +282,23 @@ All four GREEN statuses are source-level only; owner physical retest remains req
 Exact HEAD at checkpoint: 8f7fb29ae67c0c4366531176b63de8615af0aeba before this documentation-only follow-up commit.
 
 Exact next code-level operation: begin B27-14.17 Voice Memo. In StructuredCommand and the open-app/device registry, separate OPEN_APP Voice Memos semantics from internal VOICE_MEMO_RECORD. In AudioRecorderController, trace public AVFoundation start-pause-resume-stop, durable file/result publication and recovery after scene/app lifecycle. Add Home production-boundary lifecycle tests, crash/disappearance regression, and Development compile. Do not repeat any CLOSED approach.
+
+## Completed material repair: B27-14.17
+
+Physical evidence: internal voice recording started but later crashed/disappeared; an OPEN_APP Voice Memos request incorrectly started the UniversalAssistant recorder.
+
+Material repair:
+- OPEN_APP Voice Memos is classified before recorder patterns and terminates with the truthful public-iOS limitation because no documented third-party launch URL is used. It never starts AudioRecorderController.
+- Internal recording retains public AVAudioSession/AVAudioRecorder start, pause, resume and stop behavior. Scene deactivation finalizes active audio and playback safely.
+- Finalized nonempty m4a files live under Application Support, receive complete file protection, are recovered by newest modification date after controller/app recreation, and are published as typed document CurrentContext plus a public UIActivityViewController file result.
+- Stop morphology and intent classification use one shared action family, so unseen finish variants reach the same production path.
+
+CLOSED approaches: adding stop words only to recorderAction while leaving semantic intent classification unchanged. Production E2E proved the request still became unknown/web. The green mechanism aligns the action ontology at both canonical-intent and command-action stages.
+
+Verification: AudioRecorderControllerTests, VoiceTextInputQualityTests and UniversalDeviceCommandRouterTests PASS: 27 tests in 3 suites. Development compile PASS. Owner physical retest remains required.
+
+## Exact continuation point after B27-14.17
+
+B27-14.17 is GREEN. Build 27 does not exist.
+
+Exact next code-level operation: begin B27-14.18 Camera. Preserve public Camera open; classify take-photo separately, represent the required user shutter action truthfully through the existing camera presentation, and add production-boundary unseen variants proving no fabricated capture or web fallback.

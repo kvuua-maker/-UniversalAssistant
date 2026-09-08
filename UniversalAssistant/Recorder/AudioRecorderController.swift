@@ -76,6 +76,7 @@ final class AudioRecorderController {
         self.backend = backend
         self.directory = directory ?? Self.defaultDirectory()
         self.permission = permission
+        if let recovered = Self.latestRecording(in: self.directory) { recordingURL = recovered; state = .stopped }
         audioEvents = AudioSessionEventMonitor(
             onInterruption: { [weak self] in self?.handleAudioInterruptionBegan() },
             onRouteChange: { [weak self] _ in self?.handleAudioRouteChanged() })
@@ -125,6 +126,10 @@ final class AudioRecorderController {
         guard state == .playing else { return }
         backend.stopPlayback(); state = .stopped
     }
+    func finalizeForLifecycleTransition() {
+        if state == .recording || state == .paused { stop() }
+        else if state == .playing { stopPlayback() }
+    }
     func handleAudioInterruptionBegan() {
         if state == .recording { backend.pause(); state = .paused }
         else if state == .playing { backend.stopPlayback(); state = .stopped }
@@ -152,6 +157,18 @@ final class AudioRecorderController {
     func shareURL() throws -> URL {
         guard state == .stopped, let recordingURL else { throw AudioRecorderError.noRecording }
         return recordingURL
+    }
+
+    private static func latestRecording(in directory: URL) -> URL? {
+        guard let urls = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey], options: [.skipsHiddenFiles]) else { return nil }
+        return urls.filter { url in
+            guard url.pathExtension.lowercased() == "m4a", let values = try? url.resourceValues(forKeys: [.fileSizeKey]), (values.fileSize ?? 0) > 0 else { return false }
+            return true
+        }.max { left, right in
+            let lhs = (try? left.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+            let rhs = (try? right.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+            return lhs < rhs
+        }
     }
 
     private static func defaultDirectory() -> URL {
