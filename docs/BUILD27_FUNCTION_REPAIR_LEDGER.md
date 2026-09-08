@@ -50,10 +50,10 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-19 | GREEN |
 | B27-20 | GREEN |
 | B27-21 | GREEN |
-| B27-22 | NOT_STARTED |
+| B27-22 | EXTERNAL_PROVIDER_DEPENDENCY |
 | B27-23 | GREEN |
-| B27-24 | NOT_STARTED |
-| B27-25 | IN_PROGRESS |
+| B27-24 | GREEN |
+| B27-25 | EXTERNAL_PROVIDER_DEPENDENCY |
 
 ## CLOSED approaches
 
@@ -372,3 +372,8 @@ Canonical gates: backend PASS 114 tests/28 suites; ZERO-OMISSION 2404/2404; AUDI
 CLOSED environment approach: detached nohup xcodebuild did not survive the managed PTY shell and produced neither log nor xcresult. The materially different managed-session execution with active polling produced the durable result at /private/tmp/UA-B27-Full-iOS-20260908-0303.xcresult and PASS.
 
 Exact next operation: commit and push this completed source ledger, verify HEAD == origin/main and tracked tree clean, then execute B27-22 Build-27 release gate. B27-24 and B27-25 remain pending the final release report/completion.
+
+
+## Build 27 release checkpoint
+
+B27-22 reached archive/export verification but upload is externally blocked. Build source HEAD `0819b686e9361292a61092660517194d059fec61`; archive and IPA paths, SHA-256, signing/profile/entitlement evidence, exact account failure and continuation are persisted in `docs/BUILD27_RELEASE_VERIFICATION.md`. Upload attempt 1 did not reach Apple validation because Xcode has no App Store Connect account access for team 9V5XXDXF3N, and no local JWT/app-password upload credential is available. The unchanged account approach is CLOSED until credentials/account state materially changes. Build 28 was not created.
