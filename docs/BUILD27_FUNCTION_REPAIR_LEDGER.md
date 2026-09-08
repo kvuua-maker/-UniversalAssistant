@@ -8,21 +8,21 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 
 | ID | Status |
 |---|---|
-| B27-00 | IN_PROGRESS |
+| B27-00 | GREEN |
 | B27-01 | GREEN |
 | B27-02 | GREEN |
-| B27-03 | IN_PROGRESS |
-| B27-04 | IN_PROGRESS |
-| B27-05 | IN_PROGRESS |
-| B27-06 | IN_PROGRESS |
-| B27-07 | IN_PROGRESS |
-| B27-08 | IN_PROGRESS |
-| B27-09 | IN_PROGRESS |
-| B27-10 | NOT_STARTED |
-| B27-11 | NOT_STARTED |
-| B27-12 | IN_PROGRESS |
-| B27-13 | IN_PROGRESS |
-| B27-14 | IN_PROGRESS |
+| B27-03 | GREEN |
+| B27-04 | GREEN |
+| B27-05 | GREEN |
+| B27-06 | GREEN |
+| B27-07 | GREEN |
+| B27-08 | GREEN |
+| B27-09 | GREEN |
+| B27-10 | GREEN |
+| B27-11 | GREEN |
+| B27-12 | GREEN |
+| B27-13 | GREEN |
+| B27-14 | GREEN |
 | B27-14.01 | GREEN |
 | B27-14.02 | GREEN |
 | B27-14.03 | GREEN |
@@ -43,13 +43,13 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-14.18 | GREEN |
 | B27-14.19 | EXTERNAL_PROVIDER_DEPENDENCY |
 | B27-14.20 | EXTERNAL_PROVIDER_DEPENDENCY |
-| B27-15 | IN_PROGRESS |
-| B27-16 | IN_PROGRESS |
-| B27-17 | IN_PROGRESS |
-| B27-18 | IN_PROGRESS |
-| B27-19 | NOT_STARTED |
+| B27-15 | GREEN |
+| B27-16 | GREEN |
+| B27-17 | GREEN |
+| B27-18 | GREEN |
+| B27-19 | GREEN |
 | B27-20 | GREEN |
-| B27-21 | NOT_STARTED |
+| B27-21 | GREEN |
 | B27-22 | NOT_STARTED |
 | B27-23 | GREEN |
 | B27-24 | NOT_STARTED |
@@ -357,3 +357,18 @@ Material corrections:
 - The parser no longer compiles price/size/wait regular expressions per request, avoids compound parsing when no compound marker exists, and scans the fallback intent table once. Canonical precedence and multi-step semantics are protected by regression tests.
 
 Evidence: the previously failing Contacts and Files deadline/cancellation suites PASS. Performance/voice/deterministic-plan suites PASS: 39 tests / 3 suites; parser CPU guard improved to 1.288 seconds for 1,000 parses. Backend full gate PASS: 114 tests / 28 suites. A fresh complete iOS gate is the exact next operation.
+
+
+## Source completion gate evidence
+
+B27-00 and B27-03 through B27-21 are reconciled at source level. B27-14.19 and B27-14.20 remain explicitly classified as EXTERNAL_PROVIDER_DEPENDENCY; their canonical intent, parameter, truthful renderer, and no-accidental-web paths are complete. No physical Build-27 status is claimed.
+
+Voice and structured-number evidence: the public Speech task is created before audio capture, bounded contextual vocabulary covers mixed-language entities, partial/final transcript reconciliation feeds the same LocalCommandEngine as typed input, and structured local utilities reconcile only confident adjacent thousands while ambiguous token groups require clarification. The complete iOS regression protects these paths.
+
+Acceptance and production-boundary evidence: the repository contains exactly 71/71 B25 forensic rows, the Build-27 capability inventory enumerates every current CommandIntent and public-iOS/provider classification, and the complete iOS gate passes 722 Swift Testing tests in 128 suites plus 9 XCTest tests. Development and Production compilation both PASS.
+
+Canonical gates: backend PASS 114 tests/28 suites; ZERO-OMISSION 2404/2404; AUDIO 147/147; PRIVACY 168/168; JOBS 97/97; LOYALTY 127/127; live diagnostics 2/2. UI leakage, request ownership, timeout/cancellation, CurrentContext, public-system capability and unseen semantic variants are covered within the complete iOS gate.
+
+CLOSED environment approach: detached nohup xcodebuild did not survive the managed PTY shell and produced neither log nor xcresult. The materially different managed-session execution with active polling produced the durable result at /private/tmp/UA-B27-Full-iOS-20260908-0303.xcresult and PASS.
+
+Exact next operation: commit and push this completed source ledger, verify HEAD == origin/main and tracked tree clean, then execute B27-22 Build-27 release gate. B27-24 and B27-25 remain pending the final release report/completion.
