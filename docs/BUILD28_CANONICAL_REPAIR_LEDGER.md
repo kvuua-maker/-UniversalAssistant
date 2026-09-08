@@ -17,7 +17,7 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 | B28-06 | IN_PROGRESS | Session-generation ownership suppresses stale authorization, recognition and stop continuations; focused race tests and Development compile pass. Device crash evidence is unavailable locally; interruption and route-change lifecycle remain pending. |
 | B28-07 | IN_PROGRESS | Source entitlement and official-mechanism audit persisted in `BUILD28_APPLE_CAPABILITY_AUDIT.md`; Developer-account App ID/profile readback remains pending. |
 | B28-08 | REQUIRED_OWNER_ACTION | Official Apple authority requires ShazamKit service on the main App ID. Current executable entitlements lack that authorization; truthful local fallback remains protected. |
-| B28-09 | IN_PROGRESS | Provider research/configuration audit pending. |
+| B28-09 | IN_PROGRESS | Official credential-free ECB SDMX boundary now serves supported informational FX reference conversions in-app with provenance; unsupported currencies remain provider-required. General, stocks, catalog and retail providers remain under audit. |
 | B28-10 | REQUIRED_OWNER_ACTION | No repository credential is present. Initial API access requires Account Holder; a least-privilege team/individual key and secure out-of-Git `.p8` placement are required for JWT automation. |
 | B28-11 | IN_PROGRESS | Active Codex Remote Control policy audit pending. |
 | B28-12 | NOT_STARTED | Unseen cross-family production-boundary acceptance pending. |
@@ -49,6 +49,7 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 - `CanonicalSemanticFrameTests`: 5/5 PASS for unseen cross-family collisions.
 - Development simulator compile: PASS.
 - Physical iPhone verification remains pending.
+- Official ECB current-FX boundary: parser/executor tests 11/11 PASS together with protected local utilities; Development compile PASS. Supported ECB currencies return sourced in-app reference conversions, while UAH remains a truthful provider dependency.
 
 ## Exact continuation point
 
