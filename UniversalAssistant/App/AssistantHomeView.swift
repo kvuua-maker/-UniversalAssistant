@@ -77,8 +77,8 @@ struct AssistantHomeView: View {
                 SystemCameraCapture(onCapturedImage: model.handleCapturedOCRImage)
             case .ocrDocuments:
                 AuthorizedDocumentPicker(onSelection: model.handleSelectedOCRDocuments)
-            case .scanDocument:
-                SystemDocumentScannerView(onPages: model.handleScannedOCRDocument, onFailure: model.handleDocumentScannerFailure)
+            case let .scanDocument(mode):
+                SystemDocumentScannerView(onPages: { model.handleScannedDocument($0, mode: mode) }, onFailure: model.handleDocumentScannerFailure)
             case .scanner:
                 LiveCodeScannerView(onResult: model.handleScannedCode, onUnavailable: model.handleScannerUnavailable)
             case .documents:
@@ -105,6 +105,8 @@ struct AssistantHomeView: View {
             case let .photoShare(identifier):
                 PhotoAssetPresentationView(localIdentifier: identifier, onOCR: model.handlePhotoOCRImage, automaticAction: .share)
             case let .audioFile(url):
+                SystemShareSheet(items: [url])
+            case let .documentFile(url):
                 SystemShareSheet(items: [url])
             case let .translation(plan):
                 AppleTranslationExecutionView(plan: plan, onResult: model.handleTranslationResult, onFailure: model.handleTranslationFailure)

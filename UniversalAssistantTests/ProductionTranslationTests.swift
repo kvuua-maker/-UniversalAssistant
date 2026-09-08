@@ -87,10 +87,10 @@ struct ProductionTranslationTests {
         model.input = "Оцифруй цей документ, потім переклади німецькою"
         model.submit()
         for _ in 0..<100 {
-            if model.capabilityPresentation == .scanDocument { break }
+            if model.capabilityPresentation == .scanDocument(.recognizedText) { break }
             try await Task.sleep(for: .milliseconds(10))
         }
-        #expect(model.capabilityPresentation == .scanDocument)
+        #expect(model.capabilityPresentation == .scanDocument(.recognizedText))
         let image = UIGraphicsImageRenderer(size: CGSize(width: 2, height: 2)).image { context in
             UIColor.white.setFill(); context.fill(CGRect(x: 0, y: 0, width: 2, height: 2))
         }

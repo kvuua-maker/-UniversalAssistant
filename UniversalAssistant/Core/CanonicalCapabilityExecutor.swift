@@ -5,11 +5,13 @@ import UIKit
 import Contacts
 import ContactsUI
 
+enum DocumentScanOutputMode: String, Equatable, Sendable { case recognizedText, pdf }
+
 enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case camera
     case ocrCamera
     case ocrDocuments
-    case scanDocument
+    case scanDocument(DocumentScanOutputMode)
     case scanner
     case documents
     case share(String)
@@ -22,6 +24,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case photoOCR(String)
     case photoShare(String)
     case audioFile(URL)
+    case documentFile(URL)
 
     var id: String {
         switch self {
@@ -41,6 +44,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
         case .photoOCR: "photo-ocr"
         case .photoShare: "photo-share"
         case .audioFile: "audio-file"
+        case .documentFile: "document-file"
         }
     }
 }
@@ -249,7 +253,10 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .cameraCapture:
             if command.entities["capture_mode"] == "code_scan" { return .presentation(.scanner) }
             if command.entities["capture_mode"] == "text_scan" {
-                if command.entities["input_source"] == "document_camera" { return .presentation(.scanDocument) }
+                if command.entities["input_source"] == "document_camera" {
+                    let mode: DocumentScanOutputMode = command.entities["output_format"] == "pdf" ? .pdf : .recognizedText
+                    return .presentation(.scanDocument(mode))
+                }
                 return .presentation(command.entities["input_source"] == "document" ? .ocrDocuments : .ocrCamera)
             }
             return .presentation(.camera)
@@ -412,7 +419,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case let .handoff(value): return .init(id: step.id, label: command.intent.rawValue, value: value.destination.absoluteString, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
         case let .presentation(value):
             switch value {
-            case .message, .share, .documents, .contactImport, .photoAsset, .photoOCR, .photoShare, .audioFile:
+            case .message, .share, .documents, .contactImport, .photoAsset, .photoOCR, .photoShare, .audioFile, .documentFile:
                 return .init(id: step.id, label: command.intent.rawValue, value: value.id, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
             case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .contactAccess, .translationTarget, .translation:
                 throw CoordinationOperationError.confirmationRequired

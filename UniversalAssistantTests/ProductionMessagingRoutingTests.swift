@@ -83,7 +83,7 @@ struct ProductionAppContentCompositionTests {
         }
         let scanner = LocalCommandEngine().parse("Проскануй паперовий договір у PDF")
         #expect(scanner.entities["input_source"] == "document_camera")
-        #expect(try await ProductionCanonicalCapabilityExecutor(personalSearchSources: []).execute(scanner) == .presentation(.scanDocument))
+        #expect(try await ProductionCanonicalCapabilityExecutor(personalSearchSources: []).execute(scanner) == .presentation(.scanDocument(.pdf)))
     }
 
     @Test func spotifyContentNeverSilentlyRunsThroughAppleMusic() async throws {

@@ -522,7 +522,8 @@ final class AssistantViewModel {
         if accessed { url.stopAccessingSecurityScopedResource() }
         processOCR(image, provenance: .document)
     }
-    func handleScannedOCRDocument(_ pages: [UIImage]) {
+    func handleScannedOCRDocument(_ pages: [UIImage]) { handleScannedDocument(pages, mode: .recognizedText) }
+    func handleScannedDocument(_ pages: [UIImage], mode: DocumentScanOutputMode) {
         capabilityPresentation = nil
         guard !pages.isEmpty else { presentFailure(message: AppText.value("request_unavailable")); return }
         activeRequestGeneration &+= 1
@@ -532,6 +533,24 @@ final class AssistantViewModel {
         ocrExecutionTask = Task { [weak self] in
             guard let self else { return }
             do {
+                if mode == .pdf {
+                    var recognized: [String] = []
+                    for image in pages {
+                        recognized.append((try? await ocrPipeline.process(image, provenance: .document).recognizedText) ?? "")
+                    }
+                    let data = try OnDevicePDFProcessor().searchablePDF(images: pages, recognizedText: recognized)
+                    let base = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+                        .appending(path: "UniversalAssistant/Scans", directoryHint: .isDirectory)
+                    try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+                    let url = base.appending(path: "Scan-\(UUID().uuidString).pdf")
+                    try data.write(to: url, options: .atomic)
+                    guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
+                    currentContext.replaceShared(kind: .document, value: url.path)
+                    capabilityPresentation = .documentFile(url)
+                    resultState = .idle; statusText = AppText.value("ready")
+                    LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=document_pdf pages=\(pages.count)")
+                    return
+                }
                 let result = try await ocrPipeline.process(pages, provenance: .document)
                 guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
                 resultState = .ocr(result); statusText = AppText.value("ready")

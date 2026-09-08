@@ -1,5 +1,6 @@
 import Testing
 import UIKit
+import PDFKit
 @testable import UniversalAssistant
 
 @Suite("Production OCR")
@@ -85,7 +86,7 @@ struct ProductionOCRTests {
         #expect(command.intent == .cameraCapture)
         #expect(command.entities["capture_mode"] == "text_scan")
         #expect(command.entities["input_source"] == "document_camera")
-        #expect(try await ProductionCanonicalCapabilityExecutor(personalSearchSources: []).execute(command) == .presentation(.scanDocument))
+        #expect(try await ProductionCanonicalCapabilityExecutor(personalSearchSources: []).execute(command) == .presentation(.scanDocument(.recognizedText)))
 
         let processor = OCRProcessorStub(.success(["Page text"]))
         let result = try await OCRProductionPipeline(processor: processor).process([image(), image()], provenance: .document)
@@ -98,7 +99,7 @@ struct ProductionOCRTests {
         let command = LocalCommandEngine().parse(phrase)
         #expect(command.intent == .cameraCapture)
         #expect(command.entities["input_source"] == "document_camera")
-        #expect(try await ProductionCanonicalCapabilityExecutor(personalSearchSources: []).execute(command) == .presentation(.scanDocument))
+        #expect(try await ProductionCanonicalCapabilityExecutor(personalSearchSources: []).execute(command) == .presentation(.scanDocument(.recognizedText)))
     }
 
     @Test func scannedPagesReachTypedOCRResultAtProductionBoundary() async throws {
@@ -109,6 +110,25 @@ struct ProductionOCRTests {
         #expect(result.provenance == .document)
         #expect(result.recognizedText == "Complete receipt line\n\nComplete receipt line")
         #expect(result.actions == [.copy, .share, .translate])
+    }
+
+    @Test func scanToPDFCarriesTypedOutputThroughHomeAndProducesARealDocument() async throws {
+        let input = "Проскануй паперовий рахунок у PDF"
+        let command = LocalCommandEngine().parse(input)
+        #expect(command.intent == .cameraCapture)
+        #expect(command.entities["input_source"] == "document_camera")
+        #expect(command.entities["output_format"] == "pdf")
+        #expect(try await ProductionCanonicalCapabilityExecutor(personalSearchSources: []).execute(command) == .presentation(.scanDocument(.pdf)))
+
+        let model = AssistantViewModel(ocrProcessor: OCRProcessorStub(.success(["Invoice 2026"])), compactResultDuration: .seconds(60))
+        model.handleScannedDocument([image(), image()], mode: .pdf)
+        try await waitUntil { if case .documentFile = model.capabilityPresentation { true } else { false } }
+        guard case let .documentFile(url) = model.capabilityPresentation else {
+            Issue.record("Expected a typed PDF document presentation"); return
+        }
+        defer { try? FileManager.default.removeItem(at: url) }
+        #expect(url.pathExtension.lowercased() == "pdf")
+        #expect((try? Data(contentsOf: url)).flatMap(PDFDocument.init(data:))?.pageCount == 2)
     }
 
     @Test func supersedingHomeRequestCannotBeOverwrittenByLateOCR() async throws {

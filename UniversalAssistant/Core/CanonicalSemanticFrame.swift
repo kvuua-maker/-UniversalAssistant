@@ -142,7 +142,10 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         }
         if frame.source == .camera, frame.action.map({ [.scan, .recognize].contains($0) }) == true {
             entities["capture_mode"] = frame.object == .code ? "code_scan" : "text_scan"
-            if frame.object == .document { entities["input_source"] = "document_camera" }
+            if frame.object == .document {
+                entities["input_source"] = "document_camera"
+                if lexicalTokens(normalized).contains("pdf") { entities["output_format"] = "pdf" }
+            }
             return (.cameraCapture, entities)
         }
         if frame.source == .documents, frame.action == .recognize {
@@ -239,14 +242,17 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             return (.deviceAction, entities)
         }
 
-        if frame.action == .scan || frame.action == .recognize {
+        if frame.action == .scan || frame.action == .recognize || (frame.action == .create && frame.object == .document) {
             if frame.object == .code {
                 entities["capture_mode"] = "code_scan"
                 return (.cameraCapture, entities)
             }
             if frame.object == .document || frame.object == .text {
                 entities["capture_mode"] = "text_scan"
-                if frame.object == .document { entities["input_source"] = "document_camera" }
+                if frame.object == .document {
+                    entities["input_source"] = "document_camera"
+                    if lexicalTokens(normalized).contains("pdf") { entities["output_format"] = "pdf" }
+                }
                 return (.cameraCapture, entities)
             }
         }
