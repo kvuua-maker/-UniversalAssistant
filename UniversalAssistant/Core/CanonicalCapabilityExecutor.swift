@@ -181,6 +181,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             return .result(try result("Знайдено подкасти", facts: values.enumerated().map { index, item in
                 ResultFact(id: item.id, label: item.title, value: item.show ?? "Podcast", state: .verified, source: "Apple Podcasts", observedAt: .now, priority: 100 - index)
             }, actions: values.map { .init(id: $0.id, title: "Відкрити", kind: .open, destination: $0.exactURL) }))
+        case .musicRecognition:
+            return .result(try result(musicRecognitionAvailabilityMessage(for: command.language), facts: []))
         case .mediaSearch:
             guard let media else { throw CanonicalCapabilityExecutionError.unavailable("musickit_unavailable") }
             let query = try required(command.entities["query"], "media_query")
@@ -524,6 +526,16 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .fuel: return "gas station"
         case .shop: return command.entities["query"] ?? command.entities["brand"] ?? "shop"
         default: return command.entities["query"] ?? command.originalText
+        }
+    }
+
+    private func musicRecognitionAvailabilityMessage(for language: CommandLanguage) -> String {
+        switch language {
+        case .uk: "Розпізнавання музики потребує авторизованої для цього застосунку ShazamKit capability."
+        case .ru: "Распознавание музыки требует авторизованной для этого приложения ShazamKit capability."
+        case .de: "Die Musikerkennung benötigt eine für diese App autorisierte ShazamKit-Funktion."
+        case .fr: "La reconnaissance musicale nécessite une capacité ShazamKit autorisée pour cette app."
+        default: "Music recognition requires a ShazamKit capability authorized for this app."
         }
     }
 

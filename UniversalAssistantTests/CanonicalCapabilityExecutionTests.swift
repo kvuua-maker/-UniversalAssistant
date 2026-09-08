@@ -34,6 +34,21 @@ struct CanonicalCapabilityExecutionTests {
         }
     }
 
+    @Test func musicRecognitionRemainsSeparateFromPlaybackAndNeverFallsToWeb() async throws {
+        let parser = LocalCommandEngine()
+        for phrase in ["Визнач, яка композиція зараз грає", "Определи этот музыкальный трек", "Identify the playing song"] {
+            let command = parser.parse(phrase)
+            #expect(command.intent == .musicRecognition)
+            guard case let .result(result) = try await ProductionCanonicalCapabilityExecutor(personalSearchSources: []).execute(command) else {
+                Issue.record("Expected truthful local ShazamKit dependency result")
+                continue
+            }
+            #expect(result.primaryAnswer.localizedCaseInsensitiveContains("ShazamKit"))
+            #expect(result.actions.isEmpty)
+        }
+        #expect(parser.parse("Увімкни альбом у Apple Music").intent == .mediaSearch)
+    }
+
     @Test func parsedCapabilityUsesProductionExecutionBoundary() async throws {
         let fact = ResultFact(id: "one", label: "Result", value: "Verified", state: .verified,
                               source: "test-source", observedAt: .now, priority: 1)

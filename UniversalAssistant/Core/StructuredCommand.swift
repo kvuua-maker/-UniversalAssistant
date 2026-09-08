@@ -6,7 +6,7 @@ enum CommandIntent: String, Codable, CaseIterable, Sendable {
     case taxiSearch, taxiCompare, navigation, routeSearch, routeAwareSearch
     case calendarCreate, calendarQuery, calendarUpdate, calendarDelete, reminderCreate, reminderQuery
     case reminderComplete, reminderDelete, noteCreate, noteQuery, shoppingList, contactLookup, contactCall, messageCompose
-    case photoSearch, fileSearch, cameraCapture, translation, mediaSearch, podcastSearch, parcelTrack, weather
+    case photoSearch, fileSearch, cameraCapture, translation, musicRecognition, mediaSearch, podcastSearch, parcelTrack, weather
     case publicTransport, transportRoute, ticketSearch, ticketPurchaseHandoff, hotelSearch, travelPlan
     case emergency, webSearch, deviceAction, appAction, audioRecord, show, open, cancel, undo
     case localUtility, currencyConversion
@@ -95,6 +95,7 @@ struct LocalCommandEngine: CommandParsing {
         (.reminderComplete, ["виконай нагадування", "познач нагадування виконаним", "заверши напоминание", "complete reminder"]),
         (.reminderDelete, ["видали нагадування", "скасуй нагадування", "удали напоминание", "delete reminder"]),
         (.podcastSearch, ["знайди подкаст", "увімкни подкаст", "найди подкаст", "включи подкаст", "find podcast", "play podcast"]),
+        (.musicRecognition, ["що це за пісня", "яка зараз грає пісня", "розпізнай музику", "що за музика", "что это за песня", "какая песня играет", "распознай музыку", "what song is this", "identify this song", "recognize music"]),
         (.mediaSearch, ["увімкни музику", "знайди пісню", "включи музыку", "найди песню", "play music", "find song"]),
         (.parcelTrack, ["де моя посилка", "відстеж посилку", "где моя посылка", "отследи посылку", "track parcel", "track package"]),
         (.calendarCreate, ["запиши", "додай зустріч", "создай встреч", "add event", "termin erstellen", "ajoute un rendez-vous"]),
@@ -397,6 +398,10 @@ struct LocalCommandEngine: CommandParsing {
         let recordActions = ["запиши", "записати", "почни запис", "запиши голос", "запиши аудіо", "запиши аудио", "заверш", "закінч", "останов", "stop recording", "finish recording", "record"]
         let recordKinds = ["голосов", "аудіо", "аудио", "диктофон", "voice note", "recording"]
         if containsAny(text, recordActions), containsAny(text, recordKinds) { return .audioRecord }
+
+        let recognitionQuestions = ["що це", "що за", "яка", "розпізнай", "визнач", "что это", "что за", "какая", "распознай", "определи", "what", "identify", "recognize"]
+        let recognitionKinds = ["пісн", "музик", "композ", "трек", "песн", "музык", "music", "song", "track", "composition"]
+        if containsAny(text, recognitionQuestions), containsAny(text, recognitionKinds), ["це", "зараз", "грає", "это", "сейчас", "играет", "this", "playing", "identify", "recognize", "розпіз", "распоз"].contains(where: text.contains) { return .musicRecognition }
 
         let mediaActions = ["увімкни", "включи", "програй", "воспроизведи", "знайди", "найди", "play", "listen"]
         let mediaKinds = ["apple music", "музик", "пісн", "песн", "трек", "альбом", "виконав", "исполнител", "song", "artist"]

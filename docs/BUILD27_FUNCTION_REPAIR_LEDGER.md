@@ -41,7 +41,7 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-14.16 | GREEN |
 | B27-14.17 | GREEN |
 | B27-14.18 | GREEN |
-| B27-14.19 | NOT_STARTED |
+| B27-14.19 | EXTERNAL_PROVIDER_DEPENDENCY |
 | B27-14.20 | EXTERNAL_PROVIDER_DEPENDENCY |
 | B27-15 | IN_PROGRESS |
 | B27-16 | IN_PROGRESS |
@@ -320,3 +320,21 @@ Verification: `CanonicalCapabilityExecutionTests`, `SystemQuickActionPlannerTest
 B27-14.18 is GREEN. Build 27 does not exist.
 
 Exact next code-level operation: begin B27-14.19 Music Recognition. Audit the current source and installed public SDK for the existing ShazamKit boundary. If a configured legitimate recognition mechanism exists, connect the canonical voice/typed family through it with permission/audio-session/lifecycle handling and production-boundary tests. If the required catalog/session dependency is absent, implement a truthful local provider-required result and prevent Google fallback. Do not invent credentials or use undocumented mechanisms.
+
+## Reconciled dependency: B27-14.19
+
+Physical divergence: music-recognition requests were conflated with general media/search behavior and could reach Google advice instead of a music-recognition capability.
+
+CLOSED failed approach: treating recognition wording as ordinary `mediaSearch`/MusicKit lookup. MusicKit catalog search does not identify ambient audio, and physical evidence disproved web advice as a substitute.
+
+Material source repair: added the distinct `.musicRecognition` canonical intent, general Ukrainian/Russian/English recognition-question semantics, and a production executor result that truthfully identifies the missing authorized ShazamKit app capability. Music playback/search remains `.mediaSearch`. The result has no browser action and exposes no internal executor identifier.
+
+Public Apple audit: the installed iOS SDK contains public `ShazamKit`/`SHSession`, but `UniversalAssistant.entitlements`, the project, and the currently verified App Store profile configuration contain no `com.apple.developer.shazamkit` authorization. Adding an executable entitlement without App-ID/profile authorization would create a release signing mismatch. Real ambient recognition therefore remains EXTERNAL_PROVIDER_DEPENDENCY until the owner enables ShazamKit for the App ID and supplies matching profiles.
+
+Verification: the initial ontology omitted composition-family nouns and failed a new unseen phrase; that approach is CLOSED. The materially expanded music-object ontology (`composition`/`композ*`/`музык*`) passes. `CanonicalCapabilityExecutionTests`, `VoiceTextInputQualityTests`, and `DeterministicExecutionPlanTests` PASS (38 tests / 3 suites). Separate Development compile PASS.
+
+## Exact continuation point after B27-14.19
+
+B27-14.19 is EXTERNAL_PROVIDER_DEPENDENCY with the internally resolvable canonical routing and truthful renderer complete. Build 27 does not exist.
+
+Exact next operation: reconcile B27-14.20 and then audit every remaining main B27-00 through B27-25 identifier. Prove configured general/current/product/FX providers or preserve explicit dependencies; complete the repair ledger, capability inventory, unseen-parameter acceptance, production-boundary evidence, public-iOS audit, and all required gates before Build 27.
