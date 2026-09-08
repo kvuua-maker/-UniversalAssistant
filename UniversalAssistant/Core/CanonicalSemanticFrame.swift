@@ -99,6 +99,11 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             entities["query"] = frame.object == .file ? "file" : "document"
             return (.fileSearch, entities)
         }
+        if frame.source == .camera, frame.action.map({ [.scan, .recognize].contains($0) }) == true {
+            entities["capture_mode"] = frame.object == .code ? "code_scan" : "text_scan"
+            if frame.object == .document { entities["input_source"] = "document_camera" }
+            return (.cameraCapture, entities)
+        }
 
         if frame.object == .photo {
             if frame.action == .create {
@@ -157,7 +162,8 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         }
 
         if frame.action == .record && frame.object == .audio {
-            return (.audioRecord, ["recorder_action": "start"])
+            entities["recorder_action"] = "start"
+            return (.audioRecord, entities)
         }
 
         if frame.object == .media, let app = frame.app {

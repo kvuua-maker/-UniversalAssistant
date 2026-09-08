@@ -17,10 +17,10 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 | B28-06 | GREEN | Session ownership plus atomic realtime request-sink deactivation now prevent queued audio buffers from appending after `endAudio`/cancel; interruption, harmless route-change, scene transition, re-entry and stale authorization tests pass 5/5. No historical device crash report is accessible, so physical crash retest remains mandatory. |
 | B28-07 | IN_PROGRESS | Source entitlement and official-mechanism audit persisted in `BUILD28_APPLE_CAPABILITY_AUDIT.md`; Developer-account App ID/profile readback remains pending. |
 | B28-08 | REQUIRED_OWNER_ACTION | Official Apple authority requires ShazamKit service on the main App ID. Current executable entitlements lack that authorization; truthful local fallback remains protected. |
-| B28-09 | IN_PROGRESS | Official credential-free ECB SDMX boundary now serves supported informational FX reference conversions in-app with provenance; unsupported currencies remain provider-required. General, stocks, catalog and retail providers remain under audit. |
+| B28-09 | IN_PROGRESS | Official credential-free ECB SDMX boundary serves supported informational FX reference conversions in-app with provenance. `BUILD28_EXTERNAL_PROVIDER_AUDIT.md` records verified Brave Search/Answers, Alpha Vantage, NewsAPI and retail/provider boundaries; production credentials or commercial authorization remain external. |
 | B28-10 | REQUIRED_OWNER_ACTION | No repository credential is present. Initial API access requires Account Holder; a least-privilege team/individual key and secure out-of-Git `.p8` placement are required for JWT automation. |
-| B28-11 | IN_PROGRESS | Active Codex Remote Control policy audit pending. |
-| B28-12 | IN_PROGRESS | New `AssistantViewModel` tests prove temporal/route-context roles reach canonical executors; Share Extension pending-image host ingestion now works both on initial active launch and later scene activation, with exactly-once tests 6/6. Full unseen family matrix remains pending. |
+| B28-11 | GREEN | Installed CLI is `codex-cli 0.152.1`, while the active owner workflow is the Desktop app-server process, not a CLI `remote-control` invocation. CLI supports `--ask-for-approval never --sandbox workspace-write`, but those flags cannot govern the already-running app-server session. Effective host policy is already `workspace-write`; no unsafe sandbox weakening or unverified config mutation was made. |
+| B28-12 | IN_PROGRESS | `AssistantViewModel` tests prove temporal/route-context roles plus Photos/Files, Contacts/Calls, Alarm and Camera OCR/QR/document collisions reach canonical executors; affected suites pass 24/24. Share Extension pending-image ingestion works on initial and later scene activation, exactly once. Full unseen family matrix remains pending. |
 | B28-13 | GREEN | Durable stable-ID ledger created; CLOSED history preserved below. |
 | B28-14 | NOT_STARTED | Full gates run only after source repair. |
 | B28-15 | NOT_STARTED | Build 28 forbidden until complete gate. |
@@ -50,6 +50,8 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 - Development simulator compile: PASS.
 - Physical iPhone verification remains pending.
 - Official ECB current-FX boundary: parser/executor tests 11/11 PASS together with protected local utilities; Development compile PASS. Supported ECB currencies return sourced in-app reference conversions, while UAH remains a truthful provider dependency.
+- Camera-source semantic roles now select OCR/QR/document capture before legacy fallback, and audio-record resolution preserves temporal/context roles. `CanonicalSemanticFrameTests`, `CanonicalCapabilityExecutionTests`, and `ProductionCallRoutingTests`: 24/24 PASS; separate Development compile PASS.
+- External provider research and exact non-secret owner boundaries are persisted in `BUILD28_EXTERNAL_PROVIDER_AUDIT.md`.
 
 ## Current checkpoint
 
@@ -63,4 +65,4 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 
 Current active blocks: **B28-05 semantic-frame consumption across remaining physical defect families**, **B28-07 Apple live capability configuration**, and **B28-09 provider audit**.
 
-Exact next code-level action: continue Build-27 physical family reconciliation using the typed frame: verify Contacts normal-call action isolation, Files/Photos action-source collisions, then Calendar/Reminder/Alarm and OCR/QR/Document production boundaries with unseen Home tests. Continue provider and Apple live-capability audits independently. Do not create Build 28.
+Exact next code-level action: continue the remaining Build-27 physical families after the now-green role collisions: verify Calendar/Reminder natural parameter consumption and Alarm label/time consistency through their specialized production boundaries, then complete OCR/QR/document result continuations and CurrentContext composition. Continue live Apple capability/account readback and provider boundary work independently. Do not create Build 28.

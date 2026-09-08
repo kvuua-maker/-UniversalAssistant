@@ -83,6 +83,35 @@ struct CanonicalCapabilityExecutionTests {
         #expect(executor.commands[1].intent != .webSearch)
     }
 
+    @Test func unseenRoleCollisionsReachOneCanonicalHomeBoundary() async throws {
+        let fact = ResultFact(id: "frame", label: "Result", value: "Verified", state: .verified,
+                              source: "test-source", observedAt: .now, priority: 1)
+        let value = try DeterministicResultComposer().compose(primaryAnswer: "Done", facts: [fact])
+        let cases: [(String, CommandIntent, [String: String])] = [
+            ("Пошукай гарантійні талони серед фотографій", .photoSearch, [:]),
+            ("Дозволь обрати звіт із iCloud Drive", .fileSearch, [:]),
+            ("Покажи контакт Лесі", .contactLookup, [:]),
+            ("Набери Лесю", .contactCall, [:]),
+            ("Зателефонуй Лесі через WhatsApp", .contactCall, ["call_service": "whatsapp"]),
+            ("Встанови будильник на 06:40", .deviceAction, ["system_action": "alarm"]),
+            ("Прочитай текст камерою", .cameraCapture, ["capture_mode": "text_scan"]),
+            ("Проскануй штрихкод упаковки", .cameraCapture, ["capture_mode": "code_scan"]),
+            ("Оцифруй паперовий документ", .cameraCapture, ["input_source": "document_camera"])
+        ]
+
+        for item in cases {
+            let executor = CapabilityExecutorStub(.success(.result(value)))
+            let model = AssistantViewModel(capabilityExecutor: executor)
+            model.input = item.0
+            model.submit()
+            try await waitUntil { executor.commands.count == 1 }
+            let command = try #require(executor.commands.last)
+            #expect(command.intent == item.1)
+            for (key, expected) in item.2 { #expect(command.entities[key] == expected) }
+            #expect(command.intent != .webSearch)
+        }
+    }
+
     @Test func systemPresentationIsTypedAndDoesNotMasqueradeAsCompletedAction() async throws {
         let executor = CapabilityExecutorStub(.success(.presentation(.camera)))
         let model = AssistantViewModel(capabilityExecutor: executor)
