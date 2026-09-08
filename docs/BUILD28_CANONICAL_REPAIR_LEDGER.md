@@ -51,6 +51,14 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 - Physical iPhone verification remains pending.
 - Official ECB current-FX boundary: parser/executor tests 11/11 PASS together with protected local utilities; Development compile PASS. Supported ECB currencies return sourced in-app reference conversions, while UAH remains a truthful provider dependency.
 
+## Current checkpoint
+
+- HEAD: `e67fe635a9bd33670044989c33b5dcc6496d1882` (verify with Git before resuming).
+- `HEAD == origin/main`: PASS at checkpoint creation.
+- Tracked tree: CLEAN; only the three intentional recovery/handoff artifacts remain untracked and untouched.
+- Build 28: NOT CREATED.
+- Latest green blocks: voice session ownership, initial role-based semantic frame, official Apple capability boundary audit, credential-free ECB FX provider for its supported currencies.
+
 ## Exact continuation point
 
 Current active blocks: **B28-05 material semantic repair** and **B28-06 microphone/Speech lifecycle**.
