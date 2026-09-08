@@ -44,6 +44,8 @@ final class AssistantViewModel {
     private var eventKitExecutionTask: Task<Void, Never>?
     private var genericDiscoveryTask: Task<Void, Never>?
     private var capabilityContinuation: CanonicalCapabilityContinuation?
+    private var capabilityPresentationGeneration: UInt64?
+    private var capabilityPresentationCommandID: UUID?
     // Own the permission-suspending microphone start from the UI lifecycle.
     // Controller generation guards suppress stale callbacks; this task ownership
     // also prevents abandoned starts surviving re-entry or scene transitions.
@@ -182,9 +184,12 @@ final class AssistantViewModel {
         weatherExecutionTask?.cancel()
         eventKitExecutionTask?.cancel()
         genericDiscoveryTask?.cancel()
-        // A newly submitted command supersedes any UI-bound compound continuation.
-        // Late scanner/OCR callbacks therefore cannot resume an obsolete plan.
+        // A newly submitted command supersedes any UI-bound continuation.
+        // Late picker/scanner/OCR callbacks therefore cannot resume an obsolete request.
         capabilityContinuation = nil
+        capabilityPresentationGeneration = nil
+        capabilityPresentationCommandID = nil
+        capabilityPresentation = nil
         weatherExecutionInFlight = false
         eventKitExecutionInFlight = false
         capabilityExecutionInFlight = false
@@ -433,6 +438,8 @@ final class AssistantViewModel {
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=handoff capability=\(command.intent.rawValue)")
                 case let .presentation(presentation):
                     capabilityPresentation = presentation
+                    capabilityPresentationGeneration = presentation.id == "contact-access" ? requestGeneration : nil
+                    capabilityPresentationCommandID = presentation.id == "contact-access" ? command.id : nil
                     resultState = .idle
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=system_presentation capability=\(command.intent.rawValue)")
                 case let .suspended(presentation, continuation):
@@ -605,8 +612,29 @@ final class AssistantViewModel {
     func performTranslationAction(_ result: TranslationProductionResult, _ action: OCRResultAction) {
         switch action { case .copy: UIPasteboard.general.string = result.translatedText; case .share: capabilityPresentation = .share(result.translatedText); case .translate: break }
     }
+    func handleContactAccessGranted(_ identifiers: [String], for command: StructuredCommand) {
+        guard capabilityPresentationGeneration == activeRequestGeneration, capabilityPresentationCommandID == command.id else {
+            capabilityPresentation = nil
+            capabilityPresentationGeneration = nil
+            capabilityPresentationCommandID = nil
+            return
+        }
+        capabilityPresentation = nil
+        capabilityPresentationGeneration = nil
+        capabilityPresentationCommandID = nil
+        guard !identifiers.isEmpty else { presentFailure(message: AppText.value("request_unavailable")); return }
+        activeRequestGeneration &+= 1
+        let generation = activeRequestGeneration
+        var entities = command.entities
+        if identifiers.count == 1, let identifier = identifiers.first { entities["contact_identifier"] = identifier }
+        let resumed = StructuredCommand(id: command.id, originalText: command.originalText, normalizedText: command.normalizedText, language: command.language, intent: command.intent, entities: entities, constraints: command.constraints, risk: command.risk, needsClarification: false)
+        executeCanonicalCapability(resumed, summary: .init(request: command.originalText, intent: command.intent, risk: command.risk), requestGeneration: generation)
+    }
+
     func dismissCapabilityPresentation() {
         capabilityPresentation = nil
+        capabilityPresentationGeneration = nil
+        capabilityPresentationCommandID = nil
         capabilityContinuation = nil
     }
 

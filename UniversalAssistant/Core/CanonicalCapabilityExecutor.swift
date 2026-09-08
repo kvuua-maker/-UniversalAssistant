@@ -15,6 +15,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case share(String)
     case message(recipients: [String], body: String?)
     case contactImport(Data)
+    case contactAccess(query: String, command: StructuredCommand)
     case translationTarget(String)
     case translation(LocalTranslationPlan)
     case photoAsset(String)
@@ -33,6 +34,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
         case .share: "share"
         case .message: "message"
         case .contactImport: "contact-import"
+        case .contactAccess: "contact-access"
         case .translationTarget: "translation-target"
         case .translation: "translation"
         case .photoAsset: "photo-asset"
@@ -411,7 +413,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             switch value {
             case .message, .share, .documents, .contactImport, .photoAsset, .photoOCR, .photoShare, .audioFile:
                 return .init(id: step.id, label: command.intent.rawValue, value: value.id, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
-            case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .translationTarget, .translation:
+            case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .contactAccess, .translationTarget, .translation:
                 throw CoordinationOperationError.confirmationRequired
             }
         case .suspended:
@@ -677,8 +679,18 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         }
         let name = try required(command.entities["contact"], "contact_name")
         try await contacts.requestAccessIfNeeded()
-        switch try await contacts.resolve(name: name) {
-        case .notFound: throw CanonicalCapabilityExecutionError.unavailable("contact_not_found")
+        let resolution: ContactResolution
+        if let identifier = command.entities["contact_identifier"] {
+            resolution = try await contacts.resolve(exactIdentifier: identifier)
+        } else {
+            resolution = try await contacts.resolve(name: name)
+        }
+        switch resolution {
+        case .notFound:
+            if await contacts.authorizationState() == .limited, command.entities["contact_identifier"] == nil {
+                return .presentation(.contactAccess(query: name, command: command))
+            }
+            throw CanonicalCapabilityExecutionError.unavailable("contact_not_found")
         case let .ambiguous(values): throw CanonicalCapabilityExecutionError.ambiguous(values.map(\.displayName))
         case let .resolved(value):
             if preparesCall {

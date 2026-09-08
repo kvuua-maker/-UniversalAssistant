@@ -1,3 +1,4 @@
+import ContactsUI
 import MessageUI
 import SwiftUI
 
@@ -86,6 +87,15 @@ struct AssistantHomeView: View {
                 SystemShareSheet(items: [value])
             case let .contactImport(data):
                 VCardImportConfirmationView(data: data, onComplete: model.dismissCapabilityPresentation)
+            case let .contactAccess(query, command):
+                ContactAccessButton(
+                    queryString: query,
+                    ignoredEmails: nil,
+                    ignoredPhoneNumbers: nil,
+                    approvalCallback: { identifiers in model.handleContactAccessGranted(identifiers, for: command) }
+                )
+                .contactAccessButtonCaption(.phone)
+                .padding()
             case let .translationTarget(text):
                 TranslationTargetPickerView(text: text, onSelect: model.startTranslation)
             case let .photoAsset(identifier):

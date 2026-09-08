@@ -6,9 +6,13 @@ enum ContactResolution: Equatable, Sendable { case resolved(ContactCandidate), a
 enum ContactResolutionError: Error, Equatable, Sendable { case permissionRequired, permissionDenied, timedOut, cancelled, queryFailed }
 
 protocol ContactResolving: Sendable {
+    func authorizationState() async -> ContactAuthorizationState
     func requestAccessIfNeeded() async throws
     func resolve(name: String) async throws -> ContactResolution
     func resolve(exactIdentifier identifier: String) async throws -> ContactResolution
+}
+extension ContactResolving {
+    func authorizationState() async -> ContactAuthorizationState { .authorized }
 }
 protocol ContactQuerying: Sendable {
     func contacts(matching name: String, timeout: Duration) async throws -> [ContactCandidate]
@@ -114,6 +118,7 @@ actor LocalContactResolver: ContactResolving {
     init(authorization: any ContactAuthorizing = SystemContactAuthorization(), query: any ContactQuerying = SystemContactQuery(), queryTimeout: Duration = .seconds(3)) {
         self.authorization = authorization; self.query = query; self.queryTimeout = queryTimeout
     }
+    func authorizationState() -> ContactAuthorizationState { authorization.currentStatus() }
     func requestAccessIfNeeded() async throws {
         LocalVoiceDiagnosticReport.shared.record("contacts_authorization_started")
         switch authorization.currentStatus() {

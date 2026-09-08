@@ -41,8 +41,123 @@ private final class SequencedCapabilityExecutor: CanonicalCapabilityExecuting {
     }
 }
 
+
+private actor LimitedContactResolverStub: ContactResolving {
+    let state: ContactAuthorizationState
+    let named: ContactResolution
+    let identifiers: [String: ContactResolution]
+    private(set) var requestedAccess = 0
+    private(set) var resolvedIdentifiers: [String] = []
+    init(state: ContactAuthorizationState, named: ContactResolution = .notFound, identifiers: [String: ContactResolution] = [:]) {
+        self.state = state; self.named = named; self.identifiers = identifiers
+    }
+    func authorizationState() async -> ContactAuthorizationState { state }
+    func requestAccessIfNeeded() async throws {
+        requestedAccess += 1
+        if state == .denied || state == .restricted { throw ContactResolutionError.permissionDenied }
+    }
+    func resolve(name: String) async throws -> ContactResolution { named }
+    func resolve(exactIdentifier identifier: String) async throws -> ContactResolution {
+        resolvedIdentifiers.append(identifier)
+        return identifiers[identifier] ?? .notFound
+    }
+}
+
+
+@MainActor
+private final class ContactAccessContinuationExecutor: CanonicalCapabilityExecuting {
+    private(set) var commands: [StructuredCommand] = []
+    func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        commands.append(command)
+        if command.entities["contact_identifier"] == nil {
+            return .presentation(.contactAccess(query: command.entities["contact"] ?? "", command: command))
+        }
+        let fact = ResultFact(id: "contact", label: "Контакт", value: "Доступ надано", state: .verified, source: "Contacts", observedAt: .now, priority: 100)
+        return .result(try DeterministicResultComposer().compose(primaryAnswer: "Контакт знайдено", facts: [fact]))
+    }
+}
+
 @Suite("Contacts request lifecycle")
+@MainActor
 struct ContactsRequestLifecycleTests {
+    @Test func limitedAccessUsesPublicPickerThenExactSelectedIdentifier() async throws {
+        let contact = ContactCandidate(identifier: "contact-42", displayName: "Марія Коваль", phoneNumbers: ["+380931112233"])
+        let resolver = LimitedContactResolverStub(state: .limited, identifiers: [contact.identifier: .resolved(contact)])
+        let executor = ProductionCanonicalCapabilityExecutor(contacts: resolver, personalSearchSources: [])
+        let command = LocalCommandEngine().parse("Знайди контакт Марії Коваль")
+        guard case let .presentation(.contactAccess(query, suspended)) = try await executor.execute(command) else {
+            Issue.record("Expected public limited-contact access continuation"); return
+        }
+        #expect(!query.isEmpty)
+        var entities = suspended.entities
+        entities["contact_identifier"] = contact.identifier
+        let resumed = StructuredCommand(id: suspended.id, originalText: suspended.originalText, normalizedText: suspended.normalizedText,
+                                        language: suspended.language, intent: suspended.intent, entities: entities,
+                                        constraints: suspended.constraints, risk: suspended.risk, needsClarification: false)
+        guard case let .result(result) = try await executor.execute(resumed) else {
+            Issue.record("Expected selected limited contact result"); return
+        }
+        #expect(result.facts.first?.label == "Марія Коваль")
+        #expect(await resolver.resolvedIdentifiers == [contact.identifier])
+    }
+
+    @Test func permissionStatesAndAmbiguityTerminateWithoutWebOrFabrication() async throws {
+        for state in [ContactAuthorizationState.denied, .restricted] {
+            let executor = ProductionCanonicalCapabilityExecutor(contacts: LimitedContactResolverStub(state: state), personalSearchSources: [])
+            await #expect(throws: ContactResolutionError.permissionDenied) {
+                try await executor.execute(LocalCommandEngine().parse("Покажи контакт Катерини Бондар"))
+            }
+        }
+        let pending = LimitedContactResolverStub(state: .notDetermined, named: .notFound)
+        let pendingExecutor = ProductionCanonicalCapabilityExecutor(contacts: pending, personalSearchSources: [])
+        await #expect(throws: CanonicalCapabilityExecutionError.unavailable("contact_not_found")) {
+            try await pendingExecutor.execute(LocalCommandEngine().parse("Знайди контакт Івана Левченка"))
+        }
+        #expect(await pending.requestedAccess == 1)
+        let choices = [
+            ContactCandidate(identifier: "a", displayName: "Ірина Сервіс", phoneNumbers: ["1111111"]),
+            ContactCandidate(identifier: "b", displayName: "Ірина Склад", phoneNumbers: ["2222222"])
+        ]
+        let ambiguous = ProductionCanonicalCapabilityExecutor(contacts: LimitedContactResolverStub(state: .authorized, named: .ambiguous(choices)), personalSearchSources: [])
+        await #expect(throws: CanonicalCapabilityExecutionError.ambiguous(["Ірина Сервіс", "Ірина Склад"])) {
+            try await ambiguous.execute(LocalCommandEngine().parse("Покажи контакт Ірини"))
+        }
+    }
+
+    @Test @MainActor func pickerResumeIsGenerationOwnedAndEmptySelectionIsTerminal() async throws {
+        let executor = ContactAccessContinuationExecutor()
+        let model = AssistantViewModel(capabilityExecutor: executor, compactResultDuration: .seconds(60))
+        model.input = "Знайди контакт Наталії Черненко"; model.submit()
+        for _ in 0..<100 where model.capabilityPresentation == nil { try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .contactAccess(_, suspended)? = model.capabilityPresentation else { Issue.record("Expected contact access UI"); return }
+        model.handleContactAccessGranted(["selected-contact"], for: suspended)
+        for _ in 0..<100 where executor.commands.count < 2 { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(executor.commands.last?.entities["contact_identifier"] == "selected-contact")
+        #expect(model.statusText != AppText.value("processing"))
+
+        let staleExecutor = ContactAccessContinuationExecutor()
+        let staleModel = AssistantViewModel(capabilityExecutor: staleExecutor, compactResultDuration: .seconds(60))
+        staleModel.input = "Знайди контакт Романа Поліщука"; staleModel.submit()
+        for _ in 0..<100 where staleModel.capabilityPresentation == nil { try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .contactAccess(_, staleCommand)? = staleModel.capabilityPresentation else { Issue.record("Expected stale picker setup"); return }
+        staleModel.input = "Відкрий камеру"; staleModel.submit()
+        for _ in 0..<100 where staleExecutor.commands.count < 2 { try await Task.sleep(for: .milliseconds(10)) }
+        let countAfterNewRequest = staleExecutor.commands.count
+        staleModel.handleContactAccessGranted(["obsolete-contact"], for: staleCommand)
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(staleExecutor.commands.count == countAfterNewRequest)
+        #expect(staleExecutor.commands.last?.entities["contact_identifier"] == nil)
+
+        let emptyExecutor = ContactAccessContinuationExecutor()
+        let emptyModel = AssistantViewModel(capabilityExecutor: emptyExecutor)
+        emptyModel.input = "Покажи контакт Павла Дорошенка"; emptyModel.submit()
+        for _ in 0..<100 where emptyModel.capabilityPresentation == nil { try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .contactAccess(_, emptyCommand)? = emptyModel.capabilityPresentation else { Issue.record("Expected empty picker setup"); return }
+        emptyModel.handleContactAccessGranted([], for: emptyCommand)
+        #expect(emptyExecutor.commands.count == 1)
+        #expect(emptyModel.statusText != AppText.value("processing"))
+    }
+
     @Test func uniqueNotFoundAndAmbiguousAreDeterministic() async throws {
         let one = ContactCandidate(identifier: "1", displayName: "Олег", phoneNumbers: ["+380501234567"])
         let unique = LocalContactResolver(authorization: ContactAuthorizationStub(status: .authorized, granted: true), query: SystemContactQuery(store: ContactStoreStub(values: [one])))
