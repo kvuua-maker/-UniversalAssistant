@@ -9,7 +9,12 @@ struct CanonicalSemanticFrame: Equatable, Sendable {
     enum Source: String, Sendable { case files, photos, documents, clipboard, camera, calendar, reminders }
     enum ContextReference: String, Sendable { case currentLocation, activeRoute, selectedResult, sharedContent, previousResult }
 
-    struct TemporalRole: Equatable, Sendable { let expression: String; let durationSeconds: Int? }
+    struct TemporalRole: Equatable, Sendable {
+        let expression: String
+        let durationSeconds: Int?
+        let hour: Int?
+        let minute: Int?
+    }
     struct NumericRole: Equatable, Sendable { let orderedTokens: [String]; let percentage: Decimal? }
     struct CompoundRole: Equatable, Sendable { let clauses: [String]; let isSequential: Bool }
 
@@ -103,6 +108,10 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         if let temporal = frame.temporal {
             entities["temporal_expression"] = temporal.expression
             if let duration = temporal.durationSeconds { entities["duration_seconds"] = String(duration) }
+            if let hour = temporal.hour, let minute = temporal.minute {
+                entities["hour"] = String(format: "%02d", hour)
+                entities["minute"] = String(format: "%02d", minute)
+            }
         }
         if let numeric = frame.numeric {
             entities["numeric_tokens"] = numeric.orderedTokens.joined(separator: "|")
@@ -291,7 +300,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.message, ["напиш", "повідом", "сообщ", "message"]),
             (.navigate, ["маршрут", "вед", "проклад", "їхат", "ехать", "navigat", "route"]),
             (.create, ["створ", "дод", "заплан", "созд", "добав", "create", "add", "schedule"]),
-            (.set, ["постав", "встанов", "установ", "запуст", "запуст", "start", "set"]),
+            (.set, ["постав", "встанов", "установ", "запуст", "увімк", "включ", "розбуд", "start", "activate", "set"]),
             (.open, ["відкр", "откр", "open", "перейд"]),
             (.search, ["знайд", "пошук", "найд", "search", "find"]),
             (.show, ["покаж", "show", "display"]),
@@ -307,7 +316,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.reminder, ["нагадув", "напомин", "reminder"]),
             (.calendar, ["календар", "поді", "зустр", "событ", "event", "appointment"]),
             (.timer, ["таймер", "timer"]),
-            (.alarm, ["будильник", "alarm"]),
+            (.alarm, ["будильник", "розбуд", "alarm", "wake"]),
             (.settings, ["налаштуван", "настрой", "параметр", "settings", "preferences", "einstellungen", "réglages"]),
             (.code, ["qr", "barcode", "штрихкод", "код"]),
             (.text, ["текст", "text"]),
@@ -404,7 +413,23 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
                 durationSeconds = Int((number * multiplier).rounded())
             }
         }
-        return .init(expression: original.trimmingCharacters(in: .whitespacesAndNewlines), durationSeconds: durationSeconds)
+        let clock = explicitClock(in: normalized)
+        return .init(
+            expression: original.trimmingCharacters(in: .whitespacesAndNewlines),
+            durationSeconds: durationSeconds,
+            hour: clock?.hour,
+            minute: clock?.minute
+        )
+    }
+
+    private func explicitClock(in text: String) -> (hour: Int, minute: Int)? {
+        let pattern = #"(?<!\d)(?:о|об|в|at|um|a)?\s*([01]?\d|2[0-3])[:.]([0-5]\d)\b"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              let hourRange = Range(match.range(at: 1), in: text),
+              let minuteRange = Range(match.range(at: 2), in: text),
+              let hour = Int(text[hourRange]), let minute = Int(text[minuteRange]) else { return nil }
+        return (hour, minute)
     }
 
     private func numericRole(in normalized: String) -> CanonicalSemanticFrame.NumericRole? {

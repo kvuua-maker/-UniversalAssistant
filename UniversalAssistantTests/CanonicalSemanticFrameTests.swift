@@ -98,4 +98,23 @@ struct CanonicalSemanticFrameTests {
         let arithmetic = parser.parse("Сто поділити на п’ять і помножити на дев’ять")
         #expect(arithmetic.intent == .localUtility)
     }
+
+    @Test func temporalFamiliesProduceTypedPayloadsFromUnseenActionForms() {
+        let reminder = parser.parse("Встанови нагадування сьогодні о 18:35 забрати пакунок")
+        #expect(reminder.intent == .reminderCreate)
+
+        let timer = parser.parse("Увімкни таймер для заварювання на сорок п'ять секунд")
+        #expect(timer.intent == .deviceAction)
+        #expect(timer.entities["system_action"] == "timer")
+        #expect(timer.entities["duration_seconds"] == "45")
+
+        let alarm = parser.parse("Розбуди мене о 06:25 для раннього потяга")
+        #expect(alarm.intent == .deviceAction)
+        #expect(alarm.entities["system_action"] == "alarm")
+        #expect(alarm.entities["hour"] == "06")
+        #expect(alarm.entities["minute"] == "25")
+
+        let query = parser.parse("Перелік нагадувань на післязавтра")
+        #expect(query.intent == .reminderQuery)
+    }
 }

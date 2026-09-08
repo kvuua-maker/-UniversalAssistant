@@ -167,6 +167,21 @@ extension EventKitCommandExecutorDirectTests {
         #expect(parts.minute == 35)
     }
 
+    @Test func unseenReminderActionMorphologyDoesNotLeakIntoPayload() async throws {
+        let start = ISO8601DateFormatter().date(from: "2026-09-08T08:00:00Z")!
+        let reminders = DirectReminderStub()
+        let executor = ProductionEventKitCommandExecutor(
+            calendar: DirectCalendarStub(), reminders: reminders,
+            history: ActionHistory(persistence: DirectMemoryHistoryStore()),
+            now: { start }, timeZone: TimeZone(secondsFromGMT: 0)!
+        )
+        let parsed = LocalCommandEngine().parse("Встанови нагадування сьогодні о 18:35 забрати пакунок")
+        #expect(parsed.intent == .reminderCreate)
+        _ = try await executor.execute(parsed)
+        let created = try #require((await reminders.items).first)
+        #expect(created.draft.title == "забрати пакунок")
+    }
+
     @Test func reminderQueryVariantsUseEventKitAndRequestedDay() async throws {
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         let zone = TimeZone(identifier: "Europe/Kyiv")!

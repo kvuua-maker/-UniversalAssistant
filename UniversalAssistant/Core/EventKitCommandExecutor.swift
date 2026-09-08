@@ -31,6 +31,19 @@ struct EventKitCommandArgumentExtractor: Sendable {
         let action = ["запиши", "створи", "додай", "заплануй", "запланируй", "подію", "подія", "зустріч", "перенеси", "видали", "скасуй", "нагадай", "нагадати", "покажи", "календарі", "нагадування", "виконай", "познач", "виконаним", "заверши", "complete", "создай", "событие", "встречу", "удали", "напомни", "календаре", "напоминания", "add", "create", "event", "move", "delete", "remind", "show", "calendar", "reminders", "termin", "erstellen", "verschieben", "löschen", "erinnere", "kalendertermine", "rendez-vous", "ajoute", "déplace", "supprime", "rappelle", "événements", "rappels"]
         let temporal = ["будь ласка", "пожалуйста", "please", "на сьогодні", "на завтра", "на післязавтра", "на сегодня", "на послезавтра", "сьогодні", "завтра", "післязавтра", "сегодня", "послезавтра", "today", "tomorrow", "day after tomorrow", "heute", "morgen", "übermorgen", "aujourd’hui", "demain", "après-demain", "мені", "мне", "через", "ранку", "утра", "вранці", "вечора", "вечером"]
         var subject = command.originalText
+        // Remove canonical action/object roles by morphology, not by one
+        // memorized utterance. Temporal and user payload terms are cleaned
+        // separately below, leaving only the event/reminder title.
+        subject = subject.replacingOccurrences(
+            of: #"\b(?:постав\p{L}*|встанов\p{L}*|установ\p{L}*|створ\p{L}*|созд\p{L}*|дод\p{L}*|добав\p{L}*|заплан\p{L}*|нагада\p{L}*|напомн\p{L}*|remind\p{L}*|create\p{L}*|add\p{L}*|schedule\p{L}*)\b"#,
+            with: " ",
+            options: [.regularExpression, .caseInsensitive]
+        )
+        subject = subject.replacingOccurrences(
+            of: #"\b(?:нагадув\p{L}*|напомин\p{L}*|reminder\p{L}*|календар\p{L}*|поді\p{L}*|событ\p{L}*|зустріч\p{L}*|встреч\p{L}*|event\p{L}*|appointment\p{L}*)\b"#,
+            with: " ",
+            options: [.regularExpression, .caseInsensitive]
+        )
         subject = subject.replacingOccurrences(
             of: #"(?:\bна|\bfor)\s+\d+\s*(?:годин(?:у|и)?|hours?|хвилин(?:у|и)?|хв|минут(?:у|ы)?|мин|minutes?|mins?)"#,
             with: " ",
