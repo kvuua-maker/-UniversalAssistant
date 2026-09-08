@@ -40,7 +40,7 @@ Physical status is not assigned here. `GREEN` means source implementation is con
 | B27-14.15 | GREEN |
 | B27-14.16 | GREEN |
 | B27-14.17 | GREEN |
-| B27-14.18 | NOT_STARTED |
+| B27-14.18 | GREEN |
 | B27-14.19 | NOT_STARTED |
 | B27-14.20 | EXTERNAL_PROVIDER_DEPENDENCY |
 | B27-15 | IN_PROGRESS |
@@ -302,3 +302,21 @@ Verification: AudioRecorderControllerTests, VoiceTextInputQualityTests and Unive
 B27-14.17 is GREEN. Build 27 does not exist.
 
 Exact next code-level operation: begin B27-14.18 Camera. Preserve public Camera open; classify take-photo separately, represent the required user shutter action truthfully through the existing camera presentation, and add production-boundary unseen variants proving no fabricated capture or web fallback.
+
+## Completed material repair: B27-14.18
+
+Root cause: the public in-app camera presentation already existed, but the semantic family recognized only narrow create-photo wording. Unseen Ukrainian, Russian, and English capture imperatives could miss `.cameraCapture`.
+
+Material repair: `LocalCommandEngine.priorityIntent` now converges morphology-level capture verbs plus photo/image object families on `.cameraCapture`. Production execution remains the existing public `UIImagePickerController` presentation with a visible user shutter; the app does not claim that a photo was taken before the user acts. Existing Camera-open behavior remains separate and preserved.
+
+Public Apple classification: PUBLIC USER-CONFIRMED IN-APP CAPTURE. `UIImagePickerController` presents the system camera UI; iOS requires the user to operate the shutter. No private Camera.app URL scheme, silent capture, or fabricated success was introduced.
+
+Production-boundary evidence: new unseen Ukrainian/Russian/English capture variants parse to `.cameraCapture` and cross `ProductionCanonicalCapabilityExecutor` to `.presentation(.camera)`. Existing Home test proves the presentation is typed and is not rendered as a completed action.
+
+Verification: `CanonicalCapabilityExecutionTests`, `SystemQuickActionPlannerTests`, and `AppleSystemDomainIntegrationTests` PASS (20 tests / 3 suites). Separate Development simulator compile PASS.
+
+## Exact continuation point after B27-14.18
+
+B27-14.18 is GREEN. Build 27 does not exist.
+
+Exact next code-level operation: begin B27-14.19 Music Recognition. Audit the current source and installed public SDK for the existing ShazamKit boundary. If a configured legitimate recognition mechanism exists, connect the canonical voice/typed family through it with permission/audio-session/lifecycle handling and production-boundary tests. If the required catalog/session dependency is absent, implement a truthful local provider-required result and prevent Google fallback. Do not invent credentials or use undocumented mechanisms.

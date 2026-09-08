@@ -25,6 +25,15 @@ struct CanonicalCapabilityExecutionTests {
         #expect(parser.parse("Отследи посылку AB123456789CD").intent == .parcelTrack)
     }
 
+    @Test func unseenCaptureVariantsReachPublicVisibleCameraWithoutClaimingAutomaticCapture() async throws {
+        let parser = LocalCommandEngine()
+        for phrase in ["Зніми портретну фотографію", "Сними новый снимок", "Capture an image"] {
+            let command = parser.parse(phrase)
+            #expect(command.intent == .cameraCapture)
+            #expect(try await ProductionCanonicalCapabilityExecutor(personalSearchSources: []).execute(command) == .presentation(.camera))
+        }
+    }
+
     @Test func parsedCapabilityUsesProductionExecutionBoundary() async throws {
         let fact = ResultFact(id: "one", label: "Result", value: "Verified", state: .verified,
                               source: "test-source", observedAt: .now, priority: 1)

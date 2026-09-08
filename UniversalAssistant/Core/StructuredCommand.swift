@@ -382,6 +382,10 @@ struct LocalCommandEngine: CommandParsing {
         let groceryKinds = ["продукт", "супермаркет", "магазин", "молоч", "хліб", "овоч", "фрукт", "круп", "напій", "хлеб", "овощ", "grocer", "supermarket", "food store"]
         let retailerSignals = ["сільпо", "silpo", "атб", "fora", "фора", "fozzy"]
 
+        let cameraActions = ["знім", "сфотограф", "сними", "сфотограф", "capture", "take"]
+        let cameraKinds = ["фото", "фотограф", "знімок", "снимок", "photo", "picture", "image"]
+        if containsAny(text, cameraActions), containsAny(text, cameraKinds) { return .cameraCapture }
+
         let translationActions = ["перекла", "переве", "translate", "übersetz", "tradui"]
         let translationTargets = ["англій", "україн", "росій", "німець", "француз", "англий", "украин", "русск", "немец", "english", "ukrainian", "russian", "german", "french"]
         if containsAny(text, translationActions), containsAny(text, translationTargets) { return .translation }
