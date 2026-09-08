@@ -13,7 +13,7 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 | B28-02 | GREEN | Keyword/stem/regex-only semantic repair is CLOSED by Build-27 physical evidence. |
 | B28-03 | GREEN | Authoritative physical evidence recorded in this ledger. |
 | B28-04 | IN_PROGRESS | Protected-pass regression list retained; full gate pending. |
-| B28-05 | IN_PROGRESS | Typed frame now carries action/object/source/person/service/location plus temporal, ordered numeric, compound and CurrentContext-reference roles through `LocalCommandEngine`; 7/7 parser and production-boundary coverage pass. Remaining physical families will consume these roles without reverting to keyword-only routing. |
+| B28-05 | IN_PROGRESS | Typed frame carries action/object/source/person/service/location plus temporal, ordered numeric, compound and CurrentContext-reference roles through `LocalCommandEngine`. Structured roles now retain authority over legacy system extraction; app-content provider and current-location Weather composition are connected. Remaining physical families will consume these roles without reverting to keyword-only routing. |
 | B28-06 | GREEN | Session ownership plus atomic realtime request-sink deactivation now prevent queued audio buffers from appending after `endAudio`/cancel; interruption, harmless route-change, scene transition, re-entry and stale authorization tests pass 5/5. No historical device crash report is accessible, so physical crash retest remains mandatory. |
 | B28-07 | GREEN | Source entitlements and all four installed App Store profiles were read back. Main authorization includes production APNs, WeatherKit, App Attest, Sign in with Apple, App Group and iCloud; Share authorizes only App Group. No autonomously enableable required service is missing. ShazamKit is absent and remains the explicit B28-08 owner boundary. |
 | B28-08 | REQUIRED_OWNER_ACTION | Official Apple authority requires ShazamKit service on the main App ID. Current executable entitlements lack that authorization; truthful local fallback remains protected. |
@@ -35,6 +35,7 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 | System fallback | Generic unavailable/web after broad device intent | Recognized system/device commands still reached Google | Capability resolution occurred too late | Typed public-capability classification before any web fallback |
 | Cross-family composition | Independent keyword-triggered intent selection | Photos/Files, Location/Weather, Contact/Call, Clipboard/URL and Route/Place collided | Whole-command roles and dependencies were discarded | Semantic frame plus deterministic dependency lowering into existing canonical executors |
 | OCR input selection | Treat every recognized text object as a document-camera scan | Existing production regression required plain “recognize text” to use camera OCR, while an existing document must use the picker | Object type alone cannot distinguish capture from an existing source | Separate `OBJECT=text`, `SOURCE=documents`, and `ACTION=scan + OBJECT=document`; route to camera OCR, document-picker OCR, or VisionKit respectively |
+| Structured system parameters | Run legacy quick-action extraction after the semantic frame and allow it to overwrite role-derived parameters | Unseen clipboard web-address composition produced `clipboard_open_url` in the frame, then legacy address matching changed it to `current_address` | Post-frame keyword extraction violated structured-role authority | Legacy extraction now runs only when the semantic frame did not provide `system_action` |
 
 ## Build-27 physical evidence carried forward
 
@@ -56,6 +57,7 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 - OCR execution now owns a cancellable task and request generation. A superseding Home request cancels waiting OCR and stale completion cannot mutate the renderer. Camera OCR, existing-document OCR and multi-page VisionKit scan are role-distinct; frame/OCR/scanner suites pass 30/30.
 - App Store provisioning readback confirms the main and Share target authorizations, production signing services and minimal Share entitlement. ShazamKit remains absent rather than being added without authorization.
 - Message composition now consumes semantic PERSON/SERVICE roles through the production Contacts boundary. Ordinary recipients open the public Messages composer with a resolved number; explicit WhatsApp uses the official `wa.me` handoff. Missing and ambiguous recipients terminate truthfully; messaging/frame suites pass 14/14 and Development compile passes.
+- App-content composition preserves the requested provider: Spotify content requests use its documented app handoff instead of silently querying Apple Music; Apple Music remains on MusicKit. Clipboard SOURCE + URL OBJECT reaches the exact user-initiated public URL handoff. Current-location context composes into WeatherKit rather than returning coordinates. These affected suites pass 15/15 and Development compile passes.
 
 ## Current checkpoint
 
@@ -69,4 +71,4 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 
 Current active blocks: **B28-05 semantic-frame consumption across remaining physical defect families**, **B28-07 Apple live capability configuration**, and **B28-09 provider audit**.
 
-Exact next code-level action: continue the unseen cross-family production matrix with app-content actions, location-to-weather, clipboard-to-URL and photo/context composition; then reconcile remaining physical families and provider boundaries without fabricated credentials. Do not create Build 28.
+Exact next code-level action: continue the unseen cross-family production matrix with photo/context share-OCR composition and compound dependency lowering, then reconcile the remaining Build-27 physical families and provider boundaries without fabricated credentials. Do not create Build 28.

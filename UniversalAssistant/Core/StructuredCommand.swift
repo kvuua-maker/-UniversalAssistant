@@ -182,7 +182,9 @@ struct LocalCommandEngine: CommandParsing {
         if [.placeSearch, .restaurantSearch, .serviceSearch, .weather].contains(intent), let value = locality(in: text) { entities["location"] = value }
         if intent == .weather, entities["location"] == nil { entities["near_current_location"] = "true" }
         if intent == .audioRecord { entities["recorder_action"] = recorderAction(in: normalized) }
-        if intent == .deviceAction { extractSystemQuickAction(from: text, normalized: normalized, into: &entities) }
+        if intent == .deviceAction, entities["system_action"] == nil {
+            extractSystemQuickAction(from: text, normalized: normalized, into: &entities)
+        }
         if intent == .cameraCapture, ["qr", "q r", "ку ар", "штрихкод", "barcode", "скануй код", "сканируй код"].contains(where: normalized.contains) { entities["capture_mode"] = "code_scan" }
         if intent == .cameraCapture, ["розпізнай текст", "розпізнати текст", "распознай текст", "recognize text", "scan text"].contains(where: normalized.contains) {
             entities["capture_mode"] = "text_scan"

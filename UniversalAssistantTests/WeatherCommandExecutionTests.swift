@@ -35,6 +35,19 @@ private struct WeatherViewModelExecutor: WeatherCommandExecuting {
     }
 }
 
+private actor WeatherCommandCapture {
+    private(set) var commands: [StructuredCommand] = []
+    func append(_ command: StructuredCommand) { commands.append(command) }
+}
+
+private struct CapturingWeatherViewModelExecutor: WeatherCommandExecuting {
+    let capture: WeatherCommandCapture
+    func execute(_ command: StructuredCommand) async throws -> WeatherSnapshot {
+        await capture.append(command)
+        return weatherExecutionSnapshot()
+    }
+}
+
 private func weatherExecutionSnapshot() -> WeatherSnapshot {
     .init(
         current: .init(date: .now, temperatureCelsius: 18,
@@ -100,6 +113,26 @@ struct WeatherCommandExecutionTests {
 
         #expect(model.resultState == .weather(snapshot))
         #expect(model.statusText == AppText.value("ready"))
+    }
+
+    @MainActor
+    @Test func unseenLocationReferenceComposesIntoWeatherAtHomeBoundary() async throws {
+        let capture = WeatherCommandCapture()
+        let model = AssistantViewModel(weatherExecutor: CapturingWeatherViewModelExecutor(capture: capture))
+        model.input = "Чи холодно там, де я перебуваю?"
+
+        model.submit()
+        try await waitForWeatherResult(model)
+
+        let command = try #require(await capture.commands.last)
+        #expect(command.intent == .weather)
+        #expect(command.entities["context_reference"] == "currentLocation")
+        #expect(command.entities["near_current_location"] == "true")
+        guard case let .weather(snapshot) = model.resultState else {
+            Issue.record("Expected in-app Weather result"); return
+        }
+        #expect(snapshot.source == "weather-test")
+        #expect(snapshot.current.temperatureCelsius == 18)
     }
 
     @MainActor

@@ -113,6 +113,14 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             entities["input_source"] = "document"
             return (.cameraCapture, entities)
         }
+        if frame.source == .clipboard {
+            if frame.action == .open || frame.object == .url {
+                entities["system_action"] = "clipboard_open_url"
+            } else {
+                entities["system_action"] = "clipboard_read"
+            }
+            return (.deviceAction, entities)
+        }
 
         if frame.object == .photo {
             if frame.action == .create {
@@ -142,7 +150,9 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         }
 
         if frame.object == .weather || weatherQuestion(normalized) {
-            if frame.modifiers.contains("current_location") { entities["near_current_location"] = "true" }
+            if frame.modifiers.contains("current_location") || frame.contextReference == .currentLocation {
+                entities["near_current_location"] = "true"
+            }
             if let location = frame.location { entities["location"] = location }
             return (.weather, entities)
         }
@@ -234,13 +244,13 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.alarm, ["будильник", "alarm"]),
             (.code, ["qr", "barcode", "штрихкод", "код"]),
             (.text, ["текст", "text"]),
-            (.weather, ["погод", "температур", "дощ", "дожд", "weather", "rain"]),
+            (.weather, ["погод", "температур", "дощ", "дожд", "холод", "спек", "жарк", "weather", "rain", "cold", "hot"]),
             (.photo, ["фото", "світлин", "знім", "сним", "photo", "image", "picture"]),
             (.file, ["файл", "file"]),
             (.document, ["документ", "document", "pdf"]),
             (.note, ["нотат", "замет", "note"]),
-            (.url, ["url", "посилан", "ссылк", "link"]),
-            (.media, ["плейлист", "playlist", "пісн", "песн", "song", "трек", "track"]),
+            (.url, ["url", "посилан", "ссылк", "link", "вебадрес", "webaddress"]),
+            (.media, ["плейлист", "playlist", "добір", "подбор", "selection", "пісн", "песн", "song", "трек", "track"]),
             (.app, ["програм", "застос", "прилож", "app"])
         ]
         return families.first { _, roots in tokens.contains { token in roots.contains { token.hasPrefix($0) } } }?.0
@@ -249,7 +259,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     private func source(in tokens: [String]) -> CanonicalSemanticFrame.Source? {
         if tokens.contains(where: { ["photos", "photolibrary"].contains($0) }) { return .photos }
         if tokens.contains(where: { ["файлів", "файлах", "files", "icloud", "drive"].contains($0) }) { return .files }
-        if tokens.contains(where: { ["буфер", "clipboard"].contains($0) }) { return .clipboard }
+        if tokens.contains(where: { token in ["буфер", "clipboard"].contains(where: token.hasPrefix) }) { return .clipboard }
         if tokens.contains(where: { token in ["камер", "camera"].contains(where: token.hasPrefix) }) { return .camera }
         return nil
     }

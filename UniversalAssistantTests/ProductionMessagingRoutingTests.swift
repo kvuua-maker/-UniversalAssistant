@@ -65,3 +65,39 @@ struct ProductionMessagingRoutingTests {
         }
     }
 }
+
+@Suite("Production app-content and clipboard composition")
+@MainActor
+struct ProductionAppContentCompositionTests {
+    @Test func spotifyContentNeverSilentlyRunsThroughAppleMusic() async throws {
+        let executor = ProductionCanonicalCapabilityExecutor(personalSearchSources: [])
+        let command = LocalCommandEngine().parse("Знайди добірку для бігу в Spotify")
+        #expect(command.intent == .mediaSearch)
+        #expect(command.entities["app"] == "Spotify")
+        guard case let .handoff(result) = try await executor.execute(command) else {
+            Issue.record("Expected documented Spotify app handoff"); return
+        }
+        #expect(result.destination.absoluteString == "spotify:")
+    }
+
+    @Test func clipboardURLRolesReachThePublicUserInitiatedBoundary() async throws {
+        let expected = URL(string: "https://developer.apple.com/documentation")!
+        let executor = ProductionCanonicalCapabilityExecutor(
+            clipboardRead: { .url(expected) },
+            personalSearchSources: []
+        )
+        let input = "Перейди за вебадресою з буфера"
+        let frame = CanonicalSemanticFrameAnalyzer().analyze(original: input, normalized: input.lowercased())
+        #expect(frame.frame.action == .open)
+        #expect(frame.frame.object == .url)
+        #expect(frame.frame.source == .clipboard)
+        #expect(frame.intent == .deviceAction)
+        let command = LocalCommandEngine().parse(input)
+        #expect(command.intent == .deviceAction)
+        #expect(command.entities["system_action"] == "clipboard_open_url")
+        guard case let .handoff(result) = try await executor.execute(command) else {
+            Issue.record("Expected exact clipboard URL handoff"); return
+        }
+        #expect(result.destination == expected)
+    }
+}

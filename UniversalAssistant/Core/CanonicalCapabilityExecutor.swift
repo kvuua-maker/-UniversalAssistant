@@ -184,6 +184,22 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .musicRecognition:
             return .result(try result(musicRecognitionAvailabilityMessage(for: command.language), facts: []))
         case .mediaSearch:
+            let requestedApp = command.entities["app"]?.lowercased()
+            if requestedApp == "spotify" {
+                // Spotify documents its iOS app scheme for app detection/opening.
+                // Catalog item discovery itself requires a registered Web API app
+                // and OAuth; do not silently execute this query in Apple Music.
+                guard let url = URL(string: "spotify:") else {
+                    throw CanonicalCapabilityExecutionError.unavailable("spotify_handoff_invalid")
+                }
+                return .handoff(.init(query: command.originalText, destination: url, kind: .system))
+            }
+            if requestedApp == "youtube" {
+                guard let url = URL(string: "https://www.youtube.com") else {
+                    throw CanonicalCapabilityExecutionError.unavailable("youtube_handoff_invalid")
+                }
+                return .handoff(.init(query: command.originalText, destination: url, kind: .system))
+            }
             guard let media else { throw CanonicalCapabilityExecutionError.unavailable("musickit_unavailable") }
             let query = try required(command.entities["query"], "media_query")
             let values = try await media.search(providerID: "apple-music", query: query, kinds: [.song, .album, .artist, .playlist], limit: 3, requestAuthorization: true)
