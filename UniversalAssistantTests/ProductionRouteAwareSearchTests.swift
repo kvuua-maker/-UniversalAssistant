@@ -84,6 +84,18 @@ struct ProductionRouteAwareSearchTests {
         #expect(context.freshRoute()?.1.destination.displayName == "нового вокзалу")
     }
 
+    @Test func unseenTravelDurationRunsThroughMapKitAndSeedsRouteContext() async throws {
+        let context = CurrentContextStore()
+        let command = LocalCommandEngine().parse("Покажи тривалість поїздки до Львова")
+        #expect(command.entities["system_action"] == "travel_time")
+        #expect(command.entities["destination"] == "Львова")
+        guard case let .result(result) = try await executor(context: context).execute(command) else {
+            Issue.record("Expected typed travel-time result"); return
+        }
+        #expect(result.primaryAnswer == "Приблизно 6 хв")
+        #expect(context.freshRoute()?.1.destination.displayName == "Львова")
+    }
+
     @Test func freshRouteInvokesDetourEngineAndReturnsTypedMapsAction() async throws {
         let context = CurrentContextStore(); context.replaceRoute(origin: location(50, 30), destination: location(51, 31), destinationName: "Kyiv")
         let command = StructuredCommand(originalText: "Кавярня по дорозі", normalizedText: "кавярня по дорозі", language: .uk, intent: .routeAwareSearch)

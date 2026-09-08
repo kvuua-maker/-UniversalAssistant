@@ -69,7 +69,7 @@ struct ProductionMessagingRoutingTests {
 @Suite("Production app-content and clipboard composition")
 @MainActor
 struct ProductionAppContentCompositionTests {
-    @Test func unseenRemainingFamiliesReachConcreteCanonicalCapabilities() {
+    @Test func unseenRemainingFamiliesReachConcreteCanonicalCapabilities() async throws {
         let cases: [(String, CommandIntent)] = [
             ("Запусти запис голосової замітки для наради", .audioRecord),
             ("Проскануй паперовий договір у PDF", .cameraCapture),
@@ -81,6 +81,9 @@ struct ProductionAppContentCompositionTests {
             #expect(command.intent == expected, "\(input) resolved as \(command.intent.rawValue)")
             #expect(command.intent != .webSearch)
         }
+        let scanner = LocalCommandEngine().parse("Проскануй паперовий договір у PDF")
+        #expect(scanner.entities["input_source"] == "document_camera")
+        #expect(try await ProductionCanonicalCapabilityExecutor(personalSearchSources: []).execute(scanner) == .presentation(.scanDocument))
     }
 
     @Test func spotifyContentNeverSilentlyRunsThroughAppleMusic() async throws {
