@@ -75,6 +75,10 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         }
 
         if frame.object == .photo {
+            if frame.action == .create {
+                return (.cameraCapture, ["capture_mode": "visible_camera"])
+            }
+            guard frame.action != nil || frame.modifiers.contains("latest") else { return (nil, [:]) }
             entities["query"] = frame.modifiers.contains("latest") ? "latest" : semanticPhotoSubject(original)
             if frame.action == .share { entities["requested_action"] = "share" }
             if frame.action == .recognize { entities["requested_action"] = "ocr" }
@@ -190,7 +194,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     }
 
     private func source(in tokens: [String]) -> CanonicalSemanticFrame.Source? {
-        if tokens.contains(where: { ["фото", "photos", "photolibrary"].contains($0) }) { return .photos }
+        if tokens.contains(where: { ["photos", "photolibrary"].contains($0) }) { return .photos }
         if tokens.contains(where: { ["файлів", "файлах", "files", "icloud", "drive"].contains($0) }) { return .files }
         if tokens.contains(where: { ["буфер", "clipboard"].contains($0) }) { return .clipboard }
         if tokens.contains(where: { token in ["камер", "camera"].contains(where: token.hasPrefix) }) { return .camera }
