@@ -208,6 +208,13 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     }
 
     private func action(in tokens: [String]) -> CanonicalSemanticFrame.Action? {
+        let visualObject = tokens.contains { token in
+            ["фото", "світлин", "знім", "сним", "photo", "image", "picture"].contains { token.hasPrefix($0) }
+        }
+        let textualContent = tokens.contains { token in
+            ["напис", "текст", "слов", "надпис", "written", "text", "word", "read"].contains { token.hasPrefix($0) }
+        }
+        if visualObject && textualContent { return .recognize }
         let messageObject = tokens.contains { token in
             ["повідом", "сообщ", "message", "sms"].contains { token.hasPrefix($0) }
         }
@@ -331,6 +338,14 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     }
 
     private func contextReference(in normalized: String) -> CanonicalSemanticFrame.ContextReference? {
+        let tokens = lexicalTokens(normalized)
+        let hasPhoto = tokens.contains { token in
+            ["фото", "світлин", "знім", "сним", "photo", "image", "picture"].contains { token.hasPrefix($0) }
+        }
+        let hasDemonstrative = tokens.contains { token in
+            ["цій", "цьому", "цього", "цією", "этой", "этом", "this", "that"].contains(token)
+        }
+        if hasPhoto && hasDemonstrative { return .sharedContent }
         if normalized.contains("по дорозі") || normalized.contains("по пути") || normalized.contains("along the route") { return .activeRoute }
         if normalized.contains("де я") || normalized.contains("где я") || normalized.contains("where i am") || normalized.contains("моє місцезнаходження") { return .currentLocation }
         if normalized.contains("останній результат") || normalized.contains("последний результат") || normalized.contains("last result") { return .previousResult }

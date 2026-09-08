@@ -588,7 +588,9 @@ final class AssistantViewModel {
 
     private func isSharedImageTextRequest(_ text: String) -> Bool {
         let value = text.lowercased()
-        return ["що написано", "який текст", "розпізнай текст", "what does", "read this"].contains(where: value.contains)
+        let frame = CanonicalSemanticFrameAnalyzer().analyze(original: text, normalized: value)
+        return frame.frame.contextReference == .sharedContent &&
+            (frame.frame.action == .recognize || frame.frame.object == .text)
     }
 
     private func isSharedURLOpenRequest(_ text: String) -> Bool {

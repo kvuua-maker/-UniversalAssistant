@@ -420,7 +420,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
 
     private func photo(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         let query = command.entities["query"] ?? ""
-        let latest = query.isEmpty
+        let latest = query.isEmpty || query == "latest"
         let access = photos.authorization() == .permissionRequired ? await photos.requestAuthorization() : photos.authorization()
         guard access == .permitted || access == .limited else { throw CanonicalCapabilityExecutionError.unavailable("photos_access_unavailable") }
         let assets = await photos.search(.init(), limit: latest ? 1 : 20)
@@ -428,7 +428,11 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         if latest {
             let action = ResultAction(id: "photos:" + newest.localIdentifier, title: "Відкрити", kind: .showPhoto, destination: nil)
             let output = try result("Найновіше фото", facts: [.init(id: action.id, label: "Фото", value: newest.creationDate?.formatted(), state: .verified, source: "Photos", observedAt: newest.creationDate ?? .now, priority: 100)], actions: [action])
-            currentContext.replacePhotoResults(output); return .result(output)
+            currentContext.replacePhotoResults(output)
+            if command.entities["requested_action"] != nil {
+                return .presentation(.photoAsset(newest.localIdentifier))
+            }
+            return .result(output)
         }
         let response = await PhotosPersonalSearchSource(library: photos).search(query: query, limit: 5)
         guard !response.results.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("photos_no_semantic_match") }
@@ -438,6 +442,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let actions = response.results.map { ResultAction(id: $0.id, title: "Відкрити", kind: .showPhoto, destination: nil) }
         let output = try result("Знайдено у Фото", facts: facts, actions: actions)
         currentContext.replacePhotoResults(output)
+        if command.entities["requested_action"] != nil, let first = response.results.first {
+            return .presentation(.photoAsset(first.sourceObjectID))
+        }
         return .result(output)
     }
 

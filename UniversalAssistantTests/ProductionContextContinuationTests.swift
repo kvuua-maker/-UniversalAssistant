@@ -74,3 +74,36 @@ private actor ContextContactResolverFixture: ContactResolving {
     func resolve(name: String) async throws -> ContactResolution { resolution }
     func resolve(exactIdentifier identifier: String) async throws -> ContactResolution { resolution }
 }
+
+private struct ContextPhotoLibraryFixture: PhotoLibrarySearching {
+    let assets: [PhotoAssetReference]
+    func authorization() -> LocalSearchAccess { .permitted }
+    func requestAuthorization() async -> LocalSearchAccess { .permitted }
+    func search(_ criteria: PhotoSearchCriteria, limit: Int) async -> [PhotoAssetReference] {
+        Array(assets.prefix(limit))
+    }
+}
+
+@MainActor
+struct ProductionPhotoActionCompositionTests {
+    @Test func latestShareVariantSelectsExactlyOneAssetAndOpensPublicPhotoPresentation() async throws {
+        let newest = PhotoAssetReference(localIdentifier: "asset-new", creationDate: .now, coordinate: nil, album: nil)
+        let executor = ProductionCanonicalCapabilityExecutor(
+            photos: ContextPhotoLibraryFixture(assets: [newest]),
+            personalSearchSources: []
+        )
+        let command = LocalCommandEngine().parse("Надішли щойно зроблену світлину")
+        #expect(command.intent == .photoSearch)
+        #expect(command.entities["requested_action"] == "share")
+        #expect(try await executor.execute(command) == .presentation(.photoAsset("asset-new")))
+    }
+
+    @Test func demonstrativePhotoOCRUsesTypedSharedContextRole() {
+        for input in ["Прочитай вміст на цьому знімку", "Які слова написані на цій світлині?", "Що написано на цій фотографії?"] {
+            let result = CanonicalSemanticFrameAnalyzer().analyze(original: input, normalized: input.lowercased())
+            #expect(result.frame.contextReference == .sharedContent)
+            #expect(result.frame.action == .recognize)
+            #expect(result.intent == .photoSearch)
+        }
+    }
+}
