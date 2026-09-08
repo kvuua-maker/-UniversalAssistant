@@ -605,6 +605,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case let .ambiguous(values): throw CanonicalCapabilityExecutionError.ambiguous(values.map(\.displayName))
         case let .resolved(value):
             if preparesCall {
+                guard !value.phoneNumbers.isEmpty else {
+                    throw CanonicalCapabilityExecutionError.unavailable("contact_has_no_phone_number")
+                }
                 guard value.phoneNumbers.count == 1, let number = value.phoneNumbers.first else {
                     throw CanonicalCapabilityExecutionError.ambiguous(value.phoneNumbers)
                 }

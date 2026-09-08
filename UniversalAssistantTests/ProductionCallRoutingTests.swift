@@ -60,4 +60,12 @@ struct ProductionCallRoutingTests {
         let executor = ProductionCanonicalCapabilityExecutor(contacts: CallContactResolverStub(.notFound), personalSearchSources: [])
         await #expect(throws: CanonicalCapabilityExecutionError.unavailable("contact_not_found")) { try await executor.execute(LocalCommandEngine().parse("Подзвони Невідомому")) }
     }
+
+    @Test func contactWithoutTelephoneNumberTerminatesTruthfully() async {
+        let contact = ContactCandidate(identifier: "work", displayName: "Робочий контакт", phoneNumbers: [])
+        let executor = ProductionCanonicalCapabilityExecutor(contacts: CallContactResolverStub(.resolved(contact)), personalSearchSources: [])
+        await #expect(throws: CanonicalCapabilityExecutionError.unavailable("contact_has_no_phone_number")) {
+            try await executor.execute(LocalCommandEngine().parse("Набери робочий контакт"))
+        }
+    }
 }

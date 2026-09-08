@@ -20,6 +20,15 @@ private final class ContactStoreStub: ContactStoreQuerying, @unchecked Sendable 
     func contact(identifier: String) throws -> ContactCandidate? { values.first { $0.identifier == identifier } }
 }
 
+private struct FailingContactStoreStub: ContactStoreQuerying {
+    func contacts(matching name: String) throws -> [ContactCandidate] {
+        throw NSError(domain: "CNErrorDomain", code: 100)
+    }
+    func contact(identifier: String) throws -> ContactCandidate? {
+        throw NSError(domain: "CNErrorDomain", code: 100)
+    }
+}
+
 @MainActor
 private final class SequencedCapabilityExecutor: CanonicalCapabilityExecuting {
     private var calls = 0
@@ -70,6 +79,13 @@ struct ContactsRequestLifecycleTests {
         task.cancel()
         await #expect(throws: ContactResolutionError.cancelled) { try await task.value }
         try? await Task.sleep(for: .milliseconds(20))
+    }
+
+    @Test func frameworkReferenceErrorIsMappedBeforeCrossingAsyncBoundary() async {
+        let query = SystemContactQuery(store: FailingContactStoreStub())
+        await #expect(throws: ContactResolutionError.queryFailed) {
+            try await query.contacts(matching: "Ірина", timeout: .seconds(1))
+        }
     }
 
     @Test @MainActor func newerHomeRequestOwnsResultAndSpinnerTerminates() async throws {

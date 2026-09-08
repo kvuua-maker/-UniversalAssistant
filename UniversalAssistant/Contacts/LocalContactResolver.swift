@@ -3,7 +3,7 @@ import Foundation
 
 struct ContactCandidate: Equatable, Sendable { let identifier: String; let displayName: String; let phoneNumbers: [String] }
 enum ContactResolution: Equatable, Sendable { case resolved(ContactCandidate), ambiguous([ContactCandidate]), notFound }
-enum ContactResolutionError: Error, Equatable { case permissionRequired, permissionDenied, timedOut, cancelled }
+enum ContactResolutionError: Error, Equatable, Sendable { case permissionRequired, permissionDenied, timedOut, cancelled, queryFailed }
 
 protocol ContactResolving: Sendable {
     func requestAccessIfNeeded() async throws
@@ -20,8 +20,6 @@ protocol ContactAuthorizing: Sendable {
     func requestAccess() async throws -> Bool
 }
 struct SystemContactAuthorization: ContactAuthorizing {
-    private let store: CNContactStore
-    init(store: CNContactStore = CNContactStore()) { self.store = store }
     func currentStatus() -> ContactAuthorizationState {
         switch CNContactStore.authorizationStatus(for: .contacts) {
         case .notDetermined: .notDetermined
@@ -32,20 +30,25 @@ struct SystemContactAuthorization: ContactAuthorizing {
         @unknown default: .restricted
         }
     }
-    func requestAccess() async throws -> Bool { try await store.requestAccess(for: .contacts) }
+    func requestAccess() async throws -> Bool {
+        // Create and use the Contacts object in this invocation. CNContactStore is
+        // not Sendable; retaining one in a Sendable boundary and later invoking it
+        // on another executor is an avoidable lifetime/thread hazard.
+        try await CNContactStore().requestAccess(for: .contacts)
+    }
 }
 
 protocol ContactStoreQuerying: Sendable {
     func contacts(matching name: String) throws -> [ContactCandidate]
     func contact(identifier: String) throws -> ContactCandidate?
 }
-final class SystemContactStoreQuery: ContactStoreQuerying, @unchecked Sendable {
-    private let store: CNContactStore
-    init(store: CNContactStore = CNContactStore()) { self.store = store }
+final class SystemContactStoreQuery: ContactStoreQuerying, Sendable {
     func contacts(matching name: String) throws -> [ContactCandidate] {
-        try store.unifiedContacts(matching: CNContact.predicateForContacts(matchingName: name), keysToFetch: Self.keys).map(Self.candidate)
+        let store = CNContactStore()
+        return try store.unifiedContacts(matching: CNContact.predicateForContacts(matchingName: name), keysToFetch: Self.keys).map(Self.candidate)
     }
     func contact(identifier: String) throws -> ContactCandidate? {
+        let store = CNContactStore()
         do { return Self.candidate(try store.unifiedContact(withIdentifier: identifier, keysToFetch: Self.keys)) }
         catch let error as CNError where error.code == .recordDoesNotExist { return nil }
     }
@@ -85,7 +88,14 @@ final class SystemContactQuery: ContactQuerying, @unchecked Sendable {
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 completion.install(continuation)
-                queue.async { do { completion.finish(.success(try operation())) } catch { completion.finish(.failure(error)) } }
+                queue.async {
+                    do { completion.finish(.success(try operation())) }
+                    catch is CancellationError { completion.finish(.failure(ContactResolutionError.cancelled)) }
+                    // Foundation/Contacts errors are Objective-C reference values.
+                    // Do not send them across this concurrency boundary; the Home
+                    // layer needs a stable typed failure, not framework internals.
+                    catch { completion.finish(.failure(ContactResolutionError.queryFailed)) }
+                }
                 let components = timeout.components
                 let delay = Double(components.seconds) + Double(components.attoseconds) / 1_000_000_000_000_000_000
                 Self.deadlineQueue.asyncAfter(deadline: .now() + delay) {
@@ -105,19 +115,42 @@ actor LocalContactResolver: ContactResolving {
         self.authorization = authorization; self.query = query; self.queryTimeout = queryTimeout
     }
     func requestAccessIfNeeded() async throws {
+        LocalVoiceDiagnosticReport.shared.record("contacts_authorization_started")
         switch authorization.currentStatus() {
-        case .authorized, .limited: return
-        case .notDetermined: guard try await authorization.requestAccess() else { throw ContactResolutionError.permissionDenied }
-        case .denied, .restricted: throw ContactResolutionError.permissionDenied
+        case .authorized, .limited:
+            LocalVoiceDiagnosticReport.shared.record("contacts_authorization_finished", "status=authorized")
+            return
+        case .notDetermined:
+            guard try await authorization.requestAccess() else {
+                LocalVoiceDiagnosticReport.shared.record("contacts_authorization_finished", "status=denied")
+                throw ContactResolutionError.permissionDenied
+            }
+            LocalVoiceDiagnosticReport.shared.record("contacts_authorization_finished", "status=authorized")
+        case .denied, .restricted:
+            LocalVoiceDiagnosticReport.shared.record("contacts_authorization_finished", "status=denied")
+            throw ContactResolutionError.permissionDenied
         }
     }
     func resolve(name: String) async throws -> ContactResolution {
         try verifyAuthorization()
+        LocalVoiceDiagnosticReport.shared.record("contacts_query_started", "kind=name")
         let contacts = try await query.contacts(matching: name, timeout: queryTimeout)
-        if contacts.isEmpty { return .notFound }; if contacts.count == 1 { return .resolved(contacts[0]) }; return .ambiguous(contacts)
+        let result: ContactResolution
+        if contacts.isEmpty { result = .notFound }
+        else if contacts.count == 1 { result = .resolved(contacts[0]) }
+        else { result = .ambiguous(contacts) }
+        LocalVoiceDiagnosticReport.shared.record("contacts_query_finished", "status=success count=\(contacts.count)")
+        return result
     }
     func resolve(exactIdentifier identifier: String) async throws -> ContactResolution {
-        try verifyAuthorization(); guard let value = try await query.contact(identifier: identifier, timeout: queryTimeout) else { return .notFound }; return .resolved(value)
+        try verifyAuthorization()
+        LocalVoiceDiagnosticReport.shared.record("contacts_query_started", "kind=identifier")
+        guard let value = try await query.contact(identifier: identifier, timeout: queryTimeout) else {
+            LocalVoiceDiagnosticReport.shared.record("contacts_query_finished", "status=no_result count=0")
+            return .notFound
+        }
+        LocalVoiceDiagnosticReport.shared.record("contacts_query_finished", "status=success count=1")
+        return .resolved(value)
     }
     private func verifyAuthorization() throws {
         switch authorization.currentStatus() {
