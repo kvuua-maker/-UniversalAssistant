@@ -47,6 +47,13 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         var frame = CanonicalSemanticFrame()
         frame.action = action(in: tokens)
         frame.object = object(in: tokens)
+        let hasVisualObject = tokens.contains { token in
+            ["фото", "світлин", "знім", "сним", "photo", "image", "picture"].contains { token.hasPrefix($0) }
+        }
+        // In a command such as “read text on the image”, text is the requested
+        // output while the visual asset is the source/target. OBJECT ordering
+        // must not redirect that composition to a camera-only OCR command.
+        if frame.action == .recognize && hasVisualObject { frame.object = .photo }
         frame.source = source(in: tokens)
         if frame.object == .text, frame.action == .recognize,
            tokens.contains(where: { $0.hasPrefix("документ") || $0.hasPrefix("document") }) {

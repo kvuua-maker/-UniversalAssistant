@@ -20,6 +20,7 @@ private struct RoutePlaceProviderStub: PlaceProvider {
 private struct ReverseLocationStub: ReverseLocationGeocoding {
     let value: String
     func address(for location: ValidatedLocation) async throws -> String { value }
+    func locality(for location: ValidatedLocation) async throws -> String { "Fixture City" }
 }
 private struct RouteProviderStub: RouteProvider {
     let providerID = "routes.fixture"
@@ -70,6 +71,11 @@ struct ProductionRouteAwareSearchTests {
         #expect(addressCommand.entities["system_action"] == "current_address")
         guard case let .result(addressResult) = try await value.execute(addressCommand) else { Issue.record("Expected address result"); return }
         #expect(addressResult.primaryAnswer == "Fixture Address")
+
+        let localityCommand = parser.parse("У якому місті я зараз перебуваю?")
+        #expect(localityCommand.entities["system_action"] == "current_locality")
+        guard case let .result(localityResult) = try await value.execute(localityCommand) else { Issue.record("Expected locality result"); return }
+        #expect(localityResult.primaryAnswer == "Fixture City")
 
         let travelCommand = parser.parse("Скільки їхати до нового вокзалу?")
         #expect(travelCommand.entities["destination"] == "нового вокзалу")

@@ -440,6 +440,11 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             let coordinates = String(format: "%.5f, %.5f", location.sample.latitude, location.sample.longitude)
             return .result(try result("Поточне місцезнаходження", facts: [.init(id: "current-location", label: "Координати", value: coordinates, state: .verified, source: "CoreLocation", observedAt: location.sample.timestamp, priority: 100)]))
         }
+        if kind == "current_locality" {
+            let location = try await currentLocation.resolveCurrent(for: .general)
+            let locality = try await reverseLocation.locality(for: location)
+            return .result(try result(locality, facts: [.init(id: "current-locality", label: "Поточне місто", value: locality, state: .verified, source: "CoreLocation", observedAt: location.sample.timestamp, priority: 100)]))
+        }
         if kind == "current_address" {
             let location = try await currentLocation.resolveCurrent(for: .general)
             let address = try await reverseLocation.address(for: location)

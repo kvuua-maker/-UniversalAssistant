@@ -26,10 +26,18 @@ struct ValidatedLocation: Equatable, Codable, Sendable {
 
 protocol ReverseLocationGeocoding: Sendable {
     func address(for location: ValidatedLocation) async throws -> String
+    func locality(for location: ValidatedLocation) async throws -> String
 }
 
 actor AppleReverseLocationGeocoder: ReverseLocationGeocoding {
     private let geocoder = CLGeocoder()
+    func locality(for location: ValidatedLocation) async throws -> String {
+        let point = CLLocation(latitude: location.sample.latitude, longitude: location.sample.longitude)
+        guard let placemark = try await geocoder.reverseGeocodeLocation(point).first,
+              let value = placemark.locality ?? placemark.subAdministrativeArea ?? placemark.administrativeArea,
+              !value.isEmpty else { throw CurrentLocationResolutionError.unavailable }
+        return value
+    }
     func address(for location: ValidatedLocation) async throws -> String {
         let point = CLLocation(latitude: location.sample.latitude, longitude: location.sample.longitude)
         guard let value = try await geocoder.reverseGeocodeLocation(point).first else { throw CurrentLocationResolutionError.unavailable }
