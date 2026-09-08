@@ -150,7 +150,8 @@ struct LocalCommandEngine: CommandParsing {
         if let directURL = validatedWebURL(text) {
             return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: .open, entities: ["direct_url": directURL.absoluteString])
         }
-        if let locationAction = locationSystemIntent(normalized) {
+        let semanticFrame = CanonicalSemanticFrameAnalyzer().analyze(original: text, normalized: normalized)
+        if semanticFrame.intent == nil, let locationAction = locationSystemIntent(normalized) {
             var entities = ["system_action": locationAction]
             if locationAction == "travel_time", let destination = target(after: ["до", "to"], in: text) { entities["destination"] = destination }
             return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: .deviceAction, entities: entities)
@@ -159,21 +160,22 @@ struct LocalCommandEngine: CommandParsing {
         let specificPatternIntent = patternIntent == .productSearch ? nil : patternIntent
         let semanticIntent = semanticCapabilityIntent(normalized)
         let resolvedIntent = resolveSpecificAndSemantic(specific: specificPatternIntent, semantic: semanticIntent)
-        let intent = priorityIntent(normalized)
+        let intent = semanticFrame.intent
+            ?? priorityIntent(normalized)
             ?? (resolvedIntent == .placeSearch ? .placeSearch : compoundIntent(normalized))
             ?? resolvedIntent
             ?? patternIntent
             ?? contextualIntent(normalized)
-        var entities: [String: String] = [:]; var constraints = CommandConstraints()
+        var entities = semanticFrame.entities; var constraints = CommandConstraints()
         extractPrice(from: normalized, into: &constraints); extractSize(from: normalized, into: &constraints)
         extractMaximumWait(from: normalized, into: &constraints)
         extractFashionFilters(from: text, normalized: normalized, into: &constraints)
         constraints.ordinal = ordinal(in: normalized)
-        if intent == .open, let target = target(after: ["відкрий", "открой", "open", "öffne", "ouvre"], in: text) { entities["app"] = target }
-        if [.contactLookup, .contactCall].contains(intent), let value = target(after: ["знайди контакт", "найди контакт", "find contact", "подзвони", "зателефонуй", "набери", "набрати", "позвони", "call", "dial"], in: text) { entities["contact"] = contactSubject(value) }
+        if intent == .open, entities["app"] == nil, let target = target(after: ["відкрий", "открой", "open", "öffne", "ouvre"], in: text) { entities["app"] = target }
+        if [.contactLookup, .contactCall].contains(intent), entities["contact"] == nil, let value = target(after: ["знайди контакт", "найди контакт", "find contact", "подзвони", "зателефонуй", "набери", "набрати", "позвони", "call", "dial"], in: text) { entities["contact"] = contactSubject(value) }
         if intent == .contactCall { extractCallDetails(from: text, normalized: normalized, into: &entities) }
-        if intent == .messageCompose, let value = target(after: ["напиши", "отправь сообщение", "message", "schreib", "écris"], in: text) { entities["recipient"] = value }
-        if [.photoSearch, .fileSearch, .mediaSearch, .podcastSearch].contains(intent) { entities["query"] = querySubject(for: intent, in: text) }
+        if intent == .messageCompose, entities["recipient"] == nil, let value = target(after: ["напиши", "отправь сообщение", "message", "schreib", "écris"], in: text) { entities["recipient"] = value }
+        if [.photoSearch, .fileSearch, .mediaSearch, .podcastSearch].contains(intent), entities["query"] == nil { entities["query"] = querySubject(for: intent, in: text) }
         if intent == .parcelTrack, let tracking = normalized.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init).first(where: { $0.count >= 5 && $0.rangeOfCharacter(from: .decimalDigits) != nil }) { entities["tracking_number"] = tracking }
         if intent == .serviceSearch, let category = serviceCategory(in: normalized) { entities["serviceCategory"] = category }
         if [.navigation, .routeSearch, .transportRoute].contains(intent), let value = target(after: ["веди мене до", "проклади маршрут до", "побудуй маршрут до", "покажи маршрут до", "построй маршрут до", "як доїхати до", "как доехать до", "маршрут до", "navigate", "route to", "веди"], in: text) { entities["destination"] = value }

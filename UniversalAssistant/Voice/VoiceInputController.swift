@@ -243,9 +243,13 @@ final class VoiceInputController {
     private(set) var state: VoiceInputState = .idle
     private(set) var transcript = ""
     private let capture: VoiceAudioCaptureLifecycle
+    private let authorization: @Sendable () async -> Bool
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private var recognizer: SFSpeechRecognizer?
+    // start() suspends for permissions; a newer mic tap can supersede it.
+    // One token owns every resource and callback for one Speech/audio session.
+    private var activeSessionID: UUID?
     private let endOfSpeechFinalizer: VoiceEndOfSpeechFinalizer
     private var isFinalizingRecognition = false
     @ObservationIgnored private var audioEvents: AudioSessionEventMonitor?
@@ -256,9 +260,11 @@ final class VoiceInputController {
 
     init(
         captureBackend: (any VoiceAudioCaptureBackend)? = nil,
-        endOfSpeechDelay: Duration = .milliseconds(2_000)
+        endOfSpeechDelay: Duration = .milliseconds(2_000),
+        authorization: (@Sendable () async -> Bool)? = nil
     ) {
         capture = VoiceAudioCaptureLifecycle(backend: captureBackend ?? AppleVoiceAudioCaptureBackend())
+        self.authorization = authorization ?? Self.authorizationGranted
         endOfSpeechFinalizer = VoiceEndOfSpeechFinalizer(delay: endOfSpeechDelay)
         audioEvents = AudioSessionEventMonitor(
             onInterruption: { [weak self] in self?.handleAudioInterruptionBegan() },
@@ -267,6 +273,8 @@ final class VoiceInputController {
 
     func start(locale: Locale = .current) async {
         stop(reason: .sessionRestart)
+        let sessionID = UUID()
+        activeSessionID = sessionID
         LocalVoiceDiagnosticReport.shared.reset()
         recognitionCallbackCount = 0
         partialResultCount = 0
@@ -274,8 +282,21 @@ final class VoiceInputController {
         isFinalizingRecognition = false
         LocalVoiceDiagnosticReport.shared.record("start_listening_invoked")
         setState(.requestingPermission)
-        guard await Self.authorizationGranted() else { setState(.denied); return }
-        guard let recognizer = SFSpeechRecognizer(locale: locale), recognizer.isAvailable else { setState(.unavailable); return }
+        guard await authorization() else {
+            guard owns(sessionID) else { return }
+            activeSessionID = nil
+            setState(.denied)
+            return
+        }
+        guard owns(sessionID) else {
+            LocalVoiceDiagnosticReport.shared.record("stale_start_suppressed", "reason=authorization_completed")
+            return
+        }
+        guard let recognizer = SFSpeechRecognizer(locale: locale), recognizer.isAvailable else {
+            activeSessionID = nil
+            setState(.unavailable)
+            return
+        }
         LocalVoiceDiagnosticReport.shared.record("recognizer_ready", "locale=\(locale.identifier) available=\(recognizer.isAvailable)")
         self.recognizer = recognizer
         let request = SFSpeechAudioBufferRecognitionRequest()
@@ -287,17 +308,31 @@ final class VoiceInputController {
         self.request = request
         let requestSink = VoiceRecognitionRequestSink(request)
         do {
-            task = recognizer.recognitionTask(with: request, resultHandler: Self.makeRecognitionHandler(owner: self))
+            task = recognizer.recognitionTask(with: request, resultHandler: Self.makeRecognitionHandler(owner: self, sessionID: sessionID))
             LocalVoiceDiagnosticReport.shared.record("recognition_task_created")
             try capture.start { buffer in requestSink.append(buffer) }
+            guard owns(sessionID) else {
+                stop(reason: .sessionRestart, ownedBy: sessionID)
+                return
+            }
             setState(.listening)
         } catch {
+            guard owns(sessionID) else { return }
             LocalVoiceDiagnosticReport.shared.record("voice_start_failed", "error_type=\(String(describing: type(of: error)))")
-            stop(reason: .startFailure); setState(.failed)
+            stop(reason: .startFailure, ownedBy: sessionID); setState(.failed)
         }
     }
 
     func stop(reason: VoiceStopReason = .externalRequest) {
+        stop(reason: reason, ownedBy: nil)
+    }
+
+    private func stop(reason: VoiceStopReason, ownedBy expectedSessionID: UUID?) {
+        if let expectedSessionID, !owns(expectedSessionID) {
+            LocalVoiceDiagnosticReport.shared.record("stale_stop_suppressed", "reason=\(reason.rawValue)")
+            return
+        }
+        activeSessionID = nil
         endOfSpeechFinalizer.cancel()
         isFinalizingRecognition = false
         LocalVoiceDiagnosticReport.shared.record("stop_invoked", "reason=\(reason.rawValue)")
@@ -320,7 +355,11 @@ final class VoiceInputController {
         eventHandler?(.state(newState))
     }
 
-    private func receiveRecognition(transcript: String?, isFinal: Bool, hasError: Bool, errorDomain: String, errorCode: Int) {
+    private func receiveRecognition(sessionID: UUID, transcript: String?, isFinal: Bool, hasError: Bool, errorDomain: String, errorCode: Int) {
+        guard owns(sessionID) else {
+            LocalVoiceDiagnosticReport.shared.record("stale_recognition_suppressed", "final=\(isFinal) error_code=\(errorCode)")
+            return
+        }
         recognitionCallbackCount += 1
         if transcript != nil {
             if isFinal { finalResultCount += 1 } else { partialResultCount += 1 }
@@ -333,19 +372,19 @@ final class VoiceInputController {
             LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_ui", "length=\(transcript.count) final=\(isFinal)")
             if !isFinal, !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 endOfSpeechFinalizer.receivedPartial { [weak self] in
-                    self?.finishAfterEndOfSpeech()
+                    self?.finishAfterEndOfSpeech(sessionID: sessionID)
                 }
             }
         }
-        if hasError { stop(reason: .recognitionError) }
+        if hasError { stop(reason: .recognitionError, ownedBy: sessionID) }
         else if isFinal {
             LocalVoiceDiagnosticReport.shared.record("recognition_task_finished", "reason=final_result")
-            stop(reason: .recognitionFinal)
+            stop(reason: .recognitionFinal, ownedBy: sessionID)
         }
     }
 
-    private func finishAfterEndOfSpeech() {
-        guard state == .listening, !isFinalizingRecognition,
+    private func finishAfterEndOfSpeech(sessionID: UUID) {
+        guard owns(sessionID), state == .listening, !isFinalizingRecognition,
               let request, let task else { return }
         isFinalizingRecognition = true
         LocalVoiceDiagnosticReport.shared.record("end_audio_called", "reason=endOfSpeech had_request=true")
@@ -391,7 +430,8 @@ final class VoiceInputController {
     }
 
     private nonisolated static func makeRecognitionHandler(
-        owner: VoiceInputController
+        owner: VoiceInputController,
+        sessionID: UUID
     ) -> @Sendable (SFSpeechRecognitionResult?, (any Error)?) -> Void {
         { [weak owner] result, error in
             let transcript = result?.bestTranscription.formattedString
@@ -401,8 +441,10 @@ final class VoiceInputController {
             let errorDomain = nsError?.domain ?? "none"
             let errorCode = nsError?.code ?? 0
             Task { @MainActor [weak owner] in
-                owner?.receiveRecognition(transcript: transcript, isFinal: isFinal, hasError: hasError, errorDomain: errorDomain, errorCode: errorCode)
+                owner?.receiveRecognition(sessionID: sessionID, transcript: transcript, isFinal: isFinal, hasError: hasError, errorDomain: errorDomain, errorCode: errorCode)
             }
         }
     }
+
+    private func owns(_ sessionID: UUID) -> Bool { activeSessionID == sessionID }
 }
