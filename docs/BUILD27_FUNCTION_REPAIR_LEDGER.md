@@ -338,3 +338,11 @@ Verification: the initial ontology omitted composition-family nouns and failed a
 B27-14.19 is EXTERNAL_PROVIDER_DEPENDENCY with the internally resolvable canonical routing and truthful renderer complete. Build 27 does not exist.
 
 Exact next operation: reconcile B27-14.20 and then audit every remaining main B27-00 through B27-25 identifier. Prove configured general/current/product/FX providers or preserve explicit dependencies; complete the repair ledger, capability inventory, unseen-parameter acceptance, production-boundary evidence, public-iOS audit, and all required gates before Build 27.
+
+## Reconciled dependencies: B27-14.20
+
+Repository and Production configuration audit confirms no active general/current-information coordinator, stock feed, FX endpoint, or retail-price credential/transport. Existing contracts and test providers are not live production evidence.
+
+Internally resolvable path is complete: canonical intents and parameters are preserved; deterministic/local/system families have priority; missing current-data classes surface only an explicit provider dependency or exact controlled browser handoff; no answer, rate, price, availability, credential, or provenance is fabricated. Exact evidence remains in `docs/BUILD26_EXTERNAL_PROVIDER_AUDIT.md` and the updated Build-27 capability matrix.
+
+B27-14.20 remains EXTERNAL_PROVIDER_DEPENDENCY. This status does not exempt the remaining source, acceptance, matrix, or gate requirements.
