@@ -48,6 +48,22 @@ private struct CapturingWeatherViewModelExecutor: WeatherCommandExecuting {
     }
 }
 
+private actor DeferredWeatherViewModelExecutor: WeatherCommandExecuting {
+    private var continuation: CheckedContinuation<WeatherSnapshot, Error>?
+    private(set) var isWaiting = false
+
+    func execute(_ command: StructuredCommand) async throws -> WeatherSnapshot {
+        isWaiting = true
+        return try await withCheckedThrowingContinuation { continuation = $0 }
+    }
+
+    func finish(_ snapshot: WeatherSnapshot) {
+        continuation?.resume(returning: snapshot)
+        continuation = nil
+        isWaiting = false
+    }
+}
+
 private func weatherExecutionSnapshot() -> WeatherSnapshot {
     .init(
         current: .init(date: .now, temperatureCelsius: 18,
@@ -149,6 +165,29 @@ struct WeatherCommandExecutionTests {
             Issue.record("Expected truthful weather failure")
             return
         }
+    }
+
+    @MainActor
+    @Test func supersedingHomeRequestOwnsRendererAfterLateWeatherCompletion() async throws {
+        let deferred = DeferredWeatherViewModelExecutor()
+        let model = AssistantViewModel(weatherExecutor: deferred, compactResultDuration: .seconds(60))
+        model.input = "Яка температура зараз там, де я перебуваю?"
+        model.submit()
+        for _ in 0..<100 where !(await deferred.isWaiting) { try await Task.sleep(for: .milliseconds(10)) }
+
+        model.input = "Скільки буде 14 помножити на 6?"
+        model.submit()
+        for _ in 0..<100 {
+            if case .deterministic = model.resultState { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        await deferred.finish(weatherExecutionSnapshot())
+        try await Task.sleep(for: .milliseconds(50))
+
+        guard case let .deterministic(result) = model.resultState else {
+            Issue.record("Late Weather completion replaced the newer Home result"); return
+        }
+        #expect(result.primaryAnswer.contains("84"))
     }
 
     @Test func locationFailureRecordsExactFirstWeatherStageWithoutSensitiveLocation() async {

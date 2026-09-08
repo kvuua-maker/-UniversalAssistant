@@ -7,6 +7,22 @@ private struct EventKitExecutorStub: EventKitCommandExecuting {
     func execute(_ command: StructuredCommand) async throws -> EventKitExecutionResult { try result.get() }
 }
 
+private actor DeferredEventKitExecutorStub: EventKitCommandExecuting {
+    private var continuation: CheckedContinuation<EventKitExecutionResult, Error>?
+    private(set) var isWaiting = false
+
+    func execute(_ command: StructuredCommand) async throws -> EventKitExecutionResult {
+        isWaiting = true
+        return try await withCheckedThrowingContinuation { continuation = $0 }
+    }
+
+    func finish(_ result: EventKitExecutionResult) {
+        continuation?.resume(returning: result)
+        continuation = nil
+        isWaiting = false
+    }
+}
+
 private actor CalendarSpy: CalendarMutating {
     var deleted: [String] = []
     var restored: [CalendarEventSnapshot] = []
@@ -84,6 +100,28 @@ struct CalendarServiceTests {
         model.submit()
         try await Task.sleep(for: .milliseconds(50))
         #expect(model.resultState == .eventKit(expected))
+    }
+
+    @Test @MainActor func supersedingHomeRequestOwnsRendererAfterLateEventKitCompletion() async throws {
+        let deferred = DeferredEventKitExecutorStub()
+        let model = AssistantViewModel(eventKitExecutor: deferred, compactResultDuration: .seconds(60))
+        model.input = "Що заплановано в календарі після обіду?"
+        model.submit()
+        for _ in 0..<100 where !(await deferred.isWaiting) { try await Task.sleep(for: .milliseconds(10)) }
+
+        model.input = "Скільки буде 18 плюс 7?"
+        model.submit()
+        for _ in 0..<100 {
+            if case .deterministic = model.resultState { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        await deferred.finish(.init(kind: .calendar, operation: .queried, title: "Stale", detail: "Stale", itemCount: 1))
+        try await Task.sleep(for: .milliseconds(50))
+
+        guard case let .deterministic(result) = model.resultState else {
+            Issue.record("Late EventKit completion replaced the newer Home result"); return
+        }
+        #expect(result.primaryAnswer.contains("25"))
     }
 
     @Test @MainActor func deletePreservesConfirmationGate() {

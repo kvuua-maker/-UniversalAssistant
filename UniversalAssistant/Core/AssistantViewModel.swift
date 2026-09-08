@@ -40,6 +40,9 @@ final class AssistantViewModel {
     private var activeRequestGeneration: UInt64 = 0
     private var capabilityExecutionTask: Task<Void, Never>?
     private var ocrExecutionTask: Task<Void, Never>?
+    private var weatherExecutionTask: Task<Void, Never>?
+    private var eventKitExecutionTask: Task<Void, Never>?
+    private var genericDiscoveryTask: Task<Void, Never>?
 
     init(
         commandEngine: any CommandParsing = LocalCommandEngine(),
@@ -162,6 +165,12 @@ final class AssistantViewModel {
         let requestGeneration = activeRequestGeneration
         capabilityExecutionTask?.cancel()
         ocrExecutionTask?.cancel()
+        weatherExecutionTask?.cancel()
+        eventKitExecutionTask?.cancel()
+        genericDiscoveryTask?.cancel()
+        weatherExecutionInFlight = false
+        eventKitExecutionInFlight = false
+        capabilityExecutionInFlight = false
         let submittedInput = input
         if let target = translationFollowUpTarget(submittedInput), let translation = currentContext.freshTranslation() {
             input = ""
@@ -195,7 +204,7 @@ final class AssistantViewModel {
         interactionDecision = interactionEngine.decide(for: command)
         input = ""
         if command.needsClarification, command.intent == .unknown {
-            presentGeneralInformation(command, summary: summary)
+            presentGeneralInformation(command, summary: summary, requestGeneration: requestGeneration)
             return
         }
         if command.needsClarification {
@@ -209,14 +218,23 @@ final class AssistantViewModel {
                 weatherExecutionInFlight = true
                 resultState = .processing
                 statusText = AppText.value("processing")
-                Task { [weak self] in
+                weatherExecutionTask = Task { [weak self] in
                     guard let self else { return }
+                    defer {
+                        if activeRequestGeneration == requestGeneration {
+                            weatherExecutionInFlight = false
+                            deliverCompletedDiagnosticSession()
+                        }
+                    }
                     do {
                         let snapshot = try await weatherExecutor.execute(command)
+                        try Task.checkCancellation()
+                        guard activeRequestGeneration == requestGeneration else { return }
                         resultState = .weather(snapshot)
                         LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=weather")
                         statusText = AppText.value("ready")
                     } catch {
+                        guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
                         LocalVoiceDiagnosticReport.shared.record(
                             "execution_failed",
                             "capability=weather error=\(String(describing: type(of: error)))"
@@ -225,10 +243,6 @@ final class AssistantViewModel {
                         let retry = String(localized: "weather_retry", table: "Weather")
                         presentFailure(message: unavailable, recoveryAction: retry)
                         statusText = unavailable
-                    }
-                    weatherExecutionInFlight = false
-                    if let session = LocalVoiceDiagnosticReport.shared.completedSession() {
-                        Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
                     }
                 }
                 return
@@ -243,14 +257,23 @@ final class AssistantViewModel {
                 resultState = .processing
                 statusText = AppText.value("processing")
                 LocalVoiceDiagnosticReport.shared.record("execution_started", "mechanism=eventkit")
-                Task { [weak self] in
+                eventKitExecutionTask = Task { [weak self] in
                     guard let self else { return }
+                    defer {
+                        if activeRequestGeneration == requestGeneration {
+                            eventKitExecutionInFlight = false
+                            deliverCompletedDiagnosticSession()
+                        }
+                    }
                     do {
                         let result = try await eventKitExecutor.execute(command)
+                        try Task.checkCancellation()
+                        guard activeRequestGeneration == requestGeneration else { return }
                         resultState = .eventKit(result)
                         statusText = AppText.value("ready")
                         LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=eventkit")
                     } catch let error as EventKitExecutionError {
+                        guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
                         LocalVoiceDiagnosticReport.shared.record("execution_failed", "mechanism=eventkit reason=\(String(describing: error)) error_type=EventKitExecutionError")
                         switch error {
                         case .unresolvedDateTime, .missingSubject, .ambiguousItem:
@@ -260,13 +283,10 @@ final class AssistantViewModel {
                             presentFailure(message: String(localized: "eventkit_unavailable"))
                         }
                     } catch {
+                        guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
                         let failure = error as NSError
                         LocalVoiceDiagnosticReport.shared.record("execution_failed", "mechanism=eventkit reason=unavailable error_domain=\(failure.domain) error_code=\(failure.code) error_type=\(String(describing: type(of: error)))")
                         presentFailure(message: String(localized: "eventkit_unavailable"))
-                    }
-                    eventKitExecutionInFlight = false
-                    if let session = LocalVoiceDiagnosticReport.shared.completedSession() {
-                        Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
                     }
                 }
                 return
@@ -297,7 +317,7 @@ final class AssistantViewModel {
                 return
             }
             if command.intent == .webSearch || command.intent == .unknown {
-                presentGeneralInformation(command, summary: summary)
+                presentGeneralInformation(command, summary: summary, requestGeneration: requestGeneration)
                 return
             }
             if interactionDecision?.pattern == .confirmation {
@@ -309,7 +329,7 @@ final class AssistantViewModel {
         }
     }
 
-    private func presentGeneralInformation(_ command: StructuredCommand, summary: ResultSummary) {
+    private func presentGeneralInformation(_ command: StructuredCommand, summary: ResultSummary, requestGeneration: UInt64) {
         do {
             _ = try GenericIntentParser().parse(command.originalText)
         } catch GenericDiscoveryError.ambiguous {
@@ -326,18 +346,22 @@ final class AssistantViewModel {
         }
         resultState = .processing
         statusText = AppText.value("processing")
-        Task { [weak self] in
+        genericDiscoveryTask = Task { [weak self] in
             guard let self else { return }
             do {
                 let result = try await genericDiscovery.execute(text: command.originalText, parsed: command)
+                try Task.checkCancellation()
+                guard activeRequestGeneration == requestGeneration else { return }
                 currentContext.replaceAnswer(result.primaryAnswer)
                 resultState = .deterministic(result)
                 statusText = AppText.value("ready")
                 LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=deterministic_general_information")
             } catch GenericDiscoveryError.ambiguous {
+                guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
                 resultState = .clarification(summary)
                 statusText = AppText.value("clarification_needed")
             } catch {
+                guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
                 presentGeneralWebFallback(command)
             }
         }

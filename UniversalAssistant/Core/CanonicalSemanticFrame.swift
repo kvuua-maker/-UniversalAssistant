@@ -4,7 +4,7 @@ import Foundation
 /// It intentionally describes the whole command instead of treating any one
 /// noun (for example “document”) as an intent.
 struct CanonicalSemanticFrame: Equatable, Sendable {
-    enum Action: String, Sendable { case open, choose, search, show, create, call, message, scan, recognize, share, navigate, query, set, record }
+    enum Action: String, Sendable { case open, choose, search, show, create, delete, call, message, scan, recognize, share, navigate, query, set, record }
     enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, url, place, weather, text, code, note, audio, media }
     enum Source: String, Sendable { case files, photos, documents, clipboard, camera, calendar, reminders }
     enum ContextReference: String, Sendable { case currentLocation, activeRoute, selectedResult, sharedContent, previousResult }
@@ -158,10 +158,14 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         }
 
         if frame.object == .calendar {
-            return (frame.action == .create ? .calendarCreate : .calendarQuery, entities)
+            if frame.action == .create { return (.calendarCreate, entities) }
+            if frame.action == .delete { return (.calendarDelete, entities) }
+            return (.calendarQuery, entities)
         }
         if frame.object == .reminder {
-            return (frame.action == .create || frame.action == .set ? .reminderCreate : .reminderQuery, entities)
+            if frame.action == .create || frame.action == .set { return (.reminderCreate, entities) }
+            if frame.action == .delete { return (.reminderDelete, entities) }
+            return (.reminderQuery, entities)
         }
         if frame.object == .timer || frame.object == .alarm {
             entities["system_action"] = frame.object == .timer ? "timer" : "alarm"
@@ -223,6 +227,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         }
         if messageObject && sendVerb { return .message }
         let families: [(CanonicalSemanticFrame.Action, [String])] = [
+            (.delete, ["видал", "скас", "удал", "отмен", "delete", "remove", "cancel"]),
             (.choose, ["вибер", "обер", "выбер", "select", "choose"]),
             (.share, ["поділ", "подел", "надішл", "відправ", "отправ", "share", "send"]),
             (.recognize, ["розпіз", "распозн", "прочит", "recogn", "read"]),

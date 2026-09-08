@@ -199,7 +199,7 @@ struct LocalCommandEngine: CommandParsing {
             if let value = translationSource(in: text) { entities["source_text"] = value }
             if let target = translationTarget(in: normalized) { entities["target_language"] = target }
         }
-        let risk: ActionRisk = intent == .emergency ? .emergency : ([.calendarCreate, .reminderCreate, .reminderComplete, .reminderDelete, .shoppingList, .cancel, .undo].contains(intent) ? .reversible : .informational)
+        let risk: ActionRisk = intent == .emergency ? .emergency : ([.calendarCreate, .calendarDelete, .reminderCreate, .reminderComplete, .reminderDelete, .shoppingList, .cancel, .undo].contains(intent) ? .reversible : .informational)
         return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: intent, entities: entities, constraints: constraints, risk: risk, needsClarification: intent == .unknown)
     }
 
