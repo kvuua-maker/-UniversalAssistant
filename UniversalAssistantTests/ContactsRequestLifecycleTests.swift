@@ -51,7 +51,10 @@ struct ContactsRequestLifecycleTests {
         #expect(try await missing.resolve(name: "Немає") == .notFound)
         let two = ContactCandidate(identifier: "2", displayName: "Олег Робота", phoneNumbers: ["2"])
         let ambiguous = LocalContactResolver(authorization: ContactAuthorizationStub(status: .authorized, granted: true), query: SystemContactQuery(store: ContactStoreStub(values: [one, two])))
-        #expect(try await ambiguous.resolve(name: "Олег") == .ambiguous([one, two]))
+        #expect(try await ambiguous.resolve(name: "Олег") == .resolved(one))
+        let duplicate = ContactCandidate(identifier: "3", displayName: "Олег", phoneNumbers: ["3"])
+        let trueAmbiguity = LocalContactResolver(authorization: ContactAuthorizationStub(status: .authorized, granted: true), query: SystemContactQuery(store: ContactStoreStub(values: [one, duplicate])))
+        #expect(try await trueAmbiguity.resolve(name: "Олег") == .ambiguous([one, duplicate]))
     }
 
     @Test func deniedRestrictedAndFailedGrantReturnTruthfully() async {

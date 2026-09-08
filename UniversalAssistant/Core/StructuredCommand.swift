@@ -237,7 +237,7 @@ struct LocalCommandEngine: CommandParsing {
             if let target = translationTarget(in: normalized) { entities["target_language"] = target }
         }
         let risk: ActionRisk = intent == .emergency ? .emergency : ([.calendarCreate, .calendarDelete, .reminderCreate, .reminderComplete, .reminderDelete, .shoppingList, .cancel, .undo].contains(intent) ? .reversible : .informational)
-        return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: intent, entities: entities, constraints: constraints, risk: risk, needsClarification: intent == .unknown)
+        return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: intent, entities: entities, constraints: constraints, risk: risk, needsClarification: intent == .unknown || entities["clarification_options"] != nil)
     }
 
     private func locationSystemIntent(_ text: String) -> String? {

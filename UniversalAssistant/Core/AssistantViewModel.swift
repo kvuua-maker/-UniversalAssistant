@@ -226,7 +226,11 @@ final class AssistantViewModel {
         }
         if command.needsClarification {
             LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=clarification")
-            resultState = .clarification(summary)
+            if let raw = command.entities["clarification_options"] {
+                requireAction(prompt: AppText.value("clarification_needed"), choices: Array(raw.split(separator: "|").map(String.init).prefix(3)))
+            } else {
+                resultState = .clarification(summary)
+            }
             statusText = AppText.value("clarification_needed")
         } else {
             LocalVoiceDiagnosticReport.shared.record("router_accepted", "capability=\(command.intent.rawValue)")

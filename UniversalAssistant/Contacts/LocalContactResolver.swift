@@ -138,7 +138,19 @@ actor LocalContactResolver: ContactResolving {
         let result: ContactResolution
         if contacts.isEmpty { result = .notFound }
         else if contacts.count == 1 { result = .resolved(contacts[0]) }
-        else { result = .ambiguous(contacts) }
+        else {
+            let domain = contacts.map { ScopedEntityCandidate(value: $0, displayName: $0.displayName, aliases: [$0.displayName]) }
+            switch ContextScopedEntityResolver(candidates: domain).resolve(name) {
+            case let .resolved(contact): result = .resolved(contact)
+            case let .ambiguous(names):
+                let selected = contacts.filter { names.contains($0.displayName) }
+                result = .ambiguous(selected.isEmpty ? contacts : selected)
+            case .unresolved:
+                // Contacts supplied every candidate in this set; an unsafe fuzzy
+                // winner remains a real ambiguity rather than becoming no-result.
+                result = .ambiguous(contacts)
+            }
+        }
         LocalVoiceDiagnosticReport.shared.record("contacts_query_finished", "status=success count=\(contacts.count)")
         return result
     }

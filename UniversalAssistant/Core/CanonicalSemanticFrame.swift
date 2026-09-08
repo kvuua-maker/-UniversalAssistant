@@ -17,6 +17,7 @@ struct CanonicalSemanticFrame: Equatable, Sendable {
     var object: Object?
     var source: Source?
     var service: String?
+    var entityAmbiguity: [String] = []
     var person: String?
     var app: String?
     var location: String?
@@ -51,7 +52,11 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
            tokens.contains(where: { $0.hasPrefix("документ") || $0.hasPrefix("document") }) {
             frame.source = .documents
         }
-        frame.service = service(in: tokens)
+        switch service(in: tokens) {
+        case let .resolved(service): frame.service = service.rawValue
+        case let .ambiguous(values): frame.entityAmbiguity = values
+        case .unresolved: break
+        }
         frame.app = application(in: tokens)
         frame.modifiers = modifiers(in: tokens)
 
@@ -94,6 +99,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             if let percentage = numeric.percentage { entities["percentage"] = NSDecimalNumber(decimal: percentage).stringValue }
         }
         if let reference = frame.contextReference { entities["context_reference"] = reference.rawValue }
+        if !frame.entityAmbiguity.isEmpty { entities["clarification_options"] = frame.entityAmbiguity.joined(separator: "|") }
         if let compound = frame.compound {
             entities["compound_clause_count"] = String(compound.clauses.count)
             entities["compound_order"] = compound.isSequential ? "sequential" : "parallel"
@@ -301,11 +307,20 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         return nil
     }
 
-    private func service(in tokens: [String]) -> String? {
-        if tokens.contains(where: { $0 == "whatsapp" || $0 == "вотсап" || $0 == "ватсап" }) { return "whatsapp" }
-        if tokens.contains("telegram") { return "telegram" }
-        if tokens.contains("viber") { return "viber" }
-        return nil
+    private func service(in tokens: [String]) -> ScopedEntityResolution<MessengerKind> {
+        let domain = MessengerKind.allCases.map { kind in
+            ScopedEntityCandidate(value: kind, displayName: kind.rawValue, aliases: [kind.rawValue])
+        }
+        let resolver = ContextScopedEntityResolver(candidates: domain)
+        var ambiguity: Set<String> = []
+        for token in tokens {
+            switch resolver.resolve(token) {
+            case let .resolved(value): return .resolved(value)
+            case let .ambiguous(values): ambiguity.formUnion(values)
+            case .unresolved: continue
+            }
+        }
+        return ambiguity.isEmpty ? .unresolved : .ambiguous(ambiguity.sorted())
     }
 
     private func application(in tokens: [String]) -> String? {
