@@ -23,7 +23,7 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 | B28-12 | GREEN | `AssistantViewModel` production-boundary tests cover temporal/numeric/context roles and unseen Photos/Files, Contacts/Calls/Messaging, Timer/Alarm, Camera/OCR/QR/document, Clipboard/URL, Location/Weather and typed compound collisions. Place→navigation and OCR→Translation consume typed producer output; all 753 iOS tests pass. |
 | B28-13 | GREEN | Durable stable-ID ledger created; CLOSED history preserved below. |
 | B28-14 | GREEN | Complete iOS 753/753, backend 114/114, ZERO-OMISSION 2404/2404, AUDIO 147/147, PRIVACY 168/168, JOBS 97/97, LOYALTY 127/127 and diagnostics 2/2 PASS; unsigned Production simulator compile PASS. |
-| B28-15 | IN_PROGRESS | Source completion gate passed; Build 28 metadata/archive/sign/export/upload workflow may now begin. |
+| B28-15 | GREEN | Build 28 source HEAD `bb34ead` archived with manual Apple Distribution signing, exported and physically verified; SHA-256 `e9f03617a2219c4374f241575662dc9d49f5fc3fc766978377f7cd8dddb3a233`. Xcode reported `Upload succeeded` and `Uploaded package is processing`. Physical iPhone retest remains required. |
 | B28-16 | GREEN | Durable continuation mechanism active. |
 
 ## CLOSED approaches
@@ -80,6 +80,6 @@ Authoritative starting repository state: `747f18283340edf7dd8332dc1026cc7e32b996
 
 ## Exact continuation point
 
-Current active block: **B28-15 Build 28 release workflow**. B28-08, B28-09 and B28-10 retain exact external owner boundaries and do not authorize fabricated capability/data.
+No internally resolvable source or release block remains. B28-08, B28-09 and B28-10 retain exact external owner boundaries and do not authorize fabricated capability/data.
 
-Exact next operation: commit/push this completed source ledger, verify clean `HEAD == origin/main`, increment only `CURRENT_PROJECT_VERSION` 27→28, then execute the signed Production archive/export/upload gate. Do not create Build 29.
+Exact next operation: wait for Apple processing, then install Build 28 from TestFlight and physically retest the Build-27 evidence families. Do not create Build 29.
