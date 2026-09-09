@@ -330,8 +330,10 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             return try await contextual(command, opensSelection: command.normalizedText.contains("відк") || command.normalizedText.contains("откр") || command.normalizedText.contains("open"))
         case .cancel:
             return .result(try result("Скасовано", facts: []))
+        case .transportRoute:
+            return try await route(command, mode: .transit)
         case .productSearch, .fashionDiscovery, .groceryBasket, .serviceSearch, .restaurantSearch,
-             .reservation, .taxiSearch, .taxiCompare, .publicTransport, .transportRoute,
+             .reservation, .taxiSearch, .taxiCompare, .publicTransport,
              .ticketSearch, .ticketPurchaseHandoff, .hotelSearch, .travelPlan, .parcelTrack:
             throw CanonicalCapabilityExecutionError.externalProviderRequired(command.intent.rawValue)
         case .placeSearch:
@@ -525,7 +527,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         return .result(output)
     }
 
-    private func route(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+    private func route(_ command: StructuredCommand, mode: TravelMode = .driving) async throws -> CapabilityExecutionOutcome {
         let destinationName = try required(command.entities["destination"], "destination")
         let destination: ValidatedLocation
         if let latitude = command.entities["destination_latitude"].flatMap(Double.init),
@@ -537,7 +539,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             destination = try await locationResolver.resolve(destinationName)
         }
         if let origin = try? await currentLocation.resolveCurrent(for: .navigation) { currentContext.replaceRoute(origin: origin, destination: destination, destinationName: destinationName) }
-        let url = try navigation.url(provider: .appleMaps, destination: .init(latitude: destination.sample.latitude, longitude: destination.sample.longitude, name: destinationName), mode: .driving)
+        let url = try navigation.url(provider: .appleMaps, destination: .init(latitude: destination.sample.latitude, longitude: destination.sample.longitude, name: destinationName), mode: mode)
         return .handoff(.init(query: command.originalText, destination: url, kind: .navigation))
     }
 

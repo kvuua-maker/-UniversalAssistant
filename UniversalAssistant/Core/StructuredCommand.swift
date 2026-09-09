@@ -279,11 +279,12 @@ struct LocalCommandEngine: CommandParsing {
     }
 
     private func locationSystemIntent(_ text: String) -> String? {
-        let localityQuestion = ["в якому місті", "у якому місті", "в каком городе", "what city", "which city"].contains(where: text.contains)
-        if localityQuestion { return "current_locality" }
+        let selfWords = Set(text.split(whereSeparator: { !$0.isLetter }).map(String.init))
+        let selfLocation = ["мо", "поточ", "теперіш", "текущ", "де я", "где я", "current", "my "].contains(where: text.contains) || !selfWords.isDisjoint(with: ["я", "i"])
+        let localityStem = ["міст", "город", "city", "locality"].contains(where: text.contains)
+        if localityStem && selfLocation { return "current_locality" }
         if ["скільки їхати", "сколько ехать", "travel time", "how long"].contains(where: text.contains) { return "travel_time" }
         let addressStem = ["адрес", "address"].contains(where: text.contains)
-        let selfLocation = ["мо", "поточ", "текущ", "де я", "где я", "current", "my "].contains(where: text.contains)
         if addressStem && selfLocation { return "current_address" }
         let locationStem = ["місцезнаход", "местополож", "location", "де я", "где я"].contains(where: text.contains)
         if locationStem && selfLocation { return "current_location" }

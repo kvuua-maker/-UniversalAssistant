@@ -290,7 +290,9 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
 
         if frame.action == .navigate {
             if let location = frame.location { entities["destination"] = location }
-            return (frame.location == nil ? .routeSearch : .navigation, entities)
+            let transitMode = ["громадськ", "транспорт", "автобус", "метро", "трамва", "тролейбус", "обществен", "transit", "public transport"].contains(where: normalized.contains)
+            if transitMode { entities["travel_mode"] = "transit" }
+            return (transitMode ? .transportRoute : (frame.location == nil ? .routeSearch : .navigation), entities)
         }
 
         // Proximity is a structural location constraint. Once it is present,
@@ -339,7 +341,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.record, ["аудіозап", "аудиозап", "запис", "розпоч", "начн", "record"]),
             (.call, ["подзвон", "зателефон", "набер", "позвон", "call", "dial"]),
             (.message, ["напиш", "повідом", "сообщ", "message"]),
-            (.navigate, ["маршрут", "шлях", "дорог", "путь", "вед", "проклад", "їхат", "ехать", "navigat", "route", "path"]),
+            (.navigate, ["маршрут", "шлях", "дорог", "путь", "вед", "проклад", "їхат", "ехать", "діст", "добрат", "reach", "navigat", "route", "path"]),
             (.create, ["створ", "дод", "заплан", "созд", "добав", "create", "add", "schedule"]),
             (.set, ["постав", "встанов", "установ", "запуст", "увімк", "включ", "розбуд", "start", "activate", "set"]),
             (.open, ["відкр", "откр", "open", "перейд"]),

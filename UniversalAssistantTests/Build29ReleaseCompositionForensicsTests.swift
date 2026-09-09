@@ -318,6 +318,25 @@ struct Build29ReleaseRootLocationRouteTests {
         guard case let .deterministic(nearby) = model.resultState else { Issue.record("Nearby did not reach Place boundary"); return }
         #expect(nearby.facts.first?.id == "near")
 
+        model.input = "Визнач моє теперішнє місцезнаходження"
+        model.submit()
+        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .deterministic(coordinates) = model.resultState else { Issue.record("Current location did not reach CoreLocation boundary"); return }
+        #expect(coordinates.facts.first?.source == "CoreLocation")
+        #expect(coordinates.facts.first?.value?.contains("50.45000") == true)
+
+        model.input = "Назви адресу в моїй поточній точці"
+        model.submit()
+        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .deterministic(address) = model.resultState else { Issue.record("Address did not reach reverse-geocoding boundary"); return }
+        #expect(address.primaryAnswer == "Test address")
+
+        model.input = "До якого міста належить моя теперішня геопозиція?"
+        model.submit()
+        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .deterministic(locality) = model.resultState else { Issue.record("Locality did not reach reverse-geocoding boundary"); return }
+        #expect(locality.primaryAnswer == "Test locality")
+
         model.input = "Побудуй шлях до центральної бібліотеки"
         model.submit()
         for _ in 0..<100 { if case .webHandoff = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
@@ -331,6 +350,13 @@ struct Build29ReleaseRootLocationRouteTests {
         for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
         guard case let .deterministic(travel) = model.resultState else { Issue.record("Travel time did not reach route boundary"); return }
         #expect(travel.primaryAnswer.contains("7 хв"))
+
+        model.input = "Як дістатися громадським транспортом до ботанічного саду?"
+        model.submit()
+        for _ in 0..<100 { if case .webHandoff = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .webHandoff(transit) = model.resultState else { Issue.record("Transit route did not reach MapKit handoff"); return }
+        #expect(transit.kind == .navigation)
+        #expect(transit.destination.absoluteString.contains("dirflg=r") == true)
 
         model.input = "Знайди клініку вздовж цього маршруту"
         model.submit()
