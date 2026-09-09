@@ -100,6 +100,11 @@ Updated: 2026-09-09
 - Release-root notification tests 2/2 PASS; contextual permission/voice diagnostics 5/5 PASS; Development compile PASS.
 - Material diagnostics repair: a voice transcript ingress now retains its privacy-safe breadcrumbs when Home submission starts, even if a recovered/test session lacks the microphone-start marker.
 
+## Always Location policy checkpoint (2026-09-09)
+
+- The canonical shipped use cases are foreground location, nearby, routing and weather. Info.plist contains only `NSLocationWhenInUseUsageDescription`; source contains no `requestAlwaysAuthorization`, background location mode or background updates.
+- Row 45 is an intentional least-privilege Apple policy boundary, not a missing permission. Foreground rows 43–44 already have Release-root evidence.
+
 ## Exact continuation
 
-Reconcile the 2 remaining RELEASE_EVIDENCE_GAP rows (29, 45), then reconcile the recorded LocalCommandEngine contract gaps and run the full canonical gate set.
+Reconcile the remaining RELEASE_EVIDENCE_GAP row 29, then reconcile the recorded LocalCommandEngine contract gaps and run the full canonical gate set.
