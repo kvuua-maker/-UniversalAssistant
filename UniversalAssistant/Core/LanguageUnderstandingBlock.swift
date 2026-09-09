@@ -40,6 +40,7 @@ struct CanonicalCatalogEntity: Equatable, Sendable {
 struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
     private let legacyCandidate: LocalCommandEngine
     private let analyzer: CanonicalSemanticFrameAnalyzer
+    private let propositionAnalyzer: CanonicalPropositionAnalyzer
     private let applicationCandidates: [ScopedEntityCandidate<String>]
     private let serviceCandidates: [ScopedEntityCandidate<String>]
     private let catalogCandidates: [ScopedEntityCandidate<CanonicalCatalogEntity>]
@@ -47,12 +48,14 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
     init(
         legacyCandidate: LocalCommandEngine = .init(),
         analyzer: CanonicalSemanticFrameAnalyzer = .init(),
+        propositionAnalyzer: CanonicalPropositionAnalyzer = .init(),
         applicationCandidates: [ScopedEntityCandidate<String>]? = nil,
         serviceCandidates: [ScopedEntityCandidate<String>]? = nil,
         catalogCandidates: [ScopedEntityCandidate<CanonicalCatalogEntity>]? = nil
     ) {
         self.legacyCandidate = legacyCandidate
         self.analyzer = analyzer
+        self.propositionAnalyzer = propositionAnalyzer
         self.applicationCandidates = applicationCandidates ?? Self.verifiedApplicationCandidates
         self.serviceCandidates = serviceCandidates ?? Self.verifiedServiceCandidates
         self.catalogCandidates = catalogCandidates ?? Self.verifiedCatalogCandidates
@@ -125,8 +128,30 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             intent = legacy.intent
         }
 
-        var needsClarification = legacy.needsClarification || entities["clarification_options"] != nil
-        if let recovered = recoverApplication(frame: frameResult.frame, document: document) {
+        let proposition = propositionAnalyzer.infer(
+            document: document,
+            frame: frameResult.frame,
+            currentIntent: intent,
+            constraints: constraints
+        )
+        if let proposition {
+            intent = proposition.intent
+            for (key, value) in proposition.entities {
+                if entities[key] == nil || key == "query" || key == "near_current_location" {
+                    entities[key] = value
+                }
+            }
+            entities["proposition_confidence"] = String(format: "%.3f", proposition.confidence)
+            entities["proposition_evidence"] = proposition.evidence.sorted().joined(separator: "|")
+        }
+
+        var needsClarification = (proposition == nil && legacy.needsClarification) ||
+            entities["clarification_options"] != nil
+        if let recovered = recoverApplication(
+            frame: frameResult.frame,
+            document: document,
+            selectedIntent: intent
+        ) {
             switch recovered.resolution {
             case let .resolved(identifier):
                 entities["app"] = identifier
@@ -316,9 +341,13 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
 
     private func recoverApplication(
         frame: CanonicalSemanticFrame,
-        document: LanguageUnderstandingDocument
+        document: LanguageUnderstandingDocument,
+        selectedIntent: CommandIntent
     ) -> ScopedEntityResolutionEvidence<String>? {
-        guard isApplicationLaunch(frame) else { return nil }
+        // Application recovery may complete an OPEN_APP frame, but it cannot
+        // override an already selected concrete system or personal family just
+        // because that command also carries an "open" action.
+        guard selectedIntent == .open || (selectedIntent == .unknown && isApplicationLaunch(frame)) else { return nil }
         let actionMorphology: Set<String> = [
             "відкр", "откр", "open", "launch", "запуст", "перейд",
             "програм", "застос", "прилож", "app"

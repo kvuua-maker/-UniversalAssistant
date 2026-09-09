@@ -162,7 +162,12 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         // SOURCE controls the domain. “documents in Photos” is a Photos query;
         // the object alone must never redirect it to Files.
         if frame.source == .photos {
-            entities["query"] = (frame.modifiers.contains("latest") || frame.modifiers.contains("penultimate") || frame.action.map { [.open, .show].contains($0) } == true) ? "recent" : semanticPhotoSubject(original)
+            let subject = semanticPhotoSubject(original)
+            let recentSelection = frame.modifiers.contains("latest") ||
+                frame.modifiers.contains("penultimate") ||
+                (subject.isEmpty && frame.action.map { [.open, .show].contains($0) } == true)
+            entities["photo_query_kind"] = recentSelection ? "recent" : "semantic"
+            entities["query"] = recentSelection ? "recent" : subject
             if frame.action == .open { entities["requested_action"] = "open" }
             if frame.action == .share { entities["requested_action"] = "share" }
             if frame.action == .recognize { entities["requested_action"] = "ocr" }
@@ -230,8 +235,12 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
                 return (.cameraCapture, entities)
             }
             guard frame.action != nil || frame.modifiers.contains("latest") else { return (nil, entities) }
-            let recentSelection = frame.modifiers.contains("latest") || frame.modifiers.contains("penultimate") || [.open, .show].contains(frame.action)
-            entities["query"] = recentSelection ? "recent" : semanticPhotoSubject(original)
+            let subject = semanticPhotoSubject(original)
+            let recentSelection = frame.modifiers.contains("latest") ||
+                frame.modifiers.contains("penultimate") ||
+                (subject.isEmpty && [.open, .show].contains(frame.action))
+            entities["photo_query_kind"] = recentSelection ? "recent" : "semantic"
+            entities["query"] = recentSelection ? "recent" : subject
             if frame.action == .open { entities["requested_action"] = "open" }
             if frame.action == .share { entities["requested_action"] = "share" }
             if frame.action == .recognize { entities["requested_action"] = "ocr" }
@@ -687,7 +696,23 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     }
 
     private func semanticPhotoSubject(_ original: String) -> String {
-        original.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Keep the content-bearing part of the request while removing only
+        // structural action/source/object tokens. This is deliberately role
+        // based: it does not encode any photo subject, brand, place or an
+        // acceptance-test phrase.
+        let actionOrObjectRoots = [
+            "знайд", "пошук", "покаж", "відкр", "найд", "поищ", "откр",
+            "find", "search", "show", "open",
+            "фото", "фотограф", "світлин", "знім", "сним", "picture", "image"
+        ]
+        let structuralWords: Set<String> = [
+            "у", "в", "на", "серед", "поміж", "из", "среди", "among", "in", "from",
+            "моє", "мої", "моїх", "мою", "мій", "моя", "мои", "моих", "my", "the", "a"
+        ]
+        return lexicalTokens(original).filter { token in
+            !structuralWords.contains(token) &&
+                !actionOrObjectRoots.contains(where: token.hasPrefix)
+        }.joined(separator: " ")
     }
 
     private func mediaSubject(_ original: String, app: String) -> String {

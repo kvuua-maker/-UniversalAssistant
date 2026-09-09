@@ -428,10 +428,13 @@ struct Build29ReleaseRootLocationRouteTests {
     private func location(_ latitude: Double, _ longitude: Double, source: LocationSource = .device) -> ValidatedLocation {
         .init(sample: .init(latitude: latitude, longitude: longitude, horizontalAccuracy: 5, timestamp: .now, speed: 0, course: 0, source: source), quality: .precise, isSafeForLocationActions: true, manualLabel: nil)
     }
-    private func model(opened: @escaping @MainActor (URL) -> Void = { _ in }) -> AssistantViewModel {
+    private func model(
+        places placeOverride: [Place]? = nil,
+        opened: @escaping @MainActor (URL) -> Void = { _ in }
+    ) -> AssistantViewModel {
         let origin = location(50.45, 30.52)
         let destination = location(50.46, 30.55, source: .manual)
-        let places = [
+        let places = placeOverride ?? [
             Place(id: "far", providerID: "far", name: "Far Clinic", category: .clinic, latitude: 50.70, longitude: 30.80, source: "MapKit boundary", timestamp: .now, verification: .providerReturned),
             Place(id: "near", providerID: "near", name: "Near Clinic", category: .clinic, latitude: 50.451, longitude: 30.521, source: "MapKit boundary", timestamp: .now, verification: .providerReturned)
         ]
@@ -502,6 +505,38 @@ struct Build29ReleaseRootLocationRouteTests {
         guard case let .deterministic(routePlace) = model.resultState else { Issue.record("Route context did not continue"); return }
         #expect(routePlace.facts.first?.source == "MapKit boundary")
         #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+
+    @Test func indirectPropositionsUseTheShippedLanguageBlockAndMapKitGraph() async throws {
+        let model = model(places: [
+            Place(id: "far", providerID: "far", name: "Far Cafe", category: .cafe, latitude: 50.70, longitude: 30.80, source: "MapKit boundary", timestamp: .now, verification: .providerReturned),
+            Place(id: "near", providerID: "near", name: "Near Cafe", category: .cafe, latitude: 50.451, longitude: 30.521, source: "MapKit boundary", timestamp: .now, verification: .providerReturned)
+        ])
+        model.input = "Хотілося б випити теплого напою десь поряд"
+        model.submit()
+        for _ in 0..<100 {
+            if case .deterministic = model.resultState { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        guard case let .deterministic(nearby) = model.resultState else {
+            Issue.record("Indirect nearby proposition did not reach Place boundary")
+            return
+        }
+        #expect(nearby.facts.first?.id == "near")
+        #expect(!nearby.facts.contains(where: { $0.id == "far" }))
+
+        model.input = "Мені необхідно потрапити до виставкового павільйону"
+        model.submit()
+        for _ in 0..<100 {
+            if case .webHandoff = model.resultState { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        guard case let .webHandoff(route) = model.resultState else {
+            Issue.record("Indirect movement proposition did not reach Navigation boundary")
+            return
+        }
+        #expect(route.kind == .navigation)
+        #expect(route.destination.host?.contains("maps.apple.com") == true)
     }
 }
 
@@ -863,6 +898,15 @@ struct Build29ReleaseRemainingGapTests {
         weak.submit()
         try await wait { if case .failure = weak.resultState { return true }; return false }
         #expect({ if case .webHandoff = weak.resultState { return false }; return true }())
+
+        // A content-bearing SHOW formulation must use semantic classification;
+        // it may not silently fall back to the latest private asset.
+        let weakShow = ProductionAssistantComposition.makeModel(photos: library, photoSemanticLoader: Build29PhotoLoaderBoundary(), photoSemanticLabeler: Build29PhotoLabelBoundary(confidence: 0.31), personalSearchSources: [], compactResultDuration: .seconds(60))
+        weakShow.input = "Покажи серед світлин паперовий документ"
+        weakShow.submit()
+        try await wait { if case .failure = weakShow.resultState { return true }; return false }
+        #expect({ if case .deterministic = weakShow.resultState { return false }; return true }())
+        #expect({ if case .webHandoff = weakShow.resultState { return false }; return true }())
     }
 
     @Test func sharedInboxEntersCurrentContextThroughReleaseModelExactlyOnce() throws {

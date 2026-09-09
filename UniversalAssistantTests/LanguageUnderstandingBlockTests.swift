@@ -58,8 +58,21 @@ struct LanguageUnderstandingBlockTests {
     @Test func semanticPhotoIsNotReplacedByLatestPhoto() {
         let command = LanguageUnderstandingBlock().parse("Пошукай старий міст серед моїх світлин")
         #expect(command.intent == .photoSearch)
-        #expect(command.entities["query"] != "recent")
+        #expect(command.entities["photo_query_kind"] == "semantic")
+        #expect(command.entities["query"] == "старий міст")
         #expect(command.intent != .fileSearch)
+    }
+
+    @Test func contentBearingShowStaysSemanticWhileGenericPhotoRemainsRecent() {
+        let semantic = LanguageUnderstandingBlock().parse("Покажи серед світлин старовинну вежу")
+        #expect(semantic.intent == .photoSearch)
+        #expect(semantic.entities["photo_query_kind"] == "semantic")
+        #expect(semantic.entities["query"] == "старовинну вежу")
+
+        let recent = LanguageUnderstandingBlock().parse("Покажи мою фотографію")
+        #expect(recent.intent == .photoSearch)
+        #expect(recent.entities["photo_query_kind"] == "recent")
+        #expect(recent.entities["query"] == "recent")
     }
 
     @Test func protectedUnknownTargetNeverBecomesGenericWeb() {
@@ -136,6 +149,44 @@ struct LanguageUnderstandingBlockTests {
         let weak = block.parse("Підбери черевики невідомої марки")
         #expect(weak.constraints.brand == nil)
         #expect(weak.entities["catalog_entity_id"] == nil)
+    }
+
+    @Test func indirectNearbyNeedUsesAWholePropositionInsteadOfWebFallback() {
+        let block = LanguageUnderstandingBlock()
+        let variants = [
+            "Хотілося б випити теплого напою десь поряд",
+            "Мені треба перекусити неподалік",
+            "Хочу придбати свіжих овочів поблизу"
+        ]
+        for text in variants {
+            let command = block.parse(text)
+            #expect(command.intent == .placeSearch, "Selected \(command.intent) for \(text)")
+            #expect(command.entities["near_current_location"] == "true")
+            #expect(command.entities["proposition_evidence"]?.contains("proximity") == true)
+            #expect(command.intent != .webSearch)
+            #expect(!command.needsClarification)
+        }
+    }
+
+    @Test func indirectMovementNeedProducesTypedDestination() {
+        let command = LanguageUnderstandingBlock().parse(
+            "Мені необхідно потрапити до виставкового павільйону"
+        )
+        #expect(command.intent == .navigation)
+        #expect(command.entities["destination"] == "виставкового павільйону")
+        #expect(command.entities["proposition_confidence"].flatMap(Double.init) ?? 0 >= 0.80)
+        #expect(command.intent != .webSearch)
+        #expect(!command.needsClarification)
+    }
+
+    @Test func propositionInferenceCannotOverrideRecognizedPersonalOrSystemFamily() {
+        let reminder = LanguageUnderstandingBlock().parse("Мені потрібне нагадування завтра о 8:20")
+        #expect([CommandIntent.reminderCreate, .reminderQuery].contains(reminder.intent))
+        #expect(reminder.intent != .placeSearch && reminder.intent != .productSearch)
+
+        let settings = LanguageUnderstandingBlock().parse("Хочу відкрити налаштування цього застосунку")
+        #expect(settings.intent == .settings)
+        #expect(settings.intent != .webSearch)
     }
 }
 

@@ -544,9 +544,23 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         }
         let category = placeCategory(in: command.normalizedText)
         let searchText = placeSearchText(for: command, category: category)
-        let response = try await placeSearch.search(.init(text: searchText, category: category, location: location, limit: 5))
-        let nearestRequested = ["найближ", "ближайш", "nearest", "closest"].contains(where: command.normalizedText.contains)
-        let places = nearestRequested ? PlaceProximityOrdering().nearestFirst(response.places, from: location) : response.places
+        let nearbyRadiusMeters = 5_000.0
+        let response = try await placeSearch.search(.init(
+            text: searchText, category: category, location: location,
+            radiusMeters: nearbyRadiusMeters, limit: 5
+        ))
+        let proximityRequested = command.entities["near_current_location"] == "true" ||
+            ["поруч", "поблиз", "неподал", "поряд", "рядом", "nearby", "nearest", "closest"]
+                .contains(where: command.normalizedText.contains)
+        let distanceOrdered = proximityRequested
+            ? PlaceProximityOrdering().nearestFirst(response.places, from: location)
+            : response.places
+        // Provider regions are a request hint, not a trust boundary. Enforce
+        // the explicit nearby radius locally so a provider cannot surface an
+        // obviously distant result above relevant local candidates.
+        let places = proximityRequested
+            ? distanceOrdered.filter { ($0.distanceMeters ?? .greatestFiniteMagnitude) <= nearbyRadiusMeters }
+            : distanceOrdered
         guard !places.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_places_found") }
         let output = try result("Знайдено місця", facts: places.prefix(5).enumerated().map { index, place in
             ResultFact(id: place.id, label: place.name, value: place.address ?? place.category.rawValue, state: .verified, source: place.source, observedAt: place.timestamp, priority: 100 - index)
@@ -627,7 +641,14 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
 
     private func photo(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         let query = command.entities["query"] ?? ""
-        let latest = query.isEmpty || query == "latest" || query == "recent"
+        let queryKind = command.entities["photo_query_kind"]
+        let latest = queryKind == "recent" || query == "latest" || query == "recent"
+        guard latest || !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            // A malformed semantic request must never degrade into returning a
+            // private latest asset. Keep the failure in the Photos family so
+            // the renderer can clarify truthfully without a web fallback.
+            throw CanonicalCapabilityExecutionError.missingParameter("photo_semantic_query")
+        }
         let access = photos.authorization() == .permissionRequired ? await photos.requestAuthorization() : photos.authorization()
         guard access == .permitted || access == .limited else { throw CanonicalCapabilityExecutionError.unavailable("photos_access_unavailable") }
         let recentIndex = max(0, (command.constraints.ordinal ?? 1) - 1)

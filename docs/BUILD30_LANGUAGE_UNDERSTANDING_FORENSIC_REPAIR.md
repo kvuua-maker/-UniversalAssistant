@@ -195,8 +195,45 @@ RETEST REQUIRED**. Build-30 crash causation remains unproven because its diagnos
 payloads were rejected before storage; this checkpoint does not relabel that
 missing evidence.
 
+## Proposition, Places and semantic Photos checkpoint
+
+`CanonicalPropositionAnalyzer` adds proposition-level evidence for natural
+need/desire statements. It selects a capability only from a compatible set of
+modality, activity, destination/content and proximity roles. A lone keyword is
+never sufficient, and an inferred proposition cannot override an already typed
+system or personal capability. The first Release-root run exposed two separate
+legacy-precedence defects: inherited clarification survived a stronger complete
+proposition, and application recovery could steal a concrete SETTINGS intent.
+Both precedence mechanisms were corrected structurally rather than with phrase
+exceptions.
+
+Nearby requests now carry a typed `near_current_location` role to the production
+MapKit boundary. MapKit's search region remains a provider hint, so the executor
+also applies geodesic nearest-first ordering and a local five-kilometre cutoff for
+an explicit nearby request. The first Release-root assertion caught the former
+far-first behavior and is preserved as regression evidence.
+
+Recent/ordinal PhotoKit selection and semantic Photos are now explicitly typed as
+`photo_query_kind=recent|semantic`. Content-bearing OPEN/SHOW requests retain a
+structurally extracted subject and use confidence-bearing Vision classification;
+they cannot degrade to the latest private asset. Low-confidence classification and
+an empty malformed semantic query fail inside the Photos family without web.
+Generic photo requests and latest/ordinal PhotoKit behavior remain protected.
+
+Verification:
+
+- proposition and MapKit Release-root suites after the distance repair: 17/17 PASS;
+- combined language, semantic frame, PhotoKit/Vision, Files collision,
+  CurrentContext and Release-root MapKit suites: 47/47 PASS;
+- Development compile: PASS;
+- `git diff --check`: PASS.
+
+Status is **AUTOMATED GREEN FOR THIS CHECKPOINT — PHYSICAL IPHONE RETEST
+REQUIRED**.
+
 ## Exact continuation point
 
-Add proposition-level indirect-intent and reusable Ukrainian/Russian morphology
-evidence to `LanguageUnderstandingBlock`, then prove semantic-photo versus
-latest-photo isolation and nearby ranking through `ProductionAssistantComposition`.
+Audit current device/Xcode crash diagnostics for the Build-30 Contacts close event.
+Then complete reusable Ukrainian/Russian inflection evidence and typed temporal/
+confidence clarification policy in `LanguageUnderstandingBlock`, followed by
+unseen Release-root Contacts/Calls and cross-family language regressions.
