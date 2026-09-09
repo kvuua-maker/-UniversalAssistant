@@ -29,4 +29,13 @@ Updated: 2026-09-09
 - Material lifecycle repair: `AssistantViewModel.presentFailure` now always leaves the processing state when publishing a terminal failure.
 - Rows 63 and 66–72 now have Release evidence or exact public-iOS limitation evidence.
 
+## CurrentContext and compound checkpoint
+
+- The shipped composition now structurally recognizes inflected references to a previous answer before local utility selection; result copy/share consumes typed `CurrentContext`, not reparsed text.
+- Removed the broad arithmetic `поділ`/`раздел` substring collision that captured natural Share commands; exact division forms remain supported and the protected chained-arithmetic regression stays green.
+- Release-root system/context plus utility verification: 15/15 PASS. Protected CurrentContext, concrete multi-step, clipboard and replay/expiry suites: 31/31 PASS. Development compile: PASS.
+- Rows 73–75 now have Release-root evidence. Internal planner identifiers remain non-executable.
+
 ## Exact continuation
+
+Rows 76–89: prove provider-neutral Release boundaries and exact truthful dependency or deliberate constraint-preserving fallback, without fabricated credentials/data.

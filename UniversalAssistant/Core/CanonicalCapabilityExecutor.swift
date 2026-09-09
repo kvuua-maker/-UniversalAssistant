@@ -453,6 +453,10 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             guard let value = currentContext.freshAnswer() else { throw CanonicalCapabilityExecutionError.missingParameter("current_result") }
             return .result(try result(try publicDeviceExecute(.copyToClipboard(value)), facts: []))
         }
+        if kind == "share_context" {
+            guard let value = currentContext.freshAnswer() else { throw CanonicalCapabilityExecutionError.missingParameter("current_result") }
+            return .presentation(.share(value))
+        }
         if kind == "current_location" {
             let location = try await currentLocation.resolveCurrent(for: .general)
             let coordinates = String(format: "%.5f, %.5f", location.sample.latitude, location.sample.longitude)

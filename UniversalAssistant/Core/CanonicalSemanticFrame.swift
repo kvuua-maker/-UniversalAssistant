@@ -131,6 +131,11 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             entities["compound_order"] = compound.isSequential ? "sequential" : "parallel"
         }
 
+        if [.previousResult, .selectedResult].contains(frame.contextReference) {
+            if frame.action == .copy { entities["system_action"] = "clipboard_copy_context"; return (.deviceAction, entities) }
+            if frame.action == .share { entities["system_action"] = "share_context"; return (.deviceAction, entities) }
+        }
+
         if frame.contextReference == .activeRoute,
            frame.action == nil || [.search, .show, .query].contains(frame.action!) {
             entities["query"] = original
@@ -555,7 +560,8 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         let routeNoun = ["маршрут", "дороз", "пут", "route"].contains(where: normalized.contains)
         if routeRelation && routeNoun { return .activeRoute }
         if normalized.contains("де я") || normalized.contains("где я") || normalized.contains("where i am") || normalized.contains("моє місцезнаходження") { return .currentLocation }
-        if normalized.contains("останній результат") || normalized.contains("последний результат") || normalized.contains("last result") { return .previousResult }
+        let previousResultReference = tokens.contains { token in ["остан", "поперед", "послед", "previous", "last"].contains { root in token.hasPrefix(root) } } && tokens.contains { token in ["результ", "відповід", "ответ", "result", "answer"].contains { root in token.hasPrefix(root) } }
+        if previousResultReference { return .previousResult }
         if normalized.contains("цій фотографії") || normalized.contains("shared image") || normalized.contains("цим посиланням") { return .sharedContent }
         if normalized.contains("цей результат") || normalized.contains("обраний") || normalized.contains("selected result") { return .selectedResult }
         return nil

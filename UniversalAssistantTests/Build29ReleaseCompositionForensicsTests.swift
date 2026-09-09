@@ -560,4 +560,27 @@ struct Build29ReleaseRootSystemFXTests {
             #expect(model.statusText != AppText.value("processing"))
         }
     }
+
+    @Test func previousResultCopyAndShareConsumeTypedReleaseContext() async throws {
+        var actions: [SystemQuickAction] = []
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            publicDeviceExecute: { action in actions.append(action); return "copied" }
+        )
+        model.input = "Котра година за місцевим часом?"
+        model.submit()
+        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .deterministic(initial) = model.resultState else { Issue.record("Initial result missing"); return }
+
+        model.input = "Скопіюй останній результат у буфер обміну"
+        model.submit()
+        for _ in 0..<100 where actions.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(actions.last == .copyToClipboard(initial.primaryAnswer))
+
+        model.input = "Поділися останнім результатом"
+        model.submit()
+        for _ in 0..<100 where model.capabilityPresentation == nil { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(model.capabilityPresentation == .share("copied"))
+        #expect(model.statusText != AppText.value("processing"))
+    }
 }
