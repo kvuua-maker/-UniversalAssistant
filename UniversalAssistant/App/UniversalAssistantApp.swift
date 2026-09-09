@@ -8,6 +8,11 @@ enum ProductionAssistantComposition {
     static func makeModel(
         contacts: any ContactResolving = LocalContactResolver(),
         photos: any PhotoLibrarySearching = PhotoKitLibrarySearch(),
+        locationResolver: ManualLocationContextResolver = .init(),
+        placeSearch: PlaceSearchEngine = .init(providers: [MapKitPlaceProvider()]),
+        currentLocation: any CurrentLocationResolving = AppleCurrentLocationResolver(),
+        reverseLocation: any ReverseLocationGeocoding = AppleReverseLocationGeocoder(),
+        routeProvider: any RouteProvider = MapKitRouteProvider(),
         personalSearchSources: [any PersonalSearchSource] = [
             ContactsPersonalSearchSource(), PhotosPersonalSearchSource(),
             LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())
@@ -22,7 +27,9 @@ enum ProductionAssistantComposition {
         let context = CurrentContextStore()
         let recorder = AudioRecorderController()
         let executor = ProductionCanonicalCapabilityExecutor(
-            contacts: contacts, photos: photos, currentContext: context, eventKit: eventKit, recorder: recorder,
+            contacts: contacts, photos: photos, locationResolver: locationResolver, placeSearch: placeSearch,
+            currentLocation: currentLocation, reverseLocation: reverseLocation, currentContext: context, routeProvider: routeProvider,
+            eventKit: eventKit, recorder: recorder,
             publicDeviceExecute: publicDeviceExecute, clipboardRead: clipboardRead,
             personalSearchSources: personalSearchSources
         )

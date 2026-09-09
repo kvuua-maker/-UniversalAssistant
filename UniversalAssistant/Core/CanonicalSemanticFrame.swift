@@ -131,6 +131,12 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             entities["compound_order"] = compound.isSequential ? "sequential" : "parallel"
         }
 
+        if frame.contextReference == .activeRoute,
+           frame.action == nil || [.search, .show, .query].contains(frame.action!) {
+            entities["query"] = original
+            return (.routeAwareSearch, entities)
+        }
+
         // SOURCE controls the domain. “documents in Photos” is a Photos query;
         // the object alone must never redirect it to Files.
         if frame.source == .photos {
@@ -333,7 +339,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.record, ["аудіозап", "аудиозап", "запис", "розпоч", "начн", "record"]),
             (.call, ["подзвон", "зателефон", "набер", "позвон", "call", "dial"]),
             (.message, ["напиш", "повідом", "сообщ", "message"]),
-            (.navigate, ["маршрут", "вед", "проклад", "їхат", "ехать", "navigat", "route"]),
+            (.navigate, ["маршрут", "шлях", "дорог", "путь", "вед", "проклад", "їхат", "ехать", "navigat", "route", "path"]),
             (.create, ["створ", "дод", "заплан", "созд", "добав", "create", "add", "schedule"]),
             (.set, ["постав", "встанов", "установ", "запуст", "увімк", "включ", "розбуд", "start", "activate", "set"]),
             (.open, ["відкр", "откр", "open", "перейд"]),
@@ -373,7 +379,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.settings, ["налаштуван", "настрой", "параметр", "settings", "preferences", "einstellungen", "réglages"]),
             (.battery, ["батаре", "акумулятор", "battery"]),
             (.storage, ["сховищ", "простор", "памят", "storage", "diskspace"]),
-            (.travelTime, ["триваліст", "час-дорозі", "traveltime", "duration"]),
+            (.travelTime, ["трив", "час-дорозі", "traveltime", "duration"]),
             (.code, ["qr", "barcode", "штрихкод", "код"]),
             (.text, ["текст", "text"]),
             (.weather, ["погод", "температур", "дощ", "дожд", "холод", "спек", "жарк", "weather", "rain", "cold", "hot"]),
@@ -447,10 +453,10 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             output.remove("latest")
             output.insert("penultimate")
         }
-        if tokens.contains(where: { ["тут", "поруч", "поблизу", "неподалік", "рядом", "поблизости", "nearby", "near", "зараз", "моє", "моему", "current", "here"].contains($0) }) {
+        if tokens.contains(where: { token in ["тут", "поруч", "поблиз", "неподал", "рядом", "nearby", "near", "найближ", "ближайш", "nearest", "closest", "зараз", "моє", "моему", "current", "here"].contains(where: token.hasPrefix) }) {
             output.insert("current_location")
         }
-        if tokens.contains(where: { ["поруч", "поблизу", "неподалік", "рядом", "поблизости", "nearby", "near", "nearest", "closest"].contains($0) }) {
+        if tokens.contains(where: { token in ["поруч", "поблиз", "неподал", "рядом", "nearby", "near", "найближ", "ближайш", "nearest", "closest"].contains(where: token.hasPrefix) }) {
             output.insert("proximity")
         }
         return output
@@ -524,7 +530,9 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             ["цій", "цьому", "цього", "цією", "этой", "этом", "this", "that"].contains(token)
         }
         if hasPhoto && hasDemonstrative { return .sharedContent }
-        if normalized.contains("по дорозі") || normalized.contains("по пути") || normalized.contains("along the route") { return .activeRoute }
+        let routeRelation = ["по дорозі", "по пути", "along the route", "вздовж", "уздовж", "along"].contains(where: normalized.contains)
+        let routeNoun = ["маршрут", "дороз", "пут", "route"].contains(where: normalized.contains)
+        if routeRelation && routeNoun { return .activeRoute }
         if normalized.contains("де я") || normalized.contains("где я") || normalized.contains("where i am") || normalized.contains("моє місцезнаходження") { return .currentLocation }
         if normalized.contains("останній результат") || normalized.contains("последний результат") || normalized.contains("last result") { return .previousResult }
         if normalized.contains("цій фотографії") || normalized.contains("shared image") || normalized.contains("цим посиланням") { return .sharedContent }

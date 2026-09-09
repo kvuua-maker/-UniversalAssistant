@@ -259,3 +259,87 @@ struct Build29ReleaseRootPhotoFileTests {
         #expect(model.capabilityPresentation == .photoOCR("release-photo"))
     }
 }
+
+
+@MainActor private final class Build29ReleaseLocationBoundary: CurrentLocationResolving {
+    let value: ValidatedLocation
+    init(_ value: ValidatedLocation) { self.value = value }
+    func resolveCurrent(for purpose: LocationPurpose) async throws -> ValidatedLocation { value }
+}
+private actor Build29ReleaseGeocoderBoundary: ManualLocationGeocoding {
+    let sample: LocationSample
+    init(_ sample: LocationSample) { self.sample = sample }
+    func resolve(_ label: String) async throws -> LocationSample { sample }
+}
+private struct Build29ReleaseReverseBoundary: ReverseLocationGeocoding {
+    func address(for location: ValidatedLocation) async throws -> String { "Test address" }
+    func locality(for location: ValidatedLocation) async throws -> String { "Test locality" }
+}
+private struct Build29ReleasePlaceBoundary: PlaceProvider {
+    let providerID = "release-mapkit-boundary"
+    let values: [Place]
+    func search(_ query: PlaceQuery) async throws -> [Place] { values }
+}
+private struct Build29ReleaseRouteBoundary: RouteProvider {
+    let providerID = "release-directions-boundary"
+    func route(_ request: RouteRequest) async throws -> RouteResult {
+        .init(distanceMeters: 1800, expectedTravelTime: 420, steps: ["Continue straight"], source: providerID, timestamp: .now)
+    }
+}
+
+@Suite("Build 29 Release root MapKit and CoreLocation", .serialized)
+@MainActor
+struct Build29ReleaseRootLocationRouteTests {
+    private func location(_ latitude: Double, _ longitude: Double, source: LocationSource = .device) -> ValidatedLocation {
+        .init(sample: .init(latitude: latitude, longitude: longitude, horizontalAccuracy: 5, timestamp: .now, speed: 0, course: 0, source: source), quality: .precise, isSafeForLocationActions: true, manualLabel: nil)
+    }
+    private func model(opened: @escaping @MainActor (URL) -> Void = { _ in }) -> AssistantViewModel {
+        let origin = location(50.45, 30.52)
+        let destination = location(50.46, 30.55, source: .manual)
+        let places = [
+            Place(id: "far", providerID: "far", name: "Far Clinic", category: .clinic, latitude: 50.70, longitude: 30.80, source: "MapKit boundary", timestamp: .now, verification: .providerReturned),
+            Place(id: "near", providerID: "near", name: "Near Clinic", category: .clinic, latitude: 50.451, longitude: 30.521, source: "MapKit boundary", timestamp: .now, verification: .providerReturned)
+        ]
+        return ProductionAssistantComposition.makeModel(
+            locationResolver: .init(geocoder: Build29ReleaseGeocoderBoundary(destination.sample)),
+            placeSearch: .init(providers: [Build29ReleasePlaceBoundary(values: places)]),
+            currentLocation: Build29ReleaseLocationBoundary(origin), reverseLocation: Build29ReleaseReverseBoundary(),
+            routeProvider: Build29ReleaseRouteBoundary(), personalSearchSources: [], compactResultDuration: .seconds(60),
+            systemHandoffOpen: opened
+        )
+    }
+
+    @Test func nearbyRankingNavigationTravelTimeAndRouteFollowupUseOneShippedContext() async throws {
+        var opened: [URL] = []
+        let model = model { opened.append($0) }
+        model.input = "Яка клініка розташована найближче до мене?"
+        model.submit()
+        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .deterministic(nearby) = model.resultState else { Issue.record("Nearby did not reach Place boundary"); return }
+        #expect(nearby.facts.first?.id == "near")
+
+        model.input = "Побудуй шлях до центральної бібліотеки"
+        model.submit()
+        for _ in 0..<100 { if case .webHandoff = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .webHandoff(navigation) = model.resultState else { Issue.record("Navigation did not reach handoff renderer"); return }
+        #expect(navigation.kind == .navigation)
+        #expect(navigation.destination.host?.contains("maps.apple.com") == true)
+        #expect(opened.isEmpty)
+
+        model.input = "Скільки триватиме дорога до виставкового центру?"
+        model.submit()
+        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .deterministic(travel) = model.resultState else { Issue.record("Travel time did not reach route boundary"); return }
+        #expect(travel.primaryAnswer.contains("7 хв"))
+
+        model.input = "Знайди клініку вздовж цього маршруту"
+        model.submit()
+        for _ in 0..<100 {
+            if case let .deterministic(value) = model.resultState, value.primaryAnswer.contains("дорозі") { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        guard case let .deterministic(routePlace) = model.resultState else { Issue.record("Route context did not continue"); return }
+        #expect(routePlace.facts.first?.source == "MapKit boundary")
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+}
