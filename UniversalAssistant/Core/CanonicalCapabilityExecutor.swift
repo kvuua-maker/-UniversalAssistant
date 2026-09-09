@@ -172,6 +172,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         contacts: any ContactResolving = LocalContactResolver(),
         photos: any PhotoLibrarySearching = PhotoKitLibrarySearch(),
         podcasts: ApplePodcastSearchProvider = .init(),
+        mediaOverride: MediaIntegrationEngine? = nil,
         locationResolver: ManualLocationContextResolver = .init(),
         placeSearch: PlaceSearchEngine = .init(providers: [MapKitPlaceProvider()]),
         currentLocation: any CurrentLocationResolving = AppleCurrentLocationResolver(),
@@ -215,9 +216,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             }
         }
 #if canImport(MusicKit)
-        self.media = MediaIntegrationEngine(adapters: [AppleMusicProviderAdapter()])
+        self.media = mediaOverride ?? MediaIntegrationEngine(adapters: [AppleMusicProviderAdapter()])
 #else
-        self.media = nil
+        self.media = mediaOverride
 #endif
         if multiStepOperationFactory == nil {
             let operationMap = ProductionStepOperationMap(eventKit: eventKit, currentLocation: currentLocation, locationResolver: locationResolver, places: placeSearch) { [weak self] subcommand, step in

@@ -108,6 +108,23 @@ private final class Build29ReleaseRecordingBackend: AudioRecordingBackend {
     func stopPlayback() {}
 }
 
+private actor Build29ReleaseMediaBoundary: MediaProviderAdapter {
+    let providerID = "apple-music"
+    func authorizationState() async -> MediaAuthorizationState { .authorized }
+    func requestAuthorization() async -> MediaAuthorizationState { .authorized }
+    func search(query: String, kinds: Set<MediaItemKind>, limit: Int) async throws -> [MediaItem] {
+        [.init(id: "release-song", providerID: providerID, kind: .song, title: "Boundary Song", artist: "Boundary Artist", exactURL: URL(string: "https://music.apple.com/song/release-song"))]
+    }
+    func control(_ action: MediaControlAction, item: MediaItem?) async throws {}
+}
+
+private actor Build29ReleasePodcastTransport: PodcastHTTPTransport {
+    func data(for request: URLRequest) async throws -> (Data, Int) {
+        let json = #"{"results":[{"trackId":321,"trackName":"Міська лабораторія","collectionName":"Архітектура","trackViewUrl":"https://podcasts.apple.com/episode/321"}]}"#
+        return (Data(json.utf8), 200)
+    }
+}
+
 private struct Build29ReleaseWeatherBoundary: WeatherCommandExecuting {
     func execute(_ command: StructuredCommand) async throws -> WeatherSnapshot {
         .init(current: .init(date: .now, temperatureCelsius: 16, apparentTemperatureCelsius: 15,
@@ -143,6 +160,44 @@ struct Build29ReleaseRootFamilyReachabilityTests {
         model.submit()
         for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
         guard case .deterministic = model.resultState else { Issue.record("Utility did not reach deterministic Release executor"); return }
+        #expect(model.statusText != AppText.value("processing"))
+    }
+
+    @Test func mediaAndPodcastProvidersUseReleaseRootWithExactHandoffs() async throws {
+        let media = MediaIntegrationEngine(adapters: [Build29ReleaseMediaBoundary()])
+        let podcasts = ApplePodcastSearchProvider(transport: Build29ReleasePodcastTransport())
+        var opened: [URL] = []
+        let model = ProductionAssistantComposition.makeModel(
+            podcasts: podcasts,
+            mediaOverride: media,
+            personalSearchSources: [],
+            compactResultDuration: .seconds(60),
+            systemHandoffOpen: { opened.append($0) }
+        )
+
+        model.input = "Знайди пісню про далеку мандрівку в Apple Music"
+        model.submit()
+        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .deterministic(music) = model.resultState else { Issue.record("Apple Music did not reach typed provider boundary"); return }
+        #expect(music.facts.first?.source == "Apple Music")
+        #expect(music.actions.first?.destination?.host == "music.apple.com")
+
+        model.input = "Знайди подкаст про міську архітектуру"
+        model.submit()
+        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .deterministic(podcast) = model.resultState else { Issue.record("Podcast did not reach Apple search boundary"); return }
+        #expect(podcast.facts.first?.source == "Apple Podcasts")
+        #expect(podcast.actions.first?.destination?.host == "podcasts.apple.com")
+
+        let spotifyInput = "Увімкни добірку для бігу у Spotify"
+        let spotifyCommand = LocalCommandEngine().parse(spotifyInput)
+        #expect(spotifyCommand.intent == .mediaSearch)
+        #expect(spotifyCommand.entities["app"]?.lowercased() == "spotify")
+        model.input = spotifyInput
+        model.submit()
+        for _ in 0..<100 where opened.last?.scheme != "spotify" { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(opened.last?.scheme == "spotify")
+        #expect(model.resultState == .idle)
         #expect(model.statusText != AppText.value("processing"))
     }
 
