@@ -1,8 +1,35 @@
 import SwiftUI
 
+/// Single composition root used by the shipped app and Production-configuration E2E.
+/// Tests may replace only an external side-effect boundary; parser, router, context,
+/// executor graph and rendering lifecycle remain identical to Release.
+@MainActor
+enum ProductionAssistantComposition {
+    static func makeModel(
+        contacts: any ContactResolving = LocalContactResolver(),
+        personalSearchSources: [any PersonalSearchSource] = [
+            ContactsPersonalSearchSource(), PhotosPersonalSearchSource(),
+            LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())
+        ],
+        compactResultDuration: Duration = .seconds(2),
+        systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
+    ) -> AssistantViewModel {
+        let context = CurrentContextStore()
+        let recorder = AudioRecorderController()
+        let executor = ProductionCanonicalCapabilityExecutor(
+            contacts: contacts, currentContext: context, recorder: recorder,
+            personalSearchSources: personalSearchSources
+        )
+        return AssistantViewModel(
+            capabilityExecutor: executor, currentContext: context, recorder: recorder,
+            compactResultDuration: compactResultDuration, systemHandoffOpen: systemHandoffOpen
+        )
+    }
+}
+
 @main
 struct UniversalAssistantApp: App {
-    @State private var model = AssistantViewModel()
+    @State private var model = ProductionAssistantComposition.makeModel()
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {

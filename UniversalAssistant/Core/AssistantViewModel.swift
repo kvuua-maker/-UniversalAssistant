@@ -59,6 +59,7 @@ final class AssistantViewModel {
         genericDiscovery: GenericUnknownRequestCoordinator? = nil,
         eventKitExecutor: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
         capabilityExecutor: (any CanonicalCapabilityExecuting)? = nil,
+        currentContext suppliedCurrentContext: CurrentContextStore? = nil,
         ocrProcessor: (any DocumentOCRProcessing)? = nil,
         recorder: AudioRecorderController = AudioRecorderController(),
         feedbackStore: UserFeedbackStore = .shared,
@@ -73,7 +74,7 @@ final class AssistantViewModel {
         self.webSearchHandoff = webSearchHandoff
         self.genericDiscovery = genericDiscovery
         self.eventKitExecutor = eventKitExecutor
-        let currentContext = CurrentContextStore()
+        let currentContext = suppliedCurrentContext ?? CurrentContextStore()
         self.currentContext = currentContext
         self.capabilityExecutor = capabilityExecutor ?? ProductionCanonicalCapabilityExecutor(currentContext: currentContext, recorder: recorder)
         self.ocrPipeline = OCRProductionPipeline(processor: ocrProcessor ?? OnDeviceDocumentOCR())

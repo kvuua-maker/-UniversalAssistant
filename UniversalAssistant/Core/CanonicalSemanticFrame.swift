@@ -286,6 +286,18 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             if let location = frame.location { entities["destination"] = location }
             return (frame.location == nil ? .routeSearch : .navigation, entities)
         }
+
+        // Proximity is a structural location constraint. Once it is present,
+        // an otherwise open-ended search/query describes a local Place rather
+        // than a catalog product or general-web request. MapKit remains
+        // authoritative for category interpretation and ranking.
+        if frame.modifiers.contains("proximity"),
+           frame.object == nil,
+           frame.action == nil || [.search, .show, .query].contains(frame.action!) {
+            entities["near_current_location"] = "true"
+            entities["query"] = original
+            return (.placeSearch, entities)
+        }
         return (nil, entities)
     }
 
@@ -310,15 +322,6 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             ["напиш", "надішл", "відправ", "отправ", "message", "send"].contains { token.hasPrefix($0) }
         }
         if messageObject && sendVerb { return .message }
-        // Interrogatives are closed lexical tokens. Prefix matching `що`
-        // would incorrectly classify role-bearing words such as `щодо` as a
-        // query and turn a declarative event payload into a calendar read.
-        let interrogatives: Set<String> = [
-            "чи", "що", "який", "яка", "яке", "які", "котрий", "котра",
-            "есть", "какой", "какая", "какие", "which", "what"
-        ]
-        if !interrogatives.isDisjoint(with: tokens) { return .query }
-
         let families: [(CanonicalSemanticFrame.Action, [String])] = [
             (.delete, ["видал", "скас", "удал", "отмен", "delete", "remove", "cancel"]),
             (.update, ["перенес", "перенос", "змін", "измени", "move", "reschedul", "update"]),
@@ -341,6 +344,13 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
            let explicit = families.first(where: { _, roots in roots.contains { actionToken(leading, matches: $0) } }) {
             return explicit.0
         }
+        // A leading imperative owns the ACTION role. Interrogatives in its
+        // payload must not turn the command into a query for another family.
+        let interrogatives: Set<String> = [
+            "чи", "що", "який", "яка", "яке", "які", "котрий", "котра",
+            "есть", "какой", "какая", "какие", "which", "what"
+        ]
+        if !interrogatives.isDisjoint(with: tokens) { return .query }
         return families.first { _, roots in tokens.contains { token in roots.contains { actionToken(token, matches: $0) } } }?.0
     }
 
@@ -437,8 +447,11 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             output.remove("latest")
             output.insert("penultimate")
         }
-        if tokens.contains(where: { ["тут", "поруч", "зараз", "моє", "моему", "current", "here"].contains($0) }) {
+        if tokens.contains(where: { ["тут", "поруч", "поблизу", "неподалік", "рядом", "поблизости", "nearby", "near", "зараз", "моє", "моему", "current", "here"].contains($0) }) {
             output.insert("current_location")
+        }
+        if tokens.contains(where: { ["поруч", "поблизу", "неподалік", "рядом", "поблизости", "nearby", "near", "nearest", "closest"].contains($0) }) {
+            output.insert("proximity")
         }
         return output
     }

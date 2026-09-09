@@ -1,6 +1,7 @@
 import CryptoKit
 import DeviceCheck
 import Foundation
+import StoreKit
 import UIKit
 
 enum PhysicalDiagnosticResult: String, Codable, Sendable {
@@ -37,9 +38,18 @@ struct PhysicalDiagnosticSession: Codable, Equatable, Sendable, Identifiable {
 }
 
 enum PhysicalDiagnosticEnvironment {
-    static func isInternalTestFlight(bundle: Bundle = .main) -> Bool {
+    static func isInternalTestFlight() async -> Bool {
         #if PRODUCTION
-        return bundle.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        do {
+            switch try await AppTransaction.shared {
+            case let .verified(transaction):
+                return transaction.environment == .sandbox
+            case .unverified:
+                return false
+            }
+        } catch {
+            return false
+        }
         #else
         return false
         #endif
@@ -137,7 +147,7 @@ actor PhysicalDiagnosticDelivery {
     private let attest: any AppAttestServicing
     private let transport: any DiagnosticHTTPTransport
     private let defaults: UserDefaults
-    private let enabled: @Sendable () -> Bool
+    private let enabled: @Sendable () async -> Bool
     private let queueKey = "internal-physical-diagnostics-v1"
     private let keyIDKey = "internal-app-attest-key-id"
     private let registrationKey = "internal-app-attest-registered"
@@ -148,13 +158,13 @@ actor PhysicalDiagnosticDelivery {
         attest: any AppAttestServicing = SystemAppAttestService(),
         transport: any DiagnosticHTTPTransport = URLSessionDiagnosticTransport(baseURL: URL(string: "https://178.105.32.46")!),
         defaults: UserDefaults = .standard,
-        enabled: @escaping @Sendable () -> Bool = { PhysicalDiagnosticEnvironment.isInternalTestFlight() }
+        enabled: @escaping @Sendable () async -> Bool = { await PhysicalDiagnosticEnvironment.isInternalTestFlight() }
     ) {
         self.attest = attest; self.transport = transport; self.defaults = defaults; self.enabled = enabled
     }
 
     func enqueue(_ session: PhysicalDiagnosticSession, now: Date = .now) async {
-        guard enabled() else { return }
+        guard await enabled() else { return }
         var queue = load(now: now)
         if !queue.contains(where: { $0.session.sessionID == session.sessionID }) {
             queue.append(.init(session: session, attempts: 0, expiresAt: now.addingTimeInterval(86_400)))
@@ -165,7 +175,7 @@ actor PhysicalDiagnosticDelivery {
     }
 
     func flush(now: Date = .now) async {
-        guard enabled(), !flushing else { return }
+        guard await enabled(), !flushing else { return }
         flushing = true; defer { flushing = false }
         var queue = load(now: now)
         guard !queue.isEmpty else { return }
