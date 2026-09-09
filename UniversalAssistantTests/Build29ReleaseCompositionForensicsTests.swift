@@ -885,3 +885,19 @@ struct Build29ReleasePublicDocumentBoundaryTests {
         #expect(String(data: data, encoding: .utf8)?.contains("Інна Савчук") == true)
     }
 }
+
+
+@Suite("Build 29 Release shopping list boundary", .serialized)
+@MainActor
+struct Build29ReleaseShoppingListBoundaryTests {
+    @Test func naturalShoppingItemUsesSharedEventKitWithoutPreselectedList() async throws {
+        let eventKit = Build29ReleaseEventKitBoundary()
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60), eventKit: eventKit)
+        model.input = "Додай паперові рушники до списку покупок"
+        model.submit()
+        for _ in 0..<100 where await eventKit.intents().isEmpty { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(await eventKit.intents() == [.shoppingList])
+        #expect(model.statusText != AppText.value("processing"))
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+}

@@ -47,12 +47,12 @@ private actor FailingHistoryStore: ActionHistoryPersisting {
 struct EventKitCommandExecutorDirectTests {
     private func command(_ text: String, intent: CommandIntent, entities: [String:String] = [:]) -> StructuredCommand { .init(originalText: text, normalizedText: text.lowercased(), language: .uk, intent: intent, entities: entities, risk: .reversible) }
 
-    @Test func shoppingAddRequiresAuthoritativeListAndRecordsHistory() async throws {
+    @Test func shoppingAddUsesDefaultOrExplicitAuthoritativeListAndRecordsHistory() async throws {
         let reminders = DirectReminderStub(); let history = ActionHistory(persistence: DirectMemoryHistoryStore())
         let executor = ProductionEventKitCommandExecutor(calendar: DirectCalendarStub(), reminders: reminders, history: history)
-        await #expect(throws: EventKitExecutionError.missingSubject) { try await executor.execute(command("Додай молоко до списку покупок", intent: .shoppingList)) }
+        _ = try await executor.execute(command("Додай молоко до списку покупок", intent: .shoppingList))
         let result = try await executor.execute(command("Додай молоко до списку покупок", intent: .shoppingList, entities: ["selected_list_id":"list-1"]))
-        #expect(result.operation == .created); #expect((await reminders.items).first?.draft.listIdentifier == "list-1"); #expect(await history.latestUndoable()?.kind == .reminderCreate)
+        #expect(result.operation == .created); #expect((await reminders.items).first?.draft.listIdentifier == nil); #expect((await reminders.items).last?.draft.listIdentifier == "list-1"); #expect(await history.latestUndoable()?.kind == .reminderCreate)
     }
 
     @Test func shoppingDeleteUsesExactSelectedItemAndUnresolvedFailsClosed() async throws {

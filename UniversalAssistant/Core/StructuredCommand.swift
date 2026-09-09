@@ -224,7 +224,9 @@ struct LocalCommandEngine: CommandParsing {
         let semanticIntent = semanticCapabilityIntent(normalized)
         let resolvedIntent = resolveSpecificAndSemantic(specific: specificPatternIntent, semantic: semanticIntent)
         let structuredCompoundIntent = semanticFrame.frame.compound == nil ? nil : compoundIntent(normalized)
-        let authoritativePatternIntent: CommandIntent? = [.emergency, .multiStep].contains(patternIntent) ? patternIntent : nil
+        let semanticTokens = normalized.split(whereSeparator: { !$0.isLetter }).map(String.init)
+        let shoppingListStructure = semanticTokens.contains { $0.hasPrefix("спис") || $0.hasPrefix("list") } && semanticTokens.contains { $0.hasPrefix("покуп") || $0.hasPrefix("shop") || $0.hasPrefix("einkauf") }
+        let authoritativePatternIntent: CommandIntent? = shoppingListStructure ? .shoppingList : ([.emergency, .multiStep, .shoppingList].contains(patternIntent) ? patternIntent : nil)
         let intent = authoritativePatternIntent
             ?? structuredCompoundIntent
             ?? semanticFrame.intent

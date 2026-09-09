@@ -80,6 +80,13 @@ Updated: 2026-09-09
 - Unseen Release-root suite: 2/2 PASS. A scoped Files request reached the system UIDocumentPicker with no web fallback; verified vCard scanner output reached the user-confirmed ContactsUI import presentation.
 - Rows 13 and 27 now have exact public Apple handoff/reachability evidence.
 
+## Shopping-list Release boundary checkpoint (2026-09-09)
+
+- Root cause: the Production EventKit executor rejected every natural shopping-list create unless UI had already supplied `selected_list_id`, although `ReminderService` legitimately supports the system default reminders list.
+- Material repair: create/query now use the explicit selected list when present and otherwise use the public EventKit default/all-incomplete-reminders boundary. Structural list+shopping roles make this personal intent authoritative before product/web discovery.
+- Unseen Production-root shopping-list test PASS; direct EventKit default-list and explicit-list paths PASS; Development compile PASS.
+- The wider LocalCommandEngine run exposed two unrelated pre-existing contract gaps (`Resume recording` and `.restaurantSearch` versus canonical `.placeSearch`). They remain explicit unfinished work and are not attributed to this green EventKit repair.
+
 ## Exact continuation
 
-Reconcile the 5 remaining RELEASE_EVIDENCE_GAP rows (17, 21, 25, 29, 45), then run the full canonical gate set.
+Reconcile the 4 remaining RELEASE_EVIDENCE_GAP rows (17, 25, 29, 45), then reconcile the recorded LocalCommandEngine contract gaps and run the full canonical gate set.

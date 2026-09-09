@@ -157,7 +157,7 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
         let text = command.normalizedText
         if ["додай", "добав", "add "].contains(where: text.contains) {
             guard let title = shoppingSubject(command.originalText) else { throw EventKitExecutionError.missingSubject }
-            guard let listID = command.entities["selected_list_id"] else { throw EventKitExecutionError.missingSubject }
+            let listID = command.entities["selected_list_id"]
             let value = try await reminders.create(.init(title: title, dueDate: nil, notes: nil, priority: 0, timeZoneIdentifier: nil, locationTrigger: nil, listIdentifier: listID))
             await recordHistory(.init(kind: .reminderCreate, externalIdentifier: value.identifier))
             return .init(kind: .reminder, operation: .created, title: value.draft.title, detail: String(localized: "eventkit_updated"), itemCount: 1)
@@ -169,8 +169,9 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
             await recordHistory(.init(kind: .reminderUpdate, externalIdentifier: old.identifier, undoPayload: try JSONEncoder().encode(old)))
             return .init(kind: .reminder, operation: .deleted, title: old.draft.title, detail: String(localized: "eventkit_deleted"), itemCount: 1)
         }
-        guard let listID = command.entities["selected_list_id"] else { throw EventKitExecutionError.missingSubject }
-        let values = try await reminders.incomplete(dueFrom: nil, to: nil).filter { $0.draft.listIdentifier == listID }
+        let listID = command.entities["selected_list_id"]
+        let allValues = try await reminders.incomplete(dueFrom: nil, to: nil)
+        let values = listID.map { selected in allValues.filter { $0.draft.listIdentifier == selected } } ?? allValues
         return .init(kind: .reminder, operation: .queried, title: String(localized: "eventkit_reminders"), detail: list(values.map { $0.draft.title }), itemCount: values.count)
     }
     private func exactReminder(identifier: String) async throws -> ReminderSnapshot {
