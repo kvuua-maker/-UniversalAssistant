@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UIKit
 @testable import UniversalAssistant
 
 private actor Build29ReleaseContactBoundary: ContactResolving {
@@ -128,5 +129,73 @@ struct Build29ReleaseRootFamilyReachabilityTests {
         for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
         guard case .deterministic = model.resultState else { Issue.record("Utility did not reach deterministic Release executor"); return }
         #expect(model.statusText != AppText.value("processing"))
+    }
+}
+
+
+@Suite("Build 29 Release root system-first reachability", .serialized)
+@MainActor
+struct Build29ReleaseRootSystemFirstTests {
+    private func waitUntil(_ predicate: @escaping @MainActor () -> Bool) async throws {
+        for _ in 0..<100 {
+            if predicate() { return }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        Issue.record("Release-root request did not reach a terminal state")
+    }
+
+    @Test func storageAndBatteryUseShippedLocalBoundary() async throws {
+        var actions: [SystemQuickAction] = []
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            publicDeviceExecute: { action in
+                actions.append(action)
+                switch action {
+                case .freeStorage: return "41 GB"
+                case .batteryLevel: return "73%"
+                default: return "verified"
+                }
+            }
+        )
+        model.input = "Скільки доступного простору є у сховищі цього пристрою?"
+        model.submit()
+        try await waitUntil { if case .deterministic = model.resultState { return true }; return false }
+        model.input = "Покажи рівень акумулятора телефону"
+        model.submit()
+        try await waitUntil { actions.count == 2 }
+        #expect(actions == [.freeStorage, .batteryLevel])
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+
+    @Test func clipboardURLUsesExactUserInitiatedContent() async throws {
+        let expected = URL(string: "https://developer.apple.com/swift/")!
+        var opened: [URL] = []
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            clipboardRead: { .url(expected) }, systemHandoffOpen: { opened.append($0) }
+        )
+        model.input = "Перейди за адресою, збереженою в буфері обміну"
+        model.submit()
+        try await waitUntil { !opened.isEmpty }
+        #expect(opened == [expected])
+        #expect(model.resultState == .idle)
+    }
+
+    @Test func settingsDistinguishApplicationFromUnavailableSystemDestination() async throws {
+        var opened: [URL] = []
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60), systemHandoffOpen: { opened.append($0) }
+        )
+        model.input = "Покажи дозволи, надані цьому застосунку"
+        model.submit()
+        try await waitUntil { !opened.isEmpty }
+        #expect(opened.first?.absoluteString == UIApplication.openSettingsURLString)
+
+        opened.removeAll()
+        model.input = "Перейди до системних параметрів приватності телефону"
+        model.submit()
+        try await waitUntil { if case .failure = model.resultState { return true }; return false }
+        #expect(opened.isEmpty)
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
     }
 }

@@ -14,12 +14,15 @@ enum ProductionAssistantComposition {
         compactResultDuration: Duration = .seconds(2),
         weather: any WeatherCommandExecuting = ProductionWeatherCommandExecutor(),
         eventKit: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
+        publicDeviceExecute: @escaping @MainActor (SystemQuickAction) throws -> String = { try ProductionPublicDeviceExecutor().execute($0) },
+        clipboardRead: @escaping @MainActor () throws -> SharedContent = { try SystemUserInitiatedClipboardReader().readAfterUserAction() },
         systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
     ) -> AssistantViewModel {
         let context = CurrentContextStore()
         let recorder = AudioRecorderController()
         let executor = ProductionCanonicalCapabilityExecutor(
             contacts: contacts, currentContext: context, eventKit: eventKit, recorder: recorder,
+            publicDeviceExecute: publicDeviceExecute, clipboardRead: clipboardRead,
             personalSearchSources: personalSearchSources
         )
         return AssistantViewModel(
