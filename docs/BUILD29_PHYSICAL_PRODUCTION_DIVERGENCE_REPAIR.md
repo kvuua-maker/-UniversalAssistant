@@ -44,6 +44,12 @@ Updated: 2026-09-09
 - Unseen Production-root provider verification plus protected semantic, interaction, retail and commerce suites: 64/64 PASS. Development compile: PASS.
 - Rows 76–89 are EXTERNAL_PROVIDER_BOUNDARY_VERIFIED. No price, availability, quote, booking or account data is fabricated.
 
+## Platform and owner boundaries
+
+- Rows 90–96 were checked from Production target membership, signed entitlement configuration, shipped app lifecycle, platform/backend ownership and exact owner/Apple boundaries. These are platform subsystems rather than fabricated Home commands.
+- StoreKit, Sign in with Apple, CloudKit, CarPlay policy and App Attest Production suites: 25/25 PASS. StoreKit products, production identity verification, live CloudKit devices/container and managed CarPlay access remain exact external boundaries.
+- App Attest is connected to the shipped TestFlight diagnostic lifecycle. App Store Connect row is evidenced by the successful authenticated Build 29 upload; optional API-key automation remains an owner boundary.
+
 ## Exact continuation
 
-Rows 90–96: prove StoreKit, AuthenticationServices, cloud/background, App Attest and exact owner/Apple boundaries from the shipped Production target, then reconcile every earlier evidence gap.
+Reconcile every remaining RELEASE_EVIDENCE_GAP across rows 1–75, then run the full canonical gate set.
