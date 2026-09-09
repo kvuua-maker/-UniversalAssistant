@@ -8,6 +8,7 @@ struct LanguageUnderstandingDocument: Equatable, Sendable {
         let surface: String
         let normalized: String
         let morphology: String
+        let morphologyForms: Set<String>
     }
 
     let originalText: String
@@ -110,7 +111,11 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             return authoritative(legacy, document: document, evidence: "verified_http_url")
         }
 
-        let frameResult = analyzer.analyze(original: text, normalized: document.normalizedText)
+        let frameResult = analyzer.analyze(
+            original: text,
+            normalized: document.normalizedText,
+            morphologyForms: document.tokens.map(\.morphologyForms)
+        )
         var entities = legacy.entities
         var constraints = legacy.constraints
         for (key, value) in frameResult.entities { entities[key] = value }
@@ -303,10 +308,12 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 let folded = surface.precomposedStringWithCompatibilityMapping
                     .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "uk_UA"))
                     .lowercased()
+                let forms = CanonicalMorphology.forms(for: folded)
                 return LanguageUnderstandingDocument.Token(
                     surface: surface,
                     normalized: folded,
-                    morphology: morphology(folded)
+                    morphology: CanonicalMorphology.representative(for: folded),
+                    morphologyForms: forms
                 )
             }
         return .init(
@@ -354,7 +361,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         ]
         let subject = document.tokens
             .filter { token in
-                !actionMorphology.contains(where: { token.morphology.hasPrefix($0) })
+                token.morphologyForms.allSatisfy { form in !actionMorphology.contains(where: form.hasPrefix) }
             }
             .map(\.surface)
             .joined(separator: " ")
@@ -417,7 +424,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             "price", "цін", "цен", "under", "грив", "uah", "usd", "eur"
         ]
         let subjects = document.tokens.filter { token in
-            !ignoredMorphology.contains(where: { token.morphology.hasPrefix($0) }) &&
+            token.morphologyForms.allSatisfy { form in !ignoredMorphology.contains(where: form.hasPrefix) } &&
                 !token.normalized.allSatisfy(\.isNumber)
         }
         guard !subjects.isEmpty else { return nil }
@@ -506,17 +513,6 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             )
             return .init(value: entity, displayName: record.displayName, aliases: [record.displayName, record.id])
         }
-
-    private static func morphology(_ token: String) -> String {
-        let suffixes = [
-            "ями", "ами", "ові", "еві", "ого", "ому", "ою", "ею",
-            "ів", "ов", "ам", "ям", "ах", "ях", "у", "ю", "і", "и", "а", "я"
-        ]
-        guard let suffix = suffixes.first(where: {
-            token.count - $0.count >= 3 && token.hasSuffix($0)
-        }) else { return token }
-        return String(token.dropLast(suffix.count))
-    }
 
     private static func commandLanguage(
         _ text: String,

@@ -48,8 +48,15 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         options: [.caseInsensitive]
     )
 
-    func analyze(original: String, normalized: String) -> CanonicalSemanticFrameResult {
-        let tokens = lexicalTokens(normalized)
+    func analyze(
+        original: String,
+        normalized: String,
+        morphologyForms: [Set<String>] = []
+    ) -> CanonicalSemanticFrameResult {
+        let lexical = lexicalTokens(normalized)
+        let lexicalSet = Set(lexical)
+        let evidence = morphologyForms.flatMap { $0 }.filter { !lexicalSet.contains($0) }.sorted()
+        let tokens = lexical + evidence
         var frame = CanonicalSemanticFrame()
         frame.action = action(in: tokens)
         frame.object = object(in: tokens)

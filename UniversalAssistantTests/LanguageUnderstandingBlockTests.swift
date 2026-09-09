@@ -14,6 +14,20 @@ struct LanguageUnderstandingBlockTests {
         #expect(document.tokens.contains(where: { $0.surface == "Порахуй" }))
     }
 
+    @Test func productiveInflectionsRemainEvidenceInsteadOfPhraseAliases() {
+        let document = LanguageUnderstandingBlock.document(
+            "Відскануйте договір та повідомте Христині через захищений канал"
+        )
+        let bySurface = Dictionary(uniqueKeysWithValues: document.tokens.map { ($0.surface, $0.morphologyForms) })
+        #expect(bySurface["Відскануйте"]?.contains("відскану") == true)
+        #expect(bySurface["Христині"]?.contains("христин") == true)
+
+        let scan = LanguageUnderstandingBlock().parse("Відскануйте текст камерою")
+        #expect(scan.intent == .cameraCapture)
+        #expect(scan.entities["capture_mode"] == "text_scan")
+        #expect(scan.intent != .webSearch)
+    }
+
     @Test func mixedUkrainianAndLatinEntityDoesNotForceRussian() {
         let document = LanguageUnderstandingBlock.document("Покажи Spotify у моїй медіатеці")
         #expect(document.language == .uk)

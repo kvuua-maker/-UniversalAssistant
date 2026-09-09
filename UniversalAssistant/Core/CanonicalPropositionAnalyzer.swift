@@ -91,21 +91,21 @@ struct CanonicalPropositionAnalyzer: Sendable {
     }
 
     private func concepts(for token: LanguageUnderstandingDocument.Token) -> Set<Concept> {
-        let value = token.morphology
+        let values = token.morphologyForms
         var output = Set<Concept>()
-        if matches(value, roots: ["хоч", "хот", "треб", "потріб", "нуж", "необхід", "need", "want", "would", "like"]) {
+        if matches(values, roots: ["хоч", "хот", "треб", "потріб", "нуж", "необхід", "need", "want", "would", "like"]) {
             output.insert(.desireOrNeed)
         }
-        if matches(value, roots: ["куп", "придба", "замов", "покуп", "закаж", "shop", "buy", "purchase", "order"]) {
+        if matches(values, roots: ["куп", "придба", "замов", "покуп", "закаж", "shop", "buy", "purchase", "order"]) {
             output.insert(.acquisition)
         }
-        if matches(value, roots: ["вип", "попит", "поїст", "перекус", "їст", "есть", "вып", "drink", "eat", "dine"]) {
+        if matches(values, roots: ["вип", "попит", "поїст", "перекус", "їст", "есть", "вып", "drink", "eat", "dine"]) {
             output.insert(.consumption)
         }
-        if matches(value, roots: ["діст", "потрап", "опин", "прибу", "їх", "йт", "добрат", "попаст", "ехать", "идт", "reach", "arrive", "get"]) {
+        if matches(values, roots: ["діст", "потрап", "опин", "прибу", "їх", "йт", "добрат", "попаст", "ехать", "идт", "reach", "arrive", "get"]) {
             output.insert(.movement)
         }
-        if matches(value, roots: ["поруч", "поблиз", "неподал", "поряд", "рядом", "ближай", "near", "nearby", "closest"]) {
+        if matches(values, roots: ["поруч", "поблиз", "неподал", "поряд", "рядом", "ближай", "near", "nearby", "closest"]) {
             output.insert(.locationProximity)
         }
         if ["до", "на", "біля", "в", "у", "к", "to", "toward", "near"].contains(token.normalized) {
@@ -114,14 +114,14 @@ struct CanonicalPropositionAnalyzer: Sendable {
         if ["о", "об", "at", "через", "in"].contains(token.normalized) {
             output.insert(.temporalMarker)
         }
-        if matches(value, roots: ["мен", "мне", "десь", "гдето", "будь", "б", "би", "please", "somewhere"]) {
+        if matches(values, roots: ["мен", "мне", "десь", "гдето", "будь", "б", "би", "please", "somewhere"]) {
             output.insert(.filler)
         }
         return output
     }
 
-    private func matches(_ value: String, roots: [String]) -> Bool {
-        roots.contains { value.hasPrefix($0) }
+    private func matches(_ values: Set<String>, roots: [String]) -> Bool {
+        values.contains { value in roots.contains { value.hasPrefix($0) } }
     }
 
     private func contentSubject(

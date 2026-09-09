@@ -231,9 +231,49 @@ Verification:
 Status is **AUTOMATED GREEN FOR THIS CHECKPOINT — PHYSICAL IPHONE RETEST
 REQUIRED**.
 
+## Morphology and crash-evidence checkpoint
+
+`CanonicalMorphology` now supplies bounded productive inflection evidence for
+Ukrainian, Russian and embedded Latin tokens. It retains the normalized surface
+token and emits candidate forms rather than claiming a dictionary lemma. This is
+important because the current SDK reports `Language`, `Script` and `TokenType`
+tag schemes for `uk` and `ru`, but does not report `Lemma`; the implementation
+therefore does not pretend Apple supplies a lemmatizer for these languages.
+
+`LanguageUnderstandingBlock`, `CanonicalSemanticFrameAnalyzer` and
+`CanonicalPropositionAnalyzer` consume the same form set. Lexical surface tokens
+remain first-class, while derived forms are additional structural evidence only;
+they cannot independently manufacture a capability. The old single-suffix
+shortcut is removed. No contact, city, brand, service or physical test phrase is
+encoded in this module.
+
+Verification:
+
+- focused language, frame, normalized-voice and shipped Release-root suites:
+  44/44 logical tests PASS (57 parameterized executions), 0 failed, 0 skipped;
+- finalized result bundle:
+  `/tmp/ua-build31-morphology-dd/Logs/Test/Test-UniversalAssistant-2026.09.10_00-39-35-+0200.xcresult`;
+- Development simulator compile: PASS;
+- `git diff --check`: PASS.
+
+The available Mac/Xcode locations contain no UniversalAssistant `.ips` or
+`.crash` report for the Build-30 Contacts close event, and no physical iPhone is
+currently attached to Xcode. The shipped app and production configuration do
+contain `NSContactsUsageDescription`; its absence is therefore not a supported
+crash theory. Since the Build-30 VPS payloads were rejected before storage, the
+exact physical crash cause remains **UNPROVEN**, not silently reclassified as
+fixed. The repaired diagnostic contract is deployed to capture the first wrong
+stage on the next physical run.
+
+Status is **AUTOMATED GREEN FOR MORPHOLOGY — PHYSICAL IPHONE RETEST REQUIRED**.
+
 ## Exact continuation point
 
-Audit current device/Xcode crash diagnostics for the Build-30 Contacts close event.
-Then complete reusable Ukrainian/Russian inflection evidence and typed temporal/
-confidence clarification policy in `LanguageUnderstandingBlock`, followed by
-unseen Release-root Contacts/Calls and cross-family language regressions.
+Add a production-composition Contacts framework integration boundary test using
+a simulator contact created through public `Contacts`, exercise normal call and
+message resolution without invoking their external UI, then delete only that
+test-owned contact. This must validate `SystemContactStoreQuery` and generation-
+owned `ProductionAssistantComposition` wiring rather than another injected
+resolver mock. After that, complete typed temporal roles and confidence-driven
+clarification policy in `LanguageUnderstandingBlock` and run unseen cross-family
+Release-root regressions.
