@@ -12,16 +12,18 @@ enum ProductionAssistantComposition {
             LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())
         ],
         compactResultDuration: Duration = .seconds(2),
+        weather: any WeatherCommandExecuting = ProductionWeatherCommandExecutor(),
+        eventKit: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
         systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
     ) -> AssistantViewModel {
         let context = CurrentContextStore()
         let recorder = AudioRecorderController()
         let executor = ProductionCanonicalCapabilityExecutor(
-            contacts: contacts, currentContext: context, recorder: recorder,
+            contacts: contacts, currentContext: context, eventKit: eventKit, recorder: recorder,
             personalSearchSources: personalSearchSources
         )
         return AssistantViewModel(
-            capabilityExecutor: executor, currentContext: context, recorder: recorder,
+            weatherExecutor: weather, eventKitExecutor: eventKit, capabilityExecutor: executor, currentContext: context, recorder: recorder,
             compactResultDuration: compactResultDuration, systemHandoffOpen: systemHandoffOpen
         )
     }

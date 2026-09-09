@@ -425,7 +425,11 @@ struct LocalCommandEngine: CommandParsing {
     }
 
     private func normalize(_ text: String) -> String {
-        var value = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().replacingOccurrences(of: "’", with: "'").split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        var value = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        for apostrophe in ["’", "ʼ", "‘", "`", "\u{02BB}"] {
+            value = value.replacingOccurrences(of: apostrophe, with: "'")
+        }
+        value = value.split(whereSeparator: \.isWhitespace).joined(separator: " ")
         let scannerContext = ["скан", "відскан", "розпіз", "scan", "recogn"].contains(where: value.contains)
         if scannerContext {
             value = value.replacingOccurrences(of: #"(?:q\s*(?:club|клуб)|quad)"#, with: "qr", options: [.regularExpression, .caseInsensitive])

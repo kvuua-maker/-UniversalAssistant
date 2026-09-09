@@ -5,7 +5,7 @@ enum LocalUtilityError: Error, Equatable { case unsupported, invalidNumber, divi
 struct LocalUtilityEngine: Sendable {
     static func recognizes(_ raw: String) -> Bool {
         let text = normalized(raw)
-        let signals = ["скільки буде", "сколько будет", "помнож", "умнож", "поділ", "раздел", "kilometer", "кілометр", "километр", "miles", "мил", "кілограм", "килограмм", "pounds", "фунт", "celsius", "fahrenheit", "цельсі", "цельси", "який сьогодні день", "какой сегодня день", "яка сьогодні дата", "какая сегодня дата", "яке сьогодні число", "какое сегодня число", "котра година", "который час", "скільки зараз часу", "сколько сейчас времени", "який зараз час", "local time"]
+        let signals = ["обчисл", "порах", "розрах", "вычисл", "посчитай", "calculate", "різниц", "разниц", "difference", "сума", "сумм", "sum", "добут", "произвед", "product", "частк", "частн", "quotient", "скільки буде", "сколько будет", "помнож", "умнож", "поділ", "раздел", "kilometer", "кілометр", "километр", "miles", "мил", "кілограм", "килограмм", "pounds", "фунт", "celsius", "fahrenheit", "цельсі", "цельси", "який сьогодні день", "какой сегодня день", "яка сьогодні дата", "какая сегодня дата", "яке сьогодні число", "какое сегодня число", "котра година", "который час", "скільки зараз часу", "сколько сейчас времени", "який зараз час", "local time"]
         let range = NSRange(text.startIndex..., in: text)
         let numericExpression = numericExpressionRegex.firstMatch(in: text, range: range) != nil
         let percentageExpression = percentageExpressionRegex.firstMatch(in: text, range: range) != nil
@@ -36,6 +36,7 @@ struct LocalUtilityEngine: Sendable {
     }
 
     private func arithmetic(_ text: String) throws -> Double? {
+        if let value = try relationalArithmetic(text) { return value }
         if let value = try chainedArithmetic(text) { return value }
         let operators: [(String, (Double, Double) throws -> Double)] = [
             (#"(?:(?:помножити|помнож|умножить|умножь)(?:\s+на)?|times|multiplied by|×|\*)"#, { $0 * $1 }),
@@ -46,6 +47,24 @@ struct LocalUtilityEngine: Sendable {
         for (token, operation) in operators {
             let pattern = "(" + Self.numberPattern + ")\\s*" + token + "\\s*(" + Self.numberPattern + ")"
             if let values = captures(pattern, text), values.count == 2 { return try operation(values[0], values[1]) }
+        }
+        return nil
+    }
+
+    private func relationalArithmetic(_ text: String) throws -> Double? {
+        let between = #"[^0-9+\-]*("# + Self.numberPattern + #")[^0-9+\-]+(?:і|и|and|та)\s*("# + Self.numberPattern + ")"
+        if let values = captures(#"(?:різниц\p{L}*|разниц\p{L}*|difference)\s+(?:між|между|between)"# + between, text), values.count == 2 {
+            return values[0] - values[1]
+        }
+        if let values = captures(#"(?:сум\p{L}*|sum)\s*(?:між|между|between|чисел)?"# + between, text), values.count == 2 {
+            return values[0] + values[1]
+        }
+        if let values = captures(#"(?:добут\p{L}*|произвед\p{L}*|product)\s*(?:між|между|between|чисел)?"# + between, text), values.count == 2 {
+            return values[0] * values[1]
+        }
+        if let values = captures(#"(?:частк\p{L}*|частн\p{L}*|quotient)\s*(?:між|между|between|чисел)?"# + between, text), values.count == 2 {
+            guard values[1] != 0 else { throw LocalUtilityError.divisionByZero }
+            return values[0] / values[1]
         }
         return nil
     }
@@ -124,7 +143,11 @@ struct LocalUtilityEngine: Sendable {
     private static let numericExpressionRegex = try! NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?\s*[+×*\/÷-]\s*[-+]?\d+(?:[.,]\d+)?"#)
     private static let percentageExpressionRegex = try! NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?[^\d]{0,20}(?:%|відсот|процент)"#, options: [.caseInsensitive])
     private static func normalized(_ raw: String) -> String {
-        let compact = raw.lowercased().replacingOccurrences(of: "’", with: "\u{27}").split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        var value = raw.lowercased()
+        for apostrophe in ["’", "ʼ", "‘", "`", "\u{02BB}"] {
+            value = value.replacingOccurrences(of: apostrophe, with: "\u{27}")
+        }
+        let compact = value.split(whereSeparator: \.isWhitespace).joined(separator: " ")
         return StructuredNumberNormalizer.normalize(compact)
     }
 }

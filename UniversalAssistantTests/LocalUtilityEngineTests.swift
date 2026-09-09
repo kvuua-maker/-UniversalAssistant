@@ -26,6 +26,17 @@ struct LocalUtilityEngineTests {
         #expect(try engine.execute(phrase, locale: locale, timeZone: utc, now: .now) == expected)
     }
 
+    @Test("Relational arithmetic", arguments: [
+        ("Обчисли різницю між 93 і 47", "46"),
+        ("Обчисли різницю між девʼяноста трьома і сорока сімома", "46"),
+        ("Посчитай сумму между 28 и 14", "42"),
+        ("Calculate the product between 7 and 9", "63"),
+        ("Знайди частку між 81 та 9", "9")
+    ]) func relationalArithmetic(phrase: String, expected: String) throws {
+        #expect(try engine.execute(phrase, locale: locale, timeZone: utc, now: .now) == expected)
+        #expect(LocalCommandEngine().parse(phrase).intent == .localUtility)
+    }
+
     @Test func fixedUnitConversionsRespectDirectionAndDecimals() throws {
         #expect(try engine.execute("Скільки буде 10 кілометрів у милях?", locale: locale, timeZone: utc, now: .now) == "6,213712 mi")
         #expect(try engine.execute("2,5 miles у кілометрах", locale: locale, timeZone: utc, now: .now) == "4,02336 km")

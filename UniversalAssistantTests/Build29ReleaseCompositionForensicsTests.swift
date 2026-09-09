@@ -78,3 +78,55 @@ struct Build29ReleaseCompositionForensicsTests {
         }
     }
 }
+
+
+private actor Build29ReleaseEventKitBoundary: EventKitCommandExecuting {
+    private(set) var commands: [StructuredCommand] = []
+    func execute(_ command: StructuredCommand) async throws -> EventKitExecutionResult {
+        commands.append(command)
+        let reminder = command.intent == .reminderCreate || command.intent == .reminderQuery
+        return .init(kind: reminder ? .reminder : .calendar,
+                     operation: command.intent == .reminderQuery || command.intent == .calendarQuery ? .queried : .created,
+                     title: reminder ? "Нагадування" : "Подія", detail: "verified-boundary", itemCount: 1)
+    }
+    func intents() -> [CommandIntent] { commands.map(\.intent) }
+}
+
+private struct Build29ReleaseWeatherBoundary: WeatherCommandExecuting {
+    func execute(_ command: StructuredCommand) async throws -> WeatherSnapshot {
+        .init(current: .init(date: .now, temperatureCelsius: 16, apparentTemperatureCelsius: 15,
+                             condition: "cloudy", symbolName: "cloud.fill"),
+              hourly: [], daily: [], source: "release-boundary", fetchedAt: .now,
+              locationSource: .manual, locationLabel: command.entities["location"], context: .manualLocation)
+    }
+}
+
+@Suite("Build 29 Release root family reachability", .serialized)
+@MainActor
+struct Build29ReleaseRootFamilyReachabilityTests {
+    @Test func calendarAndReminderShareTheShippedEventKitBoundary() async throws {
+        let eventKit = Build29ReleaseEventKitBoundary()
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60), eventKit: eventKit)
+        model.input = "Додай у календар презентацію проєкту післязавтра о 11:20"
+        model.submit()
+        for _ in 0..<100 { if case .eventKit = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        model.input = "Нагадай через сорок хвилин перевірити пошту"
+        model.submit()
+        for _ in 0..<100 { if await eventKit.intents().count == 2 { break }; try await Task.sleep(for: .milliseconds(10)) }
+        #expect(await eventKit.intents() == [.calendarCreate, .reminderCreate])
+        #expect(model.statusText != AppText.value("processing"))
+    }
+
+    @Test func weatherAndLocalUtilityUseReleaseHomeWithoutWebFallback() async throws {
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60), weather: Build29ReleaseWeatherBoundary())
+        model.input = "Покажи прогноз погоди у Львові на післязавтра"
+        model.submit()
+        for _ in 0..<100 { if case .weather = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case .weather = model.resultState else { Issue.record("Weather did not reach Release boundary"); return }
+        model.input = "Обчисли різницю між девʼяноста трьома і сорока сімома"
+        model.submit()
+        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case .deterministic = model.resultState else { Issue.record("Utility did not reach deterministic Release executor"); return }
+        #expect(model.statusText != AppText.value("processing"))
+    }
+}

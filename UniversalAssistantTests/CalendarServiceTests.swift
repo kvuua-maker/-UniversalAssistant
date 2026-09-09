@@ -98,7 +98,10 @@ struct CalendarServiceTests {
         let model = AssistantViewModel(eventKitExecutor: EventKitExecutorStub(result: .success(expected)))
         model.input = "Додай зустріч Team Sync завтра о 09:30"
         model.submit()
-        try await Task.sleep(for: .milliseconds(50))
+        for _ in 0..<100 {
+            if model.resultState == .eventKit(expected) { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
         #expect(model.resultState == .eventKit(expected))
     }
 
