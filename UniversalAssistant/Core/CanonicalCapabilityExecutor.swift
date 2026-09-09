@@ -147,6 +147,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let deviceRouter: UniversalDeviceCommandRouter
     private let contacts: any ContactResolving
     private let photos: any PhotoLibrarySearching
+    private let photoSemanticLoader: any PhotoAssetImageLoading
+    private let photoSemanticLabeler: any PhotoSemanticLabeling
     private let podcasts: ApplePodcastSearchProvider
     private let media: MediaIntegrationEngine?
     private let locationResolver: ManualLocationContextResolver
@@ -172,6 +174,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         deviceRouter: UniversalDeviceCommandRouter = .init(applications: .init(applications: LaunchDeviceApplications.verified)),
         contacts: any ContactResolving = LocalContactResolver(),
         photos: any PhotoLibrarySearching = PhotoKitLibrarySearch(),
+        photoSemanticLoader: any PhotoAssetImageLoading = PhotoKitAssetImageLoader(),
+        photoSemanticLabeler: any PhotoSemanticLabeling = VisionPhotoSemanticLabeler(),
         podcasts: ApplePodcastSearchProvider = .init(),
         mediaOverride: MediaIntegrationEngine? = nil,
         locationResolver: ManualLocationContextResolver = .init(),
@@ -193,6 +197,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.deviceRouter = deviceRouter
         self.contacts = contacts
         self.photos = photos
+        self.photoSemanticLoader = photoSemanticLoader
+        self.photoSemanticLabeler = photoSemanticLabeler
         self.podcasts = podcasts
         self.locationResolver = locationResolver
         self.placeSearch = placeSearch
@@ -628,7 +634,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             }
             return .result(output)
         }
-        let response = await PhotosPersonalSearchSource(library: photos).search(query: query, limit: 5)
+        let response = await PhotosPersonalSearchSource(library: photos, loader: photoSemanticLoader, labeler: photoSemanticLabeler).search(query: query, limit: 5)
         guard !response.results.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("photos_no_semantic_match") }
         let facts = response.results.enumerated().map { index, value in
             ResultFact(id: value.id, label: value.title, value: value.subtitle ?? value.sourceObjectID, state: .verified, source: "Photos", observedAt: .now, priority: 100 - index)

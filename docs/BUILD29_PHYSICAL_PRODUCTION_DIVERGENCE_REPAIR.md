@@ -63,6 +63,18 @@ Updated: 2026-09-09
 - Unseen Release-root emergency confirmation lifecycle: 1/1 PASS inside Build29ReleaseRemainingNativeTests; focused AssistantResultStateTests: 9/9 PASS; protected InteractionDecision/result-state/Calendar/emergency suites: 28/28 PASS. Development compile: PASS.
 - The first protected run exposed two non-production issues: obsolete Notes→Files test expectation and exhausted temporary disk while finalizing xcresult. CLOSED: changing production Notes behavior or repeating tests without correcting those proven test/infrastructure causes.
 
+## App Intent, limited Contacts, semantic Photos and Share Extension checkpoint (2026-09-09)
+
+- ProductionAssistantComposition now exposes the image-loader and semantic-labeler boundaries while retaining PhotoKitAssetImageLoader and VisionPhotoSemanticLabeler as shipped defaults. This makes the exact Release graph testable without replacing the Apple implementation.
+- Unseen Release-root gap suite: 4/4 PASS. Protected Contacts, PhotoKit/Vision, personal-source, Share Inbox and QuickLaunch suites: 37/37 PASS. Strong semantic evidence produced a typed PhotoKit action; weak confidence failed closed with no web.
+- Rows 5, 12, 31 and 33 now have Release-root evidence.
+
+## App Intent, limited Contacts, semantic Photos and Share Extension checkpoint (2026-09-09)
+
+- ProductionAssistantComposition now exposes the image-loader and semantic-labeler boundaries while retaining PhotoKitAssetImageLoader and VisionPhotoSemanticLabeler as shipped defaults. This makes the exact Release graph testable without replacing the Apple implementation.
+- Unseen Release-root gap suite: 4/4 PASS. Protected Contacts, PhotoKit/Vision, personal-source, Share Inbox and QuickLaunch suites: 37/37 PASS. Strong semantic evidence produced a typed PhotoKit action; weak confidence failed closed with no web.
+- Rows 5, 12, 31 and 33 now have Release-root evidence.
+
 ## Exact continuation
 
-Reconcile the 11 remaining RELEASE_EVIDENCE_GAP rows (5, 12, 13, 17, 21, 25, 27, 29, 31, 33, 45), then run the full canonical gate set.
+Reconcile the 7 remaining RELEASE_EVIDENCE_GAP rows (13, 17, 21, 25, 27, 29, 45), then run the full canonical gate set.

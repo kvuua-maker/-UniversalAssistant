@@ -773,3 +773,91 @@ struct Build29ReleaseRemainingNativeTests {
         #expect(capture.urls.first?.absoluteString == "tel:112")
     }
 }
+
+
+private actor Build29LimitedContactBoundary: ContactResolving {
+    let selected: ContactCandidate
+    init(selected: ContactCandidate) { self.selected = selected }
+    func authorizationState() async -> ContactAuthorizationState { .limited }
+    func requestAccessIfNeeded() async throws {}
+    func resolve(name: String) async throws -> ContactResolution { .notFound }
+    func resolve(exactIdentifier identifier: String) async throws -> ContactResolution {
+        identifier == selected.identifier ? .resolved(selected) : .notFound
+    }
+}
+private struct Build29PhotoLibraryBoundary: PhotoLibrarySearching {
+    let assets: [PhotoAssetReference]
+    func authorization() -> LocalSearchAccess { .permitted }
+    func requestAuthorization() async -> LocalSearchAccess { .permitted }
+    func search(_ criteria: PhotoSearchCriteria, limit: Int) async -> [PhotoAssetReference] { Array(assets.prefix(limit)) }
+}
+private struct Build29PhotoLoaderBoundary: PhotoAssetImageLoading {
+    func imageData(localIdentifier: String) async throws -> Data { Data(localIdentifier.utf8) }
+}
+private struct Build29PhotoLabelBoundary: PhotoSemanticLabeling {
+    let confidence: Float
+    func labels(imageData: Data) async throws -> [PhotoSemanticLabel] { [.init(name: "document", confidence: confidence)] }
+}
+
+@Suite("Build 29 Release remaining gap reachability", .serialized)
+@MainActor
+struct Build29ReleaseRemainingGapTests {
+    private func wait(_ predicate: @escaping @MainActor () -> Bool) async throws {
+        for _ in 0..<100 { if predicate() { return }; try await Task.sleep(for: .milliseconds(10)) }
+        Issue.record("Release-root request did not terminate")
+    }
+
+    @Test func appIntentFeedsTheActualReleaseCompositionRoot() async throws {
+        _ = try await RunAssistantCommandIntent(command: "Переведи 3,25 кілометра у метри").perform()
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        model.handleQuickLaunch()
+        try await wait { if case .deterministic = model.resultState { return true }; return false }
+        guard case let .deterministic(result) = model.resultState else { return }
+        #expect(result.primaryAnswer.filter(\.isNumber) == "3250")
+    }
+
+    @Test func limitedContactPickerResumesTheOwnedReleaseRequestByIdentifier() async throws {
+        let contact = ContactCandidate(identifier: "limited-73", displayName: "Дарина Мельник", phoneNumbers: ["+380 63 777 10 20"])
+        let capture = Build29SystemOpenCapture()
+        let model = ProductionAssistantComposition.makeModel(contacts: Build29LimitedContactBoundary(selected: contact), personalSearchSources: [], compactResultDuration: .seconds(60), systemHandoffOpen: capture.open)
+        model.input = "Зателефонуй Дарині Мельник"
+        model.submit()
+        try await wait { model.capabilityPresentation != nil }
+        guard case let .contactAccess(_, command)? = model.capabilityPresentation else { Issue.record("Expected limited Contacts picker"); return }
+        model.handleContactAccessGranted([contact.identifier], for: command)
+        try await wait { capture.urls.count == 1 }
+        #expect(capture.urls.first?.scheme == "tel")
+        #expect(capture.urls.first?.absoluteString.contains("WhatsApp") == false)
+    }
+
+    @Test func semanticPhotoUsesConfidenceAndFailsClosedThroughReleaseRoot() async throws {
+        let asset = PhotoAssetReference(localIdentifier: "document-photo", creationDate: .now, coordinate: nil, album: nil)
+        let library = Build29PhotoLibraryBoundary(assets: [asset])
+        let strong = ProductionAssistantComposition.makeModel(photos: library, photoSemanticLoader: Build29PhotoLoaderBoundary(), photoSemanticLabeler: Build29PhotoLabelBoundary(confidence: 0.92), personalSearchSources: [], compactResultDuration: .seconds(60))
+        strong.input = "Знайди у моїх знімках паперовий документ"
+        strong.submit()
+        try await wait { if case .deterministic = strong.resultState { return true }; return false }
+        guard case let .deterministic(result) = strong.resultState else { return }
+        #expect(result.actions.first?.id == "photos:document-photo")
+
+        let weak = ProductionAssistantComposition.makeModel(photos: library, photoSemanticLoader: Build29PhotoLoaderBoundary(), photoSemanticLabeler: Build29PhotoLabelBoundary(confidence: 0.31), personalSearchSources: [], compactResultDuration: .seconds(60))
+        weak.input = "Знайди у фото паперовий документ"
+        weak.submit()
+        try await wait { if case .failure = weak.resultState { return true }; return false }
+        #expect({ if case .webHandoff = weak.resultState { return false }; return true }())
+    }
+
+    @Test func sharedInboxEntersCurrentContextThroughReleaseModelExactlyOnce() throws {
+        let suite = "ua-release-share-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let item = SharedInboxEnvelope(kind: "url", value: "https://example.org/shared/item", receivedAt: .now)
+        defaults.set(try JSONEncoder().encode(item), forKey: SharedInboxStore.inboxKey)
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        let store = SharedInboxStore(defaults: defaults)
+        #expect(model.ingestPendingShare(from: store))
+        #expect(!model.ingestPendingShare(from: store))
+        guard case let .webHandoff(result) = model.resultState else { Issue.record("Expected typed shared URL"); return }
+        #expect(result.destination.absoluteString == item.value)
+    }
+}

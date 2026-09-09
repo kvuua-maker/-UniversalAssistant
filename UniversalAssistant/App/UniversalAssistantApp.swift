@@ -8,6 +8,8 @@ enum ProductionAssistantComposition {
     static func makeModel(
         contacts: any ContactResolving = LocalContactResolver(),
         photos: any PhotoLibrarySearching = PhotoKitLibrarySearch(),
+        photoSemanticLoader: any PhotoAssetImageLoading = PhotoKitAssetImageLoader(),
+        photoSemanticLabeler: any PhotoSemanticLabeling = VisionPhotoSemanticLabeler(),
         podcasts: ApplePodcastSearchProvider = .init(),
         mediaOverride: MediaIntegrationEngine? = nil,
         locationResolver: ManualLocationContextResolver = .init(),
@@ -32,7 +34,7 @@ enum ProductionAssistantComposition {
     ) -> AssistantViewModel {
         let context = CurrentContextStore()
         let executor = ProductionCanonicalCapabilityExecutor(
-            contacts: contacts, photos: photos, podcasts: podcasts, mediaOverride: mediaOverride, locationResolver: locationResolver, placeSearch: placeSearch,
+            contacts: contacts, photos: photos, photoSemanticLoader: photoSemanticLoader, photoSemanticLabeler: photoSemanticLabeler, podcasts: podcasts, mediaOverride: mediaOverride, locationResolver: locationResolver, placeSearch: placeSearch,
             currentLocation: currentLocation, reverseLocation: reverseLocation, currentContext: context, routeProvider: routeProvider,
             eventKit: eventKit, recorder: recorder,
             publicDeviceExecute: publicDeviceExecute, clipboardRead: clipboardRead, fx: fx, alarmExecute: alarmExecute,
