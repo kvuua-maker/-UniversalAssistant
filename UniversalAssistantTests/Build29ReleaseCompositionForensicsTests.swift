@@ -742,4 +742,34 @@ struct Build29ReleaseRemainingNativeTests {
         #expect(capture.urls.last?.scheme == "https")
         #expect({ if case .webHandoff = model.resultState { return false }; return true }())
     }
+
+    @Test func confirmationButtonsResumeOnlyTheOwnedReleaseRequest() async throws {
+        let capture = Build29SystemOpenCapture()
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            systemHandoffOpen: capture.open
+        )
+
+        model.input = "Виконай екстрений виклик 112"
+        model.submit()
+        guard case .actionRequired = model.resultState else { Issue.record("Emergency confirmation was not rendered"); return }
+        model.resolveActionRequiredChoice(AppText.value("cancel"))
+        #expect(capture.urls.isEmpty)
+        #expect(model.resultState == .idle)
+
+        model.input = "Зателефонуй 112 у надзвичайній ситуації"
+        model.submit()
+        guard case .actionRequired = model.resultState else { Issue.record("Emergency confirmation was not rendered"); return }
+        model.input = "Який сьогодні день тижня?"
+        model.submit()
+        model.resolveActionRequiredChoice(AppText.value("confirm"))
+        #expect(capture.urls.isEmpty)
+
+        model.input = "Набери екстрену службу 112"
+        model.submit()
+        guard case .actionRequired = model.resultState else { Issue.record("Emergency confirmation was not rendered"); return }
+        model.resolveActionRequiredChoice(AppText.value("confirm"))
+        try await wait { capture.urls.count == 1 }
+        #expect(capture.urls.first?.absoluteString == "tel:112")
+    }
 }

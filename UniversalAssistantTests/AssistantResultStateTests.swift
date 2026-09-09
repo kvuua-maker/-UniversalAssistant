@@ -29,16 +29,17 @@ struct AssistantResultStateTests {
         #expect(summary.request == "Щось цікаве")
     }
 
-    @Test func systemPresentationDoesNotExposeParserAcknowledgement() async throws {
+    @Test func unavailableNotesDatabaseTerminatesTruthfullyWithoutWrongFilesPresentation() async throws {
         let model = AssistantViewModel(compactResultDuration: .milliseconds(200))
         model.input = "Покажи нотатки"
         model.submit()
-        try await waitUntil { model.capabilityPresentation == .documents }
-        guard case .idle = model.resultState,
-              case .documents? = model.capabilityPresentation else {
-            Issue.record("Expected the typed system document presentation")
+        try await waitUntil { if case .failure = model.resultState { true } else { false } }
+        guard case .failure = model.resultState else {
+            Issue.record("Expected the truthful Notes database limitation")
             return
         }
+        #expect(model.capabilityPresentation == nil)
+        #expect(model.statusText != AppText.value("processing"))
     }
 
     @Test func leavingActiveSceneStopsTransientListeningState() {

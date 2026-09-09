@@ -50,6 +50,7 @@ final class AssistantViewModel {
     // Controller generation guards suppress stale callbacks; this task ownership
     // also prevents abandoned starts surviving re-entry or scene transitions.
     private var voiceStartTask: Task<Void, Never>?
+    private var pendingConfirmation: (command: StructuredCommand, summary: ResultSummary, generation: UInt64)?
 
     init(
         commandEngine: any CommandParsing = LocalCommandEngine(),
@@ -198,6 +199,7 @@ final class AssistantViewModel {
         capabilityPresentationGeneration = nil
         capabilityPresentationCommandID = nil
         capabilityPresentation = nil
+        pendingConfirmation = nil
         weatherExecutionInFlight = false
         eventKitExecutionInFlight = false
         capabilityExecutionInFlight = false
@@ -283,8 +285,7 @@ final class AssistantViewModel {
             }
             if [.calendarCreate, .calendarQuery, .calendarDelete, .reminderCreate, .reminderQuery, .reminderComplete, .reminderDelete, .shoppingList, .undo].contains(command.intent) {
                 if interactionDecision?.pattern == .confirmation {
-                    requireAction(prompt: AppText.value("confirmation_required"), choices: [AppText.value("confirm"), AppText.value("cancel")])
-                    LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=confirmation_required")
+                    requireConfirmation(command, summary: summary, generation: requestGeneration)
                     return
                 }
                 eventKitExecutionInFlight = true
@@ -355,8 +356,7 @@ final class AssistantViewModel {
                 return
             }
             if interactionDecision?.pattern == .confirmation {
-                requireAction(prompt: AppText.value("confirmation_required"), choices: [AppText.value("confirm"), AppText.value("cancel")])
-                LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=confirmation_required")
+                requireConfirmation(command, summary: summary, generation: requestGeneration)
                 return
             }
             executeCanonicalCapability(command, summary: summary, requestGeneration: requestGeneration)
@@ -669,6 +669,57 @@ final class AssistantViewModel {
         resultDismissTask?.cancel()
         resultState = .processing
         statusText = AppText.value("processing")
+    }
+
+    private func requireConfirmation(_ command: StructuredCommand, summary: ResultSummary, generation: UInt64) {
+        pendingConfirmation = (command, summary, generation)
+        requireAction(prompt: AppText.value("confirmation_required"), choices: [AppText.value("confirm"), AppText.value("cancel")])
+        LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=confirmation_required")
+    }
+
+    func resolveActionRequiredChoice(_ choice: String) {
+        guard let pending = pendingConfirmation, pending.generation == activeRequestGeneration else { return }
+        let confirmed = choice == AppText.value("confirm")
+        pendingConfirmation = nil
+        guard confirmed else {
+            resultState = .idle
+            statusText = AppText.value("ready")
+            LocalVoiceDiagnosticReport.shared.record("confirmation_resolved", "accepted=false")
+            deliverCompletedDiagnosticSession()
+            return
+        }
+        LocalVoiceDiagnosticReport.shared.record("confirmation_resolved", "accepted=true capability=\(pending.command.intent.rawValue)")
+        if [.calendarDelete, .cancel].contains(pending.command.intent) {
+            executeConfirmedEventKit(pending.command, generation: pending.generation)
+        } else {
+            executeCanonicalCapability(pending.command, summary: pending.summary, requestGeneration: pending.generation)
+        }
+    }
+
+    private func executeConfirmedEventKit(_ command: StructuredCommand, generation: UInt64) {
+        eventKitExecutionInFlight = true
+        resultState = .processing
+        statusText = AppText.value("processing")
+        eventKitExecutionTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                if activeRequestGeneration == generation {
+                    eventKitExecutionInFlight = false
+                    deliverCompletedDiagnosticSession()
+                }
+            }
+            do {
+                let value = try await eventKitExecutor.execute(command)
+                try Task.checkCancellation()
+                guard activeRequestGeneration == generation else { return }
+                resultState = .eventKit(value)
+                statusText = AppText.value("ready")
+                LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=eventkit confirmed=true")
+            } catch {
+                guard !Task.isCancelled, activeRequestGeneration == generation else { return }
+                presentFailure(message: String(localized: "eventkit_unavailable"))
+            }
+        }
     }
 
     func requireAction(prompt: String, choices: [String]) {

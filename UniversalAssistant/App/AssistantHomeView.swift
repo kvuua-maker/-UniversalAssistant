@@ -32,7 +32,7 @@ struct AssistantHomeView: View {
                     RecordingStatusPill(state: model.recorder.state)
                     CompactResultCard(state: model.resultState, onReportIssue: {
                         Task { await model.reportWrongResult() }
-                    }, onScannerAction: model.performScannerAction, onOCRAction: model.performOCRAction, onTranslationAction: model.performTranslationAction, onResultAction: model.performResultAction)
+                    }, onScannerAction: model.performScannerAction, onOCRAction: model.performOCRAction, onTranslationAction: model.performTranslationAction, onResultAction: model.performResultAction, onActionRequiredChoice: model.resolveActionRequiredChoice)
                         .frame(maxWidth: 520)
                         Spacer(minLength: 24)
                     }

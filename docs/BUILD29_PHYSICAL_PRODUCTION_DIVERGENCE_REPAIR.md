@@ -57,6 +57,12 @@ Updated: 2026-09-09
 - Material semantic repairs: broad SHOW/QUERY no longer suppresses a typed personal family; MEDIA ACTION/OBJECT/APP roles preserve clean content payload; inflected cardinal forms feed the shared deterministic number path. No exact physical utterance became a production switch.
 - CLOSED: running Production tests without `ENABLE_TESTABILITY=YES`; expecting executable `.multiStep` lowering behavior from an individual concrete operation; treating Xcode worker interruption or an obsolete test expectation as a source defect.
 
+## Confirmation continuation checkpoint (2026-09-09)
+
+- Action-required confirmation is now executable through the shipped AssistantHomeView and CompactResultCard instead of being a dead renderer state. AssistantViewModel retains the typed StructuredCommand under request-generation ownership; cancel terminates locally, superseded confirmations are ignored, and confirm resumes the original concrete executor.
+- Unseen Release-root emergency confirmation lifecycle: 1/1 PASS inside Build29ReleaseRemainingNativeTests; focused AssistantResultStateTests: 9/9 PASS; protected InteractionDecision/result-state/Calendar/emergency suites: 28/28 PASS. Development compile: PASS.
+- The first protected run exposed two non-production issues: obsolete Notes→Files test expectation and exhausted temporary disk while finalizing xcresult. CLOSED: changing production Notes behavior or repeating tests without correcting those proven test/infrastructure causes.
+
 ## Exact continuation
 
-Reconcile every remaining RELEASE_EVIDENCE_GAP across rows 1–75, then run the full canonical gate set.
+Reconcile the 11 remaining RELEASE_EVIDENCE_GAP rows (5, 12, 13, 17, 21, 25, 27, 29, 31, 33, 45), then run the full canonical gate set.

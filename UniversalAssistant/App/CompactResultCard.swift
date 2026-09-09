@@ -7,6 +7,7 @@ struct CompactResultCard: View {
     var onOCRAction: (OCRProductionResult, OCRResultAction) -> Void = { _, _ in }
     var onTranslationAction: (TranslationProductionResult, OCRResultAction) -> Void = { _, _ in }
     var onResultAction: (ResultAction) -> Void = { _ in }
+    var onActionRequiredChoice: (String) -> Void = { _ in }
 
     var body: some View {
         switch state {
@@ -84,7 +85,9 @@ struct CompactResultCard: View {
         case .actionRequired(let value):
             VStack(alignment: .leading, spacing: 10) {
                 Text(value.prompt).font(.headline)
-                ForEach(value.choices, id: \.self) { Text($0).font(.subheadline) }
+                ForEach(value.choices, id: \.self) { choice in
+                    Button(choice) { onActionRequiredChoice(choice) }.buttonStyle(.bordered)
+                }
             }
             .padding(16)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
