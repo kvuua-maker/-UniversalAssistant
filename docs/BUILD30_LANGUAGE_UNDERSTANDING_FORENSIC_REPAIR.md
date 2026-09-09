@@ -115,7 +115,44 @@ or the full 96-function revalidation.
 
 ## Exact continuation point
 
-Implement bounded request-scoped Apple Speech enrichment in the production voice
-input: authoritative contextual vocabulary (maximum 100), supported recognition
-controls, and alternative/segment confidence evidence delivered to
-`LanguageUnderstandingBlock` without creating a second semantic path.
+Extend the authoritative language block with distinct, verified candidate domains
+for SERVICE/CHANNEL, authorized CONTACT, and configured CATALOG/BRAND/PRODUCT
+entities. Resolution must remain role-scoped and evidence-bearing: unique strong
+candidate becomes a typed entity, close candidates clarify, and weak candidates
+fail closed without generic-web substitution.
+
+## Apple Speech enrichment checkpoint
+
+The production `VoiceInputController` now configures every recognition request
+with a bounded, deduplicated contextual vocabulary. Request-scoped candidates
+have priority, followed by canonical function/service/application vocabulary, so
+the public Speech framework's 100-entry boundary cannot evict the current
+utterance's relevant entities. Entries longer than two words are excluded from
+this bounded hint surface. Product/brand examples from physical testing are not
+hardcoded.
+
+`SFSpeechRecognitionResult.transcriptions`, per-segment `confidence`, and
+`alternativeSubstrings` are captured as `VoiceRecognitionEvidence`. The evidence
+is one-shot and generation-owned in `AssistantViewModel`, then delivered to the
+same authoritative `LanguageUnderstandingBlock` used by typed input. An
+alternative transcription may be adopted only when it agrees with the primary
+non-web typed intent family and safely completes a missing typed role; it cannot
+manufacture a different privileged action. `requiresOnDeviceRecognition` is not
+forced: it is enabled only when explicitly requested and supported by the active
+recognizer.
+
+Privacy-safe diagnostics retain only alternative counts and a confidence bucket,
+never transcript or personal entity content.
+
+Verification:
+
+- focused Voice/Speech/language/Release-root suites: 29/29 PASS;
+- Development arm64 simulator compile: PASS;
+- the first dual-architecture compile attempt failed solely with `No space left on
+  device`; its finalized activity log proved an infrastructure failure before a
+  source diagnostic. Completed task-owned DerivedData was removed, and the
+  materially different arm64 compile passed;
+- `git diff --check`: PASS.
+
+Status is **AUTOMATED GREEN FOR SPEECH ENRICHMENT — PHYSICAL IPHONE RETEST
+REQUIRED**.

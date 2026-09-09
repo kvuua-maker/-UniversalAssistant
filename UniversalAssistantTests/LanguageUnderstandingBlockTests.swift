@@ -68,6 +68,21 @@ struct LanguageUnderstandingBlockTests {
         #expect(command.needsClarification)
         #expect(command.intent != .webSearch)
     }
+
+    @Test func speechAlternativeCanCompleteOnlyTheSameTypedIntentFamily() {
+        let evidence = VoiceRecognitionEvidence(
+            primaryTranscript: "Запусти невідоме",
+            alternativeTranscripts: ["Запусти Спотіфа", "Постав будильник на сьому"],
+            segmentAlternativeCount: 3,
+            averageSegmentConfidence: 0.42
+        )
+        let command = LanguageUnderstandingBlock().parse("Запусти невідоме", speechEvidence: evidence)
+        #expect(command.intent == .open)
+        #expect(command.entities["app"] == "spotify")
+        #expect(command.entities["speech_selected_alternative"] == "true")
+        #expect(command.entities["speech_alternative_count"] == "2")
+        #expect(command.intent != .deviceAction)
+    }
 }
 
 @MainActor

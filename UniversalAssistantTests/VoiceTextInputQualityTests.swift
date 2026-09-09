@@ -7,14 +7,25 @@ struct VoiceTextInputQualityTests {
 
     @Test func speechRequestUsesSupportedQualityConfiguration() {
         let request = SFSpeechAudioBufferRecognitionRequest()
-        VoiceRecognitionRequestConfiguration().apply(to: request)
+        let configuration = VoiceRecognitionRequestConfiguration(additionalVocabulary: ["Test Entity", "Test Entity", "Three word entity"])
+        configuration.apply(to: request)
         #expect(request.shouldReportPartialResults)
         #expect(request.addsPunctuation)
         #expect(request.taskHint == .search)
-        #expect(request.contextualStrings == VoiceRecognitionRequestConfiguration.contextualVocabulary)
+        #expect(request.contextualStrings == configuration.contextualVocabulary)
         #expect(request.contextualStrings.count <= 100)
         #expect(request.contextualStrings.allSatisfy { $0.split(separator: " ").count <= 2 })
-        #expect(["NVIDIA", "Baldinini", "Spotify", "Apple Music", "QR-код", "відскануй", "розпізнай"].allSatisfy(request.contextualStrings.contains))
+        let folded = Set(request.contextualStrings.map {
+            $0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "uk_UA"))
+        })
+        #expect(["Spotify", "Apple Music", "QR-код", "відскануй", "розпізнай", "Test Entity"].allSatisfy {
+            folded.contains($0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "uk_UA")))
+        })
+        #expect(request.contextualStrings.first == "Test Entity")
+        #expect(!request.contextualStrings.contains("Baldinini"))
+        #expect(request.contextualStrings.filter { $0 == "Test Entity" }.count == 1)
+        #expect(!request.contextualStrings.contains("Three word entity"))
+        #expect(!request.requiresOnDeviceRecognition)
     }
 
     @Test func genericQueryDoesNotAddInternalFindOperator() throws {

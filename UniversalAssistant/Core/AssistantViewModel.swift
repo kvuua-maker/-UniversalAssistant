@@ -52,6 +52,7 @@ final class AssistantViewModel {
     // Controller generation guards suppress stale callbacks; this task ownership
     // also prevents abandoned starts surviving re-entry or scene transitions.
     private var voiceStartTask: Task<Void, Never>?
+    private var pendingVoiceRecognitionEvidence: VoiceRecognitionEvidence?
     private var pendingConfirmation: (command: StructuredCommand, summary: ResultSummary, generation: UInt64)?
 
     init(
@@ -141,6 +142,8 @@ final class AssistantViewModel {
             if state == .idle, !weatherExecutionInFlight, !eventKitExecutionInFlight, !capabilityExecutionInFlight, let session = LocalVoiceDiagnosticReport.shared.completedSession() {
                 Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
             }
+        case let .recognitionEvidence(evidence):
+            pendingVoiceRecognitionEvidence = evidence
         case let .transcript(transcript, isFinal):
             input = transcript
             LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_view_model", "length=\(transcript.count) final=\(isFinal)")
@@ -198,6 +201,8 @@ final class AssistantViewModel {
 
     func submit() {
         LocalVoiceDiagnosticReport.shared.beginHomeRequest()
+        let voiceEvidence = pendingVoiceRecognitionEvidence
+        pendingVoiceRecognitionEvidence = nil
         resultDismissTask?.cancel()
         activeRequestGeneration &+= 1
         let requestGeneration = activeRequestGeneration
@@ -240,7 +245,11 @@ final class AssistantViewModel {
             statusText = AppText.value("ready")
             return
         }
-        let command = commandEngine.parse(submittedInput)
+        let command = if let parser = commandEngine as? any EvidenceAwareCommandParsing {
+            parser.parse(submittedInput, speechEvidence: voiceEvidence)
+        } else {
+            commandEngine.parse(submittedInput)
+        }
         LocalVoiceDiagnosticReport.shared.record(
             "router_received",
             "capability=\(command.intent.rawValue) language=\(command.language.rawValue)"

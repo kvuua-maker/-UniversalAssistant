@@ -17,13 +17,17 @@ struct LanguageUnderstandingDocument: Equatable, Sendable {
     let languageHypotheses: [String: Double]
 }
 
+protocol EvidenceAwareCommandParsing: CommandParsing {
+    func parse(_ text: String, speechEvidence: VoiceRecognitionEvidence?) -> StructuredCommand
+}
+
 /// The single semantic entry point for typed text, final Speech transcripts,
 /// App Intent parameters, and compound subcommands in the shipped graph.
 ///
 /// LocalCommandEngine is retained only as a compatibility candidate generator
 /// while the 96 families migrate. It cannot bypass structural framing,
 /// confidence decisions, or protected-domain web isolation.
-struct LanguageUnderstandingBlock: CommandParsing, Sendable {
+struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
     private let legacyCandidate: LocalCommandEngine
     private let analyzer: CanonicalSemanticFrameAnalyzer
     private let applicationCandidates: [ScopedEntityCandidate<String>]
@@ -39,6 +43,44 @@ struct LanguageUnderstandingBlock: CommandParsing, Sendable {
     }
 
     func parse(_ text: String) -> StructuredCommand {
+        parse(text, speechEvidence: nil)
+    }
+
+    func parse(_ text: String, speechEvidence: VoiceRecognitionEvidence?) -> StructuredCommand {
+        let primary = parseAuthoritative(text)
+        guard let speechEvidence else { return primary }
+        let alternatives = speechEvidence.alternativeTranscripts
+            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .filter { $0.caseInsensitiveCompare(text) != .orderedSame }
+        var selected = primary
+        var selectedAlternative = false
+        for alternative in alternatives {
+            let candidate = parseAuthoritative(alternative)
+            if shouldAdopt(candidate, over: selected) {
+                selected = candidate
+                selectedAlternative = true
+            }
+        }
+        var entities = selected.entities
+        entities["speech_alternative_count"] = String(alternatives.count)
+        if let confidence = speechEvidence.averageSegmentConfidence {
+            entities["speech_mean_confidence"] = String(format: "%.3f", confidence)
+        }
+        if selectedAlternative { entities["speech_selected_alternative"] = "true" }
+        return .init(
+            id: primary.id,
+            originalText: text,
+            normalizedText: selected.normalizedText,
+            language: selected.language,
+            intent: selected.intent,
+            entities: entities,
+            constraints: selected.constraints,
+            risk: selected.risk,
+            needsClarification: selected.needsClarification
+        )
+    }
+
+    private func parseAuthoritative(_ text: String) -> StructuredCommand {
         let document = Self.document(text)
         guard !document.normalizedText.isEmpty else {
             return .init(originalText: text, normalizedText: "", language: document.language, intent: .unknown, needsClarification: true)
@@ -108,6 +150,21 @@ struct LanguageUnderstandingBlock: CommandParsing, Sendable {
             risk: legacy.risk,
             needsClarification: needsClarification || intent == .unknown
         )
+    }
+
+    /// Apple alternatives may complete a role only inside the same structural
+    /// intent family. They cannot manufacture a different privileged action.
+    private func shouldAdopt(_ candidate: StructuredCommand, over primary: StructuredCommand) -> Bool {
+        guard candidate.intent == primary.intent, candidate.intent != .unknown,
+              candidate.intent != .webSearch else { return false }
+        if primary.needsClarification && !candidate.needsClarification { return true }
+        let roleKeys: Set<String> = [
+            "app", "contact", "recipient", "call_service", "message_service",
+            "location", "destination", "query", "source_text", "target_language"
+        ]
+        let primaryRoles = primary.entities.keys.filter(roleKeys.contains).count
+        let candidateRoles = candidate.entities.keys.filter(roleKeys.contains).count
+        return !candidate.needsClarification && candidateRoles > primaryRoles
     }
 
     static func document(_ text: String) -> LanguageUnderstandingDocument {

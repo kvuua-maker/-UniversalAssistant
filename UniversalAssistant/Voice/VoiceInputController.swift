@@ -8,7 +8,15 @@ enum VoiceInputState: Equatable, Sendable { case idle, requestingPermission, lis
 
 enum VoiceInputEvent: Equatable, Sendable {
     case state(VoiceInputState)
+    case recognitionEvidence(VoiceRecognitionEvidence)
     case transcript(String, isFinal: Bool)
+}
+
+struct VoiceRecognitionEvidence: Equatable, Sendable {
+    let primaryTranscript: String
+    let alternativeTranscripts: [String]
+    let segmentAlternativeCount: Int
+    let averageSegmentConfidence: Double?
 }
 
 enum VoiceStopReason: String, Sendable {
@@ -100,7 +108,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         guard entries.contains(where: { ["start_listening_invoked", "home_request_started"].contains($0.marker) }),
               entries.contains(where: { ($0.marker == "state_transition" && $0.details.contains("idle")) || ["visible_result", "execution_failed", "router_rejected"].contains($0.marker) }) else { return nil }
-        let safeKeys: Set<String> = ["state", "granted", "available", "locale", "input", "sample_rate", "channels", "running", "count", "frames", "partial_results", "punctuation", "task_hint", "api", "has_text", "final", "error_domain", "error_code", "partial_count", "final_count", "reason", "had_task", "had_request", "length", "input_available", "error_type", "status", "capability", "language", "mechanism", "kind"]
+        let safeKeys: Set<String> = ["state", "granted", "available", "locale", "input", "sample_rate", "channels", "running", "count", "frames", "partial_results", "punctuation", "task_hint", "api", "has_text", "final", "error_domain", "error_code", "partial_count", "final_count", "reason", "had_task", "had_request", "length", "input_available", "error_type", "status", "capability", "language", "mechanism", "kind", "alternatives", "segment_alternatives", "confidence_bucket", "context_count", "on_device_supported", "on_device_required"]
         let bounded = Self.boundedForDelivery(entries)
         let events = bounded.enumerated().map { index, entry in
             let values = entry.details.split(separator: " ").compactMap { token -> (String, String)? in
@@ -160,20 +168,52 @@ enum VoiceAudioCaptureError: Error, Equatable {
 }
 
 struct VoiceRecognitionRequestConfiguration: Sendable {
-    static let contextualVocabulary = [
-        "UniversalAssistant", "Telegram", "WhatsApp", "Viber", "Signal",
-        "Apple Music", "подкаст", "календар", "нагадування", "маршрут",
-        "погода", "контакт", "нотатка", "документ",
-        "NVIDIA", "Baldinini", "Spotify", "iPhone", "iPhone Pro", "QR-код", "QR code", "OCR",
-        "відкрий", "відскануй", "розпізнай", "знайди", "покажи", "проклади", "подзвони", "набери",
-        "ліхтарик", "файли", "фото", "будильник", "таймер", "калькулятор"
-    ]
+    let contextualVocabulary: [String]
+    let requireOnDeviceRecognition: Bool
 
-    func apply(to request: SFSpeechAudioBufferRecognitionRequest) {
+    init(additionalVocabulary: [String] = [], requireOnDeviceRecognition: Bool = false) {
+        contextualVocabulary = Self.boundedVocabulary(additional: additionalVocabulary)
+        self.requireOnDeviceRecognition = requireOnDeviceRecognition
+    }
+
+    static var canonicalVocabulary: [String] {
+        let applications = LaunchDeviceApplications.verified.flatMap {
+            [$0.id] + Array($0.aliases)
+        }
+        let services = MessengerKind.allCases.map(\.rawValue)
+        let functions = [
+            "UniversalAssistant", "Apple Music", "подкаст", "календар",
+            "нагадування", "маршрут", "погода", "контакт", "нотатка",
+            "документ", "файл", "світлина", "будильник", "таймер",
+            "QR-код", "QR code", "OCR", "відкрий", "запусти",
+            "відскануй", "розпізнай", "знайди", "покажи", "проклади",
+            "подзвони", "набери", "повідомлення", "переклади", "ліхтарик"
+        ]
+        return boundedVocabulary(additional: applications + services + functions, includeCanonical: false)
+    }
+
+    static func boundedVocabulary(additional: [String], includeCanonical: Bool = true) -> [String] {
+        var seen: Set<String> = []
+        // Request-scoped candidates are the most relevant evidence for the
+        // current utterance. Keep them ahead of the shared vocabulary so the
+        // Speech framework's 100-entry limit cannot evict the very entities
+        // supplied for this recognition request.
+        let source = additional + (includeCanonical ? canonicalVocabulary : [])
+        return source.compactMap { phrase -> String? in
+            let trimmed = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, trimmed.split(whereSeparator: \.isWhitespace).count <= 2 else { return nil }
+            let key = trimmed.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "uk_UA"))
+            guard seen.insert(key).inserted else { return nil }
+            return trimmed
+        }.prefix(100).map { $0 }
+    }
+
+    func apply(to request: SFSpeechAudioBufferRecognitionRequest, recognizer: SFSpeechRecognizer? = nil) {
         request.shouldReportPartialResults = true
         request.addsPunctuation = true
         request.taskHint = .search
-        request.contextualStrings = Self.contextualVocabulary
+        request.contextualStrings = contextualVocabulary
+        request.requiresOnDeviceRecognition = requireOnDeviceRecognition && recognizer?.supportsOnDeviceRecognition == true
     }
 }
 
@@ -317,6 +357,7 @@ final class VoiceInputController {
     private(set) var transcript = ""
     private let capture: VoiceAudioCaptureLifecycle
     private let authorization: @Sendable () async -> Bool
+    private let contextualVocabulary: @Sendable () async -> [String]
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var requestSink: VoiceRecognitionRequestSink?
     private var task: SFSpeechRecognitionTask?
@@ -335,10 +376,12 @@ final class VoiceInputController {
     init(
         captureBackend: (any VoiceAudioCaptureBackend)? = nil,
         endOfSpeechDelay: Duration = .milliseconds(2_000),
-        authorization: (@Sendable () async -> Bool)? = nil
+        authorization: (@Sendable () async -> Bool)? = nil,
+        contextualVocabulary: @escaping @Sendable () async -> [String] = { [] }
     ) {
         capture = VoiceAudioCaptureLifecycle(backend: captureBackend ?? AppleVoiceAudioCaptureBackend())
         self.authorization = authorization ?? Self.authorizationGranted
+        self.contextualVocabulary = contextualVocabulary
         endOfSpeechFinalizer = VoiceEndOfSpeechFinalizer(delay: endOfSpeechDelay)
         audioEvents = AudioSessionEventMonitor(
             onInterruption: { [weak self] in self?.handleAudioInterruptionBegan() },
@@ -373,11 +416,17 @@ final class VoiceInputController {
         }
         LocalVoiceDiagnosticReport.shared.record("recognizer_ready", "locale=\(locale.identifier) available=\(recognizer.isAvailable)")
         self.recognizer = recognizer
+        let requestVocabulary = await contextualVocabulary()
+        guard owns(sessionID) else {
+            LocalVoiceDiagnosticReport.shared.record("stale_start_suppressed", "reason=context_vocabulary_completed")
+            return
+        }
         let request = SFSpeechAudioBufferRecognitionRequest()
-        VoiceRecognitionRequestConfiguration().apply(to: request)
+        let configuration = VoiceRecognitionRequestConfiguration(additionalVocabulary: requestVocabulary)
+        configuration.apply(to: request, recognizer: recognizer)
         LocalVoiceDiagnosticReport.shared.record(
             "recognition_request_created",
-            "api=sfspeechrecognizer partial_results=true punctuation=true task_hint=search"
+            "api=sfspeechrecognizer partial_results=true punctuation=true task_hint=search context_count=\(configuration.contextualVocabulary.count) on_device_supported=\(recognizer.supportsOnDeviceRecognition) on_device_required=\(request.requiresOnDeviceRecognition)"
         )
         self.request = request
         let requestSink = VoiceRecognitionRequestSink(request)
@@ -431,7 +480,7 @@ final class VoiceInputController {
         eventHandler?(.state(newState))
     }
 
-    private func receiveRecognition(sessionID: UUID, transcript: String?, isFinal: Bool, hasError: Bool, errorDomain: String, errorCode: Int) {
+    private func receiveRecognition(sessionID: UUID, transcript: String?, evidence: VoiceRecognitionEvidence?, isFinal: Bool, hasError: Bool, errorDomain: String, errorCode: Int) {
         guard owns(sessionID) else {
             LocalVoiceDiagnosticReport.shared.record("stale_recognition_suppressed", "final=\(isFinal) error_code=\(errorCode)")
             return
@@ -442,6 +491,16 @@ final class VoiceInputController {
         }
         LocalVoiceDiagnosticReport.shared.record("recognition_callback", "count=\(recognitionCallbackCount) has_text=\(transcript != nil) final=\(isFinal) error_domain=\(errorDomain) error_code=\(errorCode) partial_count=\(partialResultCount) final_count=\(finalResultCount)")
         if let transcript {
+            if let evidence {
+                eventHandler?(.recognitionEvidence(evidence))
+                let bucket = evidence.averageSegmentConfidence.map {
+                    $0 >= 0.8 ? "high" : ($0 >= 0.5 ? "medium" : "low")
+                } ?? "unavailable"
+                LocalVoiceDiagnosticReport.shared.record(
+                    "recognition_evidence",
+                    "alternatives=\(evidence.alternativeTranscripts.count) segment_alternatives=\(evidence.segmentAlternativeCount) confidence_bucket=\(bucket)"
+                )
+            }
             self.transcript = transcript
             eventHandler?(.transcript(transcript, isFinal: isFinal))
             LocalVoiceDiagnosticReport.shared.record(isFinal ? "final_transcript" : "partial_transcript", "length=\(transcript.count)")
@@ -515,13 +574,25 @@ final class VoiceInputController {
     ) -> @Sendable (SFSpeechRecognitionResult?, (any Error)?) -> Void {
         { [weak owner] result, error in
             let transcript = result?.bestTranscription.formattedString
+            let evidence = result.map { result in
+                let segments = result.bestTranscription.segments
+                let confidenceValues = segments.map { Double($0.confidence) }.filter { $0 > 0 }
+                let average = confidenceValues.isEmpty ? nil :
+                    confidenceValues.reduce(0, +) / Double(confidenceValues.count)
+                return VoiceRecognitionEvidence(
+                    primaryTranscript: result.bestTranscription.formattedString,
+                    alternativeTranscripts: Array(result.transcriptions.dropFirst().prefix(4).map(\.formattedString)),
+                    segmentAlternativeCount: segments.reduce(0) { $0 + $1.alternativeSubstrings.count },
+                    averageSegmentConfidence: average
+                )
+            }
             let isFinal = result?.isFinal == true
             let hasError = error != nil
             let nsError = error as NSError?
             let errorDomain = nsError?.domain ?? "none"
             let errorCode = nsError?.code ?? 0
             Task { @MainActor [weak owner] in
-                owner?.receiveRecognition(sessionID: sessionID, transcript: transcript, isFinal: isFinal, hasError: hasError, errorDomain: errorDomain, errorCode: errorCode)
+                owner?.receiveRecognition(sessionID: sessionID, transcript: transcript, evidence: evidence, isFinal: isFinal, hasError: hasError, errorDomain: errorDomain, errorCode: errorCode)
             }
         }
     }
