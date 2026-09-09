@@ -113,6 +113,35 @@ struct PhysicalDiagnosticDeliveryTests {
         #expect(try JSONDecoder.diagnostic.decode(Dated.self, from: JSONEncoder.diagnostic.encode(local)) == local)
     }
 
+    @Test @MainActor func incompleteTypedRequestIsRecoveredOnceWithoutPersonalContent() {
+        let suiteName = UUID().uuidString
+        let suite = UserDefaults(suiteName: suiteName)!
+        let key = "test-active-request"
+        suite.removeObject(forKey: key)
+        let beforeCrash = LocalVoiceDiagnosticReport(defaults: suite, persistenceKey: key)
+        beforeCrash.beginHomeRequest()
+        beforeCrash.record("router_received", "capability=contact_call contact=private-name")
+        let afterRestart = LocalVoiceDiagnosticReport(defaults: suite, persistenceKey: key)
+        let recovered = afterRestart.recoveredIncompleteSession()
+        #expect(recovered?.result == .failure)
+        #expect(recovered?.failureStage == "router_received")
+        #expect(recovered?.errorDomain == "ProcessTerminatedBeforeTerminalResult")
+        #expect(recovered?.events.allSatisfy { $0.attributes.isEmpty } == true)
+        #expect(afterRestart.recoveredIncompleteSession() == nil)
+    }
+
+    @Test @MainActor func terminalTypedRequestClearsCrashJournal() {
+        let suiteName = UUID().uuidString
+        let suite = UserDefaults(suiteName: suiteName)!
+        let key = "test-terminal-request"
+        suite.removeObject(forKey: key)
+        let report = LocalVoiceDiagnosticReport(defaults: suite, persistenceKey: key)
+        report.beginHomeRequest()
+        report.record("visible_result", "kind=deterministic")
+        #expect(report.completedSession()?.result == .success)
+        #expect(LocalVoiceDiagnosticReport(defaults: suite, persistenceKey: key).recoveredIncompleteSession() == nil)
+    }
+
     private func sampleSession() -> PhysicalDiagnosticSession {
         .init(schema: 1, sessionID: UUID(), liveTestID: "MS-800-LIVE-VOICE-QA", feature: "voice", appVersion: "0.1.0", build: 10,
               environment: "internal-testflight", osVersion: "26.6.1", deviceClass: "iPhone", startedAt: .now, endedAt: .now,

@@ -37,6 +37,9 @@ struct UniversalAssistantApp: App {
             AssistantHomeView(model: model)
                 .task {
                     _ = model.ingestPendingShare()
+                    if let recovered = LocalVoiceDiagnosticReport.shared.recoveredIncompleteSession() {
+                        await PhysicalDiagnosticDelivery.shared.enqueue(recovered)
+                    }
                     await PhysicalDiagnosticDelivery.shared.flush()
                 }
         }

@@ -21,15 +21,35 @@ private enum VoiceDiagnostic {
 }
 
 final class LocalVoiceDiagnosticReport: @unchecked Sendable {
-    struct Entry: Sendable { let timestamp: Date; let marker: String; let details: String }
+    struct Entry: Codable, Sendable { let timestamp: Date; let marker: String; let details: String }
+    private struct Persisted: Codable { let sessionID: UUID; let startedAt: Date; let entries: [Entry] }
     static let shared = LocalVoiceDiagnosticReport()
     private let lock = NSLock()
     private var entries: [Entry] = []
     private var sessionID = UUID()
     private var startedAt = Date()
+    private let defaults: UserDefaults
+    private let persistenceKey: String
+    private var recovered: Persisted?
+
+    init(defaults: UserDefaults = .standard, persistenceKey: String = "physical-diagnostic-active-request-v1") {
+        self.defaults = defaults
+        self.persistenceKey = persistenceKey
+        if let data = defaults.data(forKey: persistenceKey),
+           let value = try? JSONDecoder().decode(Persisted.self, from: data) { recovered = value }
+    }
 
     func reset() {
-        lock.lock(); entries = []; sessionID = UUID(); startedAt = Date(); lock.unlock()
+        lock.lock(); entries = []; sessionID = UUID(); startedAt = Date(); persistLocked(); lock.unlock()
+    }
+
+    func beginHomeRequest() {
+        lock.lock()
+        if !entries.contains(where: { $0.marker == "start_listening_invoked" }) {
+            entries = []; sessionID = UUID(); startedAt = Date()
+        }
+        entries.append(.init(timestamp: .now, marker: "home_request_started", details: "source=home"))
+        persistLocked(); lock.unlock()
     }
 
     func record(_ marker: String, _ details: String = "") {
@@ -39,8 +59,15 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         // Parallel providers can otherwise evict the voice ingress markers before
         // the diagnostic is inspected, making the real pipeline unverifiable.
         if entries.count > 1_000 { entries.removeFirst(entries.count - 1_000) }
+        persistLocked()
         lock.unlock()
         VoiceDiagnostic.logger.notice("\(marker, privacy: .public) \(details, privacy: .public)")
+    }
+
+    private func persistLocked() {
+        let durableEntries = entries.map { Entry(timestamp: $0.timestamp, marker: $0.marker, details: "") }
+        let value = Persisted(sessionID: sessionID, startedAt: startedAt, entries: durableEntries)
+        if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: persistenceKey) }
     }
 
     func snapshot() -> String {
@@ -49,10 +76,28 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         return (["UniversalAssistant Local Voice Diagnostic", "No audio or transcript content recorded."] + lines).joined(separator: "\n")
     }
 
+    @MainActor func recoveredIncompleteSession() -> PhysicalDiagnosticSession? {
+        lock.lock(); defer { lock.unlock() }
+        guard let value = recovered, !value.entries.isEmpty else { return nil }
+        recovered = nil
+        defaults.removeObject(forKey: persistenceKey)
+        let events = value.entries.enumerated().map { index, entry in
+            PhysicalDiagnosticEvent(sequence: index + 1, timestamp: entry.timestamp, marker: entry.marker, attributes: [:])
+        }
+        let ended = value.entries.last?.timestamp ?? value.startedAt
+        return .init(schema: 1, sessionID: value.sessionID, liveTestID: "MS-800-RECOVERED-REQUEST", feature: "request",
+                     appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
+                     build: Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0") ?? 0,
+                     environment: "internal-testflight", osVersion: UIDevice.current.systemVersion, deviceClass: UIDevice.current.model,
+                     startedAt: value.startedAt, endedAt: ended, durationMilliseconds: max(0, Int(ended.timeIntervalSince(value.startedAt) * 1_000)),
+                     result: .failure, failureStage: value.entries.last?.marker,
+                     errorDomain: "ProcessTerminatedBeforeTerminalResult", errorCode: -1, events: events)
+    }
+
     @MainActor func completedSession() -> PhysicalDiagnosticSession? {
         lock.lock(); defer { lock.unlock() }
-        guard entries.contains(where: { $0.marker == "start_listening_invoked" }),
-              entries.contains(where: { $0.marker == "state_transition" && $0.details.contains("idle") }) else { return nil }
+        guard entries.contains(where: { ["start_listening_invoked", "home_request_started"].contains($0.marker) }),
+              entries.contains(where: { ($0.marker == "state_transition" && $0.details.contains("idle")) || ["visible_result", "execution_failed", "router_rejected"].contains($0.marker) }) else { return nil }
         let safeKeys: Set<String> = ["state", "granted", "available", "locale", "input", "sample_rate", "channels", "running", "count", "frames", "partial_results", "punctuation", "task_hint", "api", "has_text", "final", "error_domain", "error_code", "partial_count", "final_count", "reason", "had_task", "had_request", "length", "input_available", "error_type", "status", "capability", "language", "mechanism", "kind"]
         let events = entries.enumerated().map { index, entry in
             let values = entry.details.split(separator: " ").compactMap { token -> (String, String)? in
@@ -70,6 +115,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         let failed = error != nil || entries.contains(where: { $0.marker == "voice_start_failed" })
         let succeeded = entries.contains(where: { $0.marker == "visible_result" })
         let ended = entries.last?.timestamp ?? .now
+        defaults.removeObject(forKey: persistenceKey)
         return .init(schema: 1, sessionID: sessionID, liveTestID: "MS-800-LIVE-VOICE-QA", feature: "voice",
                      appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
                      build: Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0") ?? 0,

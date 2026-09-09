@@ -69,3 +69,8 @@ Status: IN PROGRESS. Durable evidence: `BUILD29_PHYSICAL_PRODUCTION_DIVERGENCE_R
 The first Release-root tests proved a semantic-selection divergence before executors: message payload interrogatives overrode the leading ACTION, and proximity constraints did not structurally select Places. A shared `ProductionAssistantComposition` now constructs the app and Release-root E2E with the same parser/router/context/production executor graph. TestFlight diagnostic eligibility now uses verified StoreKit `AppTransaction` sandbox environment rather than deprecated receipt naming.
 
 Automated evidence: Production Release-root 4/4 PASS; protected routing/entity suites 26/26 PASS; diagnostic delivery 9/9 PASS; Production compile PASS; `git diff --check` PASS. Physical iPhone retest remains required. Exact next material operation: complete the 96-function Release production reachability matrix, then prioritize unconnected/crashing families from real composition evidence. Build 30 has not been created.
+
+
+### Durable Build-29 crash diagnostics
+
+Typed Home ingress and pre-terminal process death are now covered by a privacy-safe persistent marker journal. Production-config verification: 15/15 PASS across diagnostic delivery and shared Release-composition suites. The initial terminal predicate that excluded valid idle/error voice sessions failed assertions and is CLOSED; the corrected predicate preserves both voice lifecycle and typed terminal markers. Release reachability inventory: BUILD29_RELEASE_REACHABILITY_MATRIX.md, exactly 96/96 rows, with evidence gaps left explicit rather than promoted from Development mocks.

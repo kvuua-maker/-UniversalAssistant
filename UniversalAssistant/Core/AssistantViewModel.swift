@@ -183,6 +183,7 @@ final class AssistantViewModel {
     }
 
     func submit() {
+        LocalVoiceDiagnosticReport.shared.beginHomeRequest()
         resultDismissTask?.cancel()
         activeRequestGeneration &+= 1
         let requestGeneration = activeRequestGeneration
