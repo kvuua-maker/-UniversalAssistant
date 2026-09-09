@@ -28,7 +28,7 @@ struct LocalCommandEngineTests {
     func intentCorpus(_ phrase: String, _ intent: CommandIntent) { #expect(engine.parse(phrase).intent == intent) }
 
     @Test("Canonical intent recognition matrix", arguments: [
-        ("Ресторан поруч", CommandIntent.restaurantSearch), ("Забронюй столик", .reservation),
+        ("Ресторан поруч", CommandIntent.placeSearch), ("Забронюй столик", .reservation),
         ("Виклич таксі", .taxiSearch), ("Побудуй маршрут", .routeSearch), ("Кав'ярня по дорозі", .routeAwareSearch),
         ("Що в календарі", .calendarQuery), ("Перенеси зустріч", .calendarUpdate), ("Видали зустріч", .calendarDelete),
         ("Покажи нагадування", .reminderQuery), ("Створи нотатку", .noteCreate), ("Покажи нотатки", .noteQuery),
@@ -61,6 +61,13 @@ struct LocalCommandEngineTests {
         let command = engine.parse(phrase)
         #expect(command.intent == .audioRecord)
         #expect(command.entities["recorder_action"] == action)
+    }
+
+    @Test func explicitCommunicationServiceOwnsSendActionDespiteContentDomainNouns() {
+        let command = engine.parse("Надішли email про календарний звіт")
+        #expect(command.intent == .messageCompose)
+        #expect(command.entities["message_service"] == "email")
+        #expect(command.intent != .calendarCreate && command.intent != .calendarQuery)
     }
 
     @Test func contextResolvesAndExpires() {

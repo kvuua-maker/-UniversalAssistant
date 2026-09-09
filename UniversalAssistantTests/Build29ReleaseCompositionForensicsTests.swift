@@ -212,6 +212,16 @@ struct Build29ReleaseRootFamilyReachabilityTests {
         for _ in 0..<100 where recorder.state != .recording { try await Task.sleep(for: .milliseconds(10)) }
         #expect(recorder.state == .recording)
 
+        model.input = "Призупини активний звуковий запис"
+        model.submit()
+        for _ in 0..<100 where recorder.state != .paused { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(recorder.state == .paused)
+
+        model.input = "Resume the active recording"
+        model.submit()
+        for _ in 0..<100 where recorder.state != .recording { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(recorder.state == .recording)
+
         model.input = "Заверши цей аудіозапис"
         model.submit()
         for _ in 0..<100 where model.capabilityPresentation == nil { try await Task.sleep(for: .milliseconds(10)) }
@@ -907,7 +917,7 @@ struct Build29ReleaseShoppingListBoundaryTests {
 struct Build29ReleaseEmailComposeBoundaryTests {
     @Test func explicitEmailChannelUsesMailComposerInsteadOfSMSOrWeb() async throws {
         let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
-        model.input = "Напиши лист електронною поштою про новий проєкт"
+        model.input = "Надішли email про календарний підсумок кварталу"
         model.submit()
         for _ in 0..<100 where model.capabilityPresentation == nil { try await Task.sleep(for: .milliseconds(10)) }
         guard case .email? = model.capabilityPresentation else {

@@ -114,4 +114,12 @@ Updated: 2026-09-09
 
 ## Exact continuation
 
-Reconcile the three recorded LocalCommandEngine semantic contracts (recorder lifecycle verbs, restaurant/place canonical consolidation, and messaging service precedence over content-domain nouns), then run the full canonical gate set.
+Run the full canonical gate set; all 96 reachability rows and the three recorded semantic contracts are reconciled.
+
+## Final semantic-contract checkpoint (2026-09-09)
+
+- Recorder pause/resume/stop is a typed lifecycle ACTION through the shipped Home composition. A token-boundary defect in `LocalUtilityEngine` treated the substring `sum` inside `resume` as arithmetic; English single-word utility signals now require complete lexical tokens.
+- Restaurant/food proximity uses the one canonical structured Places route (`placeSearch`) rather than a competing legacy restaurant intent expectation.
+- A leading send/share verb plus a verified SERVICE/CHANNEL role becomes `messageCompose`; Calendar-domain nouns inside the message payload no longer steal intent ownership.
+- Production-root family suite 6/6 PASS; LocalCommandEngine/email suite 10/10 PASS; broader recorder/messaging regressions 22/22 PASS; Development compile PASS.
+- CLOSED: substring matching of short English utility operators, and direct parser/controller tests as proof of shipped recorder lifecycle reachability.

@@ -68,12 +68,17 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
            tokens.contains(where: { $0.hasPrefix("документ") || $0.hasPrefix("document") }) {
             frame.source = .documents
         }
-        // Messenger recovery is meaningful only after the structural action
-        // establishes a CALL/MESSAGE service role. Running fuzzy recovery over
-        // every token in unrelated commands can manufacture an ambiguity.
-        if frame.action == .call || frame.action == .message {
+        // A verified communication channel is structural evidence that a leading
+        // send/share verb describes MESSAGE, not generic sharing. Keep recovery
+        // scoped to communication actions so unrelated text cannot manufacture a
+        // messenger entity.
+        let communicationAction = frame.action == .call || frame.action == .message ||
+            (frame.action == .share && tokens.first.map(isSendActionToken) == true)
+        if communicationAction {
             switch service(in: tokens) {
-            case let .resolved(service): frame.service = service
+            case let .resolved(service):
+                frame.service = service
+                if frame.action == .share { frame.action = .message }
             case let .ambiguous(values): frame.entityAmbiguity = values
             case .unresolved: break
             }
@@ -304,7 +309,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         }
 
         if frame.object == .audio && frame.action.map({ [.record, .set, .create].contains($0) }) == true {
-            entities["recorder_action"] = "start"
+            entities["recorder_action"] = recorderLifecycleAction(in: lexicalTokens(normalized))
             return (.audioRecord, entities)
         }
 
@@ -372,7 +377,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.recognize, ["розпіз", "распозн", "прочит", "recogn", "read"]),
             (.copy, ["скопію", "копію", "скопир", "copy"]),
             (.scan, ["скан", "оцифр", "digitiz"]),
-            (.record, ["аудіозап", "аудиозап", "запис", "розпоч", "начн", "record"]),
+            (.record, ["аудіозап", "аудиозап", "запис", "розпоч", "начн", "record", "призуп", "припин", "пауз", "продовж", "віднов", "resume", "pause", "зупин", "заверш", "закінч", "останов", "fortsetz", "pausier", "stopp", "reprend", "arrêt"]),
             (.call, ["подзвон", "зателефон", "набер", "позвон", "call", "dial"]),
             (.message, ["напиш", "повідом", "сообщ", "message"]),
             (.navigate, ["маршрут", "шлях", "дорог", "путь", "вед", "проклад", "їхат", "ехать", "діст", "добрат", "reach", "navigat", "route", "path"]),
@@ -415,6 +420,21 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         return prefixes.contains { prefix in
             token.hasPrefix(prefix) && token.dropFirst(prefix.count).hasPrefix(root)
         }
+    }
+
+    private func isSendActionToken(_ token: String) -> Bool {
+        ["надішл", "відправ", "отправ", "send", "schick", "envoi"].contains { actionToken(token, matches: $0) }
+    }
+
+    private func recorderLifecycleAction(in tokens: [String]) -> String {
+        let roots: [(String, [String])] = [
+            ("pause", ["призуп", "припин", "пауз", "pause", "pausier"]),
+            ("resume", ["продовж", "віднов", "resume", "fortsetz", "reprend"]),
+            ("stop", ["зупин", "заверш", "закінч", "останов", "stop", "stopp", "arrêt"])
+        ]
+        return roots.first { _, candidates in
+            tokens.contains { token in candidates.contains { actionToken(token, matches: $0) } }
+        }?.0 ?? "start"
     }
 
     private func object(in tokens: [String]) -> CanonicalSemanticFrame.Object? {

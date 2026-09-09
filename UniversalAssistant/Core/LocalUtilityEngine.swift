@@ -6,13 +6,19 @@ struct LocalUtilityEngine: Sendable {
     static func recognizes(_ raw: String) -> Bool {
         let text = normalized(raw)
         let signals = ["обчисл", "порах", "розрах", "вычисл", "посчитай", "calculate", "різниц", "разниц", "difference", "сума", "сумм", "sum", "добут", "произвед", "product", "частк", "частн", "quotient", "скільки буде", "сколько будет", "помнож", "умнож", "поділити", "разделить", "kilometer", "кілометр", "километр", "miles", "мил", "кілограм", "килограмм", "pounds", "фунт", "celsius", "fahrenheit", "цельсі", "цельси", "який сьогодні день", "какой сегодня день", "яка сьогодні дата", "какая сегодня дата", "яке сьогодні число", "какое сегодня число", "котра година", "который час", "скільки зараз часу", "сколько сейчас времени", "який зараз час", "local time"]
+        let lexicalTokens = text.split(whereSeparator: { !$0.isLetter }).map(String.init)
+        let hasSignal = signals.contains { signal in
+            if signal.contains(" ") { return text.contains(signal) }
+            if signal.unicodeScalars.allSatisfy({ $0.isASCII }) { return lexicalTokens.contains(signal) }
+            return lexicalTokens.contains { $0.hasPrefix(signal) }
+        }
         let currentDate = ["дат", "числ", "date"].contains(where: text.contains) && ["сьогод", "сегодня", "поточ", "текущ", "current", "today"].contains(where: text.contains)
         let currentTime = ["час", "годин", "врем", "time"].contains(where: text.contains) && ["зараз", "сейчас", "поточ", "текущ", "місцев", "местн", "current", "local"].contains(where: text.contains)
         let range = NSRange(text.startIndex..., in: text)
         let numericExpression = numericExpressionRegex.firstMatch(in: text, range: range) != nil
         let numericWordExpression = numericWordExpressionRegex.firstMatch(in: text, range: range) != nil
         let percentageExpression = percentageExpressionRegex.firstMatch(in: text, range: range) != nil
-        return signals.contains(where: text.contains) || currentDate || currentTime || numericExpression || numericWordExpression || percentageExpression
+        return hasSignal || currentDate || currentTime || numericExpression || numericWordExpression || percentageExpression
     }
 
     static func recognizesCurrency(_ raw: String) -> Bool {

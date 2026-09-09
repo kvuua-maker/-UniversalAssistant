@@ -386,9 +386,13 @@ struct LocalCommandEngine: CommandParsing {
     }
 
     private func recorderAction(in text: String) -> String {
-        if ["призупини", "pause recording", "aufnahme pausieren", "pause l'enregistrement"].contains(where: text.contains) { return "pause" }
-        if ["продовж", "resume recording", "aufnahme fortsetzen", "reprends l'enregistrement"].contains(where: text.contains) { return "resume" }
-        if ["зупини", "заверш", "закінч", "останови", "заверши", "stop recording", "aufnahme stoppen", "arrête l'enregistrement"].contains(where: text.contains) { return "stop" }
+        let tokens = text.split(whereSeparator: { !$0.isLetter }).map(String.init)
+        let matches: (String, [String]) -> Bool = { _, roots in
+            tokens.contains { token in roots.contains { token.hasPrefix($0) } }
+        }
+        if matches(text, ["призуп", "припин", "пауз", "pause", "pausier"]) { return "pause" }
+        if matches(text, ["продовж", "віднов", "resume", "fortsetz", "reprend"]) { return "resume" }
+        if matches(text, ["зупин", "заверш", "закінч", "останов", "stop", "stopp", "arrêt"]) { return "stop" }
         return "start"
     }
 
