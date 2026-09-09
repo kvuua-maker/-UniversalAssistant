@@ -93,6 +93,13 @@ Updated: 2026-09-09
 - Unseen Production-root email request PASS; protected messaging suites 7/7 PASS; Development compile PASS.
 - CLOSED test input containing a Calendar-domain noun for proving the isolated email boundary; that run correctly exposed a separate Calendar/message content collision rather than an email-executor failure.
 
+## Notification Release lifecycle checkpoint (2026-09-09)
+
+- Proven gap: production APNs entitlement and backend delivery existed, but the shipped app had no UserNotifications authorization/registration entry point.
+- Added explicit settings-triggered authorization and `UIApplication.registerForRemoteNotifications`; no permission request occurs at launch. Denial and errors remain truthful.
+- Release-root notification tests 2/2 PASS; contextual permission/voice diagnostics 5/5 PASS; Development compile PASS.
+- Material diagnostics repair: a voice transcript ingress now retains its privacy-safe breadcrumbs when Home submission starts, even if a recovered/test session lacks the microphone-start marker.
+
 ## Exact continuation
 
-Reconcile the 3 remaining RELEASE_EVIDENCE_GAP rows (25, 29, 45), then reconcile the recorded LocalCommandEngine contract gaps and run the full canonical gate set.
+Reconcile the 2 remaining RELEASE_EVIDENCE_GAP rows (29, 45), then reconcile the recorded LocalCommandEngine contract gaps and run the full canonical gate set.

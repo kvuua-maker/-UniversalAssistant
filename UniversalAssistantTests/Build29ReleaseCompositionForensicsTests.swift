@@ -917,3 +917,31 @@ struct Build29ReleaseEmailComposeBoundaryTests {
         #expect({ if case .webHandoff = model.resultState { return false }; return true }())
     }
 }
+
+@Suite("Build 29 Release notification boundary", .serialized)
+@MainActor
+struct Build29ReleaseNotificationBoundaryTests {
+    @Test func explicitProactiveEnableUsesShippedRegistrationBoundaryOnlyOnDemand() async {
+        var calls = 0
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            notificationEnable: { calls += 1; return .enabled }
+        )
+        #expect(calls == 0)
+        await model.enableProactiveNotifications()
+        #expect(calls == 1)
+        #expect(model.statusText == "Сповіщення ввімкнено")
+    }
+
+    @Test func denialIsTruthfulAndDoesNotRetryOrUseWeb() async {
+        var calls = 0
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            notificationEnable: { calls += 1; return .denied }
+        )
+        await model.enableProactiveNotifications()
+        #expect(calls == 1)
+        #expect(model.statusText == "Дозвіл на сповіщення не надано")
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+}

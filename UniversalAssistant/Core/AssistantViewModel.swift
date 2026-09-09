@@ -33,6 +33,7 @@ final class AssistantViewModel {
     private let compactResultDuration: Duration
     private let presentationPreferenceStore: PresentationPreferenceStore
     private let systemHandoffOpen:  (URL) -> Void
+    private let notificationEnable: @MainActor () async -> ProactiveNotificationEnableResult
     private var resultDismissTask: Task<Void, Never>?
     private var weatherExecutionInFlight = false
     private var eventKitExecutionInFlight = false
@@ -67,6 +68,7 @@ final class AssistantViewModel {
         compactResultDuration: Duration = .seconds(2),
         presentationPreferenceStore: PresentationPreferenceStore = PresentationPreferenceStore(),
         voiceInput: VoiceInputController = VoiceInputController(),
+        notificationEnable: @escaping @MainActor () async -> ProactiveNotificationEnableResult = { await ProductionNotificationRegistration.enable() },
         systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
     ) {
         self.commandEngine = commandEngine
@@ -84,6 +86,7 @@ final class AssistantViewModel {
         self.compactResultDuration = compactResultDuration
         self.presentationPreferenceStore = presentationPreferenceStore
         self.voiceInput = voiceInput
+        self.notificationEnable = notificationEnable
         self.systemHandoffOpen = systemHandoffOpen
         voiceInput.setEventHandler { [weak self] event in
             self?.handleVoiceEvent(event)
@@ -166,6 +169,14 @@ final class AssistantViewModel {
     func savePresentationPreferences(_ value: PresentationPreferences) {
         presentationPreferences = value
         Task { try? await presentationPreferenceStore.save(value) }
+    }
+
+    func enableProactiveNotifications() async {
+        switch await notificationEnable() {
+        case .enabled: statusText = "Сповіщення ввімкнено"
+        case .denied: statusText = "Дозвіл на сповіщення не надано"
+        case .failed: statusText = AppText.value("request_unavailable")
+        }
     }
 
     func setVoiceInputEnabled(_ enabled: Bool) {

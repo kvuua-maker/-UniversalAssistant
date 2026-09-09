@@ -45,7 +45,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
 
     func beginHomeRequest() {
         lock.lock()
-        if !entries.contains(where: { $0.marker == "start_listening_invoked" }) {
+        if !entries.contains(where: { ["start_listening_invoked", "transcript_delivered_to_view_model", "transcript_delivered_to_router"].contains($0.marker) }) {
             entries = []; sessionID = UUID(); startedAt = Date()
         }
         entries.append(.init(timestamp: .now, marker: "home_request_started", details: "source=home"))

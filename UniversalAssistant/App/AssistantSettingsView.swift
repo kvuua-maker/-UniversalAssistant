@@ -26,6 +26,10 @@ struct AssistantSettingsView: View {
                 .accessibilityIdentifier("settings.copy-voice-diagnostics")
             }
             Section("Permissions") {
+                Button("Увімкнути proactive-сповіщення") {
+                    Task { await model.enableProactiveNotifications() }
+                }
+                .accessibilityIdentifier("settings.enable-proactive-notifications")
                 if let url = URL(string: UIApplication.openSettingsURLString) { Link("iPhone Permissions", destination: url) }
             }
             Section("Privacy & Data") { Text("On-device preferences contain no raw command history.").foregroundStyle(.secondary) }
