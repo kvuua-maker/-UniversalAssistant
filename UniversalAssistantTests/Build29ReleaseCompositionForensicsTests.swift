@@ -584,3 +584,58 @@ struct Build29ReleaseRootSystemFXTests {
         #expect(model.statusText != AppText.value("processing"))
     }
 }
+
+
+private struct Build29ReleaseDiscoveryBoundary: GenericDiscoveryProvider {
+    let id = "release-provider"
+    func discover(_ intent: GenericIntent, query: String) async throws -> [GenericDiscoveryDocument] {
+        let safeTitle = intent.brandOrProvider ?? intent.subject
+        let payload = "<script type=\"application/ld+json\">{\"@type\":\"Thing\",\"name\":\"" + safeTitle.replacingOccurrences(of: "\"", with: "") + "\",\"url\":\"https://provider.example/result\"}</script>"
+        return [.init(response: .init(finalURL: URL(string: "https://provider.example/result")!, html: payload, fetchedAt: .now, sourceTimestamp: .now), sourceKind: .structuredMarketplace)]
+    }
+}
+
+@Suite("Build 29 Release external provider boundaries", .serialized)
+
+@MainActor
+struct Build29ReleaseExternalProviderBoundaryTests {
+@Test func configuredProviderIsReachableFromUnknownAndTypedCommerceHomePaths() async throws {
+        let discovery = GenericUnknownRequestCoordinator(providers: [Build29ReleaseDiscoveryBoundary()], cache: GenericSemanticCache(), ai: nil)
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60), genericDiscovery: discovery)
+        for input in ["Розкажи актуальний стан міжнародної місії", "Підбери водостійкий туристичний рюкзак до 4200 гривень"] {
+            model.input = input
+            model.submit()
+            for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+            guard case let .deterministic(result) = model.resultState else { Issue.record("Configured Release provider was not reached: \(input)"); continue }
+            #expect(result.facts.first?.source?.hasPrefix("structuredMarketplace:") == true)
+            #expect(result.actions.first?.destination?.host == "provider.example")
+        }
+    }
+
+@Test func absentCommercialProvidersPreserveRequestsInDeliberateBrowserFallback() async throws {
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        let requests = [
+            "Покажи свіжі економічні новини за сьогодні",
+            "Дізнайся поточне котирування акцій виробника напівпровідників",
+            "Збери кошик для овочевого супу з доставкою",
+            "Забронюй столик на двох завтра ввечері",
+            "Порівняй доступні поїздки таксі до музею",
+            "Підбери готель у Кракові на дві ночі",
+            "Знайди квитки на нічний потяг до Варшави",
+            "Відстеж міжнародне відправлення за номером",
+            "Знайди майстра для ремонту посудомийної машини",
+            "Покажи офіційний муніципальний сервіс для реєстрації",
+            "Знайди вакансії дизайнера з віддаленою роботою",
+            "Покажи доступні персональні знижки програми лояльності"
+        ]
+        for request in requests {
+            model.input = request
+            model.submit()
+            for _ in 0..<100 { if case .webHandoff = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+            guard case let .webHandoff(fallback) = model.resultState else { Issue.record("External boundary did not terminate truthfully: \(request)"); continue }
+            #expect(fallback.query == request)
+            #expect(fallback.destination.host?.contains("google") == true)
+            #expect(model.statusText != AppText.value("processing"))
+        }
+    }
+}

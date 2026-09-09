@@ -467,7 +467,7 @@ struct LocalCommandEngine: CommandParsing {
     private func resolveSpecificAndSemantic(specific: CommandIntent?, semantic: CommandIntent?) -> CommandIntent? {
         guard let semantic else { return specific }
         let broadCollision: Bool = switch (semantic, specific) {
-        case (.photoSearch, .show), (.audioRecord, .calendarCreate),
+        case (.unknown, .show), (.photoSearch, .show), (.audioRecord, .calendarCreate),
              (.mediaSearch, .show), (.mediaSearch, .productSearch),
              (.calendarCreate, .productSearch),
              (.placeSearch, .show), (.placeSearch, .productSearch),

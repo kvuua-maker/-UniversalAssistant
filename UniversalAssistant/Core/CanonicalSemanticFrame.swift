@@ -259,7 +259,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             return (.reminderQuery, entities)
         }
         if frame.object == .timer || frame.object == .alarm {
-            guard frame.action == .set || frame.action == .create else {
+            guard frame.action == .set || frame.action == .create || frame.action == .enable else {
                 // AlarmKit supports app-created alarms, but it is not a public
                 // replacement for browsing the user's Clock alarm database.
                 return (.deviceAction, ["system_action": "unsupported_system_control"])
@@ -320,6 +320,9 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             entities["near_current_location"] = "true"
             entities["query"] = original
             return (.placeSearch, entities)
+        }
+        if let action = frame.action, [.show, .query].contains(action), frame.contextReference == nil, frame.entityAmbiguity.isEmpty {
+            return (.unknown, entities)
         }
         return (nil, entities)
     }

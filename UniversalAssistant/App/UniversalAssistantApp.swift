@@ -23,6 +23,7 @@ enum ProductionAssistantComposition {
         compactResultDuration: Duration = .seconds(2),
         weather: any WeatherCommandExecuting = ProductionWeatherCommandExecutor(),
         fx: any CurrentFXProviding = ECBCurrentFXProvider(),
+        genericDiscovery: GenericUnknownRequestCoordinator? = nil,
         eventKit: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
         publicDeviceExecute: @escaping @MainActor (SystemQuickAction) throws -> String = { try ProductionPublicDeviceExecutor().execute($0) },
         clipboardRead: @escaping @MainActor () throws -> SharedContent = { try SystemUserInitiatedClipboardReader().readAfterUserAction() },
@@ -37,8 +38,7 @@ enum ProductionAssistantComposition {
             personalSearchSources: personalSearchSources
         )
         return AssistantViewModel(
-            weatherExecutor: weather, eventKitExecutor: eventKit, capabilityExecutor: executor, currentContext: context, recorder: recorder,
-            compactResultDuration: compactResultDuration, systemHandoffOpen: systemHandoffOpen
+            weatherExecutor: weather, genericDiscovery: genericDiscovery, eventKitExecutor: eventKit, capabilityExecutor: executor, currentContext: context, recorder: recorder, compactResultDuration: compactResultDuration, systemHandoffOpen: systemHandoffOpen
         )
     }
 }

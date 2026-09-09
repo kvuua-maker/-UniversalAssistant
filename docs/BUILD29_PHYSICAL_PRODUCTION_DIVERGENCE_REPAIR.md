@@ -36,6 +36,14 @@ Updated: 2026-09-09
 - Release-root system/context plus utility verification: 15/15 PASS. Protected CurrentContext, concrete multi-step, clipboard and replay/expiry suites: 31/31 PASS. Development compile: PASS.
 - Rows 73–75 now have Release-root evidence. Internal planner identifiers remain non-executable.
 
+## External-provider Release boundary
+
+- Proven Release composition gap: ProductionAssistantComposition always constructed AssistantViewModel without a GenericUnknownRequestCoordinator, and externalProviderRequired jumped directly to generic web. The production composition root now accepts the provider-neutral coordinator while preserving production defaults; AssistantViewModel consults that boundary before an exact deliberate browser handoff.
+- General show/query requests now reach the general-information provider path, while structurally open-ended search remains product/catalog discovery. This repairs the provider boundary without turning product selection into ambiguity.
+- Reservation/ticket discovery no longer requests confirmation before a concrete provider result; confirmation remains required for an actual verified booking/purchase.
+- Unseen Production-root provider verification plus protected semantic, interaction, retail and commerce suites: 64/64 PASS. Development compile: PASS.
+- Rows 76–89 are EXTERNAL_PROVIDER_BOUNDARY_VERIFIED. No price, availability, quote, booking or account data is fabricated.
+
 ## Exact continuation
 
-Rows 76–89: prove provider-neutral Release boundaries and exact truthful dependency or deliberate constraint-preserving fallback, without fabricated credentials/data.
+Rows 90–96: prove StoreKit, AuthenticationServices, cloud/background, App Attest and exact owner/Apple boundaries from the shipped Production target, then reconcile every earlier evidence gap.

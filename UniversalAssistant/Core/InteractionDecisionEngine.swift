@@ -35,8 +35,11 @@ struct InteractionDecisionEngine: InteractionDeciding {
     }
 
     private func requiresConfirmation(_ command: StructuredCommand) -> Bool {
-        command.risk == .consequential || command.risk == .emergency || [
-            .ticketPurchaseHandoff, .reservation, .calendarDelete, .cancel
+        // Search/discovery must first produce a concrete provider result. Confirmation
+        // belongs to the verified booking/purchase action, not to discovery itself.
+        if [.ticketPurchaseHandoff, .reservation].contains(command.intent) { return false }
+        return command.risk == .consequential || command.risk == .emergency || [
+            .calendarDelete, .cancel
         ].contains(command.intent)
     }
 

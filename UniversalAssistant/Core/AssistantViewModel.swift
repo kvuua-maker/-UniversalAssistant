@@ -471,7 +471,7 @@ final class AssistantViewModel {
             } catch let CanonicalCapabilityExecutionError.externalProviderRequired(providerClass) {
                 guard activeRequestGeneration == requestGeneration else { return }
                 LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=external_provider_required capability=\(providerClass)")
-                presentGeneralWebFallback(command)
+                presentGeneralInformation(command, summary: summary, requestGeneration: requestGeneration)
             } catch let CanonicalCapabilityExecutionError.unavailable(reason) {
                 guard activeRequestGeneration == requestGeneration else { return }
                 LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=capability_unavailable capability=\(command.intent.rawValue) detail=\(reason)")
