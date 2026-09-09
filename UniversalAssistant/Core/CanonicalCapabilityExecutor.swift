@@ -176,6 +176,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let fx: any CurrentFXProviding
     private let photoSearchTimeout: Duration
     private let alarmExecute: ( (SystemQuickAction) async throws -> String)?
+    private let commandParser: any CommandParsing
 
     init(
         deviceRouter: UniversalDeviceCommandRouter = .init(applications: .init(applications: LaunchDeviceApplications.verified)),
@@ -199,7 +200,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         fx: any CurrentFXProviding = ECBCurrentFXProvider(),
         alarmExecute: (  (SystemQuickAction) async throws -> String)? = nil,
         photoSearchTimeout: Duration = .seconds(3),
-        personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())]
+        personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())],
+        commandParser: any CommandParsing = LanguageUnderstandingBlock()
     ) {
         self.deviceRouter = deviceRouter
         self.contacts = contacts
@@ -222,12 +224,13 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.fx = fx
         self.alarmExecute = alarmExecute
         self.photoSearchTimeout = photoSearchTimeout
+        self.commandParser = commandParser
         self.multiStepOperationFactory = multiStepOperationFactory
         if let multiStepOperationFactory {
-            self.multiStep = ProductionMultiStepCoordinator(operationFactory: multiStepOperationFactory)
+            self.multiStep = ProductionMultiStepCoordinator(parser: commandParser, operationFactory: multiStepOperationFactory)
         } else {
             let operationMap = ProductionStepOperationMap(eventKit: eventKit, currentLocation: currentLocation, locationResolver: locationResolver, places: placeSearch, typedExecutor: nil)
-            self.multiStep = ProductionMultiStepCoordinator { command, plan in
+            self.multiStep = ProductionMultiStepCoordinator(parser: commandParser) { command, plan in
                 operationMap.operations(for: command, plan: plan)
             }
         }
@@ -241,7 +244,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 guard let self else { throw CanonicalCapabilityExecutionError.unavailable("multi_step_executor_released") }
                 return try await self.executeTypedStep(subcommand, step: step)
             }
-            self.multiStep = ProductionMultiStepCoordinator { command, plan in operationMap.operations(for: command, plan: plan) }
+            self.multiStep = ProductionMultiStepCoordinator(parser: commandParser) { command, plan in operationMap.operations(for: command, plan: plan) }
         }
     }
 
@@ -378,7 +381,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     }
 
     private func executeCompound(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
-        let plan = try DeterministicExecutionPlanBuilder().plan(for: command)
+        let plan = try DeterministicExecutionPlanBuilder(parser: commandParser).plan(for: command)
         let commands = plan.steps.compactMap(\.command)
         guard commands.count == plan.steps.count, !commands.isEmpty else {
             return .result(try await multiStep.execute(command))

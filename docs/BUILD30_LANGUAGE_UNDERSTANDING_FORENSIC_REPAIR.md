@@ -81,6 +81,41 @@ The unchanged Linux `swift test` path is CLOSED as a deployment gate because two
 9. optional typed AI semantic fallback only where the original canon permits it; never direct privileged execution.
 10. explicit execute/clarify/fail-closed policy; protected local/system/personal intent never falls into generic web.
 
+## Authoritative Release semantic entry checkpoint
+
+`LanguageUnderstandingBlock` is now the single `CommandParsing` instance created by
+`ProductionAssistantComposition`. The identical instance is injected into
+`AssistantViewModel`, `ProductionCanonicalCapabilityExecutor`,
+`ProductionMultiStepCoordinator`, and `DeterministicExecutionPlanBuilder`.
+`LocalCommandEngine` remains only a compatibility candidate generator inside the
+new block; it no longer owns the shipped composition root or independently
+reparses compound steps.
+
+The block currently provides Unicode compatibility normalization, punctuation and
+apostrophe normalization, the shared structured-number normalizer,
+NaturalLanguage language hypotheses, structural-frame-first selection,
+role-scoped verified-app recovery, evidence-bearing
+folded/transliteration/phonetic/morphology similarity, confidence margin, and
+fail-closed isolation for recognized system/local/personal roles. A general
+structural distinction keeps timer/alarm `set` actions intact while treating an
+object-free `start/launch` action as an application candidate.
+
+Verification:
+
+- new focused language and shipped Release-root suites: 9/9 PASS;
+- affected semantic frame, entity, structured number, local utility, Contacts,
+  Photos/Files and Release-root regressions: 35/35 PASS;
+- Development compile: PASS;
+- `git diff --check`: PASS.
+
+Status is **AUTOMATED GREEN FOR THIS CHECKPOINT — PHYSICAL IPHONE RETEST
+REQUIRED**. It does not close Speech enrichment, general service/contact/catalog
+recovery, indirect semantics, physical Contacts crash, semantic Photos, Places,
+or the full 96-function revalidation.
+
 ## Exact continuation point
 
-Add `LanguageUnderstandingBlock` as the explicit `CommandParsing` dependency of `ProductionAssistantComposition`, route typed and final voice input through it, and inject the same parser into deterministic compound lowering so `LocalCommandEngine` can no longer independently win as a competing Release semantic authority.
+Implement bounded request-scoped Apple Speech enrichment in the production voice
+input: authoritative contextual vocabulary (maximum 100), supported recognition
+controls, and alternative/segment confidence evidence delivered to
+`LanguageUnderstandingBlock` without creating a second semantic path.

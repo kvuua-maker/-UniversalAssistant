@@ -55,7 +55,7 @@ final class AssistantViewModel {
     private var pendingConfirmation: (command: StructuredCommand, summary: ResultSummary, generation: UInt64)?
 
     init(
-        commandEngine: any CommandParsing = LocalCommandEngine(),
+        commandEngine: any CommandParsing = LanguageUnderstandingBlock(),
         interactionEngine: any InteractionDeciding = InteractionDecisionEngine(),
         weatherExecutor: any WeatherCommandExecuting = ProductionWeatherCommandExecutor(),
         webSearchHandoff: ControlledWebSearchHandoff = ControlledWebSearchHandoff(),

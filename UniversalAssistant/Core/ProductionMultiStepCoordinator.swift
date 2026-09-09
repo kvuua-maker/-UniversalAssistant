@@ -112,13 +112,20 @@ final class ProductionStepOperationMap {
 @MainActor
 final class ProductionMultiStepCoordinator {
     private let operationFactory: ProductionStepOperationFactory
+    private let commandParser: any CommandParsing
     private var completedCommandIDs: Set<UUID> = []
 
-    init(operationFactory: @escaping ProductionStepOperationFactory) { self.operationFactory = operationFactory }
+    init(
+        parser: any CommandParsing = LanguageUnderstandingBlock(),
+        operationFactory: @escaping ProductionStepOperationFactory
+    ) {
+        self.commandParser = parser
+        self.operationFactory = operationFactory
+    }
 
     func execute(_ command: StructuredCommand) async throws -> DeterministicResult {
         guard !completedCommandIDs.contains(command.id) else { throw CanonicalCapabilityExecutionError.unavailable("duplicate_multi_step_command") }
-        let plan = try DeterministicExecutionPlanBuilder().plan(for: command)
+        let plan = try DeterministicExecutionPlanBuilder(parser: commandParser).plan(for: command)
         let operations = operationFactory(command, plan)
         let report = try await DeterministicPlanExecutor(maximumConcurrency: 3).execute(plan, operations: operations)
         completedCommandIDs.insert(command.id)

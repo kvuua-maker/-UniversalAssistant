@@ -35,15 +35,16 @@ enum ProductionAssistantComposition {
         systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
     ) -> AssistantViewModel {
         let context = CurrentContextStore()
+        let languageUnderstanding = LanguageUnderstandingBlock()
         let executor = ProductionCanonicalCapabilityExecutor(
             contacts: contacts, photos: photos, photoSemanticLoader: photoSemanticLoader, photoSemanticLabeler: photoSemanticLabeler, podcasts: podcasts, mediaOverride: mediaOverride, locationResolver: locationResolver, placeSearch: placeSearch,
             currentLocation: currentLocation, reverseLocation: reverseLocation, currentContext: context, routeProvider: routeProvider,
             eventKit: eventKit, recorder: recorder,
             publicDeviceExecute: publicDeviceExecute, clipboardRead: clipboardRead, fx: fx, alarmExecute: alarmExecute,
-            personalSearchSources: personalSearchSources
+            personalSearchSources: personalSearchSources, commandParser: languageUnderstanding
         )
         return AssistantViewModel(
-            weatherExecutor: weather, genericDiscovery: genericDiscovery, eventKitExecutor: eventKit, capabilityExecutor: executor, currentContext: context, recorder: recorder, compactResultDuration: compactResultDuration, notificationEnable: notificationEnable, quickLaunchStore: quickLaunchStore, systemHandoffOpen: systemHandoffOpen
+            commandEngine: languageUnderstanding, weatherExecutor: weather, genericDiscovery: genericDiscovery, eventKitExecutor: eventKit, capabilityExecutor: executor, currentContext: context, recorder: recorder, compactResultDuration: compactResultDuration, notificationEnable: notificationEnable, quickLaunchStore: quickLaunchStore, systemHandoffOpen: systemHandoffOpen
         )
     }
 }

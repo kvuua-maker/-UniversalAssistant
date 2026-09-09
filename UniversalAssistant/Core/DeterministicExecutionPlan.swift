@@ -45,7 +45,7 @@ enum ExecutionPlanError: Error, Equatable, Sendable { case invalidPlan, cyclicDe
 
 struct DeterministicExecutionPlanBuilder: Sendable {
     private let parser: any CommandParsing
-    init(parser: any CommandParsing = LocalCommandEngine()) { self.parser = parser }
+    init(parser: any CommandParsing = LanguageUnderstandingBlock()) { self.parser = parser }
 
     func activationPath(for command: StructuredCommand) throws -> [ExecutionCapability] {
         guard !command.needsClarification, command.intent != .unknown else { throw ExecutionPlanError.unresolvedCommand }
