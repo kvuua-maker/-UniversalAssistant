@@ -3,6 +3,16 @@ import Foundation
 enum LocalUtilityError: Error, Equatable { case unsupported, invalidNumber, divisionByZero }
 
 struct LocalUtilityEngine: Sendable {
+    static func canExecute(_ raw: String) -> Bool {
+        guard recognizes(raw) else { return false }
+        return (try? LocalUtilityEngine().execute(
+            raw,
+            locale: Locale(identifier: "en_US_POSIX"),
+            timeZone: TimeZone(secondsFromGMT: 0)!,
+            now: Date(timeIntervalSince1970: 0)
+        )) != nil
+    }
+
     static func recognizes(_ raw: String) -> Bool {
         let text = normalized(raw)
         let signals = ["обчисл", "порах", "розрах", "вычисл", "посчитай", "calculate", "різниц", "разниц", "difference", "сума", "сумм", "sum", "добут", "произвед", "product", "частк", "частн", "quotient", "скільки буде", "сколько будет", "помнож", "умнож", "поділити", "разделить", "kilometer", "кілометр", "километр", "miles", "мил", "кілограм", "килограмм", "pounds", "фунт", "celsius", "fahrenheit", "цельсі", "цельси", "який сьогодні день", "какой сегодня день", "яка сьогодні дата", "какая сегодня дата", "яке сьогодні число", "какое сегодня число", "котра година", "который час", "скільки зараз часу", "сколько сейчас времени", "який зараз час", "local time"]
@@ -12,8 +22,8 @@ struct LocalUtilityEngine: Sendable {
             if signal.unicodeScalars.allSatisfy({ $0.isASCII }) { return lexicalTokens.contains(signal) }
             return lexicalTokens.contains { $0.hasPrefix(signal) }
         }
-        let currentDate = ["дат", "числ", "date"].contains(where: text.contains) && ["сьогод", "сегодня", "поточ", "текущ", "current", "today"].contains(where: text.contains)
-        let currentTime = ["час", "годин", "врем", "time"].contains(where: text.contains) && ["зараз", "сейчас", "поточ", "текущ", "місцев", "местн", "current", "local"].contains(where: text.contains)
+        let currentDate = isCurrentDateRequest(text)
+        let currentTime = isCurrentTimeRequest(text)
         let range = NSRange(text.startIndex..., in: text)
         let numericExpression = numericExpressionRegex.firstMatch(in: text, range: range) != nil
         let numericWordExpression = numericWordExpressionRegex.firstMatch(in: text, range: range) != nil
@@ -32,10 +42,10 @@ struct LocalUtilityEngine: Sendable {
         if text.contains("день тижня") || text.contains("день недели") || text.contains("day of the week") {
             return format(now, template: "EEEE", locale: locale, timeZone: timeZone)
         }
-        if ["дат", "числ", "date"].contains(where: text.contains) && ["сьогод", "сегодня", "поточ", "текущ", "current", "today"].contains(where: text.contains) {
+        if Self.isCurrentDateRequest(text) {
             return format(now, template: "d MMMM y", locale: locale, timeZone: timeZone)
         }
-        if text.contains("котра година") || text.contains("который час") || (["час", "годин", "врем", "time"].contains(where: text.contains) && ["зараз", "сейчас", "поточ", "текущ", "місцев", "местн", "current", "local"].contains(where: text.contains)) {
+        if Self.isCurrentTimeRequest(text) {
             return format(now, template: "HH:mm", locale: locale, timeZone: timeZone)
         }
         if let value = try percentage(text) { return format(value, locale: locale) }
@@ -101,7 +111,7 @@ struct LocalUtilityEngine: Sendable {
     }
 
     private func percentage(_ text: String) throws -> Double? {
-        let ofPattern = "(" + Self.numberPattern + #")\s*(?:%|відсот(?:ок|ки|ків)?|процент(?:а|ов)?)\s*(?:від|от|of)\s*("# + Self.numberPattern + ")"
+        let ofPattern = "(" + Self.numberPattern + #")\s*(?:%|відсот\p{L}*|процент\p{L}*)\s*(?:від|от|of)\s*("# + Self.numberPattern + ")"
         if let values = captures(ofPattern, text), values.count == 2 { return values[1] * values[0] / 100 }
         let changePattern = #"(?:збільш|увелич|increase|зменш|уменьш|decrease)[^0-9+\-]*("# + Self.numberPattern + #")[^0-9+\-]+(?:на|by)\s*("# + Self.numberPattern + #")\s*(?:%|відсот|процент)"#
         if let values = captures(changePattern, text), values.count == 2 {
@@ -151,6 +161,21 @@ struct LocalUtilityEngine: Sendable {
     }
 
     private static let numberPattern = #"[-+]?\d+(?:[.,]\d+)?"#
+
+    private static func isCurrentDateRequest(_ text: String) -> Bool {
+        let tokens = text.split(whereSeparator: { !$0.isLetter }).map(String.init)
+        let hasDateObject = tokens.contains { token in ["дат", "числ", "date"].contains { token.hasPrefix($0) } }
+        let hasCurrentModifier = tokens.contains { token in ["сьогод", "сегодня", "поточ", "текущ", "current", "today"].contains { token.hasPrefix($0) } }
+        return hasDateObject && hasCurrentModifier
+    }
+
+    private static func isCurrentTimeRequest(_ text: String) -> Bool {
+        if text.contains("котра година") || text.contains("который час") || text.contains("скільки зараз часу") || text.contains("сколько сейчас времени") { return true }
+        let tokens = text.split(whereSeparator: { !$0.isLetter }).map(String.init)
+        let hasTimeObject = tokens.contains { token in ["час", "годин", "врем", "time"].contains { token.hasPrefix($0) } }
+        let hasCurrentModifier = tokens.contains { token in ["зараз", "сейчас", "поточ", "текущ", "місцев", "местн", "current", "local"].contains { token.hasPrefix($0) } }
+        return hasTimeObject && hasCurrentModifier
+    }
     private static let numericExpressionRegex = try! NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?\s*[+×*\/÷-]\s*[-+]?\d+(?:[.,]\d+)?"#)
     private static let numericWordExpressionRegex = try! NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?\s*(?:додати|додай|сложить|прибавить|плюс|plus|помножити|помнож|умножить|умножь|times|multiplied by|поділити на|подели на|разделить на|divided by|відняти|відніми|вычесть|отнять|мінус|минус|minus)\s*[-+]?\d+(?:[.,]\d+)?"#, options: [.caseInsensitive])
     private static let percentageExpressionRegex = try! NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?[^\d]{0,20}(?:%|відсот|процент)"#, options: [.caseInsensitive])

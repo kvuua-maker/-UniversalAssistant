@@ -2,6 +2,17 @@
 
 Updated: 2026-09-09
 
+## Full canonical completion gate (2026-09-09)
+
+- The final parallel iOS gate exposed shared semantic gaps: percentage morphology was recognized but not executable; explicit result nouns were not typed as CurrentContext; SHOW/storefront clauses lost the Places dependency; Russian current-weather text collided with substring local-time recognition; German Notes and album media objects were incomplete. The shared structural parser/frame and deterministic engine were repaired without owner-phrase switches.
+- Semantic Photos prioritizes classifier work while keeping a bounded background timeout. Weather command diagnostics accept a request-scoped sink while Release retains the shared production sink by default.
+- App Intent and Quick Launch receive one `QuickLaunchRequestStore` dependency through `RunAssistantCommandIntent` → `ProductionAssistantComposition` → `AssistantViewModel`. Production defaults remain unchanged; isolated Release-root tests prove concurrent models cannot steal each other's command.
+- CLOSED infrastructure/test approaches: parallel `xcodebuild` processes sharing one DerivedData `build.db`; a method selector that executed zero Swift Testing tests; cancellation-suppressing sleep as proof of end-of-speech completion; global QuickLaunch keys across concurrent Release-root models; narrow wall-clock thresholds below measured scheduler resumption delay.
+- Final gates: iOS 829/829 in 149 suites; Development compile PASS; Production compile PASS; Backend 114/114; ZERO-OMISSION 2404/2404; AUDIO 147/147; PRIVACY 168/168; JOBS 97/97; LOYALTY 127/127; diagnostics 2/2; evidence reconciliation 1787/1787.
+- `BUILD29_RELEASE_REACHABILITY_MATRIX.md` has exactly 96 rows and no `RELEASE_EVIDENCE_GAP`, `NOT_CONNECTED`, `IN_PROGRESS`, or `NOT_STARTED` status. Automated verification is not physical iPhone verification.
+
+Next material operation: commit/push this green source checkpoint, verify repository synchronization and preserved recovery artifacts, then increment only build 29→30 and execute archive/sign/export/upload. Build 31 must not be created.
+
 ## Proven divergence
 
 - Build 29 physical evidence overrides automated claims. Direct executor/provider unit tests were a CLOSED proof strategy because they bypassed the TestFlight composition root.

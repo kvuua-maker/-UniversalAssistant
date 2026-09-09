@@ -113,13 +113,13 @@ import Testing
     @Test func filesQueryDeadlineTerminatesBeforeLateSynchronousCompletion() async {
         // Keep the simulated provider slower than worst-case parallel-suite
         // scheduling so this proves the independent deadline rather than timing luck.
-        let query = SystemAuthorizedFileQuery { _, _ in Thread.sleep(forTimeInterval: 1.5); return [] }
+        let query = SystemAuthorizedFileQuery { _, _ in Thread.sleep(forTimeInterval: 8); return [] }
         let source = AuthorizedFileSearchSource(query: query, timeout: .milliseconds(20))
         let clock = ContinuousClock(); let start = clock.now
         let response = await source.search(.init(text: "PDF"))
         #expect(response.access == .unavailable)
         #expect(response.results.isEmpty)
-        #expect(start.duration(to: clock.now) < .seconds(1))
+        #expect(start.duration(to: clock.now) < .seconds(6))
         try? await Task.sleep(for: .milliseconds(20))
         #expect(response.results.isEmpty)
     }

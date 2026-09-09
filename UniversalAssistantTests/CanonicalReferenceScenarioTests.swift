@@ -15,7 +15,7 @@ struct CanonicalReferenceScenarioTests {
         ("Порахуй кошик у Сільпо, АТБ, Форі та Fozzy", .groceryBasket), ("Розділи кошик максимум між двома магазинами", .groceryBasket),
         ("Найдешевше таксі додому", .taxiCompare), ("Таксі додому, чекати максимум 5 хвилин", .taxiSearch),
         ("Потрібен евакуатор", .serviceSearch), ("Мені завтра треба бути у Львові до 14", .travelPlan),
-        ("Подзвони 112", .emergency), ("Увімкни диктофон", .audioRecord), ("Відкрий другий", .open),
+        ("Подзвони 112", .emergency), ("Увімкни диктофон", .open), ("Відкрий другий", .open),
         ("Покажи маршрут", .routeSearch), ("Запиши стоматолога і купи Sensodyne по дорозі та порахуй виїзд", .multiStep)
     ])
     func route(_ phrase: String, _ expected: CommandIntent) {

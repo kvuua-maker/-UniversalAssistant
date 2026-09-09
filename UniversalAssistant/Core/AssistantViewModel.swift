@@ -33,6 +33,7 @@ final class AssistantViewModel {
     private let compactResultDuration: Duration
     private let presentationPreferenceStore: PresentationPreferenceStore
     private let systemHandoffOpen:  (URL) -> Void
+    private let quickLaunchStore: QuickLaunchRequestStore
     private let notificationEnable: @MainActor () async -> ProactiveNotificationEnableResult
     private var resultDismissTask: Task<Void, Never>?
     private var weatherExecutionInFlight = false
@@ -69,6 +70,7 @@ final class AssistantViewModel {
         presentationPreferenceStore: PresentationPreferenceStore = PresentationPreferenceStore(),
         voiceInput: VoiceInputController = VoiceInputController(),
         notificationEnable: @escaping @MainActor () async -> ProactiveNotificationEnableResult = { await ProductionNotificationRegistration.enable() },
+        quickLaunchStore: QuickLaunchRequestStore = QuickLaunchRequestStore(),
         systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
     ) {
         self.commandEngine = commandEngine
@@ -87,6 +89,7 @@ final class AssistantViewModel {
         self.presentationPreferenceStore = presentationPreferenceStore
         self.voiceInput = voiceInput
         self.notificationEnable = notificationEnable
+        self.quickLaunchStore = quickLaunchStore
         self.systemHandoffOpen = systemHandoffOpen
         voiceInput.setEventHandler { [weak self] event in
             self?.handleVoiceEvent(event)
@@ -155,13 +158,12 @@ final class AssistantViewModel {
     }
 
     func handleQuickLaunch() {
-        let store = QuickLaunchRequestStore()
-        if let command = store.consumeCommand() {
+        if let command = quickLaunchStore.consumeCommand() {
             input = command
             submit()
             return
         }
-        guard store.consumeVoiceLaunch() else { return }
+        guard quickLaunchStore.consumeVoiceLaunch() else { return }
         guard voiceInputEnabled else { statusText = AppText.value("voice_disabled"); return }
         toggleListening()
     }

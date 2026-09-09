@@ -16,13 +16,18 @@ struct RunAssistantCommandIntent: AppIntent {
     static let openAppWhenRun = true
 
     @Parameter(title: "Command") var command: String
+    private var requestStore = QuickLaunchRequestStore()
     static var parameterSummary: some ParameterSummary { Summary("Run \(\.$command)") }
 
     init() {}
     init(command: String) { self.command = command }
+    init(command: String, requestStore: QuickLaunchRequestStore) {
+        self.command = command
+        self.requestStore = requestStore
+    }
 
     func perform() async throws -> some IntentResult {
-        QuickLaunchRequestStore().requestCommand(command)
+        requestStore.requestCommand(command)
         return .result()
     }
 }

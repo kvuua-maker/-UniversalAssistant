@@ -35,7 +35,7 @@ struct QuickLaunchPolicy: Sendable {
     }
 }
 
-struct QuickLaunchRequestStore {
+struct QuickLaunchRequestStore: @unchecked Sendable {
     private let defaults: UserDefaults
     private let voiceKey = "quick-launch.voice-requested"
     private let commandKey = "quick-launch.typed-command"

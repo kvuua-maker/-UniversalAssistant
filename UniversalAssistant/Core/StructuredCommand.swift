@@ -176,7 +176,7 @@ struct LocalCommandEngine: CommandParsing {
         // Deterministic mathematics is authoritative before compound planning or
         // temporal noun routing. Conjunctions join operations inside one local
         // expression; they are not automatically assistant plan boundaries.
-        if LocalUtilityEngine.recognizes(normalized) {
+        if LocalUtilityEngine.canExecute(normalized) {
             return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: .localUtility, entities: semanticFrame.entities)
         }
         // Currency has a typed amount and ordered source/destination currencies.
@@ -194,6 +194,18 @@ struct LocalCommandEngine: CommandParsing {
                 entities["destination"] = destination.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
             }
             return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: .deviceAction, entities: entities)
+        }
+        // Once every original clause independently resolves to a concrete
+        // canonical operation, the typed compound graph is authoritative over
+        // any single legacy pattern found elsewhere in the complete sentence.
+        if compoundIntent(clauses: CompoundCommandClauses.split(text)) == .multiStep {
+            return StructuredCommand(
+                originalText: text,
+                normalizedText: normalized,
+                language: language,
+                intent: .multiStep,
+                entities: semanticFrame.entities
+            )
         }
         // A structurally unbound search action is the canonical product/catalog
         // fallback. Resolve it before scanning the full legacy pattern catalog;
@@ -223,18 +235,23 @@ struct LocalCommandEngine: CommandParsing {
         let specificPatternIntent = patternIntent == .productSearch ? nil : patternIntent
         let semanticIntent = semanticCapabilityIntent(normalized)
         let resolvedIntent = resolveSpecificAndSemantic(specific: specificPatternIntent, semantic: semanticIntent)
-        let structuredCompoundIntent = semanticFrame.frame.compound == nil ? nil : compoundIntent(normalized)
         let semanticTokens = normalized.split(whereSeparator: { !$0.isLetter }).map(String.init)
         let shoppingListStructure = semanticTokens.contains { $0.hasPrefix("спис") || $0.hasPrefix("list") } && semanticTokens.contains { $0.hasPrefix("покуп") || $0.hasPrefix("shop") || $0.hasPrefix("einkauf") }
         let authoritativePatternIntent: CommandIntent? = shoppingListStructure ? .shoppingList : ([.emergency, .multiStep, .shoppingList].contains(patternIntent) ? patternIntent : nil)
-        let intent = authoritativePatternIntent
-            ?? structuredCompoundIntent
+        var intent = authoritativePatternIntent
             ?? semanticFrame.intent
             ?? priorityIntent(normalized)
             ?? (resolvedIntent == .placeSearch ? .placeSearch : compoundIntent(normalized))
             ?? resolvedIntent
             ?? patternIntent
             ?? contextualIntent(normalized)
+        // SHOW is a contextual action only when the semantic frame actually
+        // references a prior/selected result. An explicit new subject belongs
+        // to the configured general/current provider boundary, not a missing
+        // CurrentContext lookup.
+        if intent == .show, semanticFrame.frame.contextReference == nil {
+            intent = .unknown
+        }
         var entities = semanticFrame.entities; var constraints = CommandConstraints()
         extractPrice(from: normalized, into: &constraints); extractSize(from: normalized, into: &constraints)
         extractMaximumWait(from: normalized, into: &constraints)
@@ -278,6 +295,10 @@ struct LocalCommandEngine: CommandParsing {
         }
         let risk: ActionRisk = intent == .emergency ? .emergency : ([.calendarCreate, .calendarDelete, .reminderCreate, .reminderComplete, .reminderDelete, .shoppingList, .cancel, .undo].contains(intent) ? .reversible : .informational)
         return StructuredCommand(originalText: text, normalizedText: normalized, language: language, intent: intent, entities: entities, constraints: constraints, risk: risk, needsClarification: intent == .unknown || entities["clarification_options"] != nil)
+    }
+
+    func classifiedCompoundIntent(for text: String) -> CommandIntent? {
+        compoundIntent(clauses: CompoundCommandClauses.split(text))
     }
 
     private func locationSystemIntent(_ text: String) -> String? {
@@ -397,16 +418,24 @@ struct LocalCommandEngine: CommandParsing {
     }
 
     private func compoundIntent(_ text: String) -> CommandIntent? {
-        let clauses = CompoundCommandClauses.split(text)
+        compoundIntent(clauses: CompoundCommandClauses.split(text))
+    }
+
+    private func compoundIntent(clauses: [String]) -> CommandIntent? {
         guard clauses.count >= 2 else { return nil }
         // Reuse the complete canonical parser for every clause. This keeps compound
         // recognition aligned with single-command semantics instead of maintaining
         // a second, weaker keyword classifier. Individual clauses cannot recurse
         // into this branch because the splitter has removed compound boundaries.
-        let commands = zip(clauses, clauses.map(parse)).compactMap { clause, parsed -> CommandIntent? in
-            if CompoundCommandClauses.isPresentationOnly(parsed) { return nil }
-            if let dependency = CompoundCommandClauses.dependencyIntent(for: clause) { return dependency }
-            return !parsed.needsClarification && ![.unknown, .multiStep].contains(parsed.intent) ? parsed.intent : nil
+        var commands: [CommandIntent] = []
+        for clause in clauses {
+            let parsed = parse(clause)
+            if CompoundCommandClauses.isPresentationOnly(parsed) { continue }
+            if let dependency = CompoundCommandClauses.dependencyIntent(for: clause) {
+                commands.append(dependency)
+            } else if !parsed.needsClarification && ![.unknown, .multiStep].contains(parsed.intent) {
+                commands.append(parsed.intent)
+            }
         }
         return commands.count >= 2 ? .multiStep : nil
     }
@@ -462,7 +491,7 @@ struct LocalCommandEngine: CommandParsing {
     private func priorityIntent(_ text: String) -> CommandIntent? {
         let openVoiceMemos = ["відкрий", "открой", "open"].contains(where: text.contains) && ["диктофон", "voice memos", "голосові записи", "голосовые записи"].contains(where: text.contains)
         if openVoiceMemos { return .open }
-        if LocalUtilityEngine.recognizes(text) { return .localUtility }
+        if LocalUtilityEngine.canExecute(text) { return .localUtility }
         if LocalUtilityEngine.recognizesCurrency(text) { return .currencyConversion }
         let informationalGoals = ["інформац", "відомо про", "хто зараз", "свежую информацию", "информацию о", "кто сейчас", "information about", "latest information", "who is", "informationen über", "wer ist", "informations sur", "qui est"]
         if informationalGoals.contains(where: text.contains) { return .unknown }
@@ -521,13 +550,19 @@ struct LocalCommandEngine: CommandParsing {
         let reminderQueryActions = ["покажи", "відкрий", "перелік", "список", "що треба", "покажи", "открой", "список", "show", "open", "list"]
         if containsAny(text, reminderKinds), containsAny(text, reminderQueryActions) { return .reminderQuery }
 
+        let parcelKinds = ["посилк", "відправлен", "посылк", "отправлен", "parcel", "package", "shipment", "paket", "colis"]
+        if containsAny(text, showActions), containsAny(text, parcelKinds) { return .parcelTrack }
+
         let calendarActions = ["створи", "создай", "додай", "добавь", "заплануй", "запланируй", "create", "add", "schedule"]
         let calendarKinds = ["подію", "подія", "событие", "зустріч", "встреч", "event", "appointment"]
         if containsAny(text, calendarActions), containsAny(text, calendarKinds) { return .calendarCreate }
 
         let storefrontKinds = ["магазин", "крамниц", "store", "shop"]
         let routeSignals = ["як доїхати", "как доехать", "маршрут", "route", "directions"]
-        if containsAny(text, storefrontKinds), (containsAny(text, placeActions) || containsAny(text, routeSignals)) { return .placeSearch }
+        if containsAny(text, storefrontKinds),
+           (containsAny(text, placeActions) || containsAny(text, showActions) || containsAny(text, routeSignals)) {
+            return .placeSearch
+        }
 
         if containsAny(text, placeActions), containsAny(text, placeKinds) { return .placeSearch }
         guard containsAny(text, commerceActions) else { return nil }

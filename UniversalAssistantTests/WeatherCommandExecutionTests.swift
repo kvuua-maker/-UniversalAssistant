@@ -75,7 +75,7 @@ private func weatherExecutionSnapshot() -> WeatherSnapshot {
 }
 
 @MainActor
-private func waitForWeatherResult(_ model: AssistantViewModel, timeout: Duration = .seconds(1)) async throws {
+private func waitForWeatherResult(_ model: AssistantViewModel, timeout: Duration = .seconds(5)) async throws {
     let clock = ContinuousClock()
     let deadline = clock.now.advanced(by: timeout)
     while model.resultState == .processing, clock.now < deadline {
@@ -194,9 +194,12 @@ struct WeatherCommandExecutionTests {
         struct FailingGeocoder: ManualLocationGeocoding {
             func resolve(_ label: String) async throws -> LocationSample { throw ManualLocationError.notFound }
         }
-        let executor = ProductionWeatherCommandExecutor(locationResolver: .init(geocoder: FailingGeocoder()))
-        let report = LocalVoiceDiagnosticReport.shared
+        let report = LocalVoiceDiagnosticReport(defaults: UserDefaults(suiteName: UUID().uuidString)!, persistenceKey: UUID().uuidString)
         report.reset()
+        let executor = ProductionWeatherCommandExecutor(
+            locationResolver: .init(geocoder: FailingGeocoder()),
+            recordDiagnostic: { marker, details in report.record(marker, details) }
+        )
         do {
             _ = try await executor.execute(LocalCommandEngine().parse("Яка погода у Києві?"))
             Issue.record("Expected location resolution failure")

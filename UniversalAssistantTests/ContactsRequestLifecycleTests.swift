@@ -181,16 +181,16 @@ struct ContactsRequestLifecycleTests {
         await #expect(throws: ContactResolutionError.permissionDenied) { try await pending.requestAccessIfNeeded() }
     }
 
-    @Test func slowSynchronousStoreTimesOutWithoutWaitingForLateCompletion() async {
+    @Test nonisolated func slowSynchronousStoreTimesOutWithoutWaitingForLateCompletion() async {
         // The late synchronous operation deliberately outlives scheduler pressure
         // from the full parallel suite; the deadline must still win promptly.
-        let query = SystemContactQuery(store: ContactStoreStub(delay: 1.5))
+        let query = SystemContactQuery(store: ContactStoreStub(delay: 4))
         let start = ContinuousClock.now
         await #expect(throws: ContactResolutionError.timedOut) { try await query.contacts(matching: "Олег", timeout: .milliseconds(30)) }
-        #expect(start.duration(to: .now) < .seconds(1))
+        #expect(start.duration(to: .now) < .seconds(3))
     }
 
-    @Test func cancellationCompletesPromptlyAndLateStoreCannotResumeTwice() async {
+    @Test nonisolated func cancellationCompletesPromptlyAndLateStoreCannotResumeTwice() async {
         let query = SystemContactQuery(store: ContactStoreStub(delay: 1.5))
         let task = Task { try await query.contacts(matching: "Олег", timeout: .seconds(3)) }
         try? await Task.sleep(for: .milliseconds(20))

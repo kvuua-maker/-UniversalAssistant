@@ -19,7 +19,7 @@ struct DevelopmentEnvironmentPolicyTests {
             if source.contains("178.105.32.46") {
                 #expect(file.lastPathComponent == "PhysicalDiagnosticDelivery.swift")
                 #expect(source.contains("isinternaltestflight"))
-                #expect(source.contains("sandboxreceipt"))
+                #expect(source.contains("apptransaction"))
             }
         }
     }

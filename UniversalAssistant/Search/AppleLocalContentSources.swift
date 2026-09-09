@@ -157,7 +157,7 @@ struct PhotoSemanticSearchEngine: Sendable {
                 Task.detached(priority: .userInitiated) {
                     let matches = await withTaskGroup(of: (Int, PhotoSemanticMatch)?.self) { group in
                         for (index, asset) in candidates.enumerated() {
-                            group.addTask {
+                            group.addTask(priority: .userInitiated) {
                                 guard let data = try? await loader.imageData(localIdentifier: asset.localIdentifier),
                                       let labels = try? await labeler.labels(imageData: data) else { return nil }
                                 let evidence = labels.filter { label in
@@ -178,7 +178,7 @@ struct PhotoSemanticSearchEngine: Sendable {
                     }
                     completion.finish(matches)
                 }
-                Task.detached {
+                Task.detached(priority: .background) {
                     try? await Task.sleep(for: timeout)
                     completion.finish([])
                 }

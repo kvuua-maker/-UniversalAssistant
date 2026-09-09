@@ -31,6 +31,7 @@ enum ProductionAssistantComposition {
         publicDeviceExecute: @escaping @MainActor (SystemQuickAction) throws -> String = { try ProductionPublicDeviceExecutor().execute($0) },
         clipboardRead: @escaping @MainActor () throws -> SharedContent = { try SystemUserInitiatedClipboardReader().readAfterUserAction() },
         notificationEnable: @escaping @MainActor () async -> ProactiveNotificationEnableResult = { await ProductionNotificationRegistration.enable() },
+        quickLaunchStore: QuickLaunchRequestStore = QuickLaunchRequestStore(),
         systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
     ) -> AssistantViewModel {
         let context = CurrentContextStore()
@@ -42,7 +43,7 @@ enum ProductionAssistantComposition {
             personalSearchSources: personalSearchSources
         )
         return AssistantViewModel(
-            weatherExecutor: weather, genericDiscovery: genericDiscovery, eventKitExecutor: eventKit, capabilityExecutor: executor, currentContext: context, recorder: recorder, compactResultDuration: compactResultDuration, notificationEnable: notificationEnable, systemHandoffOpen: systemHandoffOpen
+            weatherExecutor: weather, genericDiscovery: genericDiscovery, eventKitExecutor: eventKit, capabilityExecutor: executor, currentContext: context, recorder: recorder, compactResultDuration: compactResultDuration, notificationEnable: notificationEnable, quickLaunchStore: quickLaunchStore, systemHandoffOpen: systemHandoffOpen
         )
     }
 }

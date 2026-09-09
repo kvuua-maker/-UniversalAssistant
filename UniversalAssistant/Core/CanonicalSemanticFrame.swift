@@ -75,11 +75,20 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         let communicationAction = frame.action == .call || frame.action == .message ||
             (frame.action == .share && tokens.first.map(isSendActionToken) == true)
         if communicationAction {
+            let explicitServiceScope = tokens.contains { token in
+                ["через", "via", "using", "service", "канал", "сервіс", "сервис"].contains(token)
+            }
             switch service(in: tokens) {
             case let .resolved(service):
                 frame.service = service
                 if frame.action == .share { frame.action = .message }
-            case let .ambiguous(values): frame.entityAmbiguity = values
+            case let .ambiguous(values) where explicitServiceScope:
+                frame.entityAmbiguity = values
+            case .ambiguous:
+                // A fuzzy collision produced by the action or recipient is not
+                // evidence that the user selected a messenger. Normal calls and
+                // messages stay on their default public Apple channel.
+                break
             case .unresolved: break
             }
         }
@@ -462,9 +471,9 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.photo, ["фото", "світлин", "знім", "сним", "photo", "image", "picture"]),
             (.file, ["файл", "file"]),
             (.document, ["документ", "document", "pdf"]),
-            (.note, ["нотат", "замет", "note"]),
+            (.note, ["нотат", "замет", "notiz", "note"]),
             (.url, ["url", "посилан", "ссылк", "link", "вебадрес", "webaddress"]),
-            (.media, ["плейлист", "playlist", "добір", "подбор", "selection", "пісн", "песн", "song", "трек", "track", "композ", "composition"]),
+            (.media, ["плейлист", "playlist", "добір", "подбор", "selection", "альбом", "album", "пісн", "песн", "song", "трек", "track", "композ", "composition"]),
             (.app, ["програм", "застос", "прилож", "app"])
         ]
         return families.first { _, roots in tokens.contains { token in roots.contains { token.hasPrefix($0) } } }?.0
@@ -612,6 +621,10 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         if normalized.contains("де я") || normalized.contains("где я") || normalized.contains("where i am") || normalized.contains("моє місцезнаходження") { return .currentLocation }
         let previousResultReference = tokens.contains { token in ["остан", "поперед", "послед", "previous", "last"].contains { root in token.hasPrefix(root) } } && tokens.contains { token in ["результ", "відповід", "ответ", "result", "answer"].contains { root in token.hasPrefix(root) } }
         if previousResultReference { return .previousResult }
+        let explicitResultReference = tokens.contains { token in
+            ["результ", "відповід", "ответ", "result", "answer"].contains { root in token.hasPrefix(root) }
+        }
+        if explicitResultReference { return .selectedResult }
         if normalized.contains("цій фотографії") || normalized.contains("shared image") || normalized.contains("цим посиланням") { return .sharedContent }
         if normalized.contains("цей результат") || normalized.contains("обраний") || normalized.contains("selected result") { return .selectedResult }
         return nil

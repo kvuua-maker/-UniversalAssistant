@@ -674,10 +674,12 @@ struct Build29ReleaseRemainingNativeTests {
         guard case let .deterministic(voiceResult) = model.resultState else { return }
         #expect(voiceResult.primaryAnswer.filter(\.isNumber) == "2400")
 
-        QuickLaunchRequestStore().requestCommand("Перерахуй 4,5 кілометра у метри")
-        model.handleQuickLaunch()
-        try await wait { if case let .deterministic(value) = model.resultState { return value.primaryAnswer.filter(\.isNumber) == "4500" }; return false }
-        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+        let quickLaunchStore = QuickLaunchRequestStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        quickLaunchStore.requestCommand("Перерахуй 4,5 кілометра у метри")
+        let quickLaunchModel = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60), quickLaunchStore: quickLaunchStore)
+        quickLaunchModel.handleQuickLaunch()
+        try await wait { if case let .deterministic(value) = quickLaunchModel.resultState { return value.primaryAnswer.filter(\.isNumber) == "4500" }; return false }
+        #expect({ if case .webHandoff = quickLaunchModel.resultState { return false }; return true }())
     }
 
     @Test func timerAlarmAndClockDatabaseLimitationUseSystemFirstReleasePath() async throws {
@@ -813,13 +815,19 @@ private struct Build29PhotoLabelBoundary: PhotoSemanticLabeling {
 @MainActor
 struct Build29ReleaseRemainingGapTests {
     private func wait(_ predicate: @escaping @MainActor () -> Bool) async throws {
-        for _ in 0..<100 { if predicate() { return }; try await Task.sleep(for: .milliseconds(10)) }
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(10))
+        while clock.now < deadline {
+            if predicate() { return }
+            try await Task.sleep(for: .milliseconds(10))
+        }
         Issue.record("Release-root request did not terminate")
     }
 
     @Test func appIntentFeedsTheActualReleaseCompositionRoot() async throws {
-        _ = try await RunAssistantCommandIntent(command: "Переведи 3,25 кілометра у метри").perform()
-        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        let quickLaunchStore = QuickLaunchRequestStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        _ = try await RunAssistantCommandIntent(command: "Переведи 3,25 кілометра у метри", requestStore: quickLaunchStore).perform()
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60), quickLaunchStore: quickLaunchStore)
         model.handleQuickLaunch()
         try await wait { if case .deterministic = model.resultState { return true }; return false }
         guard case let .deterministic(result) = model.resultState else { return }

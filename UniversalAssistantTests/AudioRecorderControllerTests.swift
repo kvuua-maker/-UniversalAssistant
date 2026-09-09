@@ -168,8 +168,12 @@ struct VoiceAudioCaptureLifecycleTests {
     @Test func partialResultSilenceFinishesOnce() async {
         let finalizer = VoiceEndOfSpeechFinalizer(delay: .milliseconds(50))
         var count = 0
-        finalizer.receivedPartial { count += 1 }
-        try? await Task.sleep(for: .milliseconds(250))
+        await withCheckedContinuation { continuation in
+            finalizer.receivedPartial {
+                count += 1
+                continuation.resume()
+            }
+        }
         #expect(count == 1)
     }
 

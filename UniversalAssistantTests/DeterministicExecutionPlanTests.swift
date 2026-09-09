@@ -72,7 +72,12 @@ extension DeterministicExecutionPlanTests {
     }
 
     @Test func productionParserRoutesNaturalCompoundRequestIntoTypedPlan() throws {
-        let command = LocalCommandEngine().parse("find contact Alice, then call Alice")
+        let text = "find contact Alice, then call Alice"
+        let clauses = CompoundCommandClauses.split(text)
+        #expect(clauses.count == 2)
+        #expect(clauses.map { LocalCommandEngine().parse($0).intent } == [.contactLookup, .contactCall])
+        #expect(LocalCommandEngine().classifiedCompoundIntent(for: text) == .multiStep)
+        let command = LocalCommandEngine().parse(text)
         #expect(command.intent == .multiStep)
         let plan = try DeterministicExecutionPlanBuilder().plan(for: command)
         #expect(plan.steps.compactMap(\.command).map(\.intent) == [.contactLookup, .contactCall])
