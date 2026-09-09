@@ -598,7 +598,7 @@ struct LocalCommandEngine: CommandParsing {
     }
     private func ordinal(in text: String) -> Int? {
         if ["передостан", "предпослед", "penultimate"].contains(where: text.contains) { return 2 }
-        if ["другий", "друга", "второй", "second", "zweite", "deuxième"].contains(where: text.contains) { return 2 }
+        if ["друг", "втор", "second", "zweite", "deuxième"].contains(where: text.contains) { return 2 }
         if ["перший", "первая", "first", "erste", "premier"].contains(where: text.contains) { return 1 }
         return nil
     }

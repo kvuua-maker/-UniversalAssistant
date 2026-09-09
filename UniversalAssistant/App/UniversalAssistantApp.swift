@@ -7,6 +7,7 @@ import SwiftUI
 enum ProductionAssistantComposition {
     static func makeModel(
         contacts: any ContactResolving = LocalContactResolver(),
+        photos: any PhotoLibrarySearching = PhotoKitLibrarySearch(),
         personalSearchSources: [any PersonalSearchSource] = [
             ContactsPersonalSearchSource(), PhotosPersonalSearchSource(),
             LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())
@@ -21,7 +22,7 @@ enum ProductionAssistantComposition {
         let context = CurrentContextStore()
         let recorder = AudioRecorderController()
         let executor = ProductionCanonicalCapabilityExecutor(
-            contacts: contacts, currentContext: context, eventKit: eventKit, recorder: recorder,
+            contacts: contacts, photos: photos, currentContext: context, eventKit: eventKit, recorder: recorder,
             publicDeviceExecute: publicDeviceExecute, clipboardRead: clipboardRead,
             personalSearchSources: personalSearchSources
         )

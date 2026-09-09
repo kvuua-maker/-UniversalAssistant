@@ -199,3 +199,63 @@ struct Build29ReleaseRootSystemFirstTests {
         #expect({ if case .webHandoff = model.resultState { return false }; return true }())
     }
 }
+
+
+private struct Build29ReleasePhotoBoundary: PhotoLibrarySearching {
+    let assets: [PhotoAssetReference]
+    func authorization() -> LocalSearchAccess { .permitted }
+    func requestAuthorization() async -> LocalSearchAccess { .permitted }
+    func search(_ criteria: PhotoSearchCriteria, limit: Int) async -> [PhotoAssetReference] { Array(assets.prefix(limit)) }
+}
+
+@Suite("Build 29 Release root Photos and Files", .serialized)
+@MainActor
+struct Build29ReleaseRootPhotoFileTests {
+    @Test func sourceRoleSeparatesOrdinalPhotoFromFilesPicker() async throws {
+        let newest = PhotoAssetReference(localIdentifier: "release-newest", creationDate: .now, coordinate: nil, album: nil)
+        let previous = PhotoAssetReference(localIdentifier: "release-previous", creationDate: .now.addingTimeInterval(-30), coordinate: nil, album: nil)
+        let model = ProductionAssistantComposition.makeModel(
+            photos: Build29ReleasePhotoBoundary(assets: [newest, previous]),
+            personalSearchSources: [], compactResultDuration: .seconds(60)
+        )
+        model.input = "Покажи другу з останніх світлин"
+        model.submit()
+        for _ in 0..<100 {
+            if case .deterministic = model.resultState { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        guard case let .deterministic(result) = model.resultState else { Issue.record("Ordinal photo did not reach PhotoKit boundary"); return }
+        #expect(result.facts.first?.id == "photos:release-previous")
+
+        model.input = "Дай вибрати електронну таблицю з файлового сховища"
+        model.submit()
+        for _ in 0..<100 {
+            if model.capabilityPresentation == .documents { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(model.capabilityPresentation == .documents)
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+
+    @Test func photoShareAndOCRProduceTypedPresentationsAutomatically() async throws {
+        let asset = PhotoAssetReference(localIdentifier: "release-photo", creationDate: .now, coordinate: nil, album: nil)
+        let model = ProductionAssistantComposition.makeModel(
+            photos: Build29ReleasePhotoBoundary(assets: [asset]), personalSearchSources: [], compactResultDuration: .seconds(60)
+        )
+        model.input = "Надішли найсвіжішу світлину"
+        model.submit()
+        for _ in 0..<100 {
+            if model.capabilityPresentation == .photoShare("release-photo") { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(model.capabilityPresentation == .photoShare("release-photo"))
+
+        model.input = "Прочитай напис на найновішому знімку"
+        model.submit()
+        for _ in 0..<100 {
+            if model.capabilityPresentation == .photoOCR("release-photo") { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(model.capabilityPresentation == .photoOCR("release-photo"))
+    }
+}
