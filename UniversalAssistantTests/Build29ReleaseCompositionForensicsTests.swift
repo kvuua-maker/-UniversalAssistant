@@ -93,6 +93,21 @@ private actor Build29ReleaseEventKitBoundary: EventKitCommandExecuting {
     func intents() -> [CommandIntent] { commands.map(\.intent) }
 }
 
+@MainActor
+private final class Build29ReleaseRecordingBackend: AudioRecordingBackend {
+    private(set) var isRecording = false
+    func start(at url: URL) throws -> Bool {
+        try Data([1, 2, 3, 4]).write(to: url)
+        isRecording = true
+        return true
+    }
+    func pause() { isRecording = false }
+    func resume() -> Bool { isRecording = true; return true }
+    func stop() { isRecording = false }
+    func play(url: URL) throws {}
+    func stopPlayback() {}
+}
+
 private struct Build29ReleaseWeatherBoundary: WeatherCommandExecuting {
     func execute(_ command: StructuredCommand) async throws -> WeatherSnapshot {
         .init(current: .init(date: .now, temperatureCelsius: 16, apparentTemperatureCelsius: 15,
@@ -129,6 +144,32 @@ struct Build29ReleaseRootFamilyReachabilityTests {
         for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
         guard case .deterministic = model.resultState else { Issue.record("Utility did not reach deterministic Release executor"); return }
         #expect(model.statusText != AppText.value("processing"))
+    }
+
+    @Test func voiceMemoLifecycleAndSystemAppSeparationUseReleaseRoot() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        let recorder = AudioRecorderController(backend: Build29ReleaseRecordingBackend(), directory: directory, permission: { true })
+        var opened: [URL] = []
+        let model = ProductionAssistantComposition.makeModel(recorder: recorder, personalSearchSources: [], compactResultDuration: .seconds(60), systemHandoffOpen: { opened.append($0) })
+
+        model.input = "Розпочни звуковий запис для польових нотаток"
+        model.submit()
+        for _ in 0..<100 where recorder.state != .recording { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(recorder.state == .recording)
+
+        model.input = "Заверши цей аудіозапис"
+        model.submit()
+        for _ in 0..<100 where model.capabilityPresentation == nil { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(recorder.state == .stopped)
+        guard case let .audioFile(url) = model.capabilityPresentation else { Issue.record("Stopped recording did not produce durable typed file"); return }
+        #expect(FileManager.default.fileExists(atPath: url.path))
+
+        model.input = "Відкрий програму Голосові записи"
+        model.submit()
+        for _ in 0..<100 { if case .failure = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        #expect(recorder.state == .stopped)
+        #expect(opened.isEmpty)
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
     }
 
     @Test func translationAndTruthfulShazamBoundaryUseReleaseHomeWithoutWeb() async throws {

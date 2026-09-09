@@ -13,6 +13,7 @@ enum ProductionAssistantComposition {
         currentLocation: any CurrentLocationResolving = AppleCurrentLocationResolver(),
         reverseLocation: any ReverseLocationGeocoding = AppleReverseLocationGeocoder(),
         routeProvider: any RouteProvider = MapKitRouteProvider(),
+        recorder: AudioRecorderController = AudioRecorderController(),
         personalSearchSources: [any PersonalSearchSource] = [
             ContactsPersonalSearchSource(), PhotosPersonalSearchSource(),
             LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())
@@ -25,7 +26,6 @@ enum ProductionAssistantComposition {
         systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
     ) -> AssistantViewModel {
         let context = CurrentContextStore()
-        let recorder = AudioRecorderController()
         let executor = ProductionCanonicalCapabilityExecutor(
             contacts: contacts, photos: photos, locationResolver: locationResolver, placeSearch: placeSearch,
             currentLocation: currentLocation, reverseLocation: reverseLocation, currentContext: context, routeProvider: routeProvider,

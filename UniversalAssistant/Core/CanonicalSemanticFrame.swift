@@ -373,7 +373,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     private func object(in tokens: [String]) -> CanonicalSemanticFrame.Object? {
         let families: [(CanonicalSemanticFrame.Object, [String])] = [
             (.contact, ["контакт"]),
-            (.audio, ["аудіозап", "аудиозап", "голосов", "голосов", "звукозап", "voice", "recording"]),
+            (.audio, ["аудіозап", "аудиозап", "голосов", "звуков", "звукозап", "voice", "recording"]),
             (.reminder, ["нагадув", "напомин", "reminder"]),
             (.calendar, ["календар", "поді", "зустр", "событ", "event", "appointment"]),
             (.timer, ["таймер", "timer"]),

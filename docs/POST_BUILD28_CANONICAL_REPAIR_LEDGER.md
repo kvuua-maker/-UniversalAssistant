@@ -105,3 +105,10 @@ Unseen Production-root tests exposed three first-stage gaps hidden by direct tes
 CLOSED: treating direct Translation/utility tests and a small exact date/time grammar as Release reachability. The first Production-root assertions failed 5 issues; after the structural repairs, final affected Release-root plus utility run is 15/15 PASS and protected Translation is 11/11 PASS. Physical iPhone retest remains required.
 
 Exact next material operation: prove Voice Memo/Open Voice Memos and media families through ProductionAssistantComposition, adding only external side-effect boundary injection needed to retain the shipped graph; then continue system public limitations, CurrentContext/compound, provider and platform-owner rows.
+
+
+### Release-root Voice Memo checkpoint
+
+`ProductionAssistantComposition` now accepts an `AudioRecorderController` boundary while the shipped Home, semantic frame, router, recorder lifecycle, CurrentContext and renderer remain unchanged. The first real assertion showed that a productive audio-object form did not establish `OBJECT=audio` and fell to unknown/web. Material repair expanded the structural audio object domain rather than adding an utterance. An unseen Release-root start→recording→stop sequence created a durable typed audio file; a separate Open Voice Memos request terminated locally, did not start the internal recorder, did not invoke an undocumented scheme and did not fall to web. Voice Memo/semantic/recorder protected run: 24/24 PASS. Physical iPhone retest remains required.
+
+CLOSED: parser-only Voice Memo tests and direct `AudioRecorderController` tests as proof of shipped Home reachability. Exact next material operation: connect or prove Apple Music/Podcast/verified third-party media through ProductionAssistantComposition; then batch Release-root proofs for truthful public limitations, CurrentContext/compound outputs and provider boundaries.

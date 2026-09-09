@@ -441,7 +441,7 @@ struct LocalCommandEngine: CommandParsing {
     private func detectLanguage(_ text: String) -> CommandLanguage {
         if text.range(of: "[іїєґ]", options: .regularExpression) != nil { return .uk }
         if text.range(of: "[ыэъё]", options: .regularExpression) != nil { return .ru }
-        if ["відкрий", "подзвони", "нагадай", "знайди", "скасуй", "покажи", "веди", "зроби", "переклад", "гарн", "будь ласка"].contains(where: text.contains) { return .uk }
+        if ["відкрий", "подзвони", "нагадай", "знайди", "скасуй", "покажи", "веди", "зроби", "переклад", "гарн", "будь ласка", "розпоч", "звуков"].contains(where: text.contains) { return .uk }
         if ["открой", "позвони", "напомни", "найди", "отмени", "покажи"].contains(where: text.contains) { return .ru }
         if text.range(of: "[а-я]", options: .regularExpression) != nil { return .ru }
         if text.range(of: "[äöüß]", options: .regularExpression) != nil || ["öffne", "zeige", "erinnere", "einstellungen"].contains(where: text.contains) { return .de }
@@ -499,7 +499,7 @@ struct LocalCommandEngine: CommandParsing {
         if containsAny(text, showActions), containsAny(text, photoKinds) { return .photoSearch }
 
         let recordActions = ["запиши", "записати", "почни запис", "запиши голос", "запиши аудіо", "запиши аудио", "заверш", "закінч", "останов", "stop recording", "finish recording", "record"]
-        let recordKinds = ["голосов", "аудіо", "аудио", "диктофон", "voice note", "recording"]
+        let recordKinds = ["голосов", "звуков", "аудіо", "аудио", "диктофон", "voice note", "recording"]
         if containsAny(text, recordActions), containsAny(text, recordKinds) { return .audioRecord }
 
         let recognitionQuestions = ["що це", "що за", "яка", "розпізнай", "визнач", "что это", "что за", "какая", "распознай", "определи", "what", "identify", "recognize"]
