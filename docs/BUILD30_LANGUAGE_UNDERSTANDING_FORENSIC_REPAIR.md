@@ -47,9 +47,17 @@ Consequently the server rejected the very request/crash breadcrumbs needed to lo
 
 - `PhysicalDiagnosticsTests`: 6/6 PASS;
 - `PhysicalDiagnosticDeliveryTests`: 12/12 PASS from finalized `.xcresult`;
+- full backend suite: 115/115 PASS on the canonical macOS host;
+- Development compile: PASS after clearing only task-owned temporary derived-data directories that had exhausted the system volume;
 - the new tests cover current Home lifecycle, recovered crash sessions and preservation of ingress/terminal evidence under a busy request.
 
-Deployment to the existing owner-authorized VPS remains required before a future physical build can deliver these corrected records. The deployment must update only `universalassistant-diagnostics.service`; it must not touch unrelated VPS services or stored diagnostic/attestation data.
+### VPS deployment evidence
+
+The compatible schema is deployed to the existing owner-authorized VPS. A Production-only Linux build of `UniversalAssistantServer` completed successfully from source checkpoint `e597360db2015d3067c41731bb68daf8f4ecbe9f`. Its SHA-256 is `f2f23db0cc080a23d3f89717dbef7f30e917c467f48615b49abf3797e0e6d91d`.
+
+Only `universalassistant-diagnostics.service` was stopped and restarted. The prior binary is preserved at `/mnt/HC_Volume_106589590/universalassistant-diagnostics/backups/pre-language-e597360-20260909/UniversalAssistantServer` with SHA-256 `176f044421c2a9596bac08b12f58ebfb82d5489e700d3da1d6130cba3f070510`. Stored diagnostics and App Attest registration data were not modified. The service is active and `GET /health` returned `{"status":"healthy","version":"v1"}` after deployment.
+
+The unchanged Linux `swift test` path is CLOSED as a deployment gate because two pre-existing test-only files are not portable to Linux (`FoundationNetworking` availability and Linux `TimeInterval` inference); this does not affect the Production server product, and the full canonical backend suite is green on macOS. The materially different Production-only release build is the deployed artifact.
 
 ## CLOSED approaches
 
@@ -75,4 +83,4 @@ Deployment to the existing owner-authorized VPS remains required before a future
 
 ## Exact continuation point
 
-Finish the diagnostics checkpoint and deploy the compatible bounded schema to the existing VPS. Then add `LanguageUnderstandingBlock` as the explicit `CommandParsing` dependency of `ProductionAssistantComposition`, route typed and final voice input through it, and inject the same parser into deterministic compound lowering so `LocalCommandEngine` can no longer independently win as a competing Release semantic authority.
+Add `LanguageUnderstandingBlock` as the explicit `CommandParsing` dependency of `ProductionAssistantComposition`, route typed and final voice input through it, and inject the same parser into deterministic compound lowering so `LocalCommandEngine` can no longer independently win as a competing Release semantic authority.
