@@ -142,6 +142,21 @@ struct PhysicalDiagnosticDeliveryTests {
         #expect(LocalVoiceDiagnosticReport(defaults: suite, persistenceKey: key).recoveredIncompleteSession() == nil)
     }
 
+    @Test @MainActor func busyRequestIsBoundedWithoutDroppingIngressOrTerminalEvidence() {
+        let suiteName = UUID().uuidString
+        let suite = UserDefaults(suiteName: suiteName)!
+        let report = LocalVoiceDiagnosticReport(defaults: suite, persistenceKey: "bounded-report")
+        report.reset()
+        report.beginHomeRequest()
+        for _ in 0..<300 { report.record("recognition_callback") }
+        report.record("visible_result")
+        let session = report.completedSession()
+        #expect(session?.events.count == 250)
+        #expect(session?.events.first?.marker == "home_request_started")
+        #expect(session?.events.last?.marker == "visible_result")
+        #expect(session?.events.enumerated().allSatisfy { $0.offset + 1 == $0.element.sequence } == true)
+    }
+
     private func sampleSession() -> PhysicalDiagnosticSession {
         .init(schema: 1, sessionID: UUID(), liveTestID: "MS-800-LIVE-VOICE-QA", feature: "voice", appVersion: "0.1.0", build: 10,
               environment: "internal-testflight", osVersion: "26.6.1", deviceClass: "iPhone", startedAt: .now, endedAt: .now,

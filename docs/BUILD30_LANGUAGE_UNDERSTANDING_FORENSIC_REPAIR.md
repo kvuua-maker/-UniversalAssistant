@@ -1,0 +1,78 @@
+# Build 30 Language Understanding Forensic Repair
+
+Status: **IN PROGRESS — BUILD 31 NOT CREATED**
+Date: 2026-09-09
+Starting repository HEAD: `8c9aa2c5e74fb1e31ae9dec7521750798ec44d3c`
+Build under physical test: `0.1.0 (30)`
+
+## Authority and scope
+
+The original UniversalAssistant canonical specification remains authoritative. Build-30 physical observations are evidence of production failures, not phrases to encode. The repair stays inside the frozen pipeline:
+
+`voice/text → LanguageUnderstandingBlock → CanonicalSemanticFrame → typed parameters/entities → CurrentContext/dependencies → canonical router → public Apple executor/configured provider → verified result → renderer/follow-up`.
+
+Build 31 is forbidden until the complete canonical repair and gate are green. Automated evidence is not physical iPhone evidence.
+
+## Authoritative physical evidence
+
+| Family | Build-30 observation | Current status |
+|---|---|---|
+| Contacts / normal call | Natural contact search and call close/crash the app | `IN_PROGRESS`; requires production crash evidence and root repair |
+| ASR / entity recovery | Foreign app/service/brand entities are clipped or substituted and do not recover reliably | `IN_PROGRESS`; exact tokens are evidence classes, never aliases |
+| Semantic Photos | Natural semantic search resolves the latest photo instead of searching by content | `IN_PROGRESS`; latest/ordinal and semantic search must remain distinct |
+| Places / nearby grocery | Results are not consistently precise enough in proximity/category relevance | `IN_PROGRESS`; structured category + geodesic/travel relevance required |
+| Protected simple paths | Spotify, Apple Music, Files and PDF remain physically useful | `PROTECTED`; must not regress |
+
+## First proven production-diagnostic divergence
+
+No authenticated session with payload build `30` is present in the SSH-only VPS store. The service journal does contain repeated authenticated diagnostic attempts on 2026-09-09, but their HTTP user agent identifies build `29`; they therefore cannot honestly be relabeled as Build-30 traces. Every observed `/v1/diagnostics` attempt terminated with HTTP 400 before storage. Representative request IDs include `43041E68-ADAD-44BA-89F7-79D42A428129` at `10:51:12Z`, `974365A8-74B1-4B01-AA65-688C3C13F46B` at `10:57:50Z`, and `780B75A6-5E71-4ADE-AC4C-3DF6FC27CF6B` at `15:35:50Z`.
+
+The archived Build-30 source proves the same client/server contract drift existed in the Build-30 release:
+
+- the client always starts a Home report with `home_request_started`;
+- recovered pre-terminal reports use `feature=request` and `liveTestID=MS-800-RECOVERED-REQUEST`;
+- the deployed server accepted only `feature=voice`, `MS-800-LIVE-VOICE-QA`, and an older marker allowlist;
+- the client could retain up to 1,000 markers while the server accepted at most 250.
+
+Consequently the server rejected the very request/crash breadcrumbs needed to locate the first semantic or crash stage. This is a diagnostics-contract defect, not proof of a Contacts, Speech, router or executor root cause. Rejected bodies are intentionally not logged, so raw transcript or personal content cannot be recovered from the journal.
+
+### Material repair
+
+- one shared server schema now accepts the current bounded voice and recovered-request session forms;
+- all current privacy-safe lifecycle markers are explicitly allowlisted;
+- the client caps delivery at 250 events while retaining the first 100 ingress markers and final 150 terminal markers, then renumbers them monotonically;
+- transcript text, contacts, locations, photos, documents and arbitrary attributes remain forbidden.
+
+### Verification
+
+- `PhysicalDiagnosticsTests`: 6/6 PASS;
+- `PhysicalDiagnosticDeliveryTests`: 12/12 PASS from finalized `.xcresult`;
+- the new tests cover current Home lifecycle, recovered crash sessions and preservation of ingress/terminal evidence under a busy request.
+
+Deployment to the existing owner-authorized VPS remains required before a future physical build can deliver these corrected records. The deployment must update only `universalassistant-diagnostics.service`; it must not touch unrelated VPS services or stored diagnostic/attestation data.
+
+## CLOSED approaches
+
+| Family | CLOSED approach | Evidence | Material replacement |
+|---|---|---|---|
+| Production diagnostics | Treat absence of a stored session as evidence that the request never reached a client stage | The VPS journal shows diagnostic POST attempts rejected by schema before storage | Verify client/server schema parity, retain bounded ingress and terminal breadcrumbs, and distinguish missing evidence from product causation |
+| Language semantics | Keyword/stem/regex/alias routing as the top-level semantic authority | Repeated Build-27/28/29/30 physical failures despite broad automated suites | New authoritative structured language-understanding block with evidence-bearing normalization, constrained recovery, full-frame semantics and confidence policy |
+| Entity recovery | Add exact noisy transcript → entity substitutions | Real ASR corruption varies by utterance, language, context and device | Role-scoped candidate domains plus phonetic/transliteration/edit/split-merge evidence and confidence margin |
+| Test architecture | Direct parser/executor or injected mock PASS as proof of TestFlight reachability | Large green suites repeatedly diverged from physical behavior | Release-configuration E2E through `ProductionAssistantComposition`, with mocks only at unavoidable side-effect boundaries |
+
+## Planned authoritative language block
+
+1. Request-scoped Apple Speech enrichment using only APIs available on the target OS, bounded contextual vocabulary, alternatives and segment confidence.
+2. Unicode/token normalization that preserves original and normalized forms.
+3. mixed Ukrainian/Russian/Latin language evidence without forcing the entire command to one language.
+4. reusable morphology for command roles, entities, temporal and numeric units.
+5. role-scoped phonetic/transliteration/edit/split-merge recovery with candidate provenance and confidence margin.
+6. shared structured numbers and temporal roles before capability selection.
+7. whole-command `CanonicalSemanticFrame` with confidence evidence.
+8. indirect/proposition-level intent inference.
+9. optional typed AI semantic fallback only where the original canon permits it; never direct privileged execution.
+10. explicit execute/clarify/fail-closed policy; protected local/system/personal intent never falls into generic web.
+
+## Exact continuation point
+
+Finish the diagnostics checkpoint and deploy the compatible bounded schema to the existing VPS. Then add `LanguageUnderstandingBlock` as the explicit `CommandParsing` dependency of `ProductionAssistantComposition`, route typed and final voice input through it, and inject the same parser into deterministic compound lowering so `LocalCommandEngine` can no longer independently win as a competing Release semantic authority.

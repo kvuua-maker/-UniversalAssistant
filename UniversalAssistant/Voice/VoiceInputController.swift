@@ -31,6 +31,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
     private let defaults: UserDefaults
     private let persistenceKey: String
     private var recovered: Persisted?
+    private static let maximumDeliveredEvents = 250
 
     init(defaults: UserDefaults = .standard, persistenceKey: String = "physical-diagnostic-active-request-v1") {
         self.defaults = defaults
@@ -81,7 +82,8 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         guard let value = recovered, !value.entries.isEmpty else { return nil }
         recovered = nil
         defaults.removeObject(forKey: persistenceKey)
-        let events = value.entries.enumerated().map { index, entry in
+        let bounded = Self.boundedForDelivery(value.entries)
+        let events = bounded.enumerated().map { index, entry in
             PhysicalDiagnosticEvent(sequence: index + 1, timestamp: entry.timestamp, marker: entry.marker, attributes: [:])
         }
         let ended = value.entries.last?.timestamp ?? value.startedAt
@@ -99,7 +101,8 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         guard entries.contains(where: { ["start_listening_invoked", "home_request_started"].contains($0.marker) }),
               entries.contains(where: { ($0.marker == "state_transition" && $0.details.contains("idle")) || ["visible_result", "execution_failed", "router_rejected"].contains($0.marker) }) else { return nil }
         let safeKeys: Set<String> = ["state", "granted", "available", "locale", "input", "sample_rate", "channels", "running", "count", "frames", "partial_results", "punctuation", "task_hint", "api", "has_text", "final", "error_domain", "error_code", "partial_count", "final_count", "reason", "had_task", "had_request", "length", "input_available", "error_type", "status", "capability", "language", "mechanism", "kind"]
-        let events = entries.enumerated().map { index, entry in
+        let bounded = Self.boundedForDelivery(entries)
+        let events = bounded.enumerated().map { index, entry in
             let values = entry.details.split(separator: " ").compactMap { token -> (String, String)? in
                 let parts = token.split(separator: "=", maxSplits: 1).map(String.init)
                 guard parts.count == 2, safeKeys.contains(parts[0]) else { return nil }
@@ -123,6 +126,17 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
                      startedAt: startedAt, endedAt: ended, durationMilliseconds: max(0, Int(ended.timeIntervalSince(startedAt) * 1_000)),
                      result: failed ? .failure : (succeeded ? .success : .unknown), failureStage: error?.marker,
                      errorDomain: error?.attributes["error_domain"], errorCode: error?.attributes["error_code"].flatMap(Int.init), events: events)
+    }
+
+    /// The authenticated server deliberately bounds a diagnostic session to
+    /// 250 privacy-safe events. Preserve both ingress and terminal evidence
+    /// when a busy request produces more markers instead of sending a payload
+    /// the server must reject.
+    private static func boundedForDelivery(_ source: [Entry]) -> [Entry] {
+        guard source.count > maximumDeliveredEvents else { return source }
+        let ingressCount = 100
+        return Array(source.prefix(ingressCount))
+            + Array(source.suffix(maximumDeliveredEvents - ingressCount))
     }
 }
 

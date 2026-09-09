@@ -174,7 +174,8 @@ actor DiagnosticSessionStore {
 
     private func validate(_ value: PhysicalDiagnosticSession) throws {
         guard value.schema == PhysicalDiagnosticSession.schemaVersion,
-              value.feature == "voice", value.liveTestID == "MS-800-LIVE-VOICE-QA",
+              ["voice", "request"].contains(value.feature),
+              ["MS-800-LIVE-VOICE-QA", "MS-800-RECOVERED-REQUEST"].contains(value.liveTestID),
               value.events.count <= 250, value.build > 0, value.endedAt >= value.startedAt,
               value.events.enumerated().allSatisfy({ $0.offset + 1 == $0.element.sequence }) else {
             throw DiagnosticServerError.invalidSchema
@@ -279,14 +280,15 @@ actor AppAttestBootstrapFailureStore {
 
 enum DiagnosticSchema {
     static let allowedVoiceMarkers: Set<String> = [
-        "start_listening_invoked", "state_transition", "state_delivered_to_view_model", "speech_permission_before",
+        "home_request_started", "start_listening_invoked", "state_transition", "state_delivered_to_view_model", "speech_permission_before",
         "speech_permission_after", "microphone_permission_before", "microphone_permission", "recognizer_ready",
         "recognition_request_created", "audio_session_activated", "audio_tap_installed", "audio_engine_started",
         "recognition_task_created", "audio_buffer_received", "buffer_appended", "recognition_callback", "voice_start_failed",
-        "route_change", "route_change_ignored", "stop_invoked", "recognition_task_cancelled", "recognition_task_finished",
+        "audio_capture_stop", "stale_start_suppressed", "stale_stop_suppressed", "stale_recognition_suppressed",
+        "route_change", "route_change_ignored", "scene_transition", "stop_invoked", "recognition_task_cancelled", "recognition_task_finished",
         "end_audio_called", "partial_transcript", "final_transcript", "transcript_delivered_to_ui",
         "transcript_delivered_to_view_model", "transcript_delivered_to_router", "router_received", "router_accepted",
-        "router_rejected", "execution_started", "execution_failed", "visible_result", "audio_interruption",
+        "router_rejected", "execution_started", "execution_failed", "visible_result", "audio_interruption", "confirmation_resolved",
         "weather_route_validated", "weather_intent_parsed", "weather_location_resolution_started",
         "weather_location_resolution_succeeded", "weather_location_resolution_failed", "weather_context_started",
         "weather_context_succeeded", "weather_context_failed", "weatherkit_request_started",

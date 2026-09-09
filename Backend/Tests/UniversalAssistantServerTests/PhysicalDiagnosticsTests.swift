@@ -34,6 +34,36 @@ struct PhysicalDiagnosticsTests {
         await #expect(throws: DiagnosticServerError.self) { _ = try await store.put(forbidden) }
     }
 
+    @Test func currentHomeLifecycleAndRecoveredCrashMarkersShareTheProductionContract() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = try DiagnosticSessionStore(directory: root, retention: 60, maximumRecords: 4)
+        let now = Date(timeIntervalSince1970: 1_000)
+        let lifecycle = [
+            "home_request_started", "stale_start_suppressed", "stale_stop_suppressed",
+            "stale_recognition_suppressed", "audio_capture_stop", "scene_transition",
+            "confirmation_resolved", "visible_result"
+        ].enumerated().map { index, marker in
+            DiagnosticEvent(sequence: index + 1, timestamp: now, marker: marker, attributes: [:])
+        }
+        let voice = PhysicalDiagnosticSession(
+            schema: 1, sessionID: UUID(), liveTestID: "MS-800-LIVE-VOICE-QA", feature: "voice",
+            appVersion: "0.1.0", build: 30, environment: "internal-testflight", osVersion: "26.6.1",
+            deviceClass: "iPhone", startedAt: now, endedAt: now, durationMilliseconds: 0,
+            result: .success, failureStage: nil, errorDomain: nil, errorCode: nil, events: lifecycle
+        )
+        #expect(try await store.put(voice))
+
+        let recovered = PhysicalDiagnosticSession(
+            schema: 1, sessionID: UUID(), liveTestID: "MS-800-RECOVERED-REQUEST", feature: "request",
+            appVersion: "0.1.0", build: 30, environment: "internal-testflight", osVersion: "26.6.1",
+            deviceClass: "iPhone", startedAt: now, endedAt: now, durationMilliseconds: 0,
+            result: .crashSuspected, failureStage: "router_received", errorDomain: "ProcessTerminatedBeforeTerminalResult",
+            errorCode: -1, events: [.init(sequence: 1, timestamp: now, marker: "router_received", attributes: [:])]
+        )
+        #expect(try await store.put(recovered))
+    }
+
     @Test func assertionCounterMustAdvance() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
