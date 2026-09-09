@@ -98,4 +98,13 @@ struct OnDevicePDFProcessorTests {
             try processor.highlighting("not present", in: pdf(["Pay by Monday"]))
         }
     }
+
+    @Test func textRedactionFlattensMatchedContentAndMissingMatchFailsClosed() throws {
+        let processor = OnDevicePDFProcessor()
+        let redacted = try processor.redacting("account 7788", in: pdf(["private account 7788 value"]))
+        let document = try #require(PDFDocument(data: redacted))
+        #expect(document.page(at: 0)?.annotations.isEmpty == true)
+        #expect(document.page(at: 0)?.string?.contains("7788") != true)
+        #expect(throws: PDFProcessingError.invalidOverlay) { try processor.redacting("absent", in: pdf(["public"])) }
+    }
 }

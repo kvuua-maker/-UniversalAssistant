@@ -273,6 +273,15 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             return (.deviceAction, entities)
         }
 
+        if frame.object == .document, let operation = pdfOperation(in: lexicalTokens(normalized)) {
+            entities["pdf_operation"] = operation.rawValue
+            if [.highlight, .redact].contains(operation), let marker = original.range(of: "текст", options: [.caseInsensitive]) {
+                let value = original[marker.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+                if !value.isEmpty { entities["pdf_text"] = value }
+            }
+            return (.fileSearch, entities)
+        }
+
         if frame.action == .scan || frame.action == .recognize || (frame.action == .create && frame.object == .document) {
             if frame.object == .code {
                 entities["capture_mode"] = "code_scan"
@@ -385,6 +394,19 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         ]
         if !interrogatives.isDisjoint(with: tokens) { return .query }
         return families.first { _, roots in tokens.contains { token in roots.contains { actionToken(token, matches: $0) } } }?.0
+    }
+
+    private func pdfOperation(in tokens: [String]) -> PDFWorkflowOperation? {
+        let families: [(PDFWorkflowOperation, [String])] = [
+            (.merge, ["обєдн", "зєдн", "злит", "merge", "combine"]),
+            (.split, ["розділ", "split", "separate"]),
+            (.rotate, ["поверн", "rotate"]),
+            (.compress, ["стисн", "compress"]),
+            (.highlight, ["виділ", "highlight"]),
+            (.redact, ["заретуш", "редаг", "redact"]),
+            (.read, ["прочит", "відкр", "read", "open"])
+        ]
+        return families.first { _, roots in tokens.contains { token in roots.contains { token.hasPrefix($0) } } }?.0
     }
 
     private func actionToken(_ token: String, matches root: String) -> Bool {

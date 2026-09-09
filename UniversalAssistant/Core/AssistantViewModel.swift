@@ -535,6 +535,52 @@ final class AssistantViewModel {
         if accessed { url.stopAccessingSecurityScopedResource() }
         processOCR(image, provenance: .document)
     }
+    func handleSelectedPDFDocuments(_ urls: [URL], operation: PDFWorkflowOperation, text: String?) {
+        capabilityPresentation = nil
+        guard !urls.isEmpty else { presentFailure(message: AppText.value("request_unavailable")); return }
+        do {
+            let data = try urls.map { url -> Data in
+                let accessed = url.startAccessingSecurityScopedResource()
+                defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+                return try Data(contentsOf: url)
+            }
+            let processor = OnDevicePDFProcessor()
+            if operation == .read {
+                capabilityPresentation = .documentFile(urls[0]); return
+            }
+            let outputs: [Data]
+            switch operation {
+            case .merge: outputs = [try processor.merge(data)]
+            case .split:
+                let count = try processor.pageCount(data[0])
+                outputs = try processor.split(data[0], groups: (0..<count).map { [$0] })
+            case .rotate:
+                let count = try processor.pageCount(data[0])
+                outputs = [try processor.rotating(Set(0..<count), degreesClockwise: 90, in: data[0])]
+            case .compress: outputs = [try processor.compressed(data[0])]
+            case .highlight:
+                guard let text, !text.isEmpty else { throw PDFProcessingError.invalidPageSelection }
+                outputs = [try processor.highlighting(text, in: data[0])]
+            case .redact:
+                guard let text, !text.isEmpty else { throw CanonicalCapabilityExecutionError.missingParameter("pdf_redaction_text") }
+                outputs = [try processor.redacting(text, in: data[0])]
+            case .read: outputs = []
+            }
+            let base = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+                .appending(path: "UniversalAssistant/PDF", directoryHint: .isDirectory)
+            try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+            let outputURLs = try outputs.enumerated().map { index, output in
+                let url = base.appending(path: "PDF-Result-\(UUID().uuidString)-\(index + 1).pdf")
+                try output.write(to: url, options: .atomic); return url
+            }
+            guard !outputURLs.isEmpty else { throw PDFProcessingError.emptyDocument }
+            currentContext.replaceShared(kind: .document, value: outputURLs[0].path)
+            capabilityPresentation = outputURLs.count == 1 ? .documentFile(outputURLs[0]) : .documentFiles(outputURLs)
+            resultState = .idle; statusText = AppText.value("ready")
+        } catch {
+            presentFailure(message: AppText.value("request_unavailable"))
+        }
+    }
     func handleScannedOCRDocument(_ pages: [UIImage]) { handleScannedDocument(pages, mode: .recognizedText) }
     func handleScannedDocument(_ pages: [UIImage], mode: DocumentScanOutputMode) {
         capabilityPresentation = nil

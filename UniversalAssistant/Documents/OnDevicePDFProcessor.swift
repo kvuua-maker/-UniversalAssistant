@@ -16,6 +16,7 @@ struct PDFPageOverlay: Sendable, Equatable {
 
 @MainActor
 struct OnDevicePDFProcessor {
+    func pageCount(_ data: Data) throws -> Int { try document(data).pageCount }
     func merge(_ documents: [Data]) throws -> Data {
         guard !documents.isEmpty else { throw PDFProcessingError.emptyDocument }
         let output = PDFDocument()
@@ -139,6 +140,31 @@ struct OnDevicePDFProcessor {
             }
         }
         return try representation(of: output)
+    }
+
+    func redacting(_ text: String, in data: Data) throws -> Data {
+        let source = try document(data)
+        let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { throw PDFProcessingError.invalidOverlay }
+        let selections = source.findString(query, withOptions: [.caseInsensitive])
+        guard !selections.isEmpty else { throw PDFProcessingError.invalidOverlay }
+        var overlays: [PDFPageOverlay] = []
+        for selection in selections {
+            for page in selection.pages {
+                let pageIndex = source.index(for: page)
+                let box = page.bounds(for: .mediaBox)
+                let rect = selection.bounds(for: page)
+                guard pageIndex >= 0, box.width > 0, box.height > 0 else { continue }
+                overlays.append(.init(pageIndex: pageIndex, normalizedRect: .init(
+                    x: (rect.minX - box.minX) / box.width,
+                    y: (rect.minY - box.minY) / box.height,
+                    width: rect.width / box.width,
+                    height: rect.height / box.height
+                ), kind: .redaction))
+            }
+        }
+        guard !overlays.isEmpty else { throw PDFProcessingError.invalidOverlay }
+        return try flattened(data, overlays: overlays)
     }
 
     func compressed(_ data: Data, maximumDimension: CGFloat = 1_600, jpegQuality: CGFloat = 0.72) throws -> Data {

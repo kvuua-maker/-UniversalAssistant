@@ -83,6 +83,8 @@ struct AssistantHomeView: View {
                 LiveCodeScannerView(onResult: model.handleScannedCode, onUnavailable: model.handleScannerUnavailable)
             case .documents:
                 AuthorizedDocumentPicker { _ in model.dismissCapabilityPresentation() }
+            case let .pdfWorkflow(operation, text):
+                AuthorizedDocumentPicker { model.handleSelectedPDFDocuments($0, operation: operation, text: text) }
             case let .share(value):
                 SystemShareSheet(items: [value])
             case let .contactImport(data):
@@ -108,6 +110,8 @@ struct AssistantHomeView: View {
                 SystemShareSheet(items: [url])
             case let .documentFile(url):
                 SystemShareSheet(items: [url])
+            case let .documentFiles(urls):
+                SystemShareSheet(items: urls)
             case let .translation(plan):
                 AppleTranslationExecutionView(plan: plan, onResult: model.handleTranslationResult, onFailure: model.handleTranslationFailure)
             case let .message(recipients, body):

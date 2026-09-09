@@ -945,3 +945,44 @@ struct Build29ReleaseNotificationBoundaryTests {
         #expect({ if case .webHandoff = model.resultState { return false }; return true }())
     }
 }
+
+@Suite("Build 29 Release PDF workflow", .serialized)
+@MainActor
+struct Build29ReleasePDFWorkflowTests {
+    private func pdf(_ label: String) -> Data {
+        UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 200, height: 200)).pdfData { context in
+            context.beginPage()
+            (label as NSString).draw(at: CGPoint(x: 20, y: 20), withAttributes: [.font: UIFont.systemFont(ofSize: 16)])
+        }
+    }
+
+    @Test func naturalOperationsReachTypedDocumentPickerThroughReleaseRoot() async throws {
+        let requests: [(String, PDFWorkflowOperation)] = [
+            ("Злити PDF звіти в один документ", .merge),
+            ("Розділи PDF на окремі сторінки", .split),
+            ("Стисни PDF перед надсиланням", .compress)
+        ]
+        for (input, operation) in requests {
+            let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+            model.input = input; model.submit()
+            for _ in 0..<100 where model.capabilityPresentation == nil { try await Task.sleep(for: .milliseconds(10)) }
+            guard case let .pdfWorkflow(actual, _)? = model.capabilityPresentation else {
+                Issue.record("Expected typed PDF picker for operation")
+                continue
+            }
+            #expect(actual == operation)
+            #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+        }
+    }
+
+    @Test func selectedDocumentsProduceRealMergedPDFOutput() throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let first = directory.appending(path: "first.pdf"), second = directory.appending(path: "second.pdf")
+        try pdf("Alpha").write(to: first); try pdf("Beta").write(to: second)
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        model.handleSelectedPDFDocuments([first, second], operation: .merge, text: nil)
+        guard case let .documentFile(url)? = model.capabilityPresentation else { Issue.record("Expected merged PDF output"); return }
+        #expect((try? Data(contentsOf: url)).map { (try? OnDevicePDFProcessor().pageCount($0)) == 2 } == true)
+    }
+}

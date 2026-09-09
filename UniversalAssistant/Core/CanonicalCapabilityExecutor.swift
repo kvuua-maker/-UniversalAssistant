@@ -6,6 +6,7 @@ import Contacts
 import ContactsUI
 
 enum DocumentScanOutputMode: String, Equatable, Sendable { case recognizedText, pdf }
+enum PDFWorkflowOperation: String, Equatable, Sendable { case read, merge, split, rotate, compress, highlight, redact }
 
 enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case camera
@@ -26,6 +27,8 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case photoShare(String)
     case audioFile(URL)
     case documentFile(URL)
+    case documentFiles([URL])
+    case pdfWorkflow(PDFWorkflowOperation, text: String?)
 
     var id: String {
         switch self {
@@ -47,6 +50,8 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
         case .photoShare: "photo-share"
         case .audioFile: "audio-file"
         case .documentFile: "document-file"
+        case .documentFiles: "document-files"
+        case .pdfWorkflow: "pdf-workflow"
         }
     }
 }
@@ -261,6 +266,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .fileSearch:
             // iOS does not expose a public API for silently searching every Files provider.
             // The document picker is the system-owned, security-scoped production boundary.
+            if let raw = command.entities["pdf_operation"], let operation = PDFWorkflowOperation(rawValue: raw) {
+                return .presentation(.pdfWorkflow(operation, text: command.entities["pdf_text"]))
+            }
             return .presentation(.documents)
         case .cameraCapture:
             if command.entities["capture_mode"] == "code_scan" { return .presentation(.scanner) }
@@ -433,9 +441,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case let .handoff(value): return .init(id: step.id, label: command.intent.rawValue, value: value.destination.absoluteString, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
         case let .presentation(value):
             switch value {
-            case .message, .email, .share, .documents, .contactImport, .photoAsset, .photoOCR, .photoShare, .audioFile, .documentFile:
+            case .message, .email, .share, .documents, .contactImport, .photoAsset, .photoOCR, .photoShare, .audioFile, .documentFile, .documentFiles:
                 return .init(id: step.id, label: command.intent.rawValue, value: value.id, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
-            case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .contactAccess, .translationTarget, .translation:
+            case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .contactAccess, .translationTarget, .translation, .pdfWorkflow:
                 throw CoordinationOperationError.confirmationRequired
             }
         case .suspended:

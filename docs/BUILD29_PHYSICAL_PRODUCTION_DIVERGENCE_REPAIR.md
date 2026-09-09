@@ -105,6 +105,13 @@ Updated: 2026-09-09
 - The canonical shipped use cases are foreground location, nearby, routing and weather. Info.plist contains only `NSLocationWhenInUseUsageDescription`; source contains no `requestAlwaysAuthorization`, background location mode or background updates.
 - Row 45 is an intentional least-privilege Apple policy boundary, not a missing permission. Foreground rows 43–44 already have Release-root evidence.
 
+## PDF Release workflow checkpoint (2026-09-09)
+
+- Row 29 now enters a typed PDF operation through the shipped `ProductionAssistantComposition`, canonical semantic frame, router and executor, then suspends at the legitimate public `UIDocumentPicker` boundary.
+- Real selected PDF bytes are processed on-device for merge, split, rotate, compression, highlight and text redaction; outputs are written atomically, retained as typed document context and presented for Open/Share. Redaction fails closed if its target text is absent rather than inventing an edit.
+- Unseen Production-root plus processor result: 8/8 PASS. A real two-document merge produced a valid two-page PDF. Development compile PASS.
+- CLOSED: treating `OnDevicePDFProcessor` unit coverage or existence of a document picker as proof that natural Home input reaches a concrete PDF operation.
+
 ## Exact continuation
 
-Reconcile the remaining RELEASE_EVIDENCE_GAP row 29, then reconcile the recorded LocalCommandEngine contract gaps and run the full canonical gate set.
+Reconcile the three recorded LocalCommandEngine semantic contracts (recorder lifecycle verbs, restaurant/place canonical consolidation, and messaging service precedence over content-domain nouns), then run the full canonical gate set.
