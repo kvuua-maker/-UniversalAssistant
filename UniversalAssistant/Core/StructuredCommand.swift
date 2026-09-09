@@ -352,7 +352,7 @@ struct LocalCommandEngine: CommandParsing {
                 if let amount { entities["duration_seconds"] = String(value.contains("сек") || value.contains("sec") ? amount : amount * 60) }
                 if let label = alarmLabel(in: text, kind: "timer") { entities["label"] = label }
             }
-        } else if ["будильник", "alarm"].contains(where: text.contains) {
+        } else if ["будильник", "alarm", "розбуд", "разбуд", "wake"].contains(where: text.contains) {
             entities["system_action"] = "alarm"
             if let match = text.range(of: #"\b([01]?[0-9]|2[0-3])[:.]([0-5][0-9])\b"#, options: .regularExpression) {
                 let parts = text[match].split(whereSeparator: { $0 == ":" || $0 == "." })
@@ -364,9 +364,10 @@ struct LocalCommandEngine: CommandParsing {
 
     private func alarmLabel(in text: String, kind: String) -> String? {
         var value = text
-        let commandPattern = kind == "timer" ? #"(?:постав|установи|set|створи|создай)?\s*(?:таймер|timer)"# : #"(?:постав|установи|set|створи|создай)?\s*(?:будильник|alarm)"#
+        let commandPattern = kind == "timer" ? #"(?:постав\p{L}*|установ\p{L}*|set|створ\p{L}*|созда\p{L}*)?\s*(?:таймер|timer)"# : #"(?:(?:постав\p{L}*|установ\p{L}*|set|створ\p{L}*|созда\p{L}*)?\s*(?:будильник|alarm)|розбуд\p{L}*|разбуд\p{L}*|wake)"#
         value = value.replacingOccurrences(of: commandPattern, with: " ", options: [.regularExpression, .caseInsensitive])
         value = value.replacingOccurrences(of: #"(?:\bна|for|at)?\s*\d{1,2}(?::[0-5]\d)?\s*(?:хвилин\p{L}*|хв|минут\p{L}*|мин|minutes?|mins?|секунд\p{L}*|сек|seconds?|secs?)?"#, with: " ", options: [.regularExpression, .caseInsensitive])
+        value = value.replacingOccurrences(of: #"\b(?:мене|меня|me|о|об|в|at|для|for)\b"#, with: " ", options: [.regularExpression, .caseInsensitive])
         value = value.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
         return value.isEmpty ? nil : value
     }

@@ -202,6 +202,11 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             return (.deviceAction, entities)
         }
 
+        // Notes are a distinct semantic object. Create uses the public share boundary; query terminates locally.
+        if frame.object == .note {
+            return (frame.action == .create || frame.action == .record ? .noteCreate : .noteQuery, entities)
+        }
+
         if frame.object == .photo {
             if frame.action == .create {
                 entities["capture_mode"] = "visible_camera"
@@ -299,7 +304,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             entities["query"] = mediaSubject(original, app: app)
             return (.mediaSearch, entities)
         }
-        if frame.action == .open, let app = frame.app {
+        if let app = frame.app, frame.action.map({ [.open, .set, .enable].contains($0) }) == true {
             return (.open, ["app": app])
         }
 
@@ -321,9 +326,9 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             entities["query"] = original
             return (.placeSearch, entities)
         }
-        if let action = frame.action, [.show, .query].contains(action), frame.contextReference == nil, frame.entityAmbiguity.isEmpty {
-            return (.unknown, entities)
-        }
+        // A broad SHOW/QUERY frame is not itself authoritative enough to
+        // suppress a more specific canonical family recognized by the shared
+        // parser. Leave capability unresolved for canonical precedence.
         return (nil, entities)
     }
 
@@ -417,7 +422,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.document, ["документ", "document", "pdf"]),
             (.note, ["нотат", "замет", "note"]),
             (.url, ["url", "посилан", "ссылк", "link", "вебадрес", "webaddress"]),
-            (.media, ["плейлист", "playlist", "добір", "подбор", "selection", "пісн", "песн", "song", "трек", "track"]),
+            (.media, ["плейлист", "playlist", "добір", "подбор", "selection", "пісн", "песн", "song", "трек", "track", "композ", "composition"]),
             (.app, ["програм", "застос", "прилож", "app"])
         ]
         return families.first { _, roots in tokens.contains { token in roots.contains { token.hasPrefix($0) } } }?.0
@@ -628,8 +633,16 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     }
 
     private func mediaSubject(_ original: String, app: String) -> String {
-        original.replacingOccurrences(of: app, with: "", options: [.caseInsensitive, .diacriticInsensitive])
-            .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        var value = original.replacingOccurrences(of: app, with: "", options: [.caseInsensitive, .diacriticInsensitive])
+        value = value.replacingOccurrences(
+            of: #"^\s*(?:увімк\p{L}*|включ\p{L}*|програ\p{L}*|воспроизвед\p{L}*|знайд\p{L}*|найд\p{L}*|play|listen(?: to)?|find)\s+"#,
+            with: "", options: [.regularExpression, .caseInsensitive]
+        )
+        value = value.replacingOccurrences(
+            of: #"\s+(?:в|у|через|on|in)\s*$"#,
+            with: "", options: [.regularExpression, .caseInsensitive]
+        )
+        return value.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
     }
 
     private func confidence(_ frame: CanonicalSemanticFrame) -> Double {

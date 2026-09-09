@@ -639,3 +639,107 @@ struct Build29ReleaseExternalProviderBoundaryTests {
         }
     }
 }
+
+
+@Suite("Build 29 Release remaining native reachability", .serialized)
+@MainActor
+struct Build29ReleaseRemainingNativeTests {
+    private func wait(_ predicate: @escaping @MainActor () -> Bool) async throws {
+        for _ in 0..<100 {
+            if predicate() { return }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        Issue.record("Release-root request did not terminate")
+    }
+
+    @Test func normalizedVoiceAndQuickLaunchUseTheSameProductionModel() async throws {
+        let parsed = LocalCommandEngine().parse("Двох тисяч трьохсот сорока два плюс пʼятдесят вісім")
+        #expect(parsed.normalizedText.contains("2342"))
+        #expect(parsed.normalizedText.contains("58"))
+        #expect(parsed.intent == .localUtility)
+
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        model.handleVoiceEvent(.transcript("Двох тисяч трьохсот сорока два плюс пʼятдесят вісім", isFinal: true))
+        try await wait { if case .deterministic = model.resultState { return true }; return false }
+        guard case let .deterministic(voiceResult) = model.resultState else { return }
+        #expect(voiceResult.primaryAnswer.filter(\.isNumber) == "2400")
+
+        QuickLaunchRequestStore().requestCommand("Перерахуй 4,5 кілометра у метри")
+        model.handleQuickLaunch()
+        try await wait { if case let .deterministic(value) = model.resultState { return value.primaryAnswer.filter(\.isNumber) == "4500" }; return false }
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+
+    @Test func timerAlarmAndClockDatabaseLimitationUseSystemFirstReleasePath() async throws {
+        var actions: [SystemQuickAction] = []
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            alarmExecute: { action in actions.append(action); return "verified" },
+            publicDeviceExecute: { action in actions.append(action); return "verified" }
+        )
+        for input in ["Увімкни таймер для настою на сорок пʼять секунд", "Розбуди мене о 06:25 для раннього потяга"] {
+            model.input = input
+            model.submit()
+            try await wait { actions.count == (input.contains("таймер") ? 1 : 2) }
+        }
+        #expect(actions.count == 2)
+        if case let .startTimer(seconds, label) = actions[0] {
+            #expect(seconds == 45)
+            #expect(label?.localizedCaseInsensitiveContains("настою") == true)
+        } else { Issue.record("Timer did not reach AlarmKit action") }
+        if case let .createAlarm(hour, minute, label) = actions[1] {
+            #expect(hour == 6 && minute == 25)
+            #expect(label?.localizedCaseInsensitiveContains("потяга") == true)
+        } else { Issue.record("Alarm did not reach AlarmKit action") }
+
+        model.input = "Переліч усі системні будильники цього телефону"
+        model.submit()
+        try await wait { if case .failure = model.resultState { return true }; return false }
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+
+    @Test func captureScanDocumentAndNoteBoundariesRemainDistinct() async throws {
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        let requests: [(String, CapabilityPresentation)] = [
+            ("Зроби новий знімок камерою", .camera),
+            ("Розпізнай штрихкод камерою", .scanner),
+            ("Оцифруй паперовий акт як PDF", .scanDocument(.pdf)),
+            ("Розпізнай напис через камеру", .ocrCamera),
+            ("Створи нотатку із текстом перевірити креслення", .share("із текстом перевірити креслення"))
+        ]
+        for (input, expected) in requests {
+            model.input = input
+            model.submit()
+            try await wait { model.capabilityPresentation != nil || { if case .failure = model.resultState { return true }; return false }() }
+            #expect(model.capabilityPresentation == expected, "Unexpected boundary for: \(input)")
+            model.dismissCapabilityPresentation()
+        }
+
+        model.input = "Покажи мої нотатки"
+        model.submit()
+        try await wait { if case .failure = model.resultState { return true }; return false }
+        #expect(model.capabilityPresentation == nil)
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+
+    @Test func verifiedApplicationAndExplicitMessengerDoNotUseGenericWeb() async throws {
+        let contact = ContactCandidate(identifier: "messenger-contact", displayName: "Леся Романюк", phoneNumbers: ["+380671234500"])
+        let capture = Build29SystemOpenCapture()
+        let model = ProductionAssistantComposition.makeModel(
+            contacts: Build29ReleaseContactBoundary(.resolved(contact)),
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            systemHandoffOpen: capture.open
+        )
+        model.input = "Запусти Telegram"
+        model.submit()
+        try await wait { !capture.urls.isEmpty }
+        #expect(capture.urls.last?.scheme == "tg")
+
+        model.input = "Зателефонуй Лесі Романюк через WhatsApp"
+        model.submit()
+        try await wait { capture.urls.count == 2 }
+        #expect(capture.urls.last?.host == "wa.me")
+        #expect(capture.urls.last?.scheme == "https")
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+}

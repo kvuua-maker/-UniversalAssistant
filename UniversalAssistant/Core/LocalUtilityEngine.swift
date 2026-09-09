@@ -10,8 +10,9 @@ struct LocalUtilityEngine: Sendable {
         let currentTime = ["час", "годин", "врем", "time"].contains(where: text.contains) && ["зараз", "сейчас", "поточ", "текущ", "місцев", "местн", "current", "local"].contains(where: text.contains)
         let range = NSRange(text.startIndex..., in: text)
         let numericExpression = numericExpressionRegex.firstMatch(in: text, range: range) != nil
+        let numericWordExpression = numericWordExpressionRegex.firstMatch(in: text, range: range) != nil
         let percentageExpression = percentageExpressionRegex.firstMatch(in: text, range: range) != nil
-        return signals.contains(where: text.contains) || currentDate || currentTime || numericExpression || percentageExpression
+        return signals.contains(where: text.contains) || currentDate || currentTime || numericExpression || numericWordExpression || percentageExpression
     }
 
     static func recognizesCurrency(_ raw: String) -> Bool {
@@ -145,6 +146,7 @@ struct LocalUtilityEngine: Sendable {
 
     private static let numberPattern = #"[-+]?\d+(?:[.,]\d+)?"#
     private static let numericExpressionRegex = try! NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?\s*[+×*\/÷-]\s*[-+]?\d+(?:[.,]\d+)?"#)
+    private static let numericWordExpressionRegex = try! NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?\s*(?:додати|додай|сложить|прибавить|плюс|plus|помножити|помнож|умножить|умножь|times|multiplied by|поділити на|подели на|разделить на|divided by|відняти|відніми|вычесть|отнять|мінус|минус|minus)\s*[-+]?\d+(?:[.,]\d+)?"#, options: [.caseInsensitive])
     private static let percentageExpressionRegex = try! NSRegularExpression(pattern: #"[-+]?\d+(?:[.,]\d+)?[^\d]{0,20}(?:%|відсот|процент)"#, options: [.caseInsensitive])
     private static func normalized(_ raw: String) -> String {
         var value = raw.lowercased()

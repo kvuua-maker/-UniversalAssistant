@@ -166,6 +166,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let clipboardRead: @MainActor () throws -> SharedContent
     private let fx: any CurrentFXProviding
     private let photoSearchTimeout: Duration
+    private let alarmExecute: ( (SystemQuickAction) async throws -> String)?
 
     init(
         deviceRouter: UniversalDeviceCommandRouter = .init(applications: .init(applications: LaunchDeviceApplications.verified)),
@@ -185,6 +186,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         publicDeviceExecute: @escaping @MainActor (SystemQuickAction) throws -> String = { try ProductionPublicDeviceExecutor().execute($0) },
         clipboardRead: @escaping @MainActor () throws -> SharedContent = { try SystemUserInitiatedClipboardReader().readAfterUserAction() },
         fx: any CurrentFXProviding = ECBCurrentFXProvider(),
+        alarmExecute: (  (SystemQuickAction) async throws -> String)? = nil,
         photoSearchTimeout: Duration = .seconds(3),
         personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())]
     ) {
@@ -205,6 +207,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.publicDeviceExecute = publicDeviceExecute
         self.clipboardRead = clipboardRead
         self.fx = fx
+        self.alarmExecute = alarmExecute
         self.photoSearchTimeout = photoSearchTimeout
         self.multiStepOperationFactory = multiStepOperationFactory
         if let multiStepOperationFactory {
@@ -246,7 +249,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             let content = value.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: ":,-")))
             return .presentation(.share(try required(content, "note_content")))
         case .noteQuery:
-            return .presentation(.documents)
+            throw CanonicalCapabilityExecutionError.unavailable("notes_database_not_publicly_available")
         case .fileSearch:
             // iOS does not expose a public API for silently searching every Files provider.
             // The document picker is the system-owned, security-scoped production boundary.
@@ -495,6 +498,10 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
 
         switch action {
         case .startTimer, .createAlarm:
+            if let alarmExecute {
+                do { return .result(try result(try await alarmExecute(action), facts: [])) }
+                catch { throw CanonicalCapabilityExecutionError.unavailable("alarmkit_execution_failed") }
+            }
             guard #available(iOS 26.0, *) else { throw CanonicalCapabilityExecutionError.unavailable("alarmkit_requires_ios_26") }
             #if canImport(AlarmKit)
             do { return .result(try result(try await ProductionAlarmKitExecutor().execute(action), facts: [])) }

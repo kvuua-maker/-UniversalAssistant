@@ -50,6 +50,13 @@ Updated: 2026-09-09
 - StoreKit, Sign in with Apple, CloudKit, CarPlay policy and App Attest Production suites: 25/25 PASS. StoreKit products, production identity verification, live CloudKit devices/container and managed CarPlay access remain exact external boundaries.
 - App Attest is connected to the shipped TestFlight diagnostic lifecycle. App Store Connect row is evidenced by the successful authenticated Build 29 upload; optional API-key automation remains an owner boundary.
 
+## Remaining native Release-root checkpoint (2026-09-09)
+
+- `Build29ReleaseRemainingNativeTests`: 4/4 PASS in Production with `ENABLE_TESTABILITY=YES`; actual `ProductionAssistantComposition` proved normalized final voice plus QuickLaunch convergence, timer/alarm AlarmKit routing and label retention, truthful global Clock limitation, Camera/QR/OCR/document-PDF presentations, Notes create and truthful Notes-database limitation, verified app opening and explicit messenger routing.
+- Protected semantic/utilities/system/messaging/scanner/clipboard regressions: 76/76 PASS. Development compile: PASS.
+- Material semantic repairs: broad SHOW/QUERY no longer suppresses a typed personal family; MEDIA ACTION/OBJECT/APP roles preserve clean content payload; inflected cardinal forms feed the shared deterministic number path. No exact physical utterance became a production switch.
+- CLOSED: running Production tests without `ENABLE_TESTABILITY=YES`; expecting executable `.multiStep` lowering behavior from an individual concrete operation; treating Xcode worker interruption or an obsolete test expectation as a source defect.
+
 ## Exact continuation
 
 Reconcile every remaining RELEASE_EVIDENCE_GAP across rows 1–75, then run the full canonical gate set.
