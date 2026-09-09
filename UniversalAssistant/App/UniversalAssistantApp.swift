@@ -22,6 +22,7 @@ enum ProductionAssistantComposition {
         ],
         compactResultDuration: Duration = .seconds(2),
         weather: any WeatherCommandExecuting = ProductionWeatherCommandExecutor(),
+        fx: any CurrentFXProviding = ECBCurrentFXProvider(),
         eventKit: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
         publicDeviceExecute: @escaping @MainActor (SystemQuickAction) throws -> String = { try ProductionPublicDeviceExecutor().execute($0) },
         clipboardRead: @escaping @MainActor () throws -> SharedContent = { try SystemUserInitiatedClipboardReader().readAfterUserAction() },
@@ -32,7 +33,7 @@ enum ProductionAssistantComposition {
             contacts: contacts, photos: photos, podcasts: podcasts, mediaOverride: mediaOverride, locationResolver: locationResolver, placeSearch: placeSearch,
             currentLocation: currentLocation, reverseLocation: reverseLocation, currentContext: context, routeProvider: routeProvider,
             eventKit: eventKit, recorder: recorder,
-            publicDeviceExecute: publicDeviceExecute, clipboardRead: clipboardRead,
+            publicDeviceExecute: publicDeviceExecute, clipboardRead: clipboardRead, fx: fx,
             personalSearchSources: personalSearchSources
         )
         return AssistantViewModel(

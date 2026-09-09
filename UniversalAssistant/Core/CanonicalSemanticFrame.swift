@@ -4,8 +4,8 @@ import Foundation
 /// It intentionally describes the whole command instead of treating any one
 /// noun (for example “document”) as an intent.
 struct CanonicalSemanticFrame: Equatable, Sendable {
-    enum Action: String, Sendable { case open, choose, search, show, create, update, delete, copy, call, message, scan, recognize, share, navigate, query, set, record }
-    enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, settings, battery, storage, url, place, weather, travelTime, text, code, note, audio, media }
+    enum Action: String, Sendable { case open, choose, search, show, create, update, delete, copy, call, message, scan, recognize, share, navigate, query, set, record, enable, disable }
+    enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, settings, battery, storage, flashlight, brightness, volume, powerMode, networkControl, phoneHistory, deviceLocator, url, place, weather, travelTime, text, code, note, audio, media }
     enum Source: String, Sendable { case files, photos, documents, clipboard, camera, calendar, reminders }
     enum ContextReference: String, Sendable { case currentLocation, activeRoute, selectedResult, sharedContent, previousResult }
 
@@ -186,6 +186,16 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             entities["system_action"] = frame.object == .battery ? "battery" : "storage"
             return (.deviceAction, entities)
         }
+        if frame.object == .flashlight {
+            entities["system_action"] = "flashlight"
+            entities["enabled"] = frame.action == .disable ? "false" : "true"
+            return (.deviceAction, entities)
+        }
+        if let object = frame.object, [.brightness, .volume, .powerMode, .networkControl, .phoneHistory, .deviceLocator].contains(object) {
+            entities["system_action"] = "unsupported_system_control"
+            entities["system_target"] = object.rawValue
+            return (.deviceAction, entities)
+        }
 
         if frame.object == .photo {
             if frame.action == .create {
@@ -331,6 +341,8 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         }
         if messageObject && sendVerb { return .message }
         let families: [(CanonicalSemanticFrame.Action, [String])] = [
+            (.disable, ["вимк", "выключ", "disable", "turnoff"]),
+            (.enable, ["увімк", "включ", "enable", "turnon"]),
             (.delete, ["видал", "скас", "удал", "отмен", "delete", "remove", "cancel"]),
             (.update, ["перенес", "перенос", "змін", "измени", "move", "reschedul", "update"]),
             (.choose, ["вибер", "обер", "выбер", "select", "choose"]),
@@ -381,6 +393,13 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.settings, ["налаштуван", "настрой", "параметр", "settings", "preferences", "einstellungen", "réglages"]),
             (.battery, ["батаре", "акумулятор", "battery"]),
             (.storage, ["сховищ", "простор", "памят", "storage", "diskspace"]),
+            (.flashlight, ["ліхтар", "фонар", "flashlight", "torch"]),
+            (.brightness, ["яскрав", "яркост", "brightness"]),
+            (.volume, ["гучніст", "громкост", "volume"]),
+            (.powerMode, ["енергозбереж", "энергосбереж", "lowpower"]),
+            (.networkControl, ["wifi", "wi-fi", "bluetooth"]),
+            (.phoneHistory, ["пропущен", "missedcall", "callhistory"]),
+            (.deviceLocator, ["локатор", "findmy"]),
             (.travelTime, ["трив", "час-дорозі", "traveltime", "duration"]),
             (.code, ["qr", "barcode", "штрихкод", "код"]),
             (.text, ["текст", "text"]),

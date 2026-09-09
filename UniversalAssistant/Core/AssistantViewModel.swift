@@ -678,6 +678,7 @@ final class AssistantViewModel {
 
     func presentFailure(message: String, recoveryAction: String? = nil) {
         resultDismissTask?.cancel()
+        statusText = message
         resultState = .failure(.init(message: message, recoveryAction: recoveryAction))
     }
 

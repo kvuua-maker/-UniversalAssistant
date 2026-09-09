@@ -494,3 +494,70 @@ struct Build29ReleaseRootLocationRouteTests {
         #expect({ if case .webHandoff = model.resultState { return false }; return true }())
     }
 }
+
+private actor Build29ReleaseFXBoundary: CurrentFXProviding {
+    func convert(_ request: FXConversionRequest) async throws -> CurrentFXConversion {
+        .init(request: request, convertedAmount: 123.45, observedAt: .now, provider: "Verified FX boundary")
+    }
+}
+
+@Suite("Build 29 Release root system and FX reachability", .serialized)
+@MainActor
+struct Build29ReleaseRootSystemFXTests {
+    @Test func currentFXUsesShippedProviderBoundaryAndUnsupportedCurrencyIsTruthful() async throws {
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60), fx: Build29ReleaseFXBoundary()
+        )
+        model.input = "Конвертуй 37 євро у польські злоті"
+        model.submit()
+        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .deterministic(result) = model.resultState else { Issue.record("FX did not reach Release provider boundary"); return }
+        #expect(result.primaryAnswer.contains("123"))
+        #expect(result.facts.first?.source == "Verified FX boundary")
+        #expect(model.statusText != AppText.value("processing"))
+    }
+
+    @Test func flashlightUsesPublicDeviceBoundaryForBothStateDirections() async throws {
+        var actions: [SystemQuickAction] = []
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            publicDeviceExecute: { action in actions.append(action); return "device boundary" }
+        )
+        model.input = "Активуй кишеньковий ліхтар"
+        model.submit()
+        for _ in 0..<100 where actions.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(actions.last == .flashlight(enabled: true))
+
+        model.input = "Вимкни кишеньковий ліхтар"
+        model.submit()
+        for _ in 0..<100 where actions.count < 2 { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(actions.last == .flashlight(enabled: false))
+        #expect(model.statusText != AppText.value("processing"))
+    }
+
+    @Test func unavailableSystemControlsTerminateLocallyWithoutWeb() async throws {
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        let requests = [
+            "Встанови яскравість дисплея нижче",
+            "Задай гучність на третину",
+            "Активуй режим енергозбереження",
+            "Вимкни Bluetooth",
+            "Покажи журнал пропущених дзвінків",
+            "Відкрий Локатор для моїх пристроїв"
+        ]
+        for request in requests {
+            let parsed = LocalCommandEngine().parse(request)
+            #expect(parsed.intent == .deviceAction)
+            #expect(parsed.entities["system_action"] == "unsupported_system_control")
+            model.input = request
+            model.submit()
+            for _ in 0..<100 {
+                if case .failure = model.resultState { break }
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            guard case .failure = model.resultState else { Issue.record("System limitation did not terminate locally: \(request)"); continue }
+            #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+            #expect(model.statusText != AppText.value("processing"))
+        }
+    }
+}

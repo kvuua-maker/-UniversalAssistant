@@ -22,4 +22,11 @@ Updated: 2026-09-09
 - Development compile: PASS.
 - Test-contract correction: expecting `.webHandoff` for Spotify was CLOSED after source tracing proved the shipped contract invokes `systemHandoffOpen` for `.system` handoffs and then returns UI to `.idle`. The test now verifies that real contract; production behavior was not changed to satisfy the erroneous assertion.
 
+## System and FX checkpoint
+
+- Added structural system-control OBJECT roles plus general enable/disable ACTION roles before intent selection; no owner phrase or device-specific success was patched.
+- Release-root system/FX suite: 3/3 PASS; protected Apple system/quick-action/device routing suites: 18/18 PASS.
+- Material lifecycle repair: `AssistantViewModel.presentFailure` now always leaves the processing state when publishing a terminal failure.
+- Rows 63 and 66–72 now have Release evidence or exact public-iOS limitation evidence.
+
 ## Exact continuation
