@@ -6,10 +6,12 @@ struct LocalUtilityEngine: Sendable {
     static func recognizes(_ raw: String) -> Bool {
         let text = normalized(raw)
         let signals = ["обчисл", "порах", "розрах", "вычисл", "посчитай", "calculate", "різниц", "разниц", "difference", "сума", "сумм", "sum", "добут", "произвед", "product", "частк", "частн", "quotient", "скільки буде", "сколько будет", "помнож", "умнож", "поділ", "раздел", "kilometer", "кілометр", "километр", "miles", "мил", "кілограм", "килограмм", "pounds", "фунт", "celsius", "fahrenheit", "цельсі", "цельси", "який сьогодні день", "какой сегодня день", "яка сьогодні дата", "какая сегодня дата", "яке сьогодні число", "какое сегодня число", "котра година", "который час", "скільки зараз часу", "сколько сейчас времени", "який зараз час", "local time"]
+        let currentDate = ["дат", "числ", "date"].contains(where: text.contains) && ["сьогод", "сегодня", "поточ", "текущ", "current", "today"].contains(where: text.contains)
+        let currentTime = ["час", "годин", "врем", "time"].contains(where: text.contains) && ["зараз", "сейчас", "поточ", "текущ", "місцев", "местн", "current", "local"].contains(where: text.contains)
         let range = NSRange(text.startIndex..., in: text)
         let numericExpression = numericExpressionRegex.firstMatch(in: text, range: range) != nil
         let percentageExpression = percentageExpressionRegex.firstMatch(in: text, range: range) != nil
-        return signals.contains(where: text.contains) || numericExpression || percentageExpression
+        return signals.contains(where: text.contains) || currentDate || currentTime || numericExpression || percentageExpression
     }
 
     static func recognizesCurrency(_ raw: String) -> Bool {
@@ -23,10 +25,10 @@ struct LocalUtilityEngine: Sendable {
         if text.contains("день тижня") || text.contains("день недели") || text.contains("day of the week") {
             return format(now, template: "EEEE", locale: locale, timeZone: timeZone)
         }
-        if text.contains("сьогодні дата") || text.contains("сегодня дата") || text.contains("сьогодні число") || text.contains("сегодня число") || text.contains("today.s date") {
+        if ["дат", "числ", "date"].contains(where: text.contains) && ["сьогод", "сегодня", "поточ", "текущ", "current", "today"].contains(where: text.contains) {
             return format(now, template: "d MMMM y", locale: locale, timeZone: timeZone)
         }
-        if text.contains("котра година") || text.contains("который час") || text.contains("скільки зараз часу") || text.contains("сколько сейчас времени") || text.contains("який зараз час") || text.contains("local time") {
+        if text.contains("котра година") || text.contains("который час") || (["час", "годин", "врем", "time"].contains(where: text.contains) && ["зараз", "сейчас", "поточ", "текущ", "місцев", "местн", "current", "local"].contains(where: text.contains)) {
             return format(now, template: "HH:mm", locale: locale, timeZone: timeZone)
         }
         if let value = try percentage(text) { return format(value, locale: locale) }
@@ -106,6 +108,8 @@ struct LocalUtilityEngine: Sendable {
         guard let value = captures("(" + Self.numberPattern + ")", text)?.first else { return nil }
         let pairs: [(from: [String], to: [String], factor: Double, unit: String)] = [
             (["кілометр", "километр", "kilometer", "km"], ["мил", "mile"], 0.6213711922, "mi"),
+            (["кілометр", "километр", "kilometer", "km"], ["метр", "meter", "m"], 1000, "m"),
+            (["метр", "meter"], ["кілометр", "километр", "kilometer", "km"], 0.001, "km"),
             (["мил", "mile"], ["кілометр", "километр", "kilometer", "km"], 1.609344, "km"),
             (["кілограм", "килограмм", "kilogram", "kg"], ["фунт", "pound", "lb"], 2.2046226218, "lb"),
             (["фунт", "pound", "lb"], ["кілограм", "килограмм", "kilogram", "kg"], 0.45359237, "kg"),

@@ -130,6 +130,35 @@ struct Build29ReleaseRootFamilyReachabilityTests {
         guard case .deterministic = model.resultState else { Issue.record("Utility did not reach deterministic Release executor"); return }
         #expect(model.statusText != AppText.value("processing"))
     }
+
+    @Test func translationAndTruthfulShazamBoundaryUseReleaseHomeWithoutWeb() async throws {
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        model.input = "Зроби французький переклад тексту: Гарного вам ранку"
+        model.submit()
+        for _ in 0..<100 { if case .translation = model.capabilityPresentation { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .translation(plan) = model.capabilityPresentation else { Issue.record("Translation did not reach Apple presentation"); return }
+        #expect(plan.text == "Гарного вам ранку")
+        #expect(plan.targetLanguage == "fr")
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+
+        model.input = "Спробуй визначити композицію, що лунає зараз"
+        model.submit()
+        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .deterministic(result) = model.resultState else { Issue.record("Shazam boundary did not terminate locally"); return }
+        #expect(result.primaryAnswer.localizedCaseInsensitiveContains("ShazamKit"))
+        #expect(result.actions.isEmpty)
+    }
+
+    @Test func unitAndLocalDateTimeRemainDeterministicInReleaseRoot() async throws {
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        for input in ["Перерахуй 3,2 кілометра у метри", "Повідом поточну дату", "Назви місцевий час"] {
+            model.input = input
+            model.submit()
+            for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+            #expect({ if case .deterministic = model.resultState { return true }; return false }(), "Did not stay local: \(input)")
+            #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+        }
+    }
 }
 
 
