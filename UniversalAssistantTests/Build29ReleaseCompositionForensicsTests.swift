@@ -861,3 +861,27 @@ struct Build29ReleaseRemainingGapTests {
         #expect(result.destination.absoluteString == item.value)
     }
 }
+
+
+@Suite("Build 29 Release public document boundaries", .serialized)
+@MainActor
+struct Build29ReleasePublicDocumentBoundaryTests {
+    @Test func selectedFilesScopeUsesSystemDocumentPickerWithoutWeb() async throws {
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        model.input = "Обери звіт з iCloud Drive для опрацювання"
+        model.submit()
+        for _ in 0..<100 where model.capabilityPresentation == nil { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(model.capabilityPresentation == .documents)
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+
+    @Test func verifiedVCardFromAppleScannerRequiresContactsUIImport() throws {
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        let payload = "BEGIN:VCARD\nVERSION:3.0\nFN:Інна Савчук\nTEL:+380991112233\nEND:VCARD"
+        model.handleScannedCode(.init(payload: payload, symbology: .qr))
+        guard case let .scanner(result) = model.resultState else { Issue.record("Expected typed scanner result"); return }
+        model.performScannerAction(result)
+        guard case let .contactImport(data)? = model.capabilityPresentation else { Issue.record("Expected public ContactsUI import"); return }
+        #expect(String(data: data, encoding: .utf8)?.contains("Інна Савчук") == true)
+    }
+}

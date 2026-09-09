@@ -75,6 +75,11 @@ Updated: 2026-09-09
 - Unseen Release-root gap suite: 4/4 PASS. Protected Contacts, PhotoKit/Vision, personal-source, Share Inbox and QuickLaunch suites: 37/37 PASS. Strong semantic evidence produced a typed PhotoKit action; weak confidence failed closed with no web.
 - Rows 5, 12, 31 and 33 now have Release-root evidence.
 
+## Public document and ContactsUI boundaries checkpoint (2026-09-09)
+
+- Unseen Release-root suite: 2/2 PASS. A scoped Files request reached the system UIDocumentPicker with no web fallback; verified vCard scanner output reached the user-confirmed ContactsUI import presentation.
+- Rows 13 and 27 now have exact public Apple handoff/reachability evidence.
+
 ## Exact continuation
 
-Reconcile the 7 remaining RELEASE_EVIDENCE_GAP rows (13, 17, 21, 25, 27, 29, 45), then run the full canonical gate set.
+Reconcile the 5 remaining RELEASE_EVIDENCE_GAP rows (17, 21, 25, 29, 45), then run the full canonical gate set.
