@@ -139,7 +139,10 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             if let percentage = numeric.percentage { entities["percentage"] = NSDecimalNumber(decimal: percentage).stringValue }
         }
         if let reference = frame.contextReference { entities["context_reference"] = reference.rawValue }
-        if !frame.entityAmbiguity.isEmpty { entities["clarification_options"] = frame.entityAmbiguity.joined(separator: "|") }
+        if !frame.entityAmbiguity.isEmpty {
+            entities["clarification_options"] = frame.entityAmbiguity.joined(separator: "|")
+            entities["clarification_role"] = "service_channel"
+        }
         if let compound = frame.compound {
             entities["compound_clause_count"] = String(compound.clauses.count)
             entities["compound_order"] = compound.isSequential ? "sequential" : "parallel"

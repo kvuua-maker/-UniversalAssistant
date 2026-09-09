@@ -31,11 +31,15 @@ enum ProductionAssistantComposition {
         publicDeviceExecute: @escaping @MainActor (SystemQuickAction) throws -> String = { try ProductionPublicDeviceExecutor().execute($0) },
         clipboardRead: @escaping @MainActor () throws -> SharedContent = { try SystemUserInitiatedClipboardReader().readAfterUserAction() },
         notificationEnable: @escaping @MainActor () async -> ProactiveNotificationEnableResult = { await ProductionNotificationRegistration.enable() },
+        voiceInputOverride: VoiceInputController? = nil,
         quickLaunchStore: QuickLaunchRequestStore = QuickLaunchRequestStore(),
         systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
     ) -> AssistantViewModel {
         let context = CurrentContextStore()
         let languageUnderstanding = LanguageUnderstandingBlock()
+        let voiceInput = voiceInputOverride ?? VoiceInputController(contextualVocabulary: {
+            await contacts.contextualVocabulary(limit: 32)
+        })
         let executor = ProductionCanonicalCapabilityExecutor(
             contacts: contacts, photos: photos, photoSemanticLoader: photoSemanticLoader, photoSemanticLabeler: photoSemanticLabeler, podcasts: podcasts, mediaOverride: mediaOverride, locationResolver: locationResolver, placeSearch: placeSearch,
             currentLocation: currentLocation, reverseLocation: reverseLocation, currentContext: context, routeProvider: routeProvider,
@@ -44,7 +48,12 @@ enum ProductionAssistantComposition {
             personalSearchSources: personalSearchSources, commandParser: languageUnderstanding
         )
         return AssistantViewModel(
-            commandEngine: languageUnderstanding, weatherExecutor: weather, genericDiscovery: genericDiscovery, eventKitExecutor: eventKit, capabilityExecutor: executor, currentContext: context, recorder: recorder, compactResultDuration: compactResultDuration, notificationEnable: notificationEnable, quickLaunchStore: quickLaunchStore, systemHandoffOpen: systemHandoffOpen
+            commandEngine: languageUnderstanding, weatherExecutor: weather,
+            genericDiscovery: genericDiscovery, eventKitExecutor: eventKit,
+            capabilityExecutor: executor, currentContext: context, recorder: recorder,
+            compactResultDuration: compactResultDuration, voiceInput: voiceInput,
+            notificationEnable: notificationEnable, quickLaunchStore: quickLaunchStore,
+            systemHandoffOpen: systemHandoffOpen
         )
     }
 }

@@ -83,6 +83,60 @@ struct LanguageUnderstandingBlockTests {
         #expect(command.entities["speech_alternative_count"] == "2")
         #expect(command.intent != .deviceAction)
     }
+
+    @Test func noisyServiceResolvesOnlyAfterCommunicationRoleAndExplicitChannelScope() {
+        let block = LanguageUnderstandingBlock(serviceCandidates: [
+            .init(value: "matrix", displayName: "Matrix", aliases: ["Matrix"]),
+            .init(value: "secure-chat", displayName: "Secure Chat", aliases: ["Secure Chat"])
+        ])
+        let command = block.parse("Надішли повідомлення Маркові через Matr")
+        #expect(command.intent == .messageCompose)
+        #expect(command.entities["recipient"] == "Маркові")
+        #expect(command.entities["message_service"] == "matrix")
+        #expect(command.entities["service_match_confidence"].flatMap(Double.init) ?? 0 >= 0.72)
+        #expect(!command.needsClarification)
+    }
+
+    @Test func personWithoutChannelMarkerNeverBecomesMessenger() {
+        let block = LanguageUnderstandingBlock(serviceCandidates: [
+            .init(value: "oleksii-service", displayName: "Oleksii", aliases: ["Олексій"])
+        ])
+        let command = block.parse("Набери Олексію")
+        #expect(command.intent == .contactCall)
+        #expect(command.entities["contact"] == "Олексію")
+        #expect(command.entities["call_service"] == nil)
+        #expect(command.intent != .webSearch)
+    }
+
+    @Test func closeServiceCandidatesRequireClarification() {
+        let block = LanguageUnderstandingBlock(serviceCandidates: [
+            .init(value: "relay-one", displayName: "Relay One", aliases: ["Relay"]),
+            .init(value: "relay-two", displayName: "Relay Two", aliases: ["Relay"])
+        ])
+        let command = block.parse("Відправ повідомлення Дарині через Relay")
+        #expect(command.intent == .messageCompose)
+        #expect(command.needsClarification)
+        #expect(command.entities["clarification_options"] == "Relay One|Relay Two")
+        #expect(command.intent != .webSearch)
+    }
+
+    @Test func verifiedCatalogCandidateBecomesTypedConstraintButWeakTextDoesNotInventBrand() {
+        let aurora = CanonicalCatalogEntity(id: "brand-aurora", displayName: "Aurora", kind: .brand)
+        let artemis = CanonicalCatalogEntity(id: "brand-artemis", displayName: "Artemis", kind: .brand)
+        let block = LanguageUnderstandingBlock(catalogCandidates: [
+            .init(value: aurora, displayName: aurora.displayName, aliases: [aurora.displayName]),
+            .init(value: artemis, displayName: artemis.displayName, aliases: [artemis.displayName])
+        ])
+        let recovered = block.parse("Підбери черевики Arora до 7300 гривень")
+        #expect([CommandIntent.productSearch, .fashionDiscovery].contains(recovered.intent))
+        #expect(recovered.constraints.brand == "Aurora")
+        #expect(recovered.entities["catalog_entity_id"] == "brand-aurora")
+        #expect(recovered.constraints.maximumPrice == 7_300)
+
+        let weak = block.parse("Підбери черевики невідомої марки")
+        #expect(weak.constraints.brand == nil)
+        #expect(weak.entities["catalog_entity_id"] == nil)
+    }
 }
 
 @MainActor

@@ -10,13 +10,19 @@ protocol ContactResolving: Sendable {
     func requestAccessIfNeeded() async throws
     func resolve(name: String) async throws -> ContactResolution
     func resolve(exactIdentifier identifier: String) async throws -> ContactResolution
+    func contextualVocabulary(limit: Int) async -> [String]
 }
 extension ContactResolving {
     func authorizationState() async -> ContactAuthorizationState { .authorized }
+    func contextualVocabulary(limit: Int) async -> [String] { [] }
 }
 protocol ContactQuerying: Sendable {
     func contacts(matching name: String, timeout: Duration) async throws -> [ContactCandidate]
     func contact(identifier: String, timeout: Duration) async throws -> ContactCandidate?
+    func accessibleContacts(limit: Int, timeout: Duration) async throws -> [ContactCandidate]
+}
+extension ContactQuerying {
+    func accessibleContacts(limit: Int, timeout: Duration) async throws -> [ContactCandidate] { [] }
 }
 enum ContactAuthorizationState: Equatable, Sendable { case notDetermined, authorized, limited, denied, restricted }
 protocol ContactAuthorizing: Sendable {
@@ -45,6 +51,10 @@ struct SystemContactAuthorization: ContactAuthorizing {
 protocol ContactStoreQuerying: Sendable {
     func contacts(matching name: String) throws -> [ContactCandidate]
     func contact(identifier: String) throws -> ContactCandidate?
+    func accessibleContacts(limit: Int) throws -> [ContactCandidate]
+}
+extension ContactStoreQuerying {
+    func accessibleContacts(limit: Int) throws -> [ContactCandidate] { [] }
 }
 final class SystemContactStoreQuery: ContactStoreQuerying, Sendable {
     func contacts(matching name: String) throws -> [ContactCandidate] {
@@ -55,6 +65,19 @@ final class SystemContactStoreQuery: ContactStoreQuerying, Sendable {
         let store = CNContactStore()
         do { return Self.candidate(try store.unifiedContact(withIdentifier: identifier, keysToFetch: Self.keys)) }
         catch let error as CNError where error.code == .recordDoesNotExist { return nil }
+    }
+    func accessibleContacts(limit: Int) throws -> [ContactCandidate] {
+        guard limit > 0 else { return [] }
+        let request = CNContactFetchRequest(keysToFetch: Self.keys)
+        request.sortOrder = .userDefault
+        request.unifyResults = true
+        request.mutableObjects = false
+        var values: [ContactCandidate] = []
+        try CNContactStore().enumerateContacts(with: request) { contact, stop in
+            values.append(Self.candidate(contact))
+            if values.count >= limit { stop.pointee = true }
+        }
+        return values
     }
     private static let keys: [CNKeyDescriptor] = [CNContactIdentifierKey as CNKeyDescriptor, CNContactGivenNameKey as CNKeyDescriptor, CNContactFamilyNameKey as CNKeyDescriptor, CNContactOrganizationNameKey as CNKeyDescriptor, CNContactPhoneNumbersKey as CNKeyDescriptor]
     private static func candidate(_ contact: CNContact) -> ContactCandidate {
@@ -86,6 +109,9 @@ final class SystemContactQuery: ContactQuerying, @unchecked Sendable {
     }
     func contact(identifier: String, timeout: Duration) async throws -> ContactCandidate? {
         try await bounded(timeout: timeout) { [store] in try store.contact(identifier: identifier) }
+    }
+    func accessibleContacts(limit: Int, timeout: Duration) async throws -> [ContactCandidate] {
+        try await bounded(timeout: timeout) { [store] in try store.accessibleContacts(limit: limit) }
     }
     private func bounded<Value: Sendable>(timeout: Duration, operation: @escaping @Sendable () throws -> Value) async throws -> Value {
         let completion = ContactQueryCompletion<Value>()
@@ -139,7 +165,23 @@ actor LocalContactResolver: ContactResolving {
     func resolve(name: String) async throws -> ContactResolution {
         try verifyAuthorization()
         LocalVoiceDiagnosticReport.shared.record("contacts_query_started", "kind=name")
-        let contacts = try await query.contacts(matching: name, timeout: queryTimeout)
+        var contacts = try await query.contacts(matching: name, timeout: queryTimeout)
+        if contacts.isEmpty {
+            let accessible = try await query.accessibleContacts(limit: 200, timeout: queryTimeout)
+            let domain = accessible.map {
+                ScopedEntityCandidate(value: $0, displayName: $0.displayName, aliases: [$0.displayName])
+            }
+            let evidence = ContextScopedEntityResolver(candidates: domain).resolveWithEvidence(name)
+            switch evidence.resolution {
+            case let .resolved(contact): contacts = [contact]
+            case let .ambiguous(names): contacts = accessible.filter { names.contains($0.displayName) }
+            case .unresolved: break
+            }
+            LocalVoiceDiagnosticReport.shared.record(
+                "contacts_domain_recovery_finished",
+                "status=\(contacts.isEmpty ? "no_result" : "candidate") count=\(contacts.count) mechanism=\(evidence.mechanism.rawValue)"
+            )
+        }
         let result: ContactResolution
         if contacts.isEmpty { result = .notFound }
         else if contacts.count == 1 { result = .resolved(contacts[0]) }
@@ -168,6 +210,22 @@ actor LocalContactResolver: ContactResolving {
         }
         LocalVoiceDiagnosticReport.shared.record("contacts_query_finished", "status=success count=1")
         return .resolved(value)
+    }
+    func contextualVocabulary(limit: Int) async -> [String] {
+        guard limit > 0 else { return [] }
+        switch authorization.currentStatus() {
+        case .authorized, .limited: break
+        case .notDetermined, .denied, .restricted: return []
+        }
+        do {
+            let values = try await query.accessibleContacts(limit: min(limit, 100), timeout: .seconds(1))
+            let names = values.map(\.displayName).filter { !$0.isEmpty }
+            LocalVoiceDiagnosticReport.shared.record("contacts_context_vocabulary", "count=\(names.count)")
+            return names
+        } catch {
+            LocalVoiceDiagnosticReport.shared.record("contacts_context_vocabulary", "count=0 status=unavailable")
+            return []
+        }
     }
     private func verifyAuthorization() throws {
         switch authorization.currentStatus() {

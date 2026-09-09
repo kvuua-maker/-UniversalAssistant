@@ -206,6 +206,37 @@ struct ContactsRequestLifecycleTests {
         }
     }
 
+    @Test func authorizedContactDomainRecoversInflectionAfterSystemNameMiss() async throws {
+        let target = ContactCandidate(
+            identifier: "contact-km",
+            displayName: "Катерина Мельник",
+            phoneNumbers: ["+380671234567"]
+        )
+        let store = ContactDomainStoreStub(accessibleValues: [target])
+        let resolver = LocalContactResolver(
+            authorization: ContactAuthorizationStub(status: .authorized, granted: true),
+            query: SystemContactQuery(store: store)
+        )
+        #expect(try await resolver.resolve(name: "Катерині Мельник") == .resolved(target))
+        #expect(await resolver.contextualVocabulary(limit: 4) == ["Катерина Мельник"])
+    }
+
+    @Test func contactVocabularyHonorsPrivacyStateAndBound() async {
+        let values = [
+            ContactCandidate(identifier: "1", displayName: "Леся Дорош", phoneNumbers: []),
+            ContactCandidate(identifier: "2", displayName: "Тарас Коваль", phoneNumbers: [])
+        ]
+        let query = SystemContactQuery(store: ContactDomainStoreStub(accessibleValues: values))
+        let limited = LocalContactResolver(
+            authorization: ContactAuthorizationStub(status: .limited, granted: true), query: query
+        )
+        #expect(await limited.contextualVocabulary(limit: 1) == ["Леся Дорош"])
+        let denied = LocalContactResolver(
+            authorization: ContactAuthorizationStub(status: .denied, granted: false), query: query
+        )
+        #expect(await denied.contextualVocabulary(limit: 10).isEmpty)
+    }
+
     @Test @MainActor func newerHomeRequestOwnsResultAndSpinnerTerminates() async throws {
         let executor = SequencedCapabilityExecutor()
         let model = AssistantViewModel(capabilityExecutor: executor)
@@ -223,5 +254,21 @@ struct ContactsRequestLifecycleTests {
         guard case let .deterministic(final) = model.resultState else { Issue.record("Late request changed state"); return }
         #expect(final.primaryAnswer == "request-2")
         #expect(model.statusText != AppText.value("processing"))
+    }
+}
+
+private final class ContactDomainStoreStub: ContactStoreQuerying, @unchecked Sendable {
+    let matchingValues: [ContactCandidate]
+    let accessibleValues: [ContactCandidate]
+    init(matchingValues: [ContactCandidate] = [], accessibleValues: [ContactCandidate]) {
+        self.matchingValues = matchingValues
+        self.accessibleValues = accessibleValues
+    }
+    func contacts(matching name: String) throws -> [ContactCandidate] { matchingValues }
+    func contact(identifier: String) throws -> ContactCandidate? {
+        accessibleValues.first { $0.identifier == identifier }
+    }
+    func accessibleContacts(limit: Int) throws -> [ContactCandidate] {
+        Array(accessibleValues.prefix(max(0, limit)))
     }
 }

@@ -99,7 +99,7 @@ struct ContextScopedEntityResolver<Value: Equatable & Sendable>: Sendable {
         if transliterated > best.0 { best = (transliterated, .transliteration) }
         let morphology = similarity(morphologicalStem(leftTransliteration), morphologicalStem(rightTransliteration)) * 0.94
         if morphology > best.0 { best = (morphology, .morphology) }
-        let phonetic = similarity(phoneticKey(leftTransliteration), phoneticKey(rightTransliteration)) * 0.92
+        let phonetic = phoneticSimilarity(phoneticKey(leftTransliteration), phoneticKey(rightTransliteration)) * 0.92
         if phonetic > best.0 { best = (phonetic, .phonetic) }
         return best
     }
@@ -138,6 +138,16 @@ struct ContextScopedEntityResolver<Value: Equatable & Sendable>: Sendable {
         let suffixes = ["iami", "amy", "ovi", "evi", "iem", "ogo", "omu", "ami", "ями", "ами", "ові", "еві", "ого", "ому", "ою", "ею", "у", "ю", "і", "и", "а", "я"]
         guard let suffix = suffixes.first(where: { value.count - $0.count >= 3 && value.hasSuffix($0) }) else { return value }
         return String(value.dropLast(suffix.count))
+    }
+    private static func phoneticSimilarity(_ lhs: String, _ rhs: String) -> Double {
+        let base = similarity(lhs, rhs)
+        let shorterCount = min(lhs.count, rhs.count)
+        guard shorterCount >= 3, lhs.hasPrefix(rhs) || rhs.hasPrefix(lhs) else { return base }
+        // Speech commonly clips a final syllable. Inside an already-authoritative
+        // entity domain, a three-consonant prefix is useful evidence, but direct
+        // execution still requires the resolver's runner-up confidence margin.
+        let coverage = Double(shorterCount) / Double(max(lhs.count, rhs.count))
+        return max(base, 0.78 + 0.16 * coverage)
     }
     private static func similarity(_ lhs: String, _ rhs: String) -> Double {
         guard !lhs.isEmpty, !rhs.isEmpty else { return 0 }

@@ -156,3 +156,47 @@ Verification:
 
 Status is **AUTOMATED GREEN FOR SPEECH ENRICHMENT — PHYSICAL IPHONE RETEST
 REQUIRED**.
+
+## Context-scoped service, contact and catalog entity checkpoint
+
+The authoritative language block now separates `APP`, `SERVICE_CHANNEL`,
+authorized `CONTACT`, and configured `CATALOG/BRAND/PRODUCT/RETAILER` candidate
+domains. A service is considered only after a communication frame and explicit
+channel scope; an ordinary person's name therefore cannot silently select a
+messenger. A unique high-confidence result becomes a typed entity, close
+candidates produce a role-labelled clarification, and weak evidence remains
+unresolved without generic-web substitution. A stronger resolution for one role
+supersedes only an earlier ambiguity for that same role.
+
+Phonetic evidence now handles generally clipped final syllables inside an
+already-constrained domain, while the existing minimum score and runner-up margin
+remain mandatory. Product/catalog recovery consumes only candidates supplied by
+the configured registry/provider boundary. A verified catalog entity plus typed
+commerce constraints can promote an otherwise unresolved sentence to a
+provider-neutral product request; an unknown name cannot manufacture a brand or
+commerce intent.
+
+The production Speech contextual vocabulary now also receives a bounded list of
+display names fetched from the currently authorized Contacts domain. Denied,
+restricted and not-determined states disclose nothing. The same bounded domain is
+used after the public Contacts exact-name predicate misses an inflected/noisy
+name. Limited access is treated as an accessible subset, not an empty address
+book. The resolver remains generation-owned and timeout-bounded.
+
+Verification:
+
+- focused language/contact/entity suites: 27/27 PASS;
+- protected Contacts/Calls/messaging/semantic/Release-root suites: 61/61 PASS;
+- Development arm64 simulator compile: PASS;
+- `git diff --check`: PASS.
+
+Status is **AUTOMATED GREEN FOR THIS ENTITY-DOMAIN CHECKPOINT — PHYSICAL IPHONE
+RETEST REQUIRED**. Build-30 crash causation remains unproven because its diagnostic
+payloads were rejected before storage; this checkpoint does not relabel that
+missing evidence.
+
+## Exact continuation point
+
+Add proposition-level indirect-intent and reusable Ukrainian/Russian morphology
+evidence to `LanguageUnderstandingBlock`, then prove semantic-photo versus
+latest-photo isolation and nearby ranking through `ProductionAssistantComposition`.
