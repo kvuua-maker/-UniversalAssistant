@@ -267,13 +267,43 @@ stage on the next physical run.
 
 Status is **AUTOMATED GREEN FOR MORPHOLOGY — PHYSICAL IPHONE RETEST REQUIRED**.
 
+## Contacts framework and typed message-payload checkpoint
+
+A serialized integration test now creates a test-owned contact through public
+`CNContactStore` in the selected simulator, then instantiates the shipped
+`ProductionAssistantComposition` with its default `LocalContactResolver` and
+`SystemContactStoreQuery`. It verifies a natural normal-call request reaches an
+intercepted `tel:` boundary rather than a messenger, and a natural message request
+reaches the MessageUI presentation with the phone number resolved from the real
+Contacts database. Only the test-created contact is deleted in cleanup.
+
+The first runtime execution reached Contacts and both canonical actions without a
+crash, but exposed a separate first wrong stage: `CanonicalSemanticFrame` retained
+the recipient while dropping message content, so MessageUI received `body=nil`.
+`CanonicalMessageRoleAnalyzer` now implements a structural recipient/content/
+service grammar. It handles message-object position, colon, complement and topical
+content boundaries without encoding a person, service or owner phrase. The resulting
+typed `message_body` travels through the existing canonical executor.
+
+Verification:
+
+- framework Contacts + language/message-role suites: 19/19 PASS;
+- protected Contacts lifecycle, normal-call/messenger, MessageUI and shipped
+  Release-composition regressions: 26/26 PASS;
+- Development simulator compile: PASS;
+- `git diff --check`: PASS.
+
+The Simulator evidence proves the public framework path and current shipped
+composition terminate without a crash for this test-owned record. It does not
+identify the unavailable Build-30 physical crash cause and therefore remains
+**AUTOMATED GREEN — PHYSICAL IPHONE RETEST REQUIRED**.
+
 ## Exact continuation point
 
-Add a production-composition Contacts framework integration boundary test using
-a simulator contact created through public `Contacts`, exercise normal call and
-message resolution without invoking their external UI, then delete only that
-test-owned contact. This must validate `SystemContactStoreQuery` and generation-
-owned `ProductionAssistantComposition` wiring rather than another injected
-resolver mock. After that, complete typed temporal roles and confidence-driven
-clarification policy in `LanguageUnderstandingBlock` and run unseen cross-family
-Release-root regressions.
+Complete typed temporal roles and evidence-backed confidence/clarification policy
+inside `LanguageUnderstandingBlock`. Verify durations versus clock time, relative
+and absolute dates, numeric constraints, ambiguity margins and the invariant that a
+recognized system/local/personal family with an uncertain parameter clarifies locally
+instead of reaching generic web. Then run unseen Release-root Calendar/Reminder/
+Timer/Alarm/arithmetic collision tests and continue the 96-function language-block
+revalidation.

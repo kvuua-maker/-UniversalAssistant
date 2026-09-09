@@ -124,6 +124,29 @@ struct LanguageUnderstandingBlockTests {
         #expect(!command.needsClarification)
     }
 
+    @Test func messageRolesSeparateRecipientBodyAndServiceWithoutPhraseAliases() {
+        let block = LanguageUnderstandingBlock(serviceCandidates: [
+            .init(value: "matrix", displayName: "Matrix", aliases: ["Matrix"])
+        ])
+        let variants: [(String, String, String)] = [
+            ("Напиши Дарині: перенесемо зустріч на вечір", "Дарині", "перенесемо зустріч на вечір"),
+            ("Надішли повідомлення для Ірини про готовність звіту", "Ірини", "про готовність звіту"),
+            ("Message Rowan that the parcel arrived", "Rowan", "the parcel arrived")
+        ]
+        for (text, recipient, body) in variants {
+            let command = block.parse(text)
+            #expect(command.intent == .messageCompose)
+            #expect(command.entities["recipient"] == recipient)
+            #expect(command.entities["message_body"] == body)
+            #expect(command.intent != .webSearch)
+        }
+
+        let service = block.parse("Надішли Оксані повідомлення про реліз через Matr")
+        #expect(service.entities["recipient"] == "Оксані")
+        #expect(service.entities["message_body"] == "про реліз")
+        #expect(service.entities["message_service"] == "matrix")
+    }
+
     @Test func personWithoutChannelMarkerNeverBecomesMessenger() {
         let block = LanguageUnderstandingBlock(serviceCandidates: [
             .init(value: "oleksii-service", displayName: "Oleksii", aliases: ["Олексій"])

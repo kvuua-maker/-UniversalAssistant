@@ -25,6 +25,7 @@ struct CanonicalSemanticFrame: Equatable, Sendable {
     var service: String?
     var entityAmbiguity: [String] = []
     var person: String?
+    var messageBody: String?
     var app: String?
     var location: String?
     var temporal: TemporalRole?
@@ -102,14 +103,16 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         frame.app = application(in: tokens)
         frame.modifiers = modifiers(in: tokens)
 
-        if frame.object == .contact || frame.action == .call || frame.action == .message {
+        if frame.action == .message, let roles = CanonicalMessageRoleAnalyzer.analyze(original) {
+            frame.person = roles.recipient
+            frame.messageBody = roles.body
+        } else if frame.object == .contact || frame.action == .call {
             frame.person = trailingEntity(
                 original,
                 afterActionFamilies: [
-                    ["контакт", "contact"], ["подзвон", "зателефон", "набер", "позвон", "call", "dial"],
-                    ["напиш", "надішл", "відправ", "повідом", "сообщ", "message", "send"]
+                    ["контакт", "contact"], ["подзвон", "зателефон", "набер", "позвон", "call", "dial"]
                 ],
-                stoppingAt: [" через ", " у whatsapp", " в whatsapp", " via whatsapp", " по whatsapp"]
+                stoppingAt: [" через ", " via ", " using "]
             )
         }
         frame.location = locationPhrase(in: original)
@@ -269,6 +272,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         if frame.action == .message {
             if let person = frame.person, !person.isEmpty { entities["recipient"] = person }
             if let service = frame.service { entities["message_service"] = service }
+            if let body = frame.messageBody, !body.isEmpty { entities["message_body"] = body }
             return (.messageCompose, entities)
         }
 
