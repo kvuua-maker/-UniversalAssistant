@@ -93,3 +93,30 @@ struct SystemMessageComposer: UIViewControllerRepresentable {
         }
     }
 }
+
+struct SystemMailComposer: UIViewControllerRepresentable {
+    let recipients: [String]
+    let subject: String?
+    let body: String?
+    let completion: @MainActor (MFMailComposeResult) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(completion: completion) }
+    func makeUIViewController(context: Context) -> MFMailComposeViewController {
+        let controller = MFMailComposeViewController()
+        controller.setToRecipients(recipients)
+        if let subject { controller.setSubject(subject) }
+        if let body { controller.setMessageBody(body, isHTML: false) }
+        controller.mailComposeDelegate = context.coordinator
+        return controller
+    }
+    func updateUIViewController(_ controller: MFMailComposeViewController, context: Context) {}
+
+    @MainActor final class Coordinator: NSObject, @preconcurrency MFMailComposeViewControllerDelegate {
+        let completion: @MainActor (MFMailComposeResult) -> Void
+        init(completion: @escaping @MainActor (MFMailComposeResult) -> Void) { self.completion = completion }
+        func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
+            completion(result)
+            controller.dismiss(animated: true)
+        }
+    }
+}

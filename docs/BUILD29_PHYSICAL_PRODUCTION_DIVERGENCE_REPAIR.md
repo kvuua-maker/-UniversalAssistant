@@ -87,6 +87,12 @@ Updated: 2026-09-09
 - Unseen Production-root shopping-list test PASS; direct EventKit default-list and explicit-list paths PASS; Development compile PASS.
 - The wider LocalCommandEngine run exposed two unrelated pre-existing contract gaps (`Resume recording` and `.restaurantSearch` versus canonical `.placeSearch`). They remain explicit unfinished work and are not attributed to this green EventKit repair.
 
+## Email compose Release boundary checkpoint (2026-09-09)
+
+- Added a distinct public `MFMailComposeViewController` presentation for explicit email service requests; SMS/iMessage and third-party messenger paths remain separate.
+- Unseen Production-root email request PASS; protected messaging suites 7/7 PASS; Development compile PASS.
+- CLOSED test input containing a Calendar-domain noun for proving the isolated email boundary; that run correctly exposed a separate Calendar/message content collision rather than an email-executor failure.
+
 ## Exact continuation
 
-Reconcile the 4 remaining RELEASE_EVIDENCE_GAP rows (17, 25, 29, 45), then reconcile the recorded LocalCommandEngine contract gaps and run the full canonical gate set.
+Reconcile the 3 remaining RELEASE_EVIDENCE_GAP rows (25, 29, 45), then reconcile the recorded LocalCommandEngine contract gaps and run the full canonical gate set.

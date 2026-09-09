@@ -16,6 +16,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case documents
     case share(String)
     case message(recipients: [String], body: String?)
+    case email(recipients: [String], subject: String?, body: String?)
     case contactImport(Data)
     case contactAccess(query: String, command: StructuredCommand)
     case translationTarget(String)
@@ -36,6 +37,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
         case .documents: "documents"
         case .share: "share"
         case .message: "message"
+        case .email: "email"
         case .contactImport: "contact-import"
         case .contactAccess: "contact-access"
         case .translationTarget: "translation-target"
@@ -431,7 +433,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case let .handoff(value): return .init(id: step.id, label: command.intent.rawValue, value: value.destination.absoluteString, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
         case let .presentation(value):
             switch value {
-            case .message, .share, .documents, .contactImport, .photoAsset, .photoOCR, .photoShare, .audioFile, .documentFile:
+            case .message, .email, .share, .documents, .contactImport, .photoAsset, .photoOCR, .photoShare, .audioFile, .documentFile:
                 return .init(id: step.id, label: command.intent.rawValue, value: value.id, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
             case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .contactAccess, .translationTarget, .translation:
                 throw CoordinationOperationError.confirmationRequired
@@ -745,6 +747,16 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private func message(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         let service = command.entities["message_service"]?.lowercased()
         let body = command.entities["message_body"]
+        if service == "email" || service == "mail" {
+            let rawRecipient = command.entities["recipient"]?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let recipients: [String]
+            if let rawRecipient, !rawRecipient.isEmpty, rawRecipient.contains("@") {
+                recipients = [rawRecipient]
+            } else {
+                recipients = []
+            }
+            return .presentation(.email(recipients: recipients, subject: command.entities["message_subject"], body: body))
+        }
         guard let rawRecipient = command.entities["recipient"]?.trimmingCharacters(in: .whitespacesAndNewlines),
               !rawRecipient.isEmpty else {
             guard service == nil || service == "messages" else {

@@ -116,6 +116,12 @@ struct AssistantHomeView: View {
                 } else {
                     Text("request_unavailable")
                 }
+            case let .email(recipients, subject, body):
+                if MFMailComposeViewController.canSendMail() {
+                    SystemMailComposer(recipients: recipients, subject: subject, body: body) { _ in model.dismissCapabilityPresentation() }
+                } else {
+                    Text("request_unavailable")
+                }
             }
         }
     }

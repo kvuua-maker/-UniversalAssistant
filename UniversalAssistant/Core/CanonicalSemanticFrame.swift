@@ -73,7 +73,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         // every token in unrelated commands can manufacture an ambiguity.
         if frame.action == .call || frame.action == .message {
             switch service(in: tokens) {
-            case let .resolved(service): frame.service = service.rawValue
+            case let .resolved(service): frame.service = service
             case let .ambiguous(values): frame.entityAmbiguity = values
             case .unresolved: break
             }
@@ -452,10 +452,10 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         return nil
     }
 
-    private func service(in tokens: [String]) -> ScopedEntityResolution<MessengerKind> {
+    private func service(in tokens: [String]) -> ScopedEntityResolution<String> {
         let domain = MessengerKind.allCases.map { kind in
-            ScopedEntityCandidate(value: kind, displayName: kind.rawValue, aliases: [kind.rawValue])
-        }
+            ScopedEntityCandidate(value: kind.rawValue, displayName: kind.rawValue, aliases: [kind.rawValue])
+        } + [ScopedEntityCandidate(value: "email", displayName: "email", aliases: ["email", "mail", "пошта", "почта", "електронною"])]
         let resolver = ContextScopedEntityResolver(candidates: domain)
         var ambiguity: Set<String> = []
         for token in tokens {

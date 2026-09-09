@@ -901,3 +901,19 @@ struct Build29ReleaseShoppingListBoundaryTests {
         #expect({ if case .webHandoff = model.resultState { return false }; return true }())
     }
 }
+
+@Suite("Build 29 Release email compose boundary", .serialized)
+@MainActor
+struct Build29ReleaseEmailComposeBoundaryTests {
+    @Test func explicitEmailChannelUsesMailComposerInsteadOfSMSOrWeb() async throws {
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        model.input = "Напиши лист електронною поштою про новий проєкт"
+        model.submit()
+        for _ in 0..<100 where model.capabilityPresentation == nil { try await Task.sleep(for: .milliseconds(10)) }
+        guard case .email? = model.capabilityPresentation else {
+            Issue.record("Expected public Mail composer boundary")
+            return
+        }
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+}
