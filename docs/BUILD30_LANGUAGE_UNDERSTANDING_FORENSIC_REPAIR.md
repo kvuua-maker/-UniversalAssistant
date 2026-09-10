@@ -365,10 +365,38 @@ Verification:
 
 Status is **AUTOMATED GREEN FOR CONFIDENCE/AMBIGUITY — PHYSICAL IPHONE RETEST REQUIRED**.
 
+## Generated noisy-ASR, mixed-script and token-boundary checkpoint
+
+Generated language tests now vary token boundaries and scripts inside already
+verified APP, SERVICE_CHANNEL and CATALOG domains. Whitespace split/merge is
+normalized before candidate scoring; Cyrillic/Latin transliteration remains
+candidate-domain constrained; Speech alternatives may improve only the same
+typed intent family and cannot substitute an unrelated timer/device command.
+The shipped `ProductionAssistantComposition` also verifies split Spotify and
+YouTube entities reach their exact legitimate application handoffs and never
+a generic-web result.
+
+The first run did not reach assertions: Xcode failed while emitting
+`Darwin.pcm` with `No space left on device` (119 MiB free). Production source
+was not changed for that infrastructure failure. No Xcode/XCTest process was
+active; only obsolete task-owned DerivedData directories were removed from
+`/tmp`, restoring 5.7 GiB. One rerun in the established DerivedData then
+completed normally.
+
+Verification:
+
+- generated normalization, mixed-language/entity, Speech-alternative and
+  shipped Release-root suites: 25/25 PASS, 0 failed, 0 skipped;
+- finalized result bundle:
+  `/tmp/ua-build31-confidence-dd/Logs/Test/Test-UniversalAssistant-2026.09.10_02-48-48-+0200.xcresult`;
+- `git diff --check`: PASS.
+
+Status is **AUTOMATED GREEN FOR GENERATED LANGUAGE VARIATION — PHYSICAL IPHONE RETEST REQUIRED**.
+
 ## Exact continuation point
 
-Add generated noisy-ASR token split/merge, mixed Ukrainian/Russian/Latin entity
-and ambiguity tests through the shipped Release composition. Materially close
-any first-stage normalization or role-domain defect they expose, then begin the
-96-function revalidation through the authoritative language block without
-repeating already GREEN family checkpoints.
+Revalidate the 96 canonical rows through the authoritative
+`LanguageUnderstandingBlock` and shipped Release production composition.
+Replace any remaining test-only `LocalCommandEngine` entry assertions with the
+new block, preserve non-Home platform/account boundaries truthfully, and record
+per-row Release-root or exact legitimate boundary evidence before full gates.

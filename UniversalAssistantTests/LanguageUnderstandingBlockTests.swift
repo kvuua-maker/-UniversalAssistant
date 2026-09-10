@@ -236,6 +236,72 @@ struct LanguageUnderstandingBlockTests {
         #expect(settings.intent == .settings)
         #expect(settings.intent != .webSearch)
     }
+    @Test func generatedTokenBoundariesAndMixedScriptsRemainInsideTypedEntityDomains() {
+        let appBlock = LanguageUnderstandingBlock(applicationCandidates: [
+            .init(value: "cloud-link", displayName: "CloudLink", aliases: ["CloudLink"])
+        ])
+        for surface in [
+            "Відкрий Cloud Link",
+            "Открой CloudLink",
+            "Запусти Клаудлінк"
+        ] {
+            let command = appBlock.parse(surface)
+            #expect(command.intent == .open, "Wrong family for \(surface)")
+            #expect(command.entities["app"] == "cloud-link", "Unresolved app for \(surface)")
+            #expect(command.entities["entity_match_resolution"] == "resolved")
+            #expect(command.intent != .webSearch)
+        }
+
+        let serviceBlock = LanguageUnderstandingBlock(serviceCandidates: [
+            .init(value: "matrix-relay", displayName: "MatrixRelay", aliases: ["MatrixRelay"])
+        ])
+        for surface in [
+            "Надішли повідомлення Соломії через Matrix Relay",
+            "Отправь сообщение Соломии через Matr ixRelay"
+        ] {
+            let command = serviceBlock.parse(surface)
+            #expect(command.intent == .messageCompose, "Wrong family for \(surface)")
+            #expect(command.entities["message_service"] == "matrix-relay", "Unresolved service for \(surface)")
+            #expect(command.entities["service_match_resolution"] == "resolved")
+            #expect(command.intent != .webSearch)
+        }
+
+        let catalog = CanonicalCatalogEntity(
+            id: "retailer-nova-market",
+            displayName: "NovaMarket",
+            kind: .retailer
+        )
+        let catalogBlock = LanguageUnderstandingBlock(catalogCandidates: [
+            .init(value: catalog, displayName: catalog.displayName, aliases: ["NovaMarket"])
+        ])
+        for surface in [
+            "Підбери продукти у Nova Market до 4300 гривень",
+            "Найди товары в NovaMar ket дешевле 4300 UAH"
+        ] {
+            let command = catalogBlock.parse(surface)
+            #expect([CommandIntent.productSearch, .fashionDiscovery, .groceryBasket].contains(command.intent), "Wrong family for \(surface)")
+            #expect(command.entities["catalog_entity_id"] == "retailer-nova-market", "Unresolved catalog entity for \(surface)")
+            #expect(command.entities["catalog_match_resolution"] == "resolved")
+        }
+    }
+
+    @Test func generatedNoisySpeechAlternativesCannotCrossIntentDomains() {
+        let block = LanguageUnderstandingBlock(applicationCandidates: [
+            .init(value: "cloud-link", displayName: "CloudLink", aliases: ["CloudLink"])
+        ])
+        let evidence = VoiceRecognitionEvidence(
+            primaryTranscript: "Відкрий Кло Лін",
+            alternativeTranscripts: ["Відкрий Cloud Link", "Постав таймер на девять хвилин"],
+            segmentAlternativeCount: 4,
+            averageSegmentConfidence: 0.39
+        )
+        let command = block.parse(evidence.primaryTranscript, speechEvidence: evidence)
+        #expect(command.intent == .open)
+        #expect(command.entities["app"] == "cloud-link")
+        #expect(command.entities["speech_selected_alternative"] == "true")
+        #expect(command.intent != .deviceAction)
+    }
+
 }
 
 @MainActor
@@ -302,6 +368,26 @@ struct Build31ReleaseRootLanguageTests {
         #expect(summary.choices == ["Nova Blue", "Nova Green"])
         #expect(model.statusText == AppText.value("clarification_needed"))
         #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+
+    @Test func generatedSplitAndMixedScriptAppsUseTheShippedReleaseRoot() async throws {
+        let capture = Build31LanguageOpenCapture()
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [],
+            compactResultDuration: .seconds(60),
+            systemHandoffOpen: capture.open
+        )
+        for surface in ["Відкрий Спо тіфа", "Открой You Tube"] {
+            let priorCount = capture.urls.count
+            model.input = surface
+            model.submit()
+            try await wait { capture.urls.count > priorCount || model.statusText == AppText.value("clarification_needed") }
+            #expect(capture.urls.count > priorCount, "No verified handoff for \(surface)")
+            #expect(model.statusText != AppText.value("processing"))
+            #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+        }
+        #expect(capture.urls.first?.scheme == "spotify")
+        #expect(capture.urls.last?.host == "www.youtube.com")
     }
 
     @Test func weakApplicationMatchFailsClosedThroughReleaseRoot() async throws {
