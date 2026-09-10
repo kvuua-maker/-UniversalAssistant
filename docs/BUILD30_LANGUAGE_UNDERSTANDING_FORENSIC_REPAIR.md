@@ -393,10 +393,57 @@ Verification:
 
 Status is **AUTOMATED GREEN FOR GENERATED LANGUAGE VARIATION — PHYSICAL IPHONE RETEST REQUIRED**.
 
+## Authoritative Release-root revalidation checkpoint
+
+The 96-row inventory now uses the authoritative `LanguageUnderstandingBlock`
+for every natural-language entry assertion in the shipped Release composition
+suite. Non-Home platform/account operations remain recorded as exact legitimate
+Apple, backend or owner boundaries rather than being mislabeled as Home
+commands.
+
+The first complete run exposed two first-wrong-stage defects:
+
+- parcel tracking and loyalty-benefit requests could lose their structured
+  external-provider domain before the production provider boundary, producing
+  clarification instead of a finite truthful result;
+- an emergency-call confirmation preserved generation ownership correctly but
+  the original request had no typed emergency telephone destination, so the
+  confirmed continuation re-entered Contacts resolution instead of the
+  legitimate telephone handoff.
+
+Material repair:
+
+- `CanonicalExternalProviderBoundaryAnalyzer` requires compatible ACTION and
+  OBJECT evidence, emits a typed provider-neutral domain/query/confidence
+  contract, and permits deliberate browser handoff only after the missing
+  provider reports `external_provider_required`;
+- `CanonicalEmergencyNumberPolicy` resolves and validates the locale-supported
+  user-initiated emergency number before confirmation. The executor consumes
+  that exact typed `phone_number`; it never reparses confirmation text or
+  substitutes a hardcoded destination.
+
+Verification:
+
+- focused changed Release-root suites: 9/9 PASS;
+- finalized result bundle:
+  `/tmp/ua-build31-release-revalidation-dd/Logs/Test/Test-UniversalAssistant-2026.09.10_03-52-21-+0200.xcresult`;
+- protected language/router/provider/call regressions: 91/91 PASS;
+- finalized regression bundle:
+  `/tmp/ua-build31-provider-emergency-regression-dd/Logs/Test/Test-UniversalAssistant-2026.09.10_03-57-07-+0200.xcresult`;
+- complete shipped Release-root inventory suite: 42/42 PASS in 14 suites;
+- finalized inventory bundle:
+  `/tmp/ua-build31-provider-emergency-regression-dd/Logs/Test/Test-UniversalAssistant-2026.09.10_04-02-50-+0200.xcresult`;
+- Development simulator compile: PASS;
+- no Release-root test in `Build29ReleaseCompositionForensicsTests.swift`
+  enters through `LocalCommandEngine` directly;
+- `git diff --check`: PASS.
+
+Status is **96/96 RELEASE REACHABILITY ACCOUNTED FOR — AUTOMATED VERIFIED;
+PHYSICAL IPHONE RETEST REQUIRED**.
+
 ## Exact continuation point
 
-Revalidate the 96 canonical rows through the authoritative
-`LanguageUnderstandingBlock` and shipped Release production composition.
-Replace any remaining test-only `LocalCommandEngine` entry assertions with the
-new block, preserve non-Home platform/account boundaries truthfully, and record
-per-row Release-root or exact legitimate boundary evidence before full gates.
+Run the complete canonical gate set, validate the current diagnostic schema and
+VPS delivery readiness without inventing the rejected historical Build-30
+payloads, reconcile recovery-artifact locations factually, and create Build 31
+only if every autonomous completion gate remains green.

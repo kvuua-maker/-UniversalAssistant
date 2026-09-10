@@ -22,7 +22,7 @@ private final class Build29SystemOpenCapture {
 @MainActor
 struct Build29ReleaseCompositionForensicsTests {
     @Test func physicalContactAndMessageEvidenceReachesTypedFamiliesBeforeFallback() {
-        let parser = LocalCommandEngine()
+        let parser = LanguageUnderstandingBlock()
         let expectations: [(String, CommandIntent)] = [
             ("Подзвони мама", .contactCall),
             ("Подзвони Сашко", .contactCall),
@@ -71,7 +71,7 @@ struct Build29ReleaseCompositionForensicsTests {
     }
 
     @Test func nearbyNaturalRequestCannotResolveAsGenericWeb() {
-        let parser = LocalCommandEngine()
+        let parser = LanguageUnderstandingBlock()
         for input in ["Перекусити неподалік", "Знайди пекарню поблизу", "Де поруч випити чаю"] {
             let command = parser.parse(input)
             #expect([.placeSearch, .restaurantSearch, .serviceSearch].contains(command.intent), "Selected \(command.intent) for \(input)")
@@ -190,7 +190,7 @@ struct Build29ReleaseRootFamilyReachabilityTests {
         #expect(podcast.actions.first?.destination?.host == "podcasts.apple.com")
 
         let spotifyInput = "Увімкни добірку для бігу у Spotify"
-        let spotifyCommand = LocalCommandEngine().parse(spotifyInput)
+        let spotifyCommand = LanguageUnderstandingBlock().parse(spotifyInput)
         #expect(spotifyCommand.intent == .mediaSearch)
         #expect(spotifyCommand.entities["app"]?.lowercased() == "spotify")
         model.input = spotifyInput
@@ -591,7 +591,7 @@ struct Build29ReleaseRootSystemFXTests {
             "Відкрий Локатор для моїх пристроїв"
         ]
         for request in requests {
-            let parsed = LocalCommandEngine().parse(request)
+            let parsed = LanguageUnderstandingBlock().parse(request)
             #expect(parsed.intent == .deviceAction)
             #expect(parsed.entities["system_action"] == "unsupported_system_control")
             model.input = request
@@ -657,7 +657,35 @@ struct Build29ReleaseExternalProviderBoundaryTests {
         }
     }
 
-@Test func absentCommercialProvidersPreserveRequestsInDeliberateBrowserFallback() async throws {
+@Test func unseenProviderDomainsRemainTypedUntilTheDeliberateReleaseFallback() async throws {
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        let requests: [(String, CommandIntent, String)] = [
+            ("Перевір статус закордонного поштового відправлення", .parcelTrack, "parcel_tracking"),
+            ("Переліч бонусні винагороди програми лояльності", .productSearch, "loyalty_benefits")
+        ]
+        for (request, expectedIntent, expectedDomain) in requests {
+            let parsed = LanguageUnderstandingBlock().parse(request)
+            #expect(parsed.intent == expectedIntent)
+            #expect(parsed.entities["provider_domain"] == expectedDomain)
+            #expect(parsed.entities["query"] == request)
+            #expect(!parsed.needsClarification)
+
+            model.input = request
+            model.submit()
+            for _ in 0..<100 {
+                if case .webHandoff = model.resultState { break }
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            guard case let .webHandoff(fallback) = model.resultState else {
+                Issue.record("Typed provider request did not reach the deliberate Release fallback: \(request)")
+                continue
+            }
+            #expect(fallback.query == request)
+            #expect(model.statusText != AppText.value("processing"))
+        }
+    }
+
+    @Test func absentCommercialProvidersPreserveRequestsInDeliberateBrowserFallback() async throws {
         let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
         let requests = [
             "Покажи свіжі економічні новини за сьогодні",
@@ -674,10 +702,14 @@ struct Build29ReleaseExternalProviderBoundaryTests {
             "Покажи доступні персональні знижки програми лояльності"
         ]
         for request in requests {
+            let parsed = LanguageUnderstandingBlock().parse(request)
             model.input = request
             model.submit()
             for _ in 0..<100 { if case .webHandoff = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
-            guard case let .webHandoff(fallback) = model.resultState else { Issue.record("External boundary did not terminate truthfully: \(request)"); continue }
+            guard case let .webHandoff(fallback) = model.resultState else {
+                Issue.record("External boundary did not terminate truthfully: \(request); intent=\(parsed.intent.rawValue); clarification=\(parsed.needsClarification); entities=\(parsed.entities); status=\(model.statusText); state=\(String(describing: model.resultState))")
+                continue
+            }
             #expect(fallback.query == request)
             #expect(fallback.destination.host?.contains("google") == true)
             #expect(model.statusText != AppText.value("processing"))
@@ -698,7 +730,7 @@ struct Build29ReleaseRemainingNativeTests {
     }
 
     @Test func normalizedVoiceAndQuickLaunchUseTheSameProductionModel() async throws {
-        let parsed = LocalCommandEngine().parse("Двох тисяч трьохсот сорока два плюс пʼятдесят вісім")
+        let parsed = LanguageUnderstandingBlock().parse("Двох тисяч трьохсот сорока два плюс пʼятдесят вісім")
         #expect(parsed.normalizedText.contains("2342"))
         #expect(parsed.normalizedText.contains("58"))
         #expect(parsed.intent == .localUtility)
@@ -790,6 +822,31 @@ struct Build29ReleaseRemainingNativeTests {
         #expect({ if case .webHandoff = model.resultState { return false }; return true }())
     }
 
+    @Test func confirmedEmergencyUsesTheTypedPermittedPhoneDestination() async throws {
+        let request = "Зателефонуй до екстреної медичної служби за номером 103"
+        let parsed = LanguageUnderstandingBlock().parse(request)
+        #expect(parsed.intent == .emergency)
+        #expect(parsed.risk == .emergency)
+        #expect(parsed.entities["phone_number"] == "103")
+        #expect(!parsed.needsClarification)
+
+        let capture = Build29SystemOpenCapture()
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            systemHandoffOpen: capture.open
+        )
+        model.input = request
+        model.submit()
+        guard case .actionRequired = model.resultState else {
+            Issue.record("Typed emergency request did not render confirmation")
+            return
+        }
+        model.resolveActionRequiredChoice(AppText.value("confirm"))
+        for _ in 0..<100 where capture.urls.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(capture.urls.first?.absoluteString == "tel:103")
+        #expect(model.statusText != AppText.value("processing"))
+    }
+
     @Test func confirmationButtonsResumeOnlyTheOwnedReleaseRequest() async throws {
         let capture = Build29SystemOpenCapture()
         let model = ProductionAssistantComposition.makeModel(
@@ -816,8 +873,8 @@ struct Build29ReleaseRemainingNativeTests {
         model.submit()
         guard case .actionRequired = model.resultState else { Issue.record("Emergency confirmation was not rendered"); return }
         model.resolveActionRequiredChoice(AppText.value("confirm"))
-        try await wait { capture.urls.count == 1 }
-        #expect(capture.urls.first?.absoluteString == "tel:112")
+        for _ in 0..<100 where capture.urls.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(capture.urls.first?.absoluteString == "tel:112", "Emergency handoff missing; status=\(model.statusText); state=\(String(describing: model.resultState)); diagnostics=\(LocalVoiceDiagnosticReport.shared.snapshot())")
     }
 }
 

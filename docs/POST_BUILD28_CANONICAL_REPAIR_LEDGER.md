@@ -1,5 +1,13 @@
 # Post-Build-28 canonical repair ledger
 
+## Build-31 authoritative language Release-root checkpoint (2026-09-10)
+
+The current 96-function inventory is accounted for through the authoritative `LanguageUnderstandingBlock` and shipped `ProductionAssistantComposition`, or through an exact legitimate non-Home Apple/backend/provider/owner boundary. The previous 38/40 aggregate exposed two Release first-stage defects. Provider-required parcel/loyalty requests lost their typed domain before provider execution; emergency confirmation owned the correct generation but lacked a typed telephone destination and re-entered Contacts. The material repair adds structural ACTION+OBJECT provider-domain inference and a locale-supported typed emergency-number policy. No acceptance phrase, parcel brand, loyalty program or single emergency number is hardcoded as a router patch.
+
+Verification: focused changed Release-root suites 9/9 PASS; protected language/router/provider/call regressions 91/91 PASS; full shipped Release-root inventory 42/42 PASS in 14 suites; Development compile PASS; `git diff --check` PASS. Historical rejected Build-30 crash payloads remain unavailable and are not fabricated.
+
+Status: **96/96 RELEASE REACHABILITY ACCOUNTED FOR — AUTOMATED VERIFIED / PHYSICAL IPHONE RETEST REQUIRED**. Exact next material operation: run all canonical gates, revalidate current diagnostic delivery/VPS readiness, locate the three recovery artifacts factually, then evaluate the Build-31 completion gate. Build 31 has not been created.
+
 ## Build-30 autonomous completion gate (2026-09-09)
 
 All 96 Release reachability rows are accounted for. The final full-iOS run materially repaired shared semantic execution, request-scoped diagnostics, classifier scheduling and QuickLaunch/App Intent dependency ownership without replacing audit-approved Apple executors. Final evidence: iOS 829/829 in 149 suites; Backend 114/114; ZERO-OMISSION 2404/2404; AUDIO 147/147; PRIVACY 168/168; JOBS 97/97; LOYALTY 127/127; diagnostics 2/2; requirement reconciliation 1787/1787; Development and Production compile PASS. Commercial provider credentials/contracts, ShazamKit App ID/profile enablement and optional App Store Connect API automation remain exact external/owner boundaries.

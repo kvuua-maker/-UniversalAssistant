@@ -322,7 +322,14 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 ResultFact(id: item.id, label: item.title, value: item.artist ?? item.kind.rawValue, state: .verified, source: "Apple Music", observedAt: .now, priority: 100 - index)
             }, actions: values.compactMap { item in item.exactURL.map { .init(id: item.id, title: "Відкрити", kind: .open, destination: $0) } }))
         case .emergency:
-            guard let url = URL(string: "tel:112") else { throw CanonicalCapabilityExecutionError.unavailable("invalid_emergency_handoff") }
+            guard let rawNumber = command.entities["phone_number"],
+                  CanonicalEmergencyNumberPolicy.isPermitted(rawNumber) else {
+                throw CanonicalCapabilityExecutionError.unavailable("invalid_emergency_handoff")
+            }
+            let digits = rawNumber.filter(\.isNumber)
+            guard let url = URL(string: "tel:\(digits)") else {
+                throw CanonicalCapabilityExecutionError.unavailable("invalid_emergency_handoff")
+            }
             return .handoff(.init(query: command.originalText, destination: url, kind: .system))
         case .settings:
             guard command.entities["settings_target"] == "application" else {

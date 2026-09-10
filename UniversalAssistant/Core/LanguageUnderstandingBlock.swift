@@ -32,6 +32,103 @@ struct CanonicalCatalogEntity: Equatable, Sendable {
     let kind: CanonicalCatalogEntityKind
 }
 
+private struct CanonicalExternalProviderInference: Sendable {
+    let intent: CommandIntent
+    let domain: String
+    let confidence: Double
+    let evidence: Set<String>
+}
+
+/// Bridges whole-command semantic evidence into the canonical provider-neutral
+/// boundary. The rules describe function domains and role combinations, not
+/// acceptance phrases. A provider family must have both a domain object and a
+/// compatible goal before it can supersede an unresolved/open-ended candidate.
+private enum CanonicalExternalProviderBoundaryAnalyzer {
+    private struct Rule: Sendable {
+        let domain: String
+        let intent: CommandIntent
+        let objectRoots: Set<String>
+        let actionRoots: Set<String>
+        let minimumObjectMatches: Int
+    }
+
+    private static let rules: [Rule] = [
+        .init(domain: "parcel_tracking", intent: .parcelTrack,
+              objectRoots: ["посилк", "відправлен", "доставлен", "посылк", "отправлен", "parcel", "package", "shipment", "consignment", "paket", "colis"],
+              actionRoots: ["відстеж", "простеж", "перевір", "статус", "покаж", "знайд", "отслед", "провер", "track", "trace", "status", "show", "find"],
+              minimumObjectMatches: 1),
+        .init(domain: "loyalty_benefits", intent: .productSearch,
+              objectRoots: ["лояльн", "знижк", "винагород", "бонус", "персональн", "лояльност", "скидк", "вознагражден", "loyalty", "discount", "reward", "benefit", "membership"],
+              actionRoots: ["покаж", "перевір", "знайд", "переліч", "доступ", "провер", "найд", "show", "check", "find", "list", "available"],
+              minimumObjectMatches: 2),
+        .init(domain: "grocery_delivery", intent: .groceryBasket,
+              objectRoots: ["кошик", "продукт", "доставк", "корзин", "grocery", "basket", "groceries", "delivery"],
+              actionRoots: ["збер", "куп", "замов", "підбер", "собер", "закаж", "assemble", "buy", "order", "build"],
+              minimumObjectMatches: 2),
+        .init(domain: "restaurant_reservation", intent: .reservation,
+              objectRoots: ["столик", "ресторан", "бронюван", "стол", "restaurant", "table", "reservation"],
+              actionRoots: ["заброн", "резерв", "book", "reserve"],
+              minimumObjectMatches: 1),
+        .init(domain: "ride_service", intent: .taxiSearch,
+              objectRoots: ["таксі", "такси", "taxi", "ride"],
+              actionRoots: ["порівн", "знайд", "виклич", "замов", "сравн", "найд", "compare", "find", "request", "book"],
+              minimumObjectMatches: 1),
+        .init(domain: "lodging", intent: .hotelSearch,
+              objectRoots: ["готел", "хостел", "житл", "отел", "hotel", "hostel", "lodging", "accommodation"],
+              actionRoots: ["підбер", "знайд", "заброн", "найд", "find", "search", "book"],
+              minimumObjectMatches: 1),
+        .init(domain: "tickets", intent: .ticketSearch,
+              objectRoots: ["квит", "білет", "ticket", "fare"],
+              actionRoots: ["знайд", "підбер", "покаж", "найд", "find", "search", "show"],
+              minimumObjectMatches: 1),
+        .init(domain: "commercial_service", intent: .serviceSearch,
+              objectRoots: ["майстр", "ремонт", "сервіс", "услуг", "мастер", "service", "repair", "contractor"],
+              actionRoots: ["знайд", "підбер", "покаж", "найд", "find", "search", "show"],
+              minimumObjectMatches: 1)
+    ]
+
+    static func infer(
+        document: LanguageUnderstandingDocument,
+        frame: CanonicalSemanticFrame,
+        currentIntent: CommandIntent
+    ) -> CanonicalExternalProviderInference? {
+        let externalIntents: Set<CommandIntent> = [
+            .productSearch, .fashionDiscovery, .groceryBasket, .serviceSearch,
+            .restaurantSearch, .reservation, .taxiSearch, .taxiCompare,
+            .publicTransport, .ticketSearch, .ticketPurchaseHandoff,
+            .hotelSearch, .travelPlan, .parcelTrack
+        ]
+        let unresolvedIntents: Set<CommandIntent> = [.unknown, .webSearch, .show, .open]
+        guard externalIntents.contains(currentIntent) || unresolvedIntents.contains(currentIntent) else {
+            return nil
+        }
+        guard frame.source == nil, frame.contextReference == nil else { return nil }
+        if frame.action == .open, frame.object == .app { return nil }
+
+        let forms = document.tokens.reduce(into: Set<String>()) { result, token in
+            result.insert(token.normalized)
+            result.formUnion(token.morphologyForms)
+        }
+        func matchedRoots(_ roots: Set<String>) -> Set<String> {
+            Set(roots.filter { root in forms.contains { $0.hasPrefix(root) } })
+        }
+
+        let candidates = rules.compactMap { rule -> CanonicalExternalProviderInference? in
+            let objects = matchedRoots(rule.objectRoots)
+            guard objects.count >= rule.minimumObjectMatches else { return nil }
+            let actions = matchedRoots(rule.actionRoots)
+            guard !actions.isEmpty else { return nil }
+            let confidence = min(0.98, 0.62 + Double(objects.count) * 0.09 + Double(actions.count) * 0.07)
+            return .init(intent: rule.intent, domain: rule.domain, confidence: confidence,
+                         evidence: objects.union(actions))
+        }
+        guard let best = candidates.max(by: { $0.confidence < $1.confidence }) else { return nil }
+        let runnerUp = candidates.filter { $0.domain != best.domain }.map(\.confidence).max() ?? 0
+        guard best.confidence >= 0.75, best.confidence - runnerUp >= 0.08 else { return nil }
+        return best
+    }
+}
+
 /// The single semantic entry point for typed text, final Speech transcripts,
 /// App Intent parameters, and compound subcommands in the shipped graph.
 ///
@@ -157,8 +254,40 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             entities["proposition_evidence"] = proposition.evidence.sorted().joined(separator: "|")
         }
 
+        let emergencyTarget: String? = {
+            let explicit = CanonicalEmergencyNumberPolicy.explicitPermittedNumber(in: document.normalizedText)
+            let emergencyContext = legacy.intent == .emergency || frameResult.frame.action == .call
+            guard emergencyContext else { return nil }
+            if let explicit { return explicit }
+            return legacy.intent == .emergency ? CanonicalEmergencyNumberPolicy.defaultNumber() : nil
+        }()
+        if let emergencyTarget {
+            intent = .emergency
+            entities["phone_number"] = emergencyTarget
+            entities["semantic_evidence"] = "typed_emergency_phone_destination"
+        }
+
+        let providerInference = emergencyTarget == nil
+            ? CanonicalExternalProviderBoundaryAnalyzer.infer(
+                document: document,
+                frame: frameResult.frame,
+                currentIntent: intent
+            )
+            : nil
+        if let providerInference {
+            intent = providerInference.intent
+            entities["provider_domain"] = providerInference.domain
+            entities["provider_boundary"] = "external_current_service"
+            entities["provider_confidence"] = String(format: "%.3f", providerInference.confidence)
+            entities["provider_evidence"] = providerInference.evidence.sorted().joined(separator: "|")
+            if entities["query"] == nil { entities["query"] = text }
+            entities.removeValue(forKey: "clarification_options")
+            entities.removeValue(forKey: "clarification_role")
+        }
+
         var needsClarification = (proposition == nil && legacy.needsClarification) ||
             entities["clarification_options"] != nil
+        if emergencyTarget != nil || providerInference != nil { needsClarification = false }
         if let recovered = recoverApplication(
             frame: frameResult.frame,
             document: document,
@@ -280,7 +409,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             intent: intent,
             entities: entities,
             constraints: constraints,
-            risk: legacy.risk,
+            risk: intent == .emergency ? .emergency : legacy.risk,
             needsClarification: needsClarification || intent == .unknown
         )
     }
