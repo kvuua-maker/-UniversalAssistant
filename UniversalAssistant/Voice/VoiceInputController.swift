@@ -850,8 +850,11 @@ final class VoiceInputController {
                 )
             }
             self.transcript = transcript
-            eventHandler?(.transcript(transcript, isFinal: isFinal))
+            // Persist the recognizer's final evidence before handing it to the
+            // semantic pipeline. If downstream parsing terminates the process,
+            // Crashlytics must still contain the exact Speech boundary input.
             LocalVoiceDiagnosticReport.shared.recordSpeechTranscript(transcript, isFinal: isFinal)
+            eventHandler?(.transcript(transcript, isFinal: isFinal))
             LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_ui", "length=\(transcript.count) final=\(isFinal)")
             if !isFinal, !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 endOfSpeechFinalizer.receivedPartial { [weak self] in

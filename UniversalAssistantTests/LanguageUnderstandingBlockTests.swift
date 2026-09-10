@@ -34,6 +34,20 @@ struct LanguageUnderstandingBlockTests {
         #expect(document.tokens.contains(where: { $0.normalized == "spotify" }))
     }
 
+    @Test func commandMarkerPrefixCannotConsumeAProperApplicationToken() {
+        let block = LanguageUnderstandingBlock(applicationCandidates: [
+            .init(value: "appraise", displayName: "Appraise", aliases: ["Appraise"]),
+            .init(value: "aperture", displayName: "Aperture", aliases: ["Aperture"])
+        ])
+
+        let command = block.parse("Open Appraise")
+
+        #expect(command.intent == .open)
+        #expect(command.entities["app"] == "appraise")
+        #expect(command.entities["entity_match_resolution"] == "resolved")
+        #expect(!command.needsClarification)
+    }
+
     @Test func verifiedDomainUsesTransliterationAndConfidenceMargin() {
         let candidates = [
             ScopedEntityCandidate(value: "foton", displayName: "Foton", aliases: ["Foton"]),
@@ -197,6 +211,38 @@ struct LanguageUnderstandingBlockTests {
         let weak = block.parse("Підбери черевики невідомої марки")
         #expect(weak.constraints.brand == nil)
         #expect(weak.entities["catalog_entity_id"] == nil)
+    }
+
+    @Test func canonicalCatalogCandidatesFeedSpeechContextAndGeneralNoisyResolution() {
+        let block = LanguageUnderstandingBlock()
+        let vocabulary = block.requestScopedCatalogVocabulary()
+
+        #expect(vocabulary.contains("Mango"))
+        let recovered = block.parse("Підбери взуття Gucc до 4200 гривень")
+        #expect([CommandIntent.productSearch, .fashionDiscovery].contains(recovered.intent))
+        #expect(recovered.constraints.brand == "Gucci")
+        #expect(recovered.entities["catalog_match_mechanism"] != "exact")
+        #expect(recovered.constraints.maximumPrice == 4_200)
+
+        let weak = block.parse("Підбери взуття дивної невідомої марки до 4200 гривень")
+        #expect(weak.constraints.brand == nil)
+        #expect(weak.entities["catalog_entity_id"] == nil)
+    }
+
+    @Test func injectedProviderCatalogCandidatesUseTheSameBoundedSpeechDomain() {
+        let providerBrand = CanonicalCatalogEntity(
+            id: "provider.brand.northstar",
+            displayName: "Northstar Atelier",
+            kind: .brand
+        )
+        let block = LanguageUnderstandingBlock(catalogCandidates: [
+            .init(value: providerBrand, displayName: providerBrand.displayName, aliases: ["Northstar"])
+        ])
+
+        #expect(block.requestScopedCatalogVocabulary() == ["Northstar Atelier", "Northstar"])
+        let command = block.parse("Покажи колекцію Northsta")
+        #expect(command.constraints.brand == "Northstar Atelier")
+        #expect(command.entities["catalog_entity_id"] == "provider.brand.northstar")
     }
 
     @Test func indirectNearbyNeedUsesAWholePropositionInsteadOfWebFallback() {

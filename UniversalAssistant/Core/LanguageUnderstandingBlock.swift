@@ -32,6 +32,44 @@ struct CanonicalCatalogEntity: Equatable, Sendable {
     let kind: CanonicalCatalogEntityKind
 }
 
+/// One verified candidate domain shared by Speech hints, structured semantics,
+/// and the legacy compatibility extractor. These are entity names, never noisy
+/// transcript substitutions; provider-supplied candidates use the same typed
+/// `ScopedEntityCandidate` boundary.
+enum CanonicalCatalogEntityRegistry {
+    static let brandNames = [
+        "Baldinini", "Nike", "Adidas", "Puma", "Zara", "Mango", "Gucci", "Prada"
+    ]
+
+    static let candidates: [ScopedEntityCandidate<CanonicalCatalogEntity>] = {
+        let brands = brandNames.map { name in
+            let entity = CanonicalCatalogEntity(
+                id: "canonical.brand.\(name.lowercased())",
+                displayName: name,
+                kind: .brand
+            )
+            return ScopedEntityCandidate(
+                value: entity,
+                displayName: name,
+                aliases: [name]
+            )
+        }
+        let retailers = UkrainianRetailerRegistry.records.map { record in
+            let entity = CanonicalCatalogEntity(
+                id: record.id,
+                displayName: record.displayName,
+                kind: .retailer
+            )
+            return ScopedEntityCandidate(
+                value: entity,
+                displayName: record.displayName,
+                aliases: [record.displayName, record.id]
+            )
+        }
+        return brands + retailers
+    }()
+}
+
 private struct CanonicalExternalProviderInference: Sendable {
     let intent: CommandIntent
     let domain: String
@@ -157,6 +195,27 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         self.applicationCandidates = applicationCandidates ?? Self.verifiedApplicationCandidates
         self.serviceCandidates = serviceCandidates ?? Self.verifiedServiceCandidates
         self.catalogCandidates = catalogCandidates ?? Self.verifiedCatalogCandidates
+    }
+
+    /// A bounded view of the exact catalog/provider candidates that this
+    /// parser can actually resolve. Speech uses it only as recognition context;
+    /// all execution still requires the same confidence-ranked typed resolver.
+    func requestScopedCatalogVocabulary(limit: Int = 24) -> [String] {
+        guard limit > 0 else { return [] }
+        var seen: Set<String> = []
+        return catalogCandidates
+            .flatMap { [$0.displayName] + $0.aliases.sorted() }
+            .compactMap { value -> String? in
+                let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return nil }
+                let key = trimmed.folding(
+                    options: [.caseInsensitive, .diacriticInsensitive],
+                    locale: Locale(identifier: "en_US_POSIX")
+                ).lowercased()
+                return seen.insert(key).inserted ? trimmed : nil
+            }
+            .prefix(limit)
+            .map { $0 }
     }
 
     func parse(_ text: String) -> StructuredCommand {
@@ -563,13 +622,16 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         // override an already selected concrete system or personal family just
         // because that command also carries an "open" action.
         guard selectedIntent == .open || (selectedIntent == .unknown && isApplicationLaunch(frame)) else { return nil }
-        let actionMorphology: Set<String> = [
-            "відкр", "откр", "open", "launch", "запуст", "перейд",
-            "програм", "застос", "прилож", "app"
+        let actionMorphologyRoots: Set<String> = [
+            "відкр", "откр", "запуст", "перейд", "програм", "застос", "прилож"
         ]
+        let exactActionTokens: Set<String> = ["open", "launch", "app"]
         let subject = document.tokens
             .filter { token in
-                token.morphologyForms.allSatisfy { form in !actionMorphology.contains(where: form.hasPrefix) }
+                token.morphologyForms.allSatisfy { form in
+                    !exactActionTokens.contains(form) &&
+                        !actionMorphologyRoots.contains(where: form.hasPrefix)
+                }
             }
             .map(\.surface)
             .joined(separator: " ")
@@ -712,15 +774,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             .init(value: "email", displayName: "email", aliases: ["email", "mail", "пошта", "почта"])
         ]
 
-    private static let verifiedCatalogCandidates: [ScopedEntityCandidate<CanonicalCatalogEntity>] =
-        UkrainianRetailerRegistry.records.map { record in
-            let entity = CanonicalCatalogEntity(
-                id: record.id,
-                displayName: record.displayName,
-                kind: .retailer
-            )
-            return .init(value: entity, displayName: record.displayName, aliases: [record.displayName, record.id])
-        }
+    private static let verifiedCatalogCandidates = CanonicalCatalogEntityRegistry.candidates
 
     private static func commandLanguage(
         _ text: String,

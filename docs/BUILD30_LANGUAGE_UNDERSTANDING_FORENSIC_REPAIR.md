@@ -532,3 +532,69 @@ Status: **ROOT REPAIR IMPLEMENTED + AUTOMATED VERIFIED; PHYSICAL BUILD-33
 IPHONE RETEST REQUIRED**. The remaining Build-32 families must be repaired only
 from their own physical Crashlytics/Apple evidence; simulator diagnostic events
 must not be promoted to iPhone evidence.
+
+## Build-32 physical evidence continuation — app/catalog and trace ordering
+
+Firebase read-back now contains six fatal Build-32 events from the owner's
+physical `Apple (iPhone12,8)` on `iOS (26.6.2)`, not two. All six have the same
+first UniversalAssistant frame, `CanonicalSemanticFrameAnalyzer.trailingEntity`
+at `CanonicalSemanticFrame.swift:671`, so there is still no evidence of a
+separate `CNContactStore` or call-executor crash. The symbolicated Unicode index
+repair remains the material Contacts/Calls fix.
+
+The retained Crashlytics logs also contain two completed physical requests. A
+communication request selected `messageCompose`, entered
+`MESSAGE_COMPOSE_PRE/POST`, presented the public `MessageUI` mechanism, and
+terminated only when the user dismissed it. A Places request selected
+`placeSearch`, completed `MAPKIT_SEARCH_PRE/POST`, rendered a deterministic
+result and terminated `SUCCESS`. This evidence contradicts changing Messages
+to Mail or changing Places execution without a newer contrary trace.
+
+Application-opening Release-root diagnostics found a distinct first wrong
+stage for the reported Apple Music regression. `recoverApplication` treated the
+English exact action token `app` as a prefix root and therefore removed the
+proper-name token `Apple`; the remaining `Music` subject failed confidence and
+caused clarification. Exact action tokens are now compared by equality while
+productive Ukrainian/Russian action morphology remains prefix-based. No
+application name or noisy alias was added. Unseen `Appraise`, App Store and
+YouTube cases prove the general token-boundary behavior; affected app/language
+Release-root regressions pass 31/31.
+
+Catalog recovery had a separate production wiring gap: the existing fuzzy
+resolver accepted typed provider/catalog candidates, but the shipped default
+candidate domain contained only retailers and Speech received only Contacts as
+request-scoped vocabulary. The pre-existing canonical brand inventory is now
+one typed candidate registry shared by the compatibility extractor, the
+authoritative `LanguageUnderstandingBlock`, and bounded Speech context. Dynamic
+provider candidates use the same contract. No ASR substitution such as
+`бані = Baldinini` exists. Unseen `Gucc → Gucci` and a provider-injected
+`Northsta → Northstar Atelier` prove confidence-ranked recovery, while unrelated
+text remains unresolved. Semantic/Speech suites pass 42/42; shipped provider
+boundary passes 4/4.
+
+The physical fatal events also prove a diagnostic ordering gap: downstream
+semantic handling ran before `recordSpeechTranscript`, so a semantic crash
+could preserve only transcript lengths. The existing recorder now stores the
+final transcript before invoking the same production semantic callback. This
+does not change recognition, routing or command results. Diagnostics and voice
+lifecycle regressions pass 41/41.
+
+Firebase currently exposes exactly the six fatal events plus the original
+connectivity probe for Build 32; no newer terminal `UA_DIAGNOSTIC_COMMAND_TRACE`
+issue is available yet. Missing terminal events are not fabricated. All status
+above is **REPAIR IMPLEMENTED + AUTOMATED VERIFIED; PHYSICAL BUILD-33 IPHONE
+RETEST REQUIRED**.
+
+Adjacent production-boundary verification is GREEN: Contacts request
+lifecycle, the actual Contacts framework Release integration, telephone
+routing, and Messages routing pass 22/22. This protects full/limited/denied
+authorization, cancellation/generation ownership, normal `tel:` separation
+from explicit messengers, and `MessageUI` from Mail fallback. Development and
+Production simulator compiles both PASS on the installed simulator UUID with
+an explicit arm64 architecture; this is automated evidence only and is not
+physical iPhone verification.
+
+An official Firebase Crashlytics API read-back through `2026-09-10T22:50:24Z`
+still reports only those six fatal events and the one connectivity probe for
+`0.1.0 (32)`; no terminal non-fatal trace is available to support an additional
+repair hypothesis.

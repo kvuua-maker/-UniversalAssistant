@@ -171,3 +171,38 @@ Build-32 Crashlytics terminal/fatal trace for the next unresolved family
 (noisy entity recovery, application opening, excessive clarification, or
 communication routing), classify its first wrong production stage, and repair
 that general mechanism without changing diagnostics or adding phrase aliases.
+
+### Build-32 app/catalog physical continuation
+
+Crashlytics read-back now accounts for six fatal `iPhone12,8`/iOS 26.6.2
+events, all in the already repaired Unicode index boundary before Contacts.
+Completed physical logs independently prove `messageCompose → MessageUI` and
+`placeSearch → MapKit → SUCCESS`; those correct mechanisms were preserved.
+
+The reported Apple Music clarification was reproduced through the shipped
+Release root. Root cause was a generic token-class bug: exact English `app` was
+matched as a prefix and consumed the proper token `Apple`. Exact action tokens
+now use equality, while productive action roots retain prefix matching. App and
+language Release-root regression: 31/31 PASS.
+
+The existing canonical brand inventory is now expressed once as typed catalog
+candidates and shared by the authoritative semantic resolver, legacy
+compatibility extraction, and bounded request-scoped Apple Speech vocabulary.
+No noisy ASR alias was added; arbitrary provider candidates use the same
+contract. Unseen semantic/Speech cases pass 42/42 and shipped provider-boundary
+cases pass 4/4. The existing final-transcript diagnostic write now happens
+before the downstream semantic callback, closing the proven pre-crash evidence
+gap; diagnostics/voice lifecycle suites pass 41/41.
+
+Status: **APP OPENING AND CATALOG CANDIDATE WIRING AUTOMATED GREEN — PHYSICAL
+BUILD-33 RETEST REQUIRED**. Firebase has not yet exposed a newer terminal
+non-fatal issue beyond the six fatal events and connectivity probe; unavailable
+evidence is not inferred. Adjacent Contacts lifecycle/framework, telephone and
+Messages production-boundary suites pass 22/22; Development and Production
+compiles PASS. Exact next material operation: re-query Firebase once for any
+newly ingested Build-32 terminal traces, then run the complete canonical gate
+without treating simulator success as physical `iPhone12,8` evidence.
+
+Firebase re-query through `2026-09-10T22:50:24Z`: unchanged at six fatal events
+plus one connectivity probe; no new terminal non-fatal evidence exists. Next:
+complete canonical gates for the verified mechanism changes.

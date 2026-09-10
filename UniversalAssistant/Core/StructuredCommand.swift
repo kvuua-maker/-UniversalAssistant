@@ -612,8 +612,7 @@ struct LocalCommandEngine: CommandParsing {
         constraints.hardConstraintKeys.insert("maximumWaitMinutes")
     }
     private func extractFashionFilters(from original: String, normalized text: String, into constraints: inout CommandConstraints) {
-        let knownBrands = ["Baldinini", "Nike", "Adidas", "Puma", "Zara", "Mango", "Gucci", "Prada"]
-        if let brand = knownBrands.first(where: { text.contains($0.lowercased()) }) {
+        if let brand = CanonicalCatalogEntityRegistry.brandNames.first(where: { text.contains($0.lowercased()) }) {
             constraints.brand = brand; constraints.hardConstraintKeys.insert("brand")
         }
         let colors: [(String, [String])] = [

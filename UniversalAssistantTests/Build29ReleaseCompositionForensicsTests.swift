@@ -702,6 +702,34 @@ private struct Build29ReleaseDiscoveryBoundary: GenericDiscoveryProvider {
 
 @MainActor
 struct Build29ReleaseExternalProviderBoundaryTests {
+    @Test func canonicalCatalogEntityRecoveryReachesTheShippedProviderBoundary() async throws {
+        let request = "Підбери взуття Gucc до 4200 гривень"
+        let parsed = LanguageUnderstandingBlock().parse(request)
+        #expect([CommandIntent.productSearch, .fashionDiscovery].contains(parsed.intent))
+        #expect(parsed.constraints.brand == "Gucci")
+        #expect(parsed.entities["catalog_match_mechanism"] != "exact")
+
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [],
+            compactResultDuration: .seconds(60)
+        )
+        model.input = request
+        model.submit()
+        for _ in 0..<150 {
+            if case .webHandoff = model.resultState { break }
+            if case .clarification = model.resultState { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        guard case let .webHandoff(fallback) = model.resultState else {
+            Issue.record("Verified catalog entity did not reach the finite provider boundary")
+            return
+        }
+        #expect(fallback.query == request)
+        #expect(model.statusText != AppText.value("clarification_needed"))
+        #expect(model.statusText != AppText.value("processing"))
+    }
+
 @Test func configuredProviderIsReachableFromUnknownAndTypedCommerceHomePaths() async throws {
         let discovery = GenericUnknownRequestCoordinator(providers: [Build29ReleaseDiscoveryBoundary()], cache: GenericSemanticCache(), ai: nil)
         let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60), genericDiscovery: discovery)
@@ -877,6 +905,42 @@ struct Build29ReleaseRemainingNativeTests {
         try await wait { capture.urls.count == 2 }
         #expect(capture.urls.last?.host == "wa.me")
         #expect(capture.urls.last?.scheme == "https")
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+
+    @Test func directVerifiedApplicationsAndBareMessageRemainDistinctThroughReleaseRoot() async throws {
+        let capture = Build29SystemOpenCapture()
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            systemHandoffOpen: capture.open
+        )
+
+        let applications: [(String, (URL) -> Bool)] = [
+            ("Відкрий Apple Music", { $0.host == "music.apple.com" }),
+            ("Запусти магазин застосунків", { $0.host == "apps.apple.com" }),
+            ("Открой YouTube", { $0.host == "www.youtube.com" })
+        ]
+        for (input, destinationMatches) in applications {
+            let previousCount = capture.urls.count
+            model.input = input
+            model.submit()
+            try await wait { capture.urls.count > previousCount || model.statusText == AppText.value("clarification_needed") }
+            #expect(capture.urls.count > previousCount, "Verified application did not reach its public handoff: \(input)")
+            if let destination = capture.urls.last {
+                #expect(destinationMatches(destination), "Wrong verified application handoff: \(destination)")
+            }
+            #expect(model.statusText != AppText.value("clarification_needed"))
+            #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+        }
+
+        model.input = "Склади звичайне текстове повідомлення"
+        model.submit()
+        try await wait { model.capabilityPresentation != nil || model.statusText == AppText.value("clarification_needed") }
+        guard case .message? = model.capabilityPresentation else {
+            Issue.record("Bare message intent did not remain on the public Messages boundary")
+            return
+        }
+        #expect({ if case .email? = model.capabilityPresentation { return false }; return true }())
         #expect({ if case .webHandoff = model.resultState { return false }; return true }())
     }
 
