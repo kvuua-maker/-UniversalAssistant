@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Observation
 import OSLog
@@ -200,12 +201,15 @@ final class AssistantViewModel {
     }
 
     func submit() {
-        LocalVoiceDiagnosticReport.shared.beginHomeRequest()
         let voiceEvidence = pendingVoiceRecognitionEvidence
         pendingVoiceRecognitionEvidence = nil
         resultDismissTask?.cancel()
         activeRequestGeneration &+= 1
         let requestGeneration = activeRequestGeneration
+        if LocalVoiceDiagnosticReport.shared.finishInteractiveContinuation(.cancelled, details: "reason=superseded") {
+            deliverCompletedDiagnosticSession()
+        }
+        LocalVoiceDiagnosticReport.shared.beginHomeRequest(generation: requestGeneration)
         capabilityExecutionTask?.cancel()
         ocrExecutionTask?.cancel()
         weatherExecutionTask?.cancel()
@@ -235,7 +239,9 @@ final class AssistantViewModel {
         }
         if isSharedImageTextRequest(submittedInput), let identifier = currentContext.freshPhotoAssetIdentifier() {
             input = ""
+            LocalVoiceDiagnosticReport.shared.suspendForInteractiveContinuation("photo-asset", generation: requestGeneration)
             capabilityPresentation = .photoAsset(identifier)
+            LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=system_presentation capability=photoSearch")
             return
         }
         if isSharedURLOpenRequest(submittedInput), let shared = currentContext.freshShared(), shared.kind == .url,
@@ -243,6 +249,8 @@ final class AssistantViewModel {
             input = ""
             resultState = .webHandoff(.init(query: url.host ?? shared.value, destination: url, kind: .system))
             statusText = AppText.value("ready")
+            LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=current_context_url")
+            deliverCompletedDiagnosticSession()
             return
         }
         let command = if let parser = commandEngine as? any EvidenceAwareCommandParsing {
@@ -250,6 +258,41 @@ final class AssistantViewModel {
         } else {
             commandEngine.parse(submittedInput)
         }
+        LocalVoiceDiagnosticReport.shared.recordNormalizedTranscript(command.normalizedText)
+        LocalVoiceDiagnosticReport.shared.record("language_detection", "language=\(command.language.rawValue)")
+        LocalVoiceDiagnosticReport.shared.record("morphology", "status=completed")
+        let structuredNumberCount = command.entities.keys.filter {
+            $0.contains("number") || $0.contains("amount") || $0.contains("duration") || $0 == "time"
+        }.count
+        LocalVoiceDiagnosticReport.shared.record("structured_number_reconstruction", "count=\(structuredNumberCount)")
+        let entityDomain = command.entities["entity_domain"] ?? command.entities["catalog_entity_kind"] ?? "canonical"
+        let entityCandidateCount = command.entities["entity_candidate_count"] ?? command.entities["speech_alternative_count"] ?? "0"
+        let entityConfidence = command.entities["entity_confidence"] ?? command.entities["semantic_confidence"] ?? "unavailable"
+        LocalVoiceDiagnosticReport.shared.record("entity_recovery", "domain=\(entityDomain) candidate_count=\(entityCandidateCount) confidence=\(entityConfidence)")
+        LocalVoiceDiagnosticReport.shared.record("entity_domain", "domain=\(entityDomain)")
+        LocalVoiceDiagnosticReport.shared.record(
+            "entity_candidates",
+            "candidate_count=\(entityCandidateCount) candidate_fingerprints=\(Self.diagnosticCandidateFingerprints(command.entities["clarification_options"]))"
+        )
+        LocalVoiceDiagnosticReport.shared.record("entity_confidence", "confidence=\(entityConfidence)")
+        let constraintCount = [
+            command.constraints.maximumPrice != nil, command.constraints.currency != nil, command.constraints.size != nil,
+            command.constraints.color != nil, command.constraints.brand != nil, command.constraints.category != nil,
+            command.constraints.season != nil, command.constraints.ordinal != nil, command.constraints.maximumWaitMinutes != nil
+        ].filter { $0 }.count + command.constraints.hardConstraintKeys.count
+        LocalVoiceDiagnosticReport.shared.record(
+            "canonical_semantic_frame",
+            diagnosticSemanticFrameDetails(for: command, constraintCount: constraintCount)
+        )
+        LocalVoiceDiagnosticReport.shared.record("candidate_capabilities", "count=1 capability=\(command.intent.rawValue)")
+        LocalVoiceDiagnosticReport.shared.record("selected_capability", "capability=\(command.intent.rawValue)")
+        let genericWeb = command.intent == .webSearch || command.intent == .unknown
+        LocalVoiceDiagnosticReport.shared.record("system_first_decision", "selected=\(!genericWeb) capability=\(command.intent.rawValue)")
+        LocalVoiceDiagnosticReport.shared.record("generic_web_selected", "selected=\(genericWeb) reason=\(genericWeb ? "structured_general_or_web_intent" : "canonical_non_web_intent")")
+        LocalVoiceDiagnosticReport.shared.record(
+            "current_context_input",
+            "input_type=\(currentContext.diagnosticInputType())"
+        )
         LocalVoiceDiagnosticReport.shared.record(
             "router_received",
             "capability=\(command.intent.rawValue) language=\(command.language.rawValue)"
@@ -269,6 +312,8 @@ final class AssistantViewModel {
                 resultState = .clarification(summary)
             }
             statusText = AppText.value("clarification_needed")
+            LocalVoiceDiagnosticReport.shared.recordTerminal(.clarification)
+            deliverCompletedDiagnosticSession()
         } else {
             LocalVoiceDiagnosticReport.shared.record("router_accepted", "capability=\(command.intent.rawValue)")
             LocalVoiceDiagnosticReport.shared.record("execution_started", "capability=\(command.intent.rawValue)")
@@ -391,39 +436,60 @@ final class AssistantViewModel {
         } catch GenericDiscoveryError.ambiguous {
             resultState = .clarification(summary)
             statusText = AppText.value("clarification_needed")
+            LocalVoiceDiagnosticReport.shared.recordTerminal(.clarification)
+            deliverCompletedDiagnosticSession()
             return
         } catch {
             presentFailure(message: AppText.value("request_unavailable"))
+            LocalVoiceDiagnosticReport.shared.recordTerminal(.error)
+            deliverCompletedDiagnosticSession()
             return
         }
         guard let genericDiscovery else {
             presentGeneralWebFallback(command)
+            deliverCompletedDiagnosticSession()
             return
         }
         resultState = .processing
         statusText = AppText.value("processing")
+        LocalVoiceDiagnosticReport.shared.suspendForInteractiveContinuation("provider", generation: requestGeneration)
         genericDiscoveryTask = Task { [weak self] in
             guard let self else { return }
+            defer {
+                if activeRequestGeneration == requestGeneration { deliverCompletedDiagnosticSession() }
+            }
+            LocalVoiceDiagnosticReport.shared.recordBoundaryPre("PROVIDER", "capability=general_information")
             do {
                 let result = try await genericDiscovery.execute(text: command.originalText, parsed: command)
                 try Task.checkCancellation()
                 guard activeRequestGeneration == requestGeneration else { return }
+                resumeInteractiveDiagnosticContinuation(generation: requestGeneration)
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("PROVIDER", "capability=general_information status=success")
                 currentContext.replaceAnswer(result.primaryAnswer)
                 resultState = .deterministic(result)
                 statusText = AppText.value("ready")
                 LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=deterministic_general_information")
             } catch GenericDiscoveryError.ambiguous {
                 guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
+                resumeInteractiveDiagnosticContinuation(generation: requestGeneration)
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("PROVIDER", "capability=general_information status=clarification")
                 resultState = .clarification(summary)
                 statusText = AppText.value("clarification_needed")
+                LocalVoiceDiagnosticReport.shared.recordTerminal(.clarification)
             } catch {
                 guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
+                resumeInteractiveDiagnosticContinuation(generation: requestGeneration)
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("PROVIDER", "capability=general_information status=error")
                 presentGeneralWebFallback(command)
             }
         }
     }
 
     private func presentGeneralWebFallback(_ command: StructuredCommand) {
+        LocalVoiceDiagnosticReport.shared.record(
+            "generic_web_selected",
+            "selected=true reason=deliberate_provider_or_general_information_fallback"
+        )
         do {
             let intent = try GenericIntentParser().parse(command.originalText)
             let minimized = try GenericQuerySanitizer().query(for: intent)
@@ -433,7 +499,69 @@ final class AssistantViewModel {
             statusText = AppText.value("ready")
             LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=web_handoff_fallback")
         } catch {
+            LocalVoiceDiagnosticReport.shared.record("execution_failed", "mechanism=web_handoff reason=invalid_safe_destination")
+            LocalVoiceDiagnosticReport.shared.recordTerminal(.error)
             presentFailure(message: AppText.value("request_unavailable"))
+        }
+    }
+
+    private func diagnosticSemanticFrameDetails(for command: StructuredCommand, constraintCount: Int) -> String {
+        let observed = CanonicalSemanticFrameAnalyzer()
+            .analyze(original: command.originalText, normalized: command.normalizedText)
+            .frame
+        let personPresent = observed.person != nil || command.entities["contact"] != nil || command.entities["recipient"] != nil
+        let servicePresent = observed.service != nil || command.entities["call_service"] != nil || command.entities["message_service"] != nil
+        let appPresent = observed.app != nil || command.entities["app"] != nil
+        let destinationPresent = command.entities["destination"] != nil || observed.location != nil
+        let locationRole: String
+        if command.entities["near_current_location"] == "true" || observed.contextReference == .currentLocation {
+            locationRole = "current"
+        } else if command.entities["location"] != nil || observed.location != nil {
+            locationRole = "specified"
+        } else {
+            locationRole = "none"
+        }
+        let datePresent = observed.temporal?.relativeDayOffset != nil || observed.temporal?.calendarDay != nil || command.entities["calendar_day"] != nil
+        let timePresent = observed.temporal?.hour != nil || command.entities["hour"] != nil || command.entities["time"] != nil
+        let durationPresent = observed.temporal?.durationSeconds != nil || observed.temporal?.relativeIntervalSeconds != nil || command.entities["duration_seconds"] != nil
+        return [
+            "action=\(observed.action?.rawValue ?? command.intent.rawValue)",
+            "object=\(observed.object?.rawValue ?? "none")",
+            "target=\(observed.object?.rawValue ?? "none")",
+            "source=\(observed.source?.rawValue ?? "none")",
+            "destination=\(destinationPresent ? "present" : "none")",
+            "person=\(personPresent ? "present" : "none")",
+            "service=\(servicePresent ? "resolved" : "none")",
+            "app=\(appPresent ? "resolved" : "none")",
+            "location=\(locationRole)",
+            "date=\(datePresent ? "present" : "none")",
+            "time=\(timePresent ? "present" : "none")",
+            "duration=\(durationPresent ? "present" : "none")",
+            "constraints=\(constraintCount)",
+            "constraint_count=\(constraintCount)",
+            "confidence=\(String(format: "%.3f", observed.confidence))"
+        ].joined(separator: " ")
+    }
+
+    private static func diagnosticCandidateFingerprints(_ raw: String?) -> String {
+        guard let raw, !raw.isEmpty else { return "none" }
+        let alphabet = Array("abcdefghijklmnop")
+        return raw.split(separator: "|").prefix(3).map { candidate in
+            SHA256.hash(data: Data(candidate.utf8)).prefix(6).flatMap { byte in
+                [alphabet[Int(byte >> 4)], alphabet[Int(byte & 0x0f)]]
+            }.map(String.init).joined()
+        }.joined(separator: "|")
+    }
+
+    private func openSystemHandoffObserved(_ destination: URL) {
+        let scheme = destination.scheme?.lowercased()
+        let boundary = scheme == "tel" ? "CALL_URL" : nil
+        if let boundary {
+            LocalVoiceDiagnosticReport.shared.recordBoundaryPre(boundary, "scheme=tel")
+        }
+        systemHandoffOpen(destination)
+        if let boundary {
+            LocalVoiceDiagnosticReport.shared.recordBoundaryPost(boundary, "scheme=tel status=dispatched")
         }
     }
 
@@ -449,10 +577,14 @@ final class AssistantViewModel {
                     deliverCompletedDiagnosticSession()
                 }
             }
+            LocalVoiceDiagnosticReport.shared.record("permission_state", "capability=\(command.intent.rawValue) status=delegated")
+            LocalVoiceDiagnosticReport.shared.recordBoundaryPre("EXECUTOR", "capability=\(command.intent.rawValue)")
             do {
                 let outcome = try await capabilityExecutor.execute(command)
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=success")
                 try Task.checkCancellation()
                 guard activeRequestGeneration == requestGeneration else { return }
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPre("RENDERER_ACTION", "capability=\(command.intent.rawValue)")
                 switch outcome {
                 case let .result(result):
                     currentContext.replaceAnswer(result.primaryAnswer)
@@ -460,49 +592,71 @@ final class AssistantViewModel {
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=deterministic capability=\(command.intent.rawValue)")
                 case let .handoff(result):
                     if result.kind == .system {
-                        systemHandoffOpen(result.destination)
+                        openSystemHandoffObserved(result.destination)
                         resultState = .idle
                     } else {
                         resultState = .webHandoff(result)
                     }
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=handoff capability=\(command.intent.rawValue)")
                 case let .presentation(presentation):
+                    LocalVoiceDiagnosticReport.shared.suspendForInteractiveContinuation(presentation.id)
                     capabilityPresentation = presentation
                     capabilityPresentationGeneration = presentation.id == "contact-access" ? requestGeneration : nil
                     capabilityPresentationCommandID = presentation.id == "contact-access" ? command.id : nil
                     resultState = .idle
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=system_presentation capability=\(command.intent.rawValue)")
                 case let .suspended(presentation, continuation):
+                    LocalVoiceDiagnosticReport.shared.suspendForInteractiveContinuation(presentation.id)
                     capabilityContinuation = continuation
                     capabilityPresentation = presentation
                     resultState = .idle
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=compound_presentation capability=\(command.intent.rawValue)")
                 }
                 statusText = AppText.value("ready")
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("RENDERER_ACTION", "capability=\(command.intent.rawValue) status=success")
             } catch is CancellationError {
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=cancelled")
+                LocalVoiceDiagnosticReport.shared.recordTerminal(.cancelled)
                 return
             } catch let CanonicalCapabilityExecutionError.ambiguous(values) {
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=error")
                 guard activeRequestGeneration == requestGeneration else { return }
                 requireAction(prompt: AppText.value("clarification_needed"), choices: Array(values.prefix(3)))
                 statusText = AppText.value("clarification_needed")
+                LocalVoiceDiagnosticReport.shared.recordTerminal(.clarification)
             } catch let CanonicalCapabilityExecutionError.missingParameter(parameter) {
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=error")
                 guard activeRequestGeneration == requestGeneration else { return }
                 LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=missing_parameter parameter=\(parameter)")
                 resultState = .clarification(summary)
                 statusText = AppText.value("clarification_needed")
+                LocalVoiceDiagnosticReport.shared.recordTerminal(.clarification)
             } catch let CanonicalCapabilityExecutionError.externalProviderRequired(providerClass) {
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=error")
                 guard activeRequestGeneration == requestGeneration else { return }
                 LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=external_provider_required capability=\(providerClass)")
                 presentGeneralInformation(command, summary: summary, requestGeneration: requestGeneration)
             } catch let CanonicalCapabilityExecutionError.unavailable(reason) {
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=error")
                 guard activeRequestGeneration == requestGeneration else { return }
                 LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=capability_unavailable capability=\(command.intent.rawValue) detail=\(reason)")
                 presentFailure(message: AppText.value("request_unavailable"))
             } catch {
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=error")
                 guard activeRequestGeneration == requestGeneration else { return }
                 LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=capability_unavailable capability=\(command.intent.rawValue)")
                 presentFailure(message: AppText.value("request_unavailable"))
             }
+        }
+    }
+
+    private func resumeInteractiveDiagnosticContinuation(generation: UInt64? = nil) {
+        LocalVoiceDiagnosticReport.shared.resumeInteractiveContinuation(generation: generation)
+    }
+
+    private func completeInteractiveDiagnosticContinuation(_ state: DiagnosticTerminalState, details: String = "") {
+        if LocalVoiceDiagnosticReport.shared.finishInteractiveContinuation(state, details: details) {
+            deliverCompletedDiagnosticSession()
         }
     }
 
@@ -514,10 +668,23 @@ final class AssistantViewModel {
 
     func handleScannedCode(_ observation: ObservedScannerCode) {
         capabilityPresentation = nil
-        do { resultState = .scanner(try ScannerProductionRouter().route(observation)); statusText = AppText.value("ready"); LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=scanner type=\(observation.isQR ? "qr" : "barcode")") }
-        catch { presentFailure(message: AppText.value("request_unavailable")) }
+        do {
+            resultState = .scanner(try ScannerProductionRouter().route(observation))
+            statusText = AppText.value("ready")
+            LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=scanner type=\(observation.isQR ? "qr" : "barcode")")
+            completeInteractiveDiagnosticContinuation(.success, details: "kind=scanner")
+        } catch {
+            presentFailure(message: AppText.value("request_unavailable"))
+            completeInteractiveDiagnosticContinuation(.error, details: "kind=scanner")
+        }
     }
-    func handleScannerUnavailable() { capabilityPresentation = nil; presentFailure(message: AppText.value("request_unavailable")) }
+
+    func handleScannerUnavailable() {
+        capabilityPresentation = nil
+        presentFailure(message: AppText.value("request_unavailable"))
+        completeInteractiveDiagnosticContinuation(.unsupported, details: "kind=scanner")
+    }
+
     func performScannerAction(_ result: ScannerProductionResult) {
         switch result.route.content {
         case let .url(url) where result.route.action == .open: UIApplication.shared.open(url)
@@ -540,7 +707,11 @@ final class AssistantViewModel {
     func handlePhotoOCRImage(_ image: UIImage?) { processOCR(image, provenance: .photoLibrary) }
     func handleSelectedOCRDocuments(_ urls: [URL]) {
         capabilityPresentation = nil
-        guard let url = urls.first else { presentFailure(message: AppText.value("request_unavailable")); return }
+        guard let url = urls.first else {
+            presentFailure(message: AppText.value("request_unavailable"))
+            completeInteractiveDiagnosticContinuation(.noResult, details: "kind=document_picker")
+            return
+        }
         let accessed = url.startAccessingSecurityScopedResource()
         let image = UIImage(contentsOfFile: url.path)
         if accessed { url.stopAccessingSecurityScopedResource() }
@@ -548,7 +719,12 @@ final class AssistantViewModel {
     }
     func handleSelectedPDFDocuments(_ urls: [URL], operation: PDFWorkflowOperation, text: String?) {
         capabilityPresentation = nil
-        guard !urls.isEmpty else { presentFailure(message: AppText.value("request_unavailable")); return }
+        guard !urls.isEmpty else {
+            presentFailure(message: AppText.value("request_unavailable"))
+            completeInteractiveDiagnosticContinuation(.noResult, details: "kind=pdf_picker")
+            return
+        }
+        resumeInteractiveDiagnosticContinuation(generation: activeRequestGeneration)
         do {
             let data = try urls.map { url -> Data in
                 let accessed = url.startAccessingSecurityScopedResource()
@@ -557,7 +733,9 @@ final class AssistantViewModel {
             }
             let processor = OnDevicePDFProcessor()
             if operation == .read {
-                capabilityPresentation = .documentFile(urls[0]); return
+                LocalVoiceDiagnosticReport.shared.suspendForInteractiveContinuation("document-file")
+                capabilityPresentation = .documentFile(urls[0])
+                return
             }
             let outputs: [Data]
             switch operation {
@@ -586,22 +764,36 @@ final class AssistantViewModel {
             }
             guard !outputURLs.isEmpty else { throw PDFProcessingError.emptyDocument }
             currentContext.replaceShared(kind: .document, value: outputURLs[0].path)
-            capabilityPresentation = outputURLs.count == 1 ? .documentFile(outputURLs[0]) : .documentFiles(outputURLs)
+            let presentation: CapabilityPresentation = outputURLs.count == 1 ? .documentFile(outputURLs[0]) : .documentFiles(outputURLs)
+            LocalVoiceDiagnosticReport.shared.suspendForInteractiveContinuation(presentation.id)
+            capabilityPresentation = presentation
             resultState = .idle; statusText = AppText.value("ready")
         } catch {
             presentFailure(message: AppText.value("request_unavailable"))
+            LocalVoiceDiagnosticReport.shared.recordTerminal(.error)
+            deliverCompletedDiagnosticSession()
         }
     }
     func handleScannedOCRDocument(_ pages: [UIImage]) { handleScannedDocument(pages, mode: .recognizedText) }
     func handleScannedDocument(_ pages: [UIImage], mode: DocumentScanOutputMode) {
         capabilityPresentation = nil
-        guard !pages.isEmpty else { presentFailure(message: AppText.value("request_unavailable")); return }
+        guard !pages.isEmpty else {
+            presentFailure(message: AppText.value("request_unavailable"))
+            completeInteractiveDiagnosticContinuation(.noResult, details: "kind=document_scan")
+            return
+        }
         activeRequestGeneration &+= 1
         let requestGeneration = activeRequestGeneration
+        resumeInteractiveDiagnosticContinuation(generation: requestGeneration)
         ocrExecutionTask?.cancel()
         resultState = .processing
         ocrExecutionTask = Task { [weak self] in
             guard let self else { return }
+            LocalVoiceDiagnosticReport.shared.recordBoundaryPre("OCR", "source=document pages=\(pages.count)")
+            defer {
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("OCR", "source=document status=returned")
+                if activeRequestGeneration == requestGeneration { deliverCompletedDiagnosticSession() }
+            }
             do {
                 if mode == .pdf {
                     var recognized: [String] = []
@@ -616,6 +808,7 @@ final class AssistantViewModel {
                     try data.write(to: url, options: .atomic)
                     guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
                     currentContext.replaceShared(kind: .document, value: url.path)
+                    LocalVoiceDiagnosticReport.shared.suspendForInteractiveContinuation("document-file", generation: requestGeneration)
                     capabilityPresentation = .documentFile(url)
                     resultState = .idle; statusText = AppText.value("ready")
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=document_pdf pages=\(pages.count)")
@@ -635,16 +828,27 @@ final class AssistantViewModel {
     func handleDocumentScannerFailure(_ error: Error) {
         capabilityPresentation = nil
         presentFailure(message: AppText.value("request_unavailable"))
+        completeInteractiveDiagnosticContinuation(.error, details: "kind=document_scan")
     }
     private func processOCR(_ image: UIImage?, provenance: OCRInputProvenance) {
         capabilityPresentation = nil
-        guard image != nil else { presentFailure(message: AppText.value("request_unavailable")); return }
+        guard image != nil else {
+            presentFailure(message: AppText.value("request_unavailable"))
+            completeInteractiveDiagnosticContinuation(.noResult, details: "kind=ocr_input")
+            return
+        }
         activeRequestGeneration &+= 1
         let requestGeneration = activeRequestGeneration
+        resumeInteractiveDiagnosticContinuation(generation: requestGeneration)
         ocrExecutionTask?.cancel()
         resultState = .processing
         ocrExecutionTask = Task { [weak self] in
             guard let self else { return }
+            LocalVoiceDiagnosticReport.shared.recordBoundaryPre("OCR", "source=\(provenance.rawValue)")
+            defer {
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("OCR", "source=\(provenance.rawValue) status=returned")
+                if activeRequestGeneration == requestGeneration { deliverCompletedDiagnosticSession() }
+            }
             do {
                 let result = try await ocrPipeline.process(image, provenance: provenance)
                 guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
@@ -663,27 +867,46 @@ final class AssistantViewModel {
         capabilityContinuation = nil
         activeRequestGeneration &+= 1
         let generation = activeRequestGeneration
+        LocalVoiceDiagnosticReport.shared.record(
+            "dependency_output_type",
+            "output_type=\(output.diagnosticTypeName) generation=\(generation)"
+        )
+        LocalVoiceDiagnosticReport.shared.suspendForInteractiveContinuation("compound_dependency", generation: generation)
         capabilityExecutionTask?.cancel()
         capabilityExecutionTask = Task { [weak self] in
             guard let self else { return }
+            defer {
+                if activeRequestGeneration == generation { deliverCompletedDiagnosticSession() }
+            }
             do {
                 let outcome = try await capabilityExecutor.resume(continuation, with: output)
                 guard !Task.isCancelled, activeRequestGeneration == generation else { return }
+                resumeInteractiveDiagnosticContinuation(generation: generation)
                 switch outcome {
-                case let .result(value): resultState = .deterministic(value)
+                case let .result(value):
+                    resultState = .deterministic(value)
+                    LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=compound_result")
                 case let .handoff(value):
                     if value.kind == .system || value.kind == .navigation {
-                        systemHandoffOpen(value.destination)
+                        openSystemHandoffObserved(value.destination)
                         resultState = .idle
                     } else {
                         resultState = .webHandoff(value)
                     }
-                case let .presentation(value): capabilityPresentation = value; resultState = .idle
-                case let .suspended(value, next): capabilityContinuation = next; capabilityPresentation = value; resultState = .idle
+                    LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=compound_handoff")
+                case let .presentation(value):
+                    LocalVoiceDiagnosticReport.shared.suspendForInteractiveContinuation(value.id)
+                    capabilityPresentation = value; resultState = .idle
+                case let .suspended(value, next):
+                    LocalVoiceDiagnosticReport.shared.suspendForInteractiveContinuation(value.id)
+                    capabilityContinuation = next; capabilityPresentation = value; resultState = .idle
                 }
                 statusText = AppText.value("ready")
             } catch {
                 guard !Task.isCancelled, activeRequestGeneration == generation else { return }
+                resumeInteractiveDiagnosticContinuation(generation: generation)
+                LocalVoiceDiagnosticReport.shared.record("execution_failed", "mechanism=compound_resume reason=execution_error")
+                LocalVoiceDiagnosticReport.shared.recordTerminal(.error)
                 presentFailure(message: AppText.value("request_unavailable"))
             }
         }
@@ -699,11 +922,31 @@ final class AssistantViewModel {
         }
     }
     func startTranslation(_ text: String, _ targetLanguage: String) {
-        do { capabilityPresentation = .translation(try CameraIntelligenceCore().translationPlan(text: text, sourceLanguage: TranslationSourceLanguageResolver().resolve(text), targetLanguage: targetLanguage)) }
-        catch { capabilityPresentation = nil; presentFailure(message: AppText.value("request_unavailable")) }
+        resumeInteractiveDiagnosticContinuation()
+        do {
+            let plan = try CameraIntelligenceCore().translationPlan(text: text, sourceLanguage: TranslationSourceLanguageResolver().resolve(text), targetLanguage: targetLanguage)
+            LocalVoiceDiagnosticReport.shared.suspendForInteractiveContinuation("translation")
+            capabilityPresentation = .translation(plan)
+        } catch {
+            capabilityPresentation = nil
+            presentFailure(message: AppText.value("request_unavailable"))
+            LocalVoiceDiagnosticReport.shared.recordTerminal(.error)
+            deliverCompletedDiagnosticSession()
+        }
     }
-    func handleTranslationResult(_ result: TranslationProductionResult) { currentContext.replaceTranslation(sourceText: result.sourceText, sourceLanguage: result.sourceLanguage); capabilityPresentation = nil; resultState = .translation(result); statusText = AppText.value("ready"); LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=translation") }
-    func handleTranslationFailure() { capabilityPresentation = nil; presentFailure(message: AppText.value("request_unavailable")) }
+    func handleTranslationResult(_ result: TranslationProductionResult) {
+        currentContext.replaceTranslation(sourceText: result.sourceText, sourceLanguage: result.sourceLanguage)
+        capabilityPresentation = nil
+        resultState = .translation(result)
+        statusText = AppText.value("ready")
+        LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=translation")
+        completeInteractiveDiagnosticContinuation(.success, details: "kind=translation")
+    }
+    func handleTranslationFailure() {
+        capabilityPresentation = nil
+        presentFailure(message: AppText.value("request_unavailable"))
+        completeInteractiveDiagnosticContinuation(.error, details: "kind=translation")
+    }
     func performTranslationAction(_ result: TranslationProductionResult, _ action: OCRResultAction) {
         switch action { case .copy: UIPasteboard.general.string = result.translatedText; case .share: capabilityPresentation = .share(result.translatedText); case .translate: break }
     }
@@ -717,9 +960,14 @@ final class AssistantViewModel {
         capabilityPresentation = nil
         capabilityPresentationGeneration = nil
         capabilityPresentationCommandID = nil
-        guard !identifiers.isEmpty else { presentFailure(message: AppText.value("request_unavailable")); return }
+        guard !identifiers.isEmpty else {
+            presentFailure(message: AppText.value("request_unavailable"))
+            completeInteractiveDiagnosticContinuation(.noResult, details: "kind=contact_access")
+            return
+        }
         activeRequestGeneration &+= 1
         let generation = activeRequestGeneration
+        resumeInteractiveDiagnosticContinuation(generation: generation)
         var entities = command.entities
         if identifiers.count == 1, let identifier = identifiers.first { entities["contact_identifier"] = identifier }
         let resumed = StructuredCommand(id: command.id, originalText: command.originalText, normalizedText: command.normalizedText, language: command.language, intent: command.intent, entities: entities, constraints: command.constraints, risk: command.risk, needsClarification: false)
@@ -731,6 +979,7 @@ final class AssistantViewModel {
         capabilityPresentationGeneration = nil
         capabilityPresentationCommandID = nil
         capabilityContinuation = nil
+        completeInteractiveDiagnosticContinuation(.cancelled, details: "reason=user_dismissed")
     }
 
     func beginProcessing() {
@@ -753,6 +1002,7 @@ final class AssistantViewModel {
             resultState = .idle
             statusText = AppText.value("ready")
             LocalVoiceDiagnosticReport.shared.record("confirmation_resolved", "accepted=false")
+            LocalVoiceDiagnosticReport.shared.recordTerminal(.cancelled)
             deliverCompletedDiagnosticSession()
             return
         }

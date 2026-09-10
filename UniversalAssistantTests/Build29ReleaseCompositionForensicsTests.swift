@@ -78,6 +78,47 @@ struct Build29ReleaseCompositionForensicsTests {
             #expect(command.intent != .webSearch && command.intent != .unknown)
         }
     }
+
+    @Test func shippedReleaseRootProducesOrderedPersistentBlackBoxTrace() async throws {
+        let report = LocalVoiceDiagnosticReport.shared
+        report.reset()
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [],
+            compactResultDuration: .seconds(60)
+        )
+
+        model.input = "Порахуй дев’ятнадцять плюс двадцять три"
+        model.submit()
+
+        for _ in 0..<200 where !report.snapshot().contains("terminal_request_state") {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        let trace = report.snapshot()
+        let orderedMarkers = [
+            "request_created", "normalization", "language_detection", "morphology",
+            "structured_number_reconstruction", "entity_recovery", "entity_domain", "entity_candidates",
+            "entity_confidence", "canonical_semantic_frame",
+            "candidate_capabilities", "selected_capability", "system_first_decision",
+            "generic_web_selected", "current_context_input", "router_received", "router_accepted", "execution_started",
+            "permission_state", "EXECUTOR_PRE", "EXECUTOR_POST", "RENDERER_ACTION_PRE",
+            "visible_result", "RENDERER_ACTION_POST", "terminal_request_state"
+        ]
+        var cursor = trace.startIndex
+        for marker in orderedMarkers {
+            guard let range = trace.range(of: marker, range: cursor..<trace.endIndex) else {
+                Issue.record("Shipped Release root did not record ordered marker \(marker). Trace: \(trace)")
+                return
+            }
+            cursor = range.upperBound
+        }
+        #expect(trace.components(separatedBy: "terminal_request_state").count - 1 == 1)
+        #expect(trace.contains("target="))
+        #expect(trace.contains("person="))
+        #expect(trace.contains("constraints="))
+        #expect(model.statusText != AppText.value("processing"))
+        #expect({ if case .deterministic = model.resultState { return true }; return false }())
+    }
 }
 
 

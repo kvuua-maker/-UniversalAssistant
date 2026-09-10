@@ -242,8 +242,15 @@ struct PhotoAssetPresentationView: View {
             if let image { SystemShareSheet(items: [image]) }
         }
         .task {
-            guard image == nil, let data = try? await PhotoKitAssetImageLoader().imageData(localIdentifier: localIdentifier) else { return }
-            image = UIImage(data: data)
+            LocalVoiceDiagnosticReport.shared.recordBoundaryPre("PHOTOKIT", "operation=load_asset")
+            guard image == nil,
+                  let data = try? await PhotoKitAssetImageLoader().imageData(localIdentifier: localIdentifier),
+                  let loadedImage = UIImage(data: data) else {
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("PHOTOKIT", "operation=load_asset status=error")
+                return
+            }
+            image = loadedImage
+            LocalVoiceDiagnosticReport.shared.recordBoundaryPost("PHOTOKIT", "operation=load_asset status=success")
             guard !automaticActionPerformed else { return }
             automaticActionPerformed = true
             switch automaticAction {
@@ -266,6 +273,7 @@ struct AuthorizedDocumentPicker: UIViewControllerRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(onSelection: onSelection) }
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre("FILES", "mechanism=UIDocumentPicker")
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.item], asCopy: false)
         picker.allowsMultipleSelection = true
         picker.delegate = context.coordinator
@@ -278,7 +286,11 @@ struct AuthorizedDocumentPicker: UIViewControllerRepresentable {
         let onSelection: @MainActor ([URL]) -> Void
         init(onSelection: @escaping @MainActor ([URL]) -> Void) { self.onSelection = onSelection }
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            LocalVoiceDiagnosticReport.shared.recordBoundaryPost("FILES", "mechanism=UIDocumentPicker status=selected count=\(urls.count)")
             onSelection(urls)
+        }
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            LocalVoiceDiagnosticReport.shared.recordBoundaryPost("FILES", "mechanism=UIDocumentPicker status=cancelled")
         }
     }
 }

@@ -198,7 +198,23 @@ struct CurrentContext: Equatable, Codable, Sendable {
 final class CurrentContextStore {
     private(set) var context = CurrentContext()
     private var consumedActionIDs: Set<String> = []
+    func diagnosticInputType(at now: Date = .now) -> String {
+        context.expireStale(at: now)
+        var types: [String] = []
+        if context.validatedLocation != nil { types.append("location") }
+        if context.activeRoute != nil { types.append("route") }
+        if context.nextCalendarEvent != nil { types.append("calendar_event") }
+        if context.currentTask != nil { types.append("task") }
+        if context.translation != nil { types.append("translation") }
+        if let shared = context.sharedContent { types.append("shared_\(shared.kind.rawValue)") }
+        if context.lastAnswer != nil { types.append("answer") }
+        if context.selectedEntity != nil { types.append("selected_entity") }
+        else if !context.resultEntities.isEmpty { types.append("result_entities") }
+        return types.isEmpty ? "none" : types.joined(separator: "|")
+    }
     func replaceResults(_ result: DeterministicResult, now: Date = .now, lifetime: TimeInterval = 300) {
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CURRENTCONTEXT", "operation=replace_results")
+        defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CURRENTCONTEXT", "operation=replace_results status=returned") }
         let expires = now.addingTimeInterval(lifetime)
         let actions = Dictionary(uniqueKeysWithValues: result.actions.map { ($0.id, $0) })
         let entities = result.facts.prefix(20).map { fact -> ContextEntity in
@@ -211,6 +227,8 @@ final class CurrentContextStore {
         consumedActionIDs.removeAll()
     }
     func replacePhotoResults(_ result: DeterministicResult, now: Date = .now, lifetime: TimeInterval = 300) {
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CURRENTCONTEXT", "operation=replace_photo_results")
+        defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CURRENTCONTEXT", "operation=replace_photo_results status=returned") }
         let expires = now.addingTimeInterval(lifetime)
         let actions = Dictionary(uniqueKeysWithValues: result.actions.map { ($0.id, $0) })
         let entities = result.facts.prefix(20).compactMap { fact -> ContextEntity? in
@@ -224,6 +242,8 @@ final class CurrentContextStore {
         consumedActionIDs.removeAll()
     }
     func replacePlaceResults(_ result: DeterministicResult, places: [Place], now: Date = .now, lifetime: TimeInterval = 300) {
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CURRENTCONTEXT", "operation=replace_place_results")
+        defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CURRENTCONTEXT", "operation=replace_place_results status=returned") }
         let expires = now.addingTimeInterval(lifetime)
         let actions = Dictionary(uniqueKeysWithValues: result.actions.map { ($0.id, $0) })
         let byID = Dictionary(uniqueKeysWithValues: places.map { ($0.id, $0) })
@@ -256,16 +276,22 @@ final class CurrentContextStore {
         return identifier.isEmpty ? nil : identifier
     }
     func replaceTranslation(sourceText: String, sourceLanguage: String?, now: Date = .now, lifetime: TimeInterval = 300) {
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CURRENTCONTEXT", "operation=replace_translation")
+        defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CURRENTCONTEXT", "operation=replace_translation status=returned") }
         let provenance = ContextProvenance(source: "AppleTranslation", objectID: "translation-\(UUID().uuidString)", observedAt: now, expiresAt: now.addingTimeInterval(lifetime))
         context.update(now: now, lifetime: lifetime, translation: .init(sourceText: sourceText, sourceLanguage: sourceLanguage, provenance: provenance))
     }
     func freshTranslation(at now: Date = .now) -> ContextTranslation? { context.expireStale(at: now); return context.translation }
     func replaceShared(kind: ContextSharedContent.Kind, value: String, observedAt: Date = .now, lifetime: TimeInterval = 300) {
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CURRENTCONTEXT", "operation=replace_shared")
+        defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CURRENTCONTEXT", "operation=replace_shared status=returned") }
         let provenance = ContextProvenance(source: "ShareExtension", objectID: "shared-\(UUID().uuidString)", observedAt: observedAt, expiresAt: observedAt.addingTimeInterval(lifetime))
         context.update(now: observedAt, lifetime: lifetime, sharedContent: .init(kind: kind, value: value, provenance: provenance))
     }
     func freshShared(at now: Date = .now) -> ContextSharedContent? { context.expireStale(at: now); return context.sharedContent }
     func replaceAnswer(_ text: String, now: Date = .now, lifetime: TimeInterval = 300) {
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CURRENTCONTEXT", "operation=replace_answer")
+        defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CURRENTCONTEXT", "operation=replace_answer status=returned") }
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return }
         let provenance = ContextProvenance(source: "assistant-result", objectID: "answer-\(UUID().uuidString)", observedAt: now, expiresAt: now.addingTimeInterval(lifetime))
@@ -273,12 +299,16 @@ final class CurrentContextStore {
     }
     func freshAnswer(at now: Date = .now) -> String? { context.expireStale(at: now); return context.lastAnswer?.text }
     func consumeSelectedAction(now: Date = .now) -> URL? {
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CURRENTCONTEXT", "operation=consume_selected_action")
+        defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CURRENTCONTEXT", "operation=consume_selected_action status=returned") }
         context.expireStale(at: now)
         guard let selected = context.selectedEntity, let actionID = selected.actionID, !consumedActionIDs.contains(actionID), let reference = selected.openReference, let url = URL(string: reference) else { return nil }
         consumedActionIDs.insert(actionID)
         return url
     }
     func replaceRoute(origin: ValidatedLocation, destination: ValidatedLocation, destinationName: String, now: Date = .now, lifetime: TimeInterval = 300) {
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CURRENTCONTEXT", "operation=replace_route")
+        defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CURRENTCONTEXT", "operation=replace_route status=returned") }
         let expires = now.addingTimeInterval(lifetime)
         let destinationProvenance = ContextProvenance(source: "apple-geocoder", objectID: "destination-\(destination.sample.latitude),\(destination.sample.longitude)", observedAt: now, expiresAt: expires)
         let destinationEntity = ContextEntity(id: destinationProvenance.objectID, kind: .place, displayName: destinationName, phoneNumber: nil, provenance: destinationProvenance, latitude: destination.sample.latitude, longitude: destination.sample.longitude)

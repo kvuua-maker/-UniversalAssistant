@@ -60,13 +60,19 @@ enum ProductionAssistantComposition {
 
 @main
 struct UniversalAssistantApp: App {
-    @State private var model = ProductionAssistantComposition.makeModel()
+    @State private var model: AssistantViewModel
     @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        CrashlyticsDiagnosticBridge.configureProductionCollection()
+        _model = State(initialValue: ProductionAssistantComposition.makeModel())
+    }
 
     var body: some Scene {
         WindowGroup {
             AssistantHomeView(model: model)
                 .task {
+                    PhysicalMetricKitDiagnostics.shared.start()
                     _ = model.ingestPendingShare()
                     if let recovered = LocalVoiceDiagnosticReport.shared.recoveredIncompleteSession() {
                         await PhysicalDiagnosticDelivery.shared.enqueue(recovered)

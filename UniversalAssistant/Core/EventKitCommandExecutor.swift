@@ -81,6 +81,10 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
     private var historyRestored = false
     init(calendar: any EventKitCalendarExecuting = EventKitCalendarService(), reminders: any EventKitReminderExecuting = EventKitReminderService(), history: ActionHistory = .init(), now: @escaping @Sendable () -> Date = { .now }, timeZone: TimeZone = .autoupdatingCurrent) { self.calendar = calendar; self.reminders = reminders; self.history = history; self.now = now; self.timeZone = timeZone }
     func execute(_ command: StructuredCommand) async throws -> EventKitExecutionResult {
+        let diagnosticBoundary = [CommandIntent.calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete].contains(command.intent)
+            ? "CALENDAR" : "REMINDER"
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre(diagnosticBoundary, "capability=\(command.intent.rawValue)")
+        defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost(diagnosticBoundary, "capability=\(command.intent.rawValue) status=returned") }
         try await restoreHistoryIfNeeded()
         let args = EventKitCommandArgumentExtractor().extract(command, now: now(), timeZone: timeZone)
         switch command.intent {

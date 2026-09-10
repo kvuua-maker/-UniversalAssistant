@@ -1,6 +1,6 @@
 # Dependency Inventory and Policy
 
-Last audited: 2026-09-05.
+Last audited: 2026-09-10.
 
 ## Runtime inventory
 
@@ -11,8 +11,9 @@ Last audited: 2026-09-05.
 | Vapor | SwiftPM 4.122.1, pinned by `Backend/Package.resolved` | Existing `UniversalAssistantServer` HTTP transport, localhost binding and typed routes | MIT | Receives only schema-validated diagnostic metadata through the owner VPS; no analytics SDK or external processor | Security and release review required before updates |
 | Swift Crypto | SwiftPM 3.15.1, pinned by `Backend/Package.resolved` | Cross-platform cryptography and App Attest assertion verification | Apache-2.0 | Cryptographic processing is local to the owner VPS; no data recipient | Security and release review required before updates |
 | AppAttest (Ian Sampson) | Git revision `f4fc1ea12c712d6833905d9c11c73c1601ae4001`, pinned by `Backend/Package.resolved` | Server-side verification of Apple's App Attest certificate chain, nonce, app identity and assertions | MIT | Processes Apple attestation objects and public device-bound key state only; no transcript/audio/user content | Revision is fixed; re-audit before change |
+| Firebase Apple SDK (`FirebaseCore`, `FirebaseCrashlytics`) | SwiftPM `12.19.0`, exact version in `UniversalAssistant.xcodeproj` and resolved workspace lock | Initializes the registered Firebase app and sends fatal Crashlytics reports plus one bounded diagnostic non-fatal trace per opted-in TestFlight command; official Crashlytics script uploads dSYM files | Apache-2.0 | Firebase/Google receives crash metadata, custom keys/logs and, only while detailed diagnostics consent is enabled, the final and normalized command transcript; credentials, tokens and raw audio are excluded/redacted | Exact version; review Firebase release notes, privacy manifests, data disclosure and symbol-upload behavior before updates |
 
-The iOS Xcode targets contain no third-party runtime package or binary framework. The backend uses only the three inventoried source packages above; all are reproducibly pinned. There are no copied provider/catalog media assets. Provider imagery is loaded only from runtime provider URLs and is never bundled as copied catalog content.
+The iOS app target contains only the inventoried Firebase Apple SDK products above; the Share Extension has no Firebase product dependency. Firebase's SwiftPM-resolved transitive open-source components are locked by `Package.resolved` and distributed under their upstream license terms. The backend uses only the three inventoried source packages above; all dependencies are reproducibly pinned. There are no copied provider/catalog media assets. Provider imagery is loaded only from runtime provider URLs and is never bundled as copied catalog content.
 
 ## First-party bundled content
 

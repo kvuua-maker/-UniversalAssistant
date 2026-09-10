@@ -16,3 +16,4 @@ INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = UniversalAssistant uses your
 INFOPLIST_KEY_NSAppleMusicUsageDescription = UniversalAssistant uses Apple Music access only when you ask to search or play music.
 INFOPLIST_KEY_NSPhotoLibraryUsageDescription = UniversalAssistant searches only photos you permit to find requested local results.
 INFOPLIST_KEY_NSCameraUsageDescription = UniversalAssistant uses the camera only when you ask to capture an image.
+OTHER_LDFLAGS = $(inherited) -ObjC

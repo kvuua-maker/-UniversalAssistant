@@ -14,6 +14,13 @@ struct PhysicalDiagnosticEvent: Codable, Equatable, Sendable {
     let timestamp: Date
     let marker: String
     let attributes: [String: String]
+    // Schema-v2 request identity is repeated on every durable event so a
+    // partially written ring buffer remains independently correlatable after
+    // process death, before the enclosing upload session is assembled.
+    var diagnosticSessionID: UUID? = nil
+    var requestID: UUID? = nil
+    var requestGeneration: UInt64? = nil
+    var build: Int? = nil
 }
 
 struct PhysicalDiagnosticSession: Codable, Equatable, Sendable, Identifiable {
@@ -34,6 +41,17 @@ struct PhysicalDiagnosticSession: Codable, Equatable, Sendable, Identifiable {
     let errorDomain: String?
     let errorCode: Int?
     let events: [PhysicalDiagnosticEvent]
+    // Schema-v2 fields are optional so persisted schema-v1 sessions remain
+    // decodable and uploadable during the Build-32 migration.
+    var diagnosticSessionID: UUID? = nil
+    var requestID: UUID? = nil
+    var requestGeneration: UInt64? = nil
+    var terminalState: DiagnosticTerminalState? = nil
+    var detailedDiagnosticsConsent: Bool? = nil
+    var finalSpeechTranscript: String? = nil
+    var normalizedTranscript: String? = nil
+    var anomaly: DiagnosticAnomaly? = nil
+    var appleDiagnosticJSON: String? = nil
     var id: UUID { sessionID }
 }
 
@@ -141,64 +159,122 @@ private struct ReceiptResponse: Codable { let sessionID: UUID; let status: Strin
 
 actor PhysicalDiagnosticDelivery {
     static let shared = PhysicalDiagnosticDelivery()
-    enum DeliveryState: String, Codable { case queued, sending, delivered, failedRetryable, expired }
-    struct Queued: Codable { let session: PhysicalDiagnosticSession; var attempts: Int; let expiresAt: Date }
+    enum DeliveryState: String, Codable { case queued, sending, delivered, failedRetryable, serverRejected, expired }
+    private struct LegacyQueued: Codable { let session: PhysicalDiagnosticSession; var attempts: Int; let expiresAt: Date }
 
     private let attest: any AppAttestServicing
     private let transport: any DiagnosticHTTPTransport
     private let defaults: UserDefaults
+    private let localStore: PhysicalDiagnosticLocalStore
     private let enabled: @Sendable () async -> Bool
     private let queueKey = "internal-physical-diagnostics-v1"
     private let keyIDKey = "internal-app-attest-key-id"
     private let registrationKey = "internal-app-attest-registered"
     private var flushing = false
+    private var retryTask: Task<Void, Never>?
     private(set) var state: DeliveryState = .queued
 
     init(
         attest: any AppAttestServicing = SystemAppAttestService(),
         transport: any DiagnosticHTTPTransport = URLSessionDiagnosticTransport(baseURL: URL(string: "https://178.105.32.46")!),
         defaults: UserDefaults = .standard,
+        localStore: PhysicalDiagnosticLocalStore = .shared,
         enabled: @escaping @Sendable () async -> Bool = { await PhysicalDiagnosticEnvironment.isInternalTestFlight() }
     ) {
-        self.attest = attest; self.transport = transport; self.defaults = defaults; self.enabled = enabled
+        self.attest = attest; self.transport = transport; self.defaults = defaults; self.localStore = localStore; self.enabled = enabled
+        if let data = defaults.data(forKey: queueKey),
+           let legacy = try? JSONDecoder.diagnostic.decode([LegacyQueued].self, from: data) {
+            for item in legacy {
+                localStore.addPending(.init(session: item.session, attempts: item.attempts, expiresAt: item.expiresAt,
+                                            nextAttemptAt: .distantPast, status: .pendingUpload,
+                                            lastHTTPStatus: nil, errorCategory: "migrated_schema_v1"))
+            }
+            defaults.removeObject(forKey: queueKey)
+        }
     }
 
     func enqueue(_ session: PhysicalDiagnosticSession, now: Date = .now) async {
+        localStore.addPending(.init(session: session, attempts: 0, expiresAt: now.addingTimeInterval(7 * 86_400),
+                                    nextAttemptAt: now, status: .pendingUpload,
+                                    lastHTTPStatus: nil, errorCategory: nil))
+        // Local durability is unconditional. Environment/App Attest gates only
+        // network delivery, never the on-device black box.
         guard await enabled() else { return }
-        var queue = load(now: now)
-        if !queue.contains(where: { $0.session.sessionID == session.sessionID }) {
-            queue.append(.init(session: session, attempts: 0, expiresAt: now.addingTimeInterval(86_400)))
-            if queue.count > 20 { queue.removeFirst(queue.count - 20) }
-            save(queue)
-        }
         await flush(now: now)
     }
 
     func flush(now: Date = .now) async {
         guard await enabled(), !flushing else { return }
         flushing = true; defer { flushing = false }
-        var queue = load(now: now)
+        var queue = localStore.loadPending(now: now)
         guard !queue.isEmpty else { return }
+        guard queue.contains(where: { $0.nextAttemptAt <= now && $0.status != .serverRejected }) else {
+            state = .failedRetryable
+            localStore.setDeliveryStatus(.retrying)
+            scheduleRetry(for: queue, now: now)
+            return
+        }
         state = .sending
+        localStore.setDeliveryStatus(.retrying)
         do {
             let keyID = try await ensureAttestedKey()
-            while let item = queue.first, item.attempts < 3 {
+            while let index = queue.firstIndex(where: { $0.nextAttemptAt <= now && $0.status != .serverRejected }) {
+                let item = queue[index]
                 let challenge: ChallengeResponse = try await transport.post("v1/app-attest/challenge", body: ChallengeRequest(operation: "diagnostic"), response: ChallengeResponse.self)
                 let client = AssertionClientData(challengeID: challenge.challengeID, challenge: challenge.challenge, operation: "diagnostic", diagnostic: item.session)
                 let clientData = try JSONEncoder.diagnostic.encode(client)
                 let assertion = try await attest.generateAssertion(keyID, clientDataHash: Data(SHA256.hash(data: clientData)))
                 let receipt: ReceiptResponse = try await transport.post("v1/diagnostics", body: AssertionEnvelope(keyID: keyID, assertion: assertion.base64EncodedString(), clientData: clientData.base64EncodedString()), response: ReceiptResponse.self)
                 guard receipt.sessionID == item.session.sessionID, receipt.status == "delivered" else { throw PhysicalDiagnosticDeliveryError.httpFailure(statusCode: 0) }
-                queue.removeFirst(); save(queue); state = .delivered
+                queue.remove(at: index)
+                localStore.savePending(queue)
+                localStore.addReceipt(.init(sessionID: receipt.sessionID, uploadedAt: receipt.receivedAt, eventCount: item.session.events.count))
+                state = .delivered
             }
+            scheduleRetry(for: queue, now: now)
         } catch {
-            if !queue.isEmpty { queue[0].attempts += 1; save(queue) }
-            state = .failedRetryable
+            guard let index = queue.firstIndex(where: { $0.nextAttemptAt <= now && $0.status != .serverRejected }) else { return }
+            queue[index].attempts += 1
+            if case let PhysicalDiagnosticDeliveryError.httpFailure(statusCode) = error,
+               (400..<500).contains(statusCode), statusCode != 408, statusCode != 429 {
+                queue[index].status = .serverRejected
+                queue[index].lastHTTPStatus = statusCode
+                queue[index].errorCategory = "server_rejected"
+                queue[index].nextAttemptAt = queue[index].expiresAt
+                state = .serverRejected
+                localStore.setDeliveryStatus(.serverRejected)
+            } else {
+                let delay = min(900.0, pow(2.0, Double(min(queue[index].attempts, 9))))
+                queue[index].status = .retrying
+                queue[index].errorCategory = String(describing: type(of: error))
+                queue[index].nextAttemptAt = now.addingTimeInterval(delay)
+                state = .failedRetryable
+                localStore.setDeliveryStatus(.retrying)
+            }
+            localStore.savePending(queue)
+            scheduleRetry(for: queue, now: now)
         }
     }
 
-    func pendingCount(now: Date = .now) -> Int { load(now: now).count }
-    func pendingAttempts(now: Date = .now) -> [Int] { load(now: now).map(\.attempts) }
+    func pendingCount(now: Date = .now) -> Int { localStore.loadPending(now: now).count }
+    func pendingAttempts(now: Date = .now) -> [Int] { localStore.loadPending(now: now).map(\.attempts) }
+
+    private func scheduleRetry(for queue: [DiagnosticQueuedUpload], now: Date) {
+        retryTask?.cancel()
+        guard let next = queue
+            .filter({ $0.status != .serverRejected && $0.expiresAt > now })
+            .map(\.nextAttemptAt).min() else {
+            retryTask = nil
+            return
+        }
+        let delay = max(0.25, min(900, next.timeIntervalSince(now)))
+        retryTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(delay)) }
+            catch { return }
+            guard let self else { return }
+            await self.flush()
+        }
+    }
 
     private func ensureAttestedKey() async throws -> String {
         var trace = AppAttestBootstrapTrace()
@@ -265,13 +341,6 @@ actor PhysicalDiagnosticDelivery {
         } catch { }
     }
 
-    private func load(now: Date) -> [Queued] {
-        guard let data = defaults.data(forKey: queueKey), let decoded = try? JSONDecoder.diagnostic.decode([Queued].self, from: data) else { return [] }
-        let active = decoded.filter { $0.expiresAt > now && $0.attempts < 3 }
-        if active.count != decoded.count { save(active); state = .expired }
-        return active
-    }
-    private func save(_ queue: [Queued]) { defaults.set(try? JSONEncoder.diagnostic.encode(queue), forKey: queueKey) }
 }
 
 extension JSONEncoder {

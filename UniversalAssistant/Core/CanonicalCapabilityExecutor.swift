@@ -66,6 +66,13 @@ enum CapabilityExecutionOutcome: Equatable, Sendable {
 enum CanonicalDependencyOutput: Equatable, Sendable {
     case recognizedText(String)
     case selectedEntity(ContextEntity)
+
+    var diagnosticTypeName: String {
+        switch self {
+        case .recognizedText: "recognized_text"
+        case .selectedEntity: "selected_entity"
+        }
+    }
 }
 
 enum CanonicalDependencyBinder {
@@ -249,6 +256,25 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     }
 
     func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        let diagnosticBoundary = DiagnosticBoundaryName.forCommand(command)
+        if let diagnosticBoundary {
+            LocalVoiceDiagnosticReport.shared.recordBoundaryPre(diagnosticBoundary, "capability=\(command.intent.rawValue)")
+        }
+        do {
+            let outcome = try await executeUnobserved(command)
+            if let diagnosticBoundary {
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost(diagnosticBoundary, "capability=\(command.intent.rawValue) status=success")
+            }
+            return outcome
+        } catch {
+            if let diagnosticBoundary {
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost(diagnosticBoundary, "capability=\(command.intent.rawValue) status=error")
+            }
+            throw error
+        }
+    }
+
+    private func executeUnobserved(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         switch command.intent {
         case .open, .appAction:
             if command.constraints.ordinal != nil { return try await contextual(command, opensSelection: true) }
@@ -404,6 +430,10 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         guard var command = commands.first else {
             return .result(try result("Виконано", facts: aggregate))
         }
+        let dependencyInputType = dependencyOutput?.diagnosticTypeName ?? "none"
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre("COMPOUND_STEP", "capability=\(command.intent.rawValue) input_type=\(dependencyInputType)")
+        defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("COMPOUND_STEP", "capability=\(command.intent.rawValue) status=returned") }
+        LocalVoiceDiagnosticReport.shared.record("dependency_input_type", "capability=\(command.intent.rawValue) input_type=\(dependencyInputType)")
         if let dependencyOutput { command = try CanonicalDependencyBinder.bind(command, output: dependencyOutput) }
         let outcome = try await execute(command)
         let remaining = Array(commands.dropFirst())
@@ -415,6 +445,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             let output: CanonicalDependencyOutput? = [.placeSearch, .restaurantSearch, .serviceSearch].contains(command.intent)
                 ? currentContext.selectFirstResult().map(CanonicalDependencyOutput.selectedEntity)
                 : nil
+            LocalVoiceDiagnosticReport.shared.record("dependency_output_type", "capability=\(command.intent.rawValue) output_type=\(output?.diagnosticTypeName ?? "none")")
             return try await executeCompound(remaining, aggregate: aggregate + [fact], dependencyOutput: output)
         case let .handoff(value):
             if remaining.isEmpty { return .handoff(value) }
@@ -744,6 +775,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private func contact(_ command: StructuredCommand, preparesCall: Bool) async throws -> CapabilityExecutionOutcome {
         let requestedService = command.entities["call_service"]
         if preparesCall, let rawNumber = command.entities["phone_number"] {
+            LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CONTACT_ACTION", "kind=typed_phone")
+            defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CONTACT_ACTION", "kind=typed_phone status=returned") }
             return .handoff(.init(query: rawNumber, destination: try callDestination(number: rawNumber, service: requestedService), kind: .system))
         }
         let name = try required(command.entities["contact"], "contact_name")
@@ -769,6 +802,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 guard value.phoneNumbers.count == 1, let number = value.phoneNumbers.first else {
                     throw CanonicalCapabilityExecutionError.ambiguous(value.phoneNumbers)
                 }
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CONTACT_ACTION", "kind=resolved_contact")
+                defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CONTACT_ACTION", "kind=resolved_contact status=returned") }
                 return .handoff(.init(query: value.displayName, destination: try callDestination(number: number, service: requestedService), kind: .system))
             }
             let facts = value.phoneNumbers.enumerated().map { index, number in

@@ -6,6 +6,9 @@ import Testing
 @Suite("Accessibility, audio and contextual permissions")
 struct AccessibilityAudioPermissionTests {
     @Test @MainActor func partialAndFinalVoiceTranscriptReachUIAndExistingRouter() {
+        // VoiceInputController creates the durable request before delivering callbacks.
+        // Mirror that production ownership boundary in this focused ViewModel test.
+        LocalVoiceDiagnosticReport.shared.reset()
         let model = AssistantViewModel()
         model.handleVoiceEvent(.state(.listening))
         model.handleVoiceEvent(.transcript("відкрий календар", isFinal: false))

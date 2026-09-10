@@ -58,6 +58,8 @@ struct AppleTranslationExecutionView: View {
     var body: some View {
         ProgressView("Перекладаю…")
             .translationTask(source: source, target: target) { session in
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPre("TRANSLATION", "mechanism=Translation")
+                defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("TRANSLATION", "mechanism=Translation status=returned") }
                 do {
                     let availability = try await LanguageAvailability().status(for: plan.text, to: target)
                     guard availability != .unsupported else { onFailure(); return }

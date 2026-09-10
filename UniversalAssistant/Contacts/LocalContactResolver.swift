@@ -164,6 +164,8 @@ actor LocalContactResolver: ContactResolving {
     }
     func resolve(name: String) async throws -> ContactResolution {
         try verifyAuthorization()
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CONTACT_FETCH", "kind=name")
+        defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CONTACT_FETCH", "kind=name status=returned") }
         LocalVoiceDiagnosticReport.shared.record("contacts_query_started", "kind=name")
         var contacts = try await query.contacts(matching: name, timeout: queryTimeout)
         if contacts.isEmpty {
@@ -203,6 +205,8 @@ actor LocalContactResolver: ContactResolving {
     }
     func resolve(exactIdentifier identifier: String) async throws -> ContactResolution {
         try verifyAuthorization()
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CONTACT_FETCH", "kind=identifier")
+        defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CONTACT_FETCH", "kind=identifier status=returned") }
         LocalVoiceDiagnosticReport.shared.record("contacts_query_started", "kind=identifier")
         guard let value = try await query.contact(identifier: identifier, timeout: queryTimeout) else {
             LocalVoiceDiagnosticReport.shared.record("contacts_query_finished", "status=no_result count=0")

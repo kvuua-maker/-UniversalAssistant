@@ -77,9 +77,11 @@ struct SystemMessageComposer: UIViewControllerRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator(completion: completion) }
     func makeUIViewController(context: Context) -> MFMessageComposeViewController {
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre("MESSAGE_COMPOSE", "mechanism=MessageUI")
         let controller = MFMessageComposeViewController()
         controller.recipients = recipients; controller.body = body
         controller.messageComposeDelegate = context.coordinator
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPost("MESSAGE_COMPOSE", "mechanism=MessageUI status=presented")
         return controller
     }
     func updateUIViewController(_ controller: MFMessageComposeViewController, context: Context) {}

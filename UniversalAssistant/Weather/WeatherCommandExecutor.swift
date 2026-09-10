@@ -35,6 +35,8 @@ struct ProductionWeatherCommandExecutor: WeatherCommandExecuting, Sendable {
     }
 
     func execute(_ command: StructuredCommand) async throws -> WeatherSnapshot {
+        recordDiagnostic("WEATHER_PRE", "capability=weather")
+        defer { recordDiagnostic("WEATHER_POST", "capability=weather status=returned") }
         guard router.route(command) == .externalCapability(.weather) else {
             throw WeatherCommandExecutionError.unsupportedRoute
         }
