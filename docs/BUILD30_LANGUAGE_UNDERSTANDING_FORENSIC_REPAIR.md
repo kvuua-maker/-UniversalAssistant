@@ -320,6 +320,55 @@ Verification:
 
 Status is **AUTOMATED GREEN FOR THIS CHECKPOINT — PHYSICAL IPHONE RETEST REQUIRED**.
 
+## Confidence, ambiguity and protected-domain fail-closed checkpoint
+
+`ContextScopedEntityResolver` now applies its configured confidence margin to
+the complete ambiguity set. A weak single candidate is no longer presented as
+a fabricated one-choice ambiguity: only two or more plausible candidates can
+produce a choice list; otherwise resolution remains explicitly unresolved.
+
+`LanguageUnderstandingBlock` records bounded confidence, runner-up margin,
+mechanism and terminal resolution metadata for application, service/channel
+and catalog domains. An unverified application target emitted by the legacy
+compatibility parser is removed before the canonical domain decision. A
+verified unique candidate restores the typed application identifier, a close
+pair renders concise choices, and weak evidence remains a local clarification
+without a generic-web handoff. `ProductionAssistantComposition` accepts an
+injectable language block for boundary tests while its shipped default remains
+the same single authoritative instance shared by Home and the canonical
+executor graph.
+
+CLOSED approach and evidence:
+
+- the prior test expectation selected `telegrm` while deliberately injecting a
+  second nearly identical Telegram candidate. The new margin policy correctly
+  classified that domain as ambiguous. Automatic selection in a demonstrably
+  close domain is CLOSED; high-confidence recovery is now asserted only in a
+  unique verified domain, while the close-domain case must clarify.
+- preserving the legacy parser raw application target after canonical
+  unresolved evidence was disproved by the shipped Release-root test. That
+  compatibility precedence is CLOSED; only a verified typed application entity
+  may survive the authoritative boundary.
+
+Verification:
+
+- focused language, Release-root, device-router and production-composition
+  confidence suites: 27/27 PASS, 0 failed, 0 skipped;
+- finalized result bundle:
+  `/tmp/ua-build31-confidence-dd/Logs/Test/Test-UniversalAssistant-2026.09.10_02-32-14-+0200.xcresult`;
+- protected entity, Contacts/Calls, messaging and shipped Release-root
+  regressions: 39/39 PASS, 0 failed, 0 skipped;
+- finalized regression bundle:
+  `/tmp/ua-build31-confidence-regression-dd/Logs/Test/Test-UniversalAssistant-2026.09.10_02-33-56-+0200.xcresult`;
+- Development simulator compile: PASS;
+- `git diff --check`: PASS.
+
+Status is **AUTOMATED GREEN FOR CONFIDENCE/AMBIGUITY — PHYSICAL IPHONE RETEST REQUIRED**.
+
 ## Exact continuation point
 
-Complete the evidence-backed confidence/clarification policy at the authoritative `LanguageUnderstandingBlock` boundary, including close candidate margins, weak entity fail-closed behavior and protected-domain local clarification. Add generated noisy-ASR, mixed-language and ambiguity Release-root tests, then begin the 96-function revalidation through the shipped language block without repeating already GREEN family checkpoints.
+Add generated noisy-ASR token split/merge, mixed Ukrainian/Russian/Latin entity
+and ambiguity tests through the shipped Release composition. Materially close
+any first-stage normalization or role-domain defect they expose, then begin the
+96-function revalidation through the authoritative language block without
+repeating already GREEN family checkpoints.

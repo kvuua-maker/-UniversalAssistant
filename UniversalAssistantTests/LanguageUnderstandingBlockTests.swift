@@ -57,6 +57,17 @@ struct LanguageUnderstandingBlockTests {
         }
         #expect(options == ["Aurora One", "Aurora Two"])
 
+        let marginBound = [
+            ScopedEntityCandidate(value: 3, displayName: "bcdfghjkln", aliases: []),
+            ScopedEntityCandidate(value: 4, displayName: "bcdfghjkzz", aliases: [])
+        ]
+        guard case let .ambiguous(marginOptions) = ContextScopedEntityResolver(candidates: marginBound)
+            .resolve("bcdfghjklm") else {
+            Issue.record("Expected both candidates inside the required confidence margin")
+            return
+        }
+        #expect(marginOptions == ["bcdfghjkln", "bcdfghjkzz"])
+
         let weak = ContextScopedEntityResolver(candidates: close).resolve("unrelated entity")
         #expect(weak == .unresolved)
     }
@@ -265,6 +276,49 @@ struct Build31ReleaseRootLanguageTests {
             compactResultDuration: .seconds(60)
         )
         model.input = "Відкрий невідому панель керування пристроєм"
+        model.submit()
+        try await wait { model.statusText != AppText.value("processing") }
+        #expect(model.statusText == AppText.value("clarification_needed"))
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+
+    @Test func closeApplicationCandidatesRenderConciseChoicesThroughReleaseRoot() async throws {
+        let language = LanguageUnderstandingBlock(applicationCandidates: [
+            .init(value: "nova-blue", displayName: "Nova Blue", aliases: ["Nova"]),
+            .init(value: "nova-green", displayName: "Nova Green", aliases: ["Nova"])
+        ])
+        let model = ProductionAssistantComposition.makeModel(
+            languageUnderstanding: language,
+            personalSearchSources: [],
+            compactResultDuration: .seconds(60)
+        )
+        model.input = "Запусти Nova"
+        model.submit()
+        try await wait { if case .actionRequired = model.resultState { return true }; return false }
+        guard case let .actionRequired(summary) = model.resultState else {
+            Issue.record("Ambiguity did not reach the production choice renderer")
+            return
+        }
+        #expect(summary.choices == ["Nova Blue", "Nova Green"])
+        #expect(model.statusText == AppText.value("clarification_needed"))
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+
+    @Test func weakApplicationMatchFailsClosedThroughReleaseRoot() async throws {
+        let language = LanguageUnderstandingBlock(applicationCandidates: [
+            .init(value: "nimbus-studio", displayName: "Nimbus Studio", aliases: ["Nimbus Studio"])
+        ])
+        let parsed = language.parse("Відкрий панель зоряного пилу")
+        #expect(parsed.entities["entity_match_resolution"] == "unresolved")
+        #expect(parsed.entities["app"] == nil)
+        #expect(parsed.needsClarification)
+
+        let model = ProductionAssistantComposition.makeModel(
+            languageUnderstanding: language,
+            personalSearchSources: [],
+            compactResultDuration: .seconds(60)
+        )
+        model.input = "Відкрий панель зоряного пилу"
         model.submit()
         try await wait { model.statusText != AppText.value("processing") }
         #expect(model.statusText == AppText.value("clarification_needed"))

@@ -164,6 +164,11 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             document: document,
             selectedIntent: intent
         ) {
+            recordResolutionEvidence(recovered, prefix: "entity_match", entities: &entities)
+            // A compatibility parser may expose the raw open target as an app.
+            // It is not a verified entity and must not survive an unresolved or
+            // ambiguous canonical-domain decision.
+            entities.removeValue(forKey: "app")
             switch recovered.resolution {
             case let .resolved(identifier):
                 entities["app"] = identifier
@@ -187,6 +192,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         if let serviceKey = serviceKey(for: intent),
            entities[serviceKey] == nil,
            let recovered = recoverService(frame: frameResult.frame, document: document, intent: intent) {
+            recordResolutionEvidence(recovered, prefix: "service_match", entities: &entities)
             switch recovered.resolution {
             case let .resolved(identifier):
                 entities[serviceKey] = identifier
@@ -215,6 +221,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             intent: intent,
             constraints: constraints
         ) {
+            recordResolutionEvidence(recovered, prefix: "catalog_match", entities: &entities)
             switch recovered.resolution {
             case let .resolved(candidate):
                 entities[candidate.kind.rawValue] = candidate.displayName
@@ -395,6 +402,21 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             risk: command.risk,
             needsClarification: command.needsClarification
         )
+    }
+
+    private func recordResolutionEvidence<Value: Equatable & Sendable>(
+        _ evidence: ScopedEntityResolutionEvidence<Value>,
+        prefix: String,
+        entities: inout [String: String]
+    ) {
+        entities["\(prefix)_confidence"] = String(format: "%.3f", evidence.bestScore)
+        entities["\(prefix)_margin"] = String(format: "%.3f", evidence.confidenceMargin)
+        entities["\(prefix)_mechanism"] = evidence.mechanism.rawValue
+        entities["\(prefix)_resolution"] = switch evidence.resolution {
+        case .resolved: "resolved"
+        case .ambiguous: "ambiguous"
+        case .unresolved: "unresolved"
+        }
     }
 
     private func recoverApplication(

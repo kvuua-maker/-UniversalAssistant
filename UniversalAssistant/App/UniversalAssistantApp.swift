@@ -7,6 +7,7 @@ import SwiftUI
 enum ProductionAssistantComposition {
     static func makeModel(
         contacts: any ContactResolving = LocalContactResolver(),
+        languageUnderstanding: LanguageUnderstandingBlock = .init(),
         photos: any PhotoLibrarySearching = PhotoKitLibrarySearch(),
         photoSemanticLoader: any PhotoAssetImageLoading = PhotoKitAssetImageLoader(),
         photoSemanticLabeler: any PhotoSemanticLabeling = VisionPhotoSemanticLabeler(),
@@ -36,7 +37,6 @@ enum ProductionAssistantComposition {
         systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
     ) -> AssistantViewModel {
         let context = CurrentContextStore()
-        let languageUnderstanding = LanguageUnderstandingBlock()
         let voiceInput = voiceInputOverride ?? VoiceInputController(contextualVocabulary: {
             await contacts.contextualVocabulary(limit: 32)
         })

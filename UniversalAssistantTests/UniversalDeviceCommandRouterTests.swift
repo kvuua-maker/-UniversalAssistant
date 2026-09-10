@@ -25,7 +25,7 @@ struct UniversalDeviceCommandRouterTests {
         ]
         #expect(DeviceApplicationResolver(applications: apps).resolve(spokenName: "телега") ==
                 .clarification(["telegram", "telegram-alt"]))
-        guard case let .direct(recovered) = DeviceApplicationResolver(applications: apps).resolve(spokenName: "telegrm") else { Issue.record("Expected high-confidence registry recovery"); return }
+        guard case let .direct(recovered) = DeviceApplicationResolver(applications: LaunchDeviceApplications.verified).resolve(spokenName: "telegrm") else { Issue.record("Expected high-confidence unique registry recovery"); return }
         #expect(recovered.id == "telegram")
         #expect(DeviceApplicationResolver(applications: apps).resolve(spokenName: "unrelated assistant") == .unsupported)
     }

@@ -67,11 +67,16 @@ struct ContextScopedEntityResolver<Value: Equatable & Sendable>: Sendable {
         if best.score >= directThreshold, margin >= requiredMargin {
             return .init(resolution: .resolved(best.candidate.value), bestScore: best.score, confidenceMargin: margin, mechanism: best.mechanism)
         }
-        let cutoff = max(ambiguityThreshold, best.score - 0.08)
+        let cutoff = max(ambiguityThreshold, best.score - requiredMargin)
         let choices: [ScopedEntityCandidate<Value>] = ranked.compactMap { entry in
             entry.score >= cutoff ? entry.candidate : nil
         }
-        let resolution: ScopedEntityResolution<Value> = choices.isEmpty ? .unresolved : .ambiguous(Self.names(choices))
+        // A weak unique match is not a real ambiguity and must not suggest an
+        // invented entity. Only two or more plausible candidates are rendered
+        // as choices; otherwise the role remains unresolved/fail-closed.
+        let resolution: ScopedEntityResolution<Value> = choices.count >= 2
+            ? .ambiguous(Self.names(choices))
+            : .unresolved
         return .init(resolution: resolution, bestScore: best.score, confidenceMargin: margin, mechanism: best.mechanism)
     }
 
