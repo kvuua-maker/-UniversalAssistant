@@ -441,9 +441,49 @@ Verification:
 Status is **96/96 RELEASE REACHABILITY ACCOUNTED FOR — AUTOMATED VERIFIED;
 PHYSICAL IPHONE RETEST REQUIRED**.
 
+## Final autonomous completion gate (2026-09-10)
+
+The first complete iOS gate exposed two shared production defects rather than
+acceptance-phrase gaps. A validated typed compound graph could be replaced by
+the structural intent of its first interactive clause, which lost the later
+OCR-to-Translation or Place-to-Navigation continuation. In addition, fixed
+temporal and split-thousands regular expressions were repeatedly compiled in
+the parser hot path, exceeding the local-parser performance budget. The
+material repair preserves a validated structural `.multiStep` graph before
+single-clause intent selection and caches/replaces fixed regular-expression
+work. No capability-specific phrase exception was added.
+
+Evidence:
+
+- focused affected compound/translation/performance suites: 38/38 PASS;
+- protected semantic/compound/performance regressions: 111/111 PASS;
+- final full iOS: 876/876 PASS, 0 failed, 0 skipped;
+- Backend: 115/115 PASS;
+- ZERO-OMISSION 2404/2404; AUDIO 147/147; PRIVACY 168/168;
+  JOBS 97/97; LOYALTY 127/127; diagnostics 2/2;
+- requirement reconciliation: 1787/1787;
+- Development and Production simulator compiles: PASS;
+- `git diff --check`: PASS.
+
+The first full-iOS rerun had one infrastructure-only failure: the selected
+fresh Simulator did not have Contacts access for the development bundle, so
+the framework integration precondition failed before production assertions.
+After booting that same Simulator and granting the test app Contacts access,
+the shipped contact resolution/call/message test passed 1/1 and the full suite
+passed 876/876. Production Contacts code was not changed for that condition.
+
+Read-only VPS correlation on 2026-09-10 still returns no accepted Build-30
+session. This is consistent with the documented old-schema rejection and is
+not crash evidence. The compatible deployed schema and current client/server
+contract are covered by Backend diagnostics tests and the 2/2 diagnostic gate,
+so the next physical build can supply the missing bounded evidence.
+
+Status is **AUTONOMOUS COMPLETION GATE AUTOMATED GREEN — PHYSICAL IPHONE
+RETEST REQUIRED**.
+
 ## Exact continuation point
 
-Run the complete canonical gate set, validate the current diagnostic schema and
-VPS delivery readiness without inventing the rejected historical Build-30
-payloads, reconcile recovery-artifact locations factually, and create Build 31
-only if every autonomous completion gate remains green.
+Commit and push the verified source checkpoint, verify `HEAD == origin/main`
+and a clean tracked tree, then create only Build 31 as the authorized physical
+verification artifact. Do not introduce another feature change between the
+verified source HEAD and release increment.

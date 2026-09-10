@@ -231,6 +231,12 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             intent = .localUtility
         } else if LocalUtilityEngine.recognizesCurrency(document.normalizedText) {
             intent = .currencyConversion
+        } else if legacy.intent == .multiStep, frameResult.frame.compound != nil {
+            // LocalCommandEngine has already required every separated clause to
+            // resolve to a concrete canonical command. Preserve that validated
+            // typed graph before selecting any one clause's structural intent;
+            // otherwise an interactive first step loses its continuation.
+            intent = .multiStep
         } else if let structural = frameResult.intent {
             intent = structural
         } else {

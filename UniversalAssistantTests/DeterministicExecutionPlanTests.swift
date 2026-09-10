@@ -85,6 +85,21 @@ extension DeterministicExecutionPlanTests {
         #expect(plan.steps.first { $0.command?.intent == .contactCall }?.dependencies == [lookup.id])
     }
 
+    @Test func authoritativeLanguageBlockPreservesValidatedStructuralCompoundGraphs() throws {
+        let samples: [(String, [CommandIntent])] = [
+            ("Відскануй текст документа, потім переклади французькою", [.cameraCapture, .translation]),
+            ("Знайди найближчу аптеку; проклади до неї маршрут", [.placeSearch, .navigation])
+        ]
+        for (text, expected) in samples {
+            let command = LanguageUnderstandingBlock().parse(text)
+            #expect(command.intent == .multiStep)
+            let plan = try DeterministicExecutionPlanBuilder().plan(for: command)
+            #expect(plan.steps.compactMap(\.command?.intent) == expected)
+            #expect(!plan.steps.contains { [.typedCommand, .deterministicCompose].contains($0.capability) })
+            #expect(plan.steps.dropFirst().allSatisfy { !$0.dependencies.isEmpty })
+        }
+    }
+
     @Test func contactsLookupIsHardDependencyForCall() throws {
         let parser = TypedCompoundParser(intents: ["lookup": .contactLookup, "call": .contactCall])
         let plan = try DeterministicExecutionPlanBuilder(parser: parser).plan(for: compound("lookup, then call"))

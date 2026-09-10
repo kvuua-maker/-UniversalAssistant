@@ -4,13 +4,17 @@ import Foundation
 /// Telephone/dial contexts stay untouched: separated phone groups represent
 /// a digit sequence rather than an additive cardinal number.
 enum StructuredNumberNormalizer {
+    private static let splitThousandsRegex = try! NSRegularExpression(
+        pattern: #"(?<![\d.,])(\d{1,})\s+(\d{3})(?![\d.,])"#
+    )
+
     static func normalize(_ text: String) -> String {
         let spoken = SpokenCardinalNormalizer.normalize(text)
         let folded = spoken.lowercased()
         let telephoneContext = ["телефон", "номер", "подзвон", "зателефон", "набер", "позвон", "call", "dial"]
             .contains(where: folded.contains)
         guard !telephoneContext else { return spoken }
-        guard let regex = try? NSRegularExpression(pattern: #"(?<![\d.,])(\d{1,})\s+(\d{3})(?![\d.,])"#) else { return spoken }
+        let regex = Self.splitThousandsRegex
         var value = spoken
         for match in regex.matches(in: spoken, range: NSRange(spoken.startIndex..., in: spoken)).reversed() {
             guard let whole = Range(match.range(at: 0), in: value),

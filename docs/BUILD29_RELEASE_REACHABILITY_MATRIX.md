@@ -2,6 +2,26 @@
 
 Build 29 and Build 30 physical evidence is authoritative. RELEASE_ROOT_VERIFIED requires the shipped ProductionAssistantComposition path through the authoritative LanguageUnderstandingBlock; Development/unit/mock evidence alone is insufficient. Build 30 remains the installed physical baseline; Build 31 does not exist. All 96 rows are accounted for by Release-root evidence or an exact legitimate Apple/backend/provider/owner boundary. The current complete Release-root inventory run is 42/42 PASS in 14 suites; physical iPhone retest remains required.
 
+## Final Build-31 pre-release reconciliation (2026-09-10)
+
+All 96 reachability rows and the recorded semantic contracts remain accounted
+for through the authoritative `LanguageUnderstandingBlock` and shipped
+`ProductionAssistantComposition`, or through an exact legitimate
+Apple/backend/provider/owner boundary. The final gate additionally protects
+general typed compound graphs: an interactive first step can no longer replace
+the validated `.multiStep` intent and discard its typed dependency output.
+
+Final evidence: focused changed suites 38/38 PASS; protected regressions
+111/111 PASS; full iOS 876/876 PASS; Backend 115/115 PASS; ZERO-OMISSION
+2404/2404; AUDIO 147/147; PRIVACY 168/168; JOBS 97/97; LOYALTY 127/127;
+diagnostics 2/2; requirement reconciliation 1787/1787; Development and
+Production compile PASS. This is automated Release-root evidence, not physical
+iPhone verification.
+
+Exact continuation: commit/push the verified source checkpoint and proceed to
+the Build-31 release workflow only after confirming `HEAD == origin/main`, a
+clean tracked tree and unchanged recovery artifacts.
+
 | ID | Canonical function | Apple audit | Current production implementation | Release entry | Target membership/config | Release-root evidence | Status | Required material action |
 |---:|---|---|---|---|---|---|---|---|
 | 1 | Voice recognition | APPLE_NATIVE_CORRECT | VoiceInputController; SFSpeechRecognizer; AVAudioEngine | Home final voice event through ProductionAssistantComposition | Production target; shared AssistantViewModel graph | Unseen finalized voice transcript traversed normalization, semantic routing and deterministic result renderer in Release root | RELEASE_ROOT_VERIFIED | Preserve session generation, stale callback suppression and physical retest |

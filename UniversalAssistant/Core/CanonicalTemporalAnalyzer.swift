@@ -4,6 +4,8 @@ import Foundation
 /// Numbers have already passed through `StructuredNumberNormalizer`, so every
 /// consumer sees the same duration/date/clock roles for typed and voice input.
 struct CanonicalTemporalAnalyzer: Sendable {
+    nonisolated(unsafe) private static let regexCache = NSCache<NSString, NSRegularExpression>()
+
     enum Kind: String, Equatable, Sendable {
         case duration
         case relativeDeadline = "relative_deadline"
@@ -135,7 +137,8 @@ struct CanonicalTemporalAnalyzer: Sendable {
     }
 
     private func hasRelativeMarker(atEndOf prefix: String) -> Bool {
-        prefix.range(of: #"(?:^|\s)(?:через|за|in)\s*$"#, options: .regularExpression) != nil
+        guard let marker = prefix.split(whereSeparator: { !$0.isLetter }).last else { return false }
+        return ["через", "за", "in"].contains(marker.lowercased())
     }
 
     private struct DayMatch {
@@ -240,12 +243,25 @@ struct CanonicalTemporalAnalyzer: Sendable {
     }
 
     private func containsWordOrPhrase(_ phrase: String, in text: String) -> Bool {
-        text.range(of: #"(?:^|\s)"# + NSRegularExpression.escapedPattern(for: phrase) + #"(?:$|\s|[,.!?])"#, options: [.regularExpression, .caseInsensitive]) != nil
+        let words = text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        let phraseWords = phrase.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        guard !phraseWords.isEmpty, phraseWords.count <= words.count else { return false }
+        return (0...(words.count - phraseWords.count)).contains { start in
+            Array(words[start..<(start + phraseWords.count)]) == phraseWords
+        }
     }
 
     private func firstMatch(_ pattern: String, in text: String) -> NSTextCheckingResult? {
-        (try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]))?
-            .firstMatch(in: text, range: NSRange(text.startIndex..., in: text))
+        let key = pattern as NSString
+        let regex: NSRegularExpression
+        if let cached = Self.regexCache.object(forKey: key) {
+            regex = cached
+        } else {
+            guard let compiled = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
+            Self.regexCache.setObject(compiled, forKey: key)
+            regex = compiled
+        }
+        return regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text))
     }
 
     private func capture(_ index: Int, from match: NSTextCheckingResult, in text: String) -> String? {
