@@ -489,3 +489,46 @@ The archive and IPA are signed and verified. Upload attempt 1 did not reach
 Apple validation because Xcode has no App Store Connect account for Team
 `9V5XXDXF3N`. Reauthenticate that authorized account, then retry only upload
 of the existing archive. Do not rebuild, change source or create Build 32.
+
+## Build-32 physical Contacts crash — symbolicated root repair (2026-09-10)
+
+The authoritative physical device is the owner's iPhone SE (2nd generation),
+model `iPhone12,8`, running iOS `26.6.2`. Two Build-32 fatal Crashlytics
+events (`1d4468f637cd41a3ba0711303c3e0ec9_2262444391634641851` and
+`ca8a8e9ba3904bdaac80b9281df475e9_2262444272430842938`) have the same fully
+symbolicated stack. The first wrong stage is semantic analysis before Contacts
+authorization or `CNContactStore` access:
+
+`CanonicalSemanticFrameAnalyzer.trailingEntity(_:afterActionFamilies:stoppingAt:)`
+at `CanonicalSemanticFrame.swift:671` → `analyze` →
+`AssistantViewModel.isSharedImageTextRequest` → `submit` → the final Speech
+callback. Therefore the physical crash is not a Contacts-framework failure.
+
+Root cause: `trailingEntity` found a range in a Unicode-folded copy and used
+that copy's `String.Index` to slice the original transcript. Unicode folding
+can change grapheme boundaries, so that index does not belong to the original
+`String` and traps. The general repair tokenizes the original transcript,
+folds each token only for action-root comparison, and slices with the matched
+original `Substring.endIndex`. No contact name, owner phrase, or ASR alias was
+added.
+
+Automated verification uses the actually installed Simulator UUID
+`6D2301D1-5C44-42EF-9E4C-CB9380DC3126`; tests are device-agnostic. The model
+name reported by CoreSimulator is not physical evidence and is not confused
+with the owner's `iPhone12,8`:
+
+- Unicode/morphology and shipped `ProductionAssistantComposition` suites:
+  17/17 PASS;
+- protected Contacts/Calls/lifecycle suites: 40/41 PASS on the first run; the
+  single pre-assertion failure was missing full Contacts permission in the
+  Simulator, not source behavior;
+- after granting `contacts` to the development test bundle on that same
+  Simulator, the affected framework-boundary suite passed 1/1 and proved both
+  normal `tel:` handoff and Messages composition through the shipped root;
+- Development compile: PASS;
+- `git diff --check`: PASS.
+
+Status: **ROOT REPAIR IMPLEMENTED + AUTOMATED VERIFIED; PHYSICAL BUILD-33
+IPHONE RETEST REQUIRED**. The remaining Build-32 families must be repaired only
+from their own physical Crashlytics/Apple evidence; simulator diagnostic events
+must not be promoted to iPhone evidence.

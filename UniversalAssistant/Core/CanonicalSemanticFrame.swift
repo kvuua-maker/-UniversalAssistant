@@ -663,12 +663,20 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     }
 
     private func trailingEntity(_ original: String, afterActionFamilies: [[String]], stoppingAt stops: [String]) -> String? {
-        let folded = original.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-        let allRoots = afterActionFamilies.flatMap { $0 }
-        guard let tokenRange = folded.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).first(where: { token in
-            allRoots.contains { token.hasPrefix($0) }
-        }).flatMap({ folded.range(of: String($0)) }) else { return nil }
-        var tail = String(original[tokenRange.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        let locale = Locale(identifier: "uk_UA")
+        let allRoots = afterActionFamilies
+            .flatMap { $0 }
+            .map { $0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: locale) }
+        guard let actionToken = original.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).first(where: { token in
+            let foldedToken = String(token).folding(options: [.caseInsensitive, .diacriticInsensitive], locale: locale)
+            return allRoots.contains { foldedToken.hasPrefix($0) }
+        }) else { return nil }
+
+        // `String.Index` belongs to one concrete string. Unicode folding can change
+        // grapheme boundaries, so an index found in a folded copy must never be used
+        // to slice the original transcript. Keep the token as an original substring
+        // and continue from its source-owned end index.
+        var tail = String(original[actionToken.endIndex...]).trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
         for stop in stops {
             if let range = tail.range(of: stop, options: [.caseInsensitive, .diacriticInsensitive]) {
                 tail = String(tail[..<range.lowerBound])

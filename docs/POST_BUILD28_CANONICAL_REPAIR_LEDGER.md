@@ -144,3 +144,30 @@ Exact next material operation: reconcile the three recorded semantic contracts�
 All three recorded contracts are reconciled. Recorder lifecycle verbs now remain typed ACTION roles and pause→resume→stop reaches the shipped `ProductionAssistantComposition`; the first Release-root run exposed a separate `sum`-inside-`resume` utility collision, repaired with lexical-token signal boundaries. Nearby restaurant requests converge on the canonical structured Places intent. A verified messaging SERVICE/CHANNEL has structural precedence over Calendar-domain nouns contained in message payloads. Production-root family suite 6/6 PASS; parser/email suite 10/10 PASS; recorder/messaging protected run 22/22 PASS; Development compile PASS; `git diff --check` PASS. CLOSED: short arithmetic substring matching and controller-only recorder evidence. Physical iPhone retest remains required.
 
 Exact next material operation: execute the complete canonical/release gate inventory, materially repair any source failures, and only after a fully green completion gate increment 29→30. Build 30 has not been created.
+
+## Build-32 physical repair continuation (2026-09-10)
+
+Authoritative physical hardware is the owner's iPhone SE (2nd generation),
+`iPhone12,8`, iOS `26.6.2`. Build 32 produced two fully symbolicated fatal
+Crashlytics events with the identical first failing symbol
+`CanonicalSemanticFrameAnalyzer.trailingEntity` at
+`CanonicalSemanticFrame.swift:671`, before any Contacts permission, fetch, or
+resolver boundary. The function incorrectly used a `String.Index` owned by a
+Unicode-folded copy to slice the original transcript. It now preserves original
+index ownership while using folded per-token text only for structural action
+matching. This is a general Unicode/morphology repair, not a contact/phrase
+exception.
+
+Verification: focused Unicode plus shipped Release-root suites 17/17 PASS;
+protected Contacts/Calls/lifecycle 40/41 with the sole failure proven to be a
+Simulator Contacts-permission precondition; after granting that permission on
+the same concrete Simulator UUID, the framework-boundary test passed 1/1;
+Development compile PASS; `git diff --check` PASS. Simulator output is
+automated evidence only and is not physical `iPhone12,8` verification.
+
+Status: **BUILD-32 CONTACT/CALL FATAL ROOT REPAIR AUTOMATED GREEN — PHYSICAL
+IPHONE RETEST REQUIRED**. Exact next material operation: obtain the physical
+Build-32 Crashlytics terminal/fatal trace for the next unresolved family
+(noisy entity recovery, application opening, excessive clarification, or
+communication routing), classify its first wrong production stage, and repair
+that general mechanism without changing diagnostics or adding phrase aliases.

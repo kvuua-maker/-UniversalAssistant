@@ -26,6 +26,21 @@ struct CanonicalSemanticFrameTests {
         #expect(thirdParty.entities["call_service"] == "whatsapp")
     }
 
+    @Test func unicodeFoldingKeepsEntitySlicesOwnedByTheOriginalTranscript() {
+        let analyzer = CanonicalSemanticFrameAnalyzer()
+        let cases = [
+            ("Зателефонуйте Євгенії", "Євгенії"),
+            ("Наберіть Ївгу", "Ївгу"),
+            ("CALL José", "José")
+        ]
+
+        for (input, expectedContact) in cases {
+            let result = analyzer.analyze(original: input, normalized: input.lowercased())
+            #expect(result.intent == .contactCall)
+            #expect(result.entities["contact"] == expectedContact)
+        }
+    }
+
     @Test func compositionPreservesTargetAndSourceRoles() {
         let weather = parser.parse("Скажи температуру тут")
         #expect(weather.intent == .weather)

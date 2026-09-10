@@ -53,6 +53,23 @@ struct Build29ReleaseCompositionForensicsTests {
         #expect(model.statusText != AppText.value("processing"))
     }
 
+    @Test func releaseHomeUnicodeContactCommandSurvivesSemanticAnalysisAndReachesTelephoneHandoff() async throws {
+        let contact = ContactCandidate(identifier: "release-unicode-contact", displayName: "Євгенія", phoneNumbers: ["+380 50 246 80 24"])
+        let capture = Build29SystemOpenCapture()
+        let model = ProductionAssistantComposition.makeModel(
+            contacts: Build29ReleaseContactBoundary(.resolved(contact)),
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            systemHandoffOpen: capture.open
+        )
+
+        model.input = "Зателефонуйте Євгенії"
+        model.submit()
+
+        for _ in 0..<100 where capture.urls.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(capture.urls.first?.scheme == "tel")
+        #expect(model.statusText != AppText.value("processing"))
+    }
+
     @Test func releaseHomeMessageProducesSystemComposerWithoutWeb() async throws {
         let contact = ContactCandidate(identifier: "release-message-contact", displayName: "Марко", phoneNumbers: ["+380 93 555 66 77"])
         let model = ProductionAssistantComposition.makeModel(
