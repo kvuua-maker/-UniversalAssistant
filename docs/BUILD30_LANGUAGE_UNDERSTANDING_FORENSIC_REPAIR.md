@@ -483,7 +483,9 @@ RETEST REQUIRED**.
 
 ## Exact continuation point
 
-Commit and push the verified source checkpoint, verify `HEAD == origin/main`
-and a clean tracked tree, then create only Build 31 as the authorized physical
-verification artifact. Do not introduce another feature change between the
-verified source HEAD and release increment.
+The verified source checkpoint is `12d06ed80af5ce8ee4a873e6297c2b0167c3af66`;
+Build-31 release/archive HEAD is `5d16f717d2c657055d39d96d90ec69549bd09a52`.
+The archive and IPA are signed and verified. Upload attempt 1 did not reach
+Apple validation because Xcode has no App Store Connect account for Team
+`9V5XXDXF3N`. Reauthenticate that authorized account, then retry only upload
+of the existing archive. Do not rebuild, change source or create Build 32.

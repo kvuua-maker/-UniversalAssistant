@@ -12,7 +12,7 @@ VPS correlation was repeated read-only on 2026-09-10. `latest --build 30` return
 
 The three intentional recovery/handoff files are factually outside this checkout at `/Users/Shared/UniversalAssistantRemote`; their SHA-256 values remain `5b25e2d9d28eeb01bc2f4f935dcbb4722424631bfa070794106abda22f392c43`, `8c5c7dbe1dcc7a1a7d88a338a1cd29b7101400168dec86e7ea0cd8e10672efe9`, and `94eeb81f67d54ee15d1ce688743fbf0a8a3cd07a2b4d7c823bc15fbc3a130f71`. They were not recreated or modified.
 
-Status: **96/96 RELEASE REACHABILITY ACCOUNTED FOR; COMPLETE AUTONOMOUS GATES AUTOMATED GREEN — PHYSICAL IPHONE RETEST REQUIRED**. Exact next material operation: commit/push this verified source checkpoint, verify a clean `origin/main`, then perform the authorized Build-31 release workflow without any intervening feature change. Build 31 has not yet been created.
+Status: **96/96 RELEASE REACHABILITY ACCOUNTED FOR; COMPLETE AUTONOMOUS GATES AUTOMATED GREEN — PHYSICAL IPHONE RETEST REQUIRED**. Verified source checkpoint `12d06ed80af5ce8ee4a873e6297c2b0167c3af66` and build-number commit `5d16f717d2c657055d39d96d90ec69549bd09a52` are pushed. Build 31 archived, signed and exported with SHA-256 `c9d7027fab29a7b44ce0aeed0258e3f63ad2515f553b32e906cf43079c8941a5`. Upload attempt 1 did not reach Apple validation because Xcode has no App Store Connect account access for Team `9V5XXDXF3N`; unchanged retry is CLOSED until account state changes. Exact next material operation: reauthenticate the authorized Apple Account in Xcode and upload the existing archive only. Build 32 has not been created.
 
 ## Build-30 autonomous completion gate (2026-09-09)
 

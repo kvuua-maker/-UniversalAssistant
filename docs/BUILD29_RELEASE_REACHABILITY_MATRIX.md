@@ -1,6 +1,6 @@
 # Build 29 Release production reachability matrix
 
-Build 29 and Build 30 physical evidence is authoritative. RELEASE_ROOT_VERIFIED requires the shipped ProductionAssistantComposition path through the authoritative LanguageUnderstandingBlock; Development/unit/mock evidence alone is insufficient. Build 30 remains the installed physical baseline; Build 31 does not exist. All 96 rows are accounted for by Release-root evidence or an exact legitimate Apple/backend/provider/owner boundary. The current complete Release-root inventory run is 42/42 PASS in 14 suites; physical iPhone retest remains required.
+Build 29 and Build 30 physical evidence is authoritative. RELEASE_ROOT_VERIFIED requires the shipped ProductionAssistantComposition path through the authoritative LanguageUnderstandingBlock; Development/unit/mock evidence alone is insufficient. Build 30 remains the installed physical baseline; Build 31 is archived/exported but has not reached Apple validation. All 96 rows are accounted for by Release-root evidence or an exact legitimate Apple/backend/provider/owner boundary. The current complete Release-root inventory run is 42/42 PASS in 14 suites; physical iPhone retest remains required.
 
 ## Final Build-31 pre-release reconciliation (2026-09-10)
 
@@ -18,9 +18,11 @@ diagnostics 2/2; requirement reconciliation 1787/1787; Development and
 Production compile PASS. This is automated Release-root evidence, not physical
 iPhone verification.
 
-Exact continuation: commit/push the verified source checkpoint and proceed to
-the Build-31 release workflow only after confirming `HEAD == origin/main`, a
-clean tracked tree and unchanged recovery artifacts.
+Release artifact state: source checkpoint `12d06ed80af5ce8ee4a873e6297c2b0167c3af66`;
+release/archive HEAD `5d16f717d2c657055d39d96d90ec69549bd09a52`;
+signed IPA SHA-256 `c9d7027fab29a7b44ce0aeed0258e3f63ad2515f553b32e906cf43079c8941a5`.
+Upload remains at the exact owner account boundary: Xcode must be reauthenticated
+for Team `9V5XXDXF3N`, then only the existing archive is uploaded.
 
 | ID | Canonical function | Apple audit | Current production implementation | Release entry | Target membership/config | Release-root evidence | Status | Required material action |
 |---:|---|---|---|---|---|---|---|---|
