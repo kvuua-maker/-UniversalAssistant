@@ -206,3 +206,25 @@ without treating simulator success as physical `iPhone12,8` evidence.
 Firebase re-query through `2026-09-10T22:50:24Z`: unchanged at six fatal events
 plus one connectivity probe; no new terminal non-fatal evidence exists. Next:
 complete canonical gates for the verified mechanism changes.
+
+### Build-32 physical repair completion gate
+
+Full evidence after the general Unicode slicing, app-token classification,
+typed catalog-domain wiring and pre-callback transcript persistence repairs:
+iOS 898/898 in 154 suites; Backend 115/115; ZERO-OMISSION 2404/2404; AUDIO
+147/147; PRIVACY 168/168; JOBS 97/97; LOYALTY 127/127; diagnostics 2/2;
+requirement reconciliation 1787/1787; Development and Production compile PASS;
+`git diff --check` PASS. All shipped Release-root suites are included in the
+full iOS gate.
+
+CLOSED infrastructure tactic: changing shell `TMPDIR` did not move Foundation's
+Darwin temporary directory and therefore could not fix SwiftPM subprocess
+sandbox `Code=513`. The unchanged Backend suite passes 115/115 with SwiftPM's
+documented `--disable-sandbox` test-runner option while the outer workspace
+sandbox remains active. This is not a production-code repair.
+
+Status: **AUTOMATED GREEN — PHYSICAL BUILD-33 IPHONE RETEST REQUIRED**. Exact
+next material operation: create one coherent source checkpoint, verify
+`HEAD == origin/main`, clean tracked tree and unchanged recovery artifacts,
+then increment only Build 32 → 33 and execute the canonical signed archive,
+IPA, SHA-256 and TestFlight upload workflow. Build 34 is forbidden.

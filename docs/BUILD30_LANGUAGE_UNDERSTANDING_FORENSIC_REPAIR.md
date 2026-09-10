@@ -598,3 +598,27 @@ An official Firebase Crashlytics API read-back through `2026-09-10T22:50:24Z`
 still reports only those six fatal events and the one connectivity probe for
 `0.1.0 (32)`; no terminal non-fatal trace is available to support an additional
 repair hypothesis.
+
+## Build-33 repair completion gate
+
+All repairs supported by the available physical Build-32 evidence now pass the
+complete automated gate: iOS 898/898 in 154 suites; Backend 115/115;
+ZERO-OMISSION 2404/2404; AUDIO 147/147; PRIVACY 168/168; JOBS 97/97; LOYALTY
+127/127; diagnostics 2/2; explicit requirement reconciliation 1787/1787;
+Development compile PASS; Production compile PASS; `git diff --check` PASS.
+The full iOS run includes the shipped Release-root reachability, collision,
+generation, provider, diagnostics, app, catalog, Contacts/Calls and messaging
+suites.
+
+The first two Backend attempts were infrastructure-only failures: SwiftPM's
+subprocess sandbox denied persistence tests access to macOS
+`FileManager.default.temporaryDirectory` with `NSCocoaErrorDomain Code=513`.
+Changing shell `TMPDIR` was ineffective because Foundation continued to use the
+Darwin user temporary directory; that tactic is CLOSED. Running the unchanged
+Backend tests with SwiftPM's documented `--disable-sandbox` option, while the
+outer workspace sandbox remained in force, produced 115/115 PASS. No source was
+changed for this infrastructure condition.
+
+This is **REPAIR IMPLEMENTED + AUTOMATED VERIFIED; PHYSICAL TESTFLIGHT
+VERIFICATION REQUIRED**. The six Build-32 fatal reports prove the old Unicode
+crash and do not prove physical behavior of the repaired binary.
