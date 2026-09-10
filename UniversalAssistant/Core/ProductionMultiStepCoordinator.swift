@@ -42,7 +42,7 @@ final class ProductionStepOperationMap {
         case .relativeDate:
             return { [command] in
                 let locale = LanguageConfiguration(uiLanguage: .uk, commandLanguage: command.language).voiceLocale
-                guard case let .resolved(value) = NaturalDateTimeResolver().resolve(command.originalText, locale: locale, timeZone: .autoupdatingCurrent, relativeTo: .now) else {
+                guard case let .resolved(value) = NaturalDateTimeResolver().resolve(command, locale: locale, timeZone: .autoupdatingCurrent, relativeTo: .now) else {
                     throw CanonicalCapabilityExecutionError.missingParameter("date")
                 }
                 return Self.fact(step, value: value.instant.ISO8601Format(), source: "NaturalDateTimeResolver")

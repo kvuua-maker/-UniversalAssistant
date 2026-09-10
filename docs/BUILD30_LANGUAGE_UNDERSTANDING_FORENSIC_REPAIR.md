@@ -298,12 +298,28 @@ composition terminate without a crash for this test-owned record. It does not
 identify the unavailable Build-30 physical crash cause and therefore remains
 **AUTOMATED GREEN — PHYSICAL IPHONE RETEST REQUIRED**.
 
+## Typed temporal, numeric morphology and arithmetic-structure checkpoint
+
+`CanonicalTemporalAnalyzer` now emits typed duration, relative-deadline, calendar-day, weekday, absolute-date, clock-time and date-time roles with confidence/evidence and an explicit ambiguity state. `NaturalDateTimeResolver`, EventKit extraction and multi-step lowering consume those typed entities before any compatibility text parse. Timer, alarm, Calendar and Reminder commands with an incomplete or incompatible temporal contract now terminate in local clarification instead of generic web.
+
+`CanonicalArithmeticExpressionAnalyzer` adds a typed ordered-operation contract. Strong arithmetic structure outranks the former SHARE collision for division imperatives, while Calendar dates containing slash separators no longer become arithmetic. Prefix operators require a valid operand connector, chained operations consume the prior typed result, and `SpokenCardinalNormalizer` now covers a bounded class of Ukrainian/Russian case-inflected cardinals.
+
+CLOSED approaches and material evidence:
+
+- infix-only arithmetic parsing was disproved by an unseen operator-first chained command;
+- treating any two numeric tokens following an add-like verb as arithmetic was disproved by Calendar plus clock time; prefix arithmetic now requires a structural operand connector;
+- the first new Release-root execution reached the local executor but returned 12 rather than 17, proving an inflected-cardinal normalization gap; the repair covers the linguistic number-form class rather than the example.
+
+Verification:
+
+- full affected temporal, EventKit, AlarmKit, semantic-frame, language and local-utility suites: 76/76 logical tests PASS (95 parameterized executions), 0 failed, 0 skipped;
+- finalized result bundle: `/tmp/ua-build31-temporal-final-dd/Logs/Test/Test-UniversalAssistant-2026.09.10_02-09-00-+0200.xcresult`;
+- unseen shipped `ProductionAssistantComposition` arithmetic continuation returns 17 through the local deterministic renderer and never reaches web;
+- Development simulator compile: PASS;
+- `git diff --check`: PASS.
+
+Status is **AUTOMATED GREEN FOR THIS CHECKPOINT — PHYSICAL IPHONE RETEST REQUIRED**.
+
 ## Exact continuation point
 
-Complete typed temporal roles and evidence-backed confidence/clarification policy
-inside `LanguageUnderstandingBlock`. Verify durations versus clock time, relative
-and absolute dates, numeric constraints, ambiguity margins and the invariant that a
-recognized system/local/personal family with an uncertain parameter clarifies locally
-instead of reaching generic web. Then run unseen Release-root Calendar/Reminder/
-Timer/Alarm/arithmetic collision tests and continue the 96-function language-block
-revalidation.
+Complete the evidence-backed confidence/clarification policy at the authoritative `LanguageUnderstandingBlock` boundary, including close candidate margins, weak entity fail-closed behavior and protected-domain local clarification. Add generated noisy-ASR, mixed-language and ambiguity Release-root tests, then begin the 96-function revalidation through the shipped language block without repeating already GREEN family checkpoints.

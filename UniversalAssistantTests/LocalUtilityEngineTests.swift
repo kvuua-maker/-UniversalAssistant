@@ -91,6 +91,13 @@ struct LocalUtilityEngineTests {
         #expect(command.normalizedText.contains("6"))
     }
 
+    @Test("Inflected cardinal forms", arguments: [
+        ("п'ятьох", "5"), ("шести", "6"), ("двадцяти", "20"),
+        ("пяти", "5"), ("семи", "7"), ("тридцати", "30")
+    ]) func inflectedCardinals(form: String, expected: String) {
+        #expect(SpokenCardinalNormalizer.normalize(form) == expected)
+    }
+
     @Test func naturalHomeInputReturnsInAppResultWithoutWebHandoff() async throws {
         let model = AssistantViewModel()
         model.input = "Скільки буде 347 помножити на 28?"

@@ -122,8 +122,15 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         entities["language_understanding_version"] = "1"
         entities["semantic_confidence"] = String(format: "%.3f", frameResult.frame.confidence)
 
+        let arithmetic = CanonicalArithmeticExpressionAnalyzer.analyze(document.normalizedText)
+        if let arithmetic {
+            entities["arithmetic_confidence"] = String(format: "%.3f", arithmetic.confidence)
+            entities["arithmetic_evidence"] = arithmetic.evidence.sorted().joined(separator: "|")
+            entities["arithmetic_step_count"] = String(arithmetic.steps.count)
+        }
         var intent: CommandIntent
-        if LocalUtilityEngine.canExecute(document.normalizedText) {
+        if LocalUtilityEngine.canExecute(document.normalizedText),
+           arithmetic != nil || !hasIncompatibleStructuredUtilityObject(frameResult.frame) {
             intent = .localUtility
         } else if LocalUtilityEngine.recognizesCurrency(document.normalizedText) {
             intent = .currencyConversion
@@ -252,6 +259,10 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
            entities["contact"] == nil, entities["phone_number"] == nil {
             needsClarification = true
         }
+        if requiresTemporalClarification(intent: intent, entities: entities) {
+            entities["clarification_role"] = "temporal"
+            needsClarification = true
+        }
 
         let language = document.language == .automatic ? legacy.language : document.language
         return .init(
@@ -265,6 +276,20 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             risk: legacy.risk,
             needsClarification: needsClarification || intent == .unknown
         )
+    }
+
+    /// A local-utility recognizer may observe digits or separators inside a
+    /// typed personal/system object (for example a Calendar date). That weak
+    /// lexical evidence cannot preempt the structural family. A complete
+    /// typed arithmetic expression remains authoritative across noun/action
+    /// collisions such as an imperative division versus generic sharing.
+    private func hasIncompatibleStructuredUtilityObject(_ frame: CanonicalSemanticFrame) -> Bool {
+        guard let object = frame.object else { return false }
+        return [
+            .calendar, .reminder, .timer, .alarm, .contact, .settings,
+            .file, .photo, .document, .place, .weather, .travelTime,
+            .note, .audio, .media
+        ].contains(object)
     }
 
     /// Apple alternatives may complete a role only inside the same structural
@@ -281,6 +306,32 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         let primaryRoles = primary.entities.keys.filter(roleKeys.contains).count
         let candidateRoles = candidate.entities.keys.filter(roleKeys.contains).count
         return !candidate.needsClarification && candidateRoles > primaryRoles
+    }
+
+    private func requiresTemporalClarification(
+        intent: CommandIntent,
+        entities: [String: String]
+    ) -> Bool {
+        if entities["temporal_requires_clarification"] == "true" { return true }
+        switch intent {
+        case .deviceAction where entities["system_action"] == "timer":
+            return Int(entities["duration_seconds"] ?? "") == nil
+        case .deviceAction where entities["system_action"] == "alarm":
+            return Int(entities["hour"] ?? "") == nil ||
+                Int(entities["minute"] ?? "") == nil
+        case .calendarCreate:
+            let hasDay = entities["relative_day_offset"] != nil ||
+                entities["calendar_day"] != nil ||
+                entities["weekday"] != nil
+            return !hasDay || entities["hour"] == nil || entities["minute"] == nil
+        case .reminderCreate:
+            return entities["relative_interval_seconds"] == nil &&
+                entities["relative_day_offset"] == nil &&
+                entities["calendar_day"] == nil &&
+                entities["weekday"] == nil
+        default:
+            return false
+        }
     }
 
     static func document(_ text: String) -> LanguageUnderstandingDocument {

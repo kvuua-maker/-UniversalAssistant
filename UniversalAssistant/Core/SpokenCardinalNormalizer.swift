@@ -31,7 +31,7 @@ enum SpokenCardinalNormalizer {
             var cursor = index, subtotal = 0, total = 0, consumed = false
             while cursor < words.count {
                 let key = canonical(words[cursor])
-                if let value = values[key] { subtotal += value; consumed = true; cursor += 1; continue }
+                if let value = numericValue(for: key) { subtotal += value; consumed = true; cursor += 1; continue }
                 if let scale = scales[key] { total += max(1, subtotal) * scale; subtotal = 0; consumed = true; cursor += 1; continue }
                 break
             }
@@ -40,6 +40,29 @@ enum SpokenCardinalNormalizer {
         }
         return output.joined(separator: " ")
     }
+
+    private static func numericValue(for word: String) -> Int? {
+        if let exact = values[word] { return exact }
+        let suffixes: Set<String> = ["и", "і", "ох", "ьох", "ом", "ьом", "ма", "ьма", "тьох", "тьом", "тьма"]
+        for (stem, value) in inflectedStems where word.hasPrefix(stem) {
+            let suffix = String(word.dropFirst(stem.count))
+            if suffixes.contains(suffix) { return value }
+        }
+        return nil
+    }
+
+    private static let inflectedStems: [String: Int] = [
+        "п'ят": 5, "пят": 5, "шіст": 6, "шест": 6, "сім": 7, "сем": 7,
+        "вісім": 8, "восьм": 8, "дев'ят": 9, "девят": 9, "десят": 10,
+        "одинадцят": 11, "одиннадцат": 11, "дванадцят": 12, "двенадцат": 12,
+        "тринадцят": 13, "тринадцат": 13, "чотирнадцят": 14, "четырнадцат": 14,
+        "п'ятнадцят": 15, "пятнадцат": 15, "шістнадцят": 16, "шестнадцат": 16,
+        "сімнадцят": 17, "семнадцат": 17, "вісімнадцят": 18, "восемнадцат": 18,
+        "дев'ятнадцят": 19, "девятнадцат": 19, "двадцят": 20, "двадцат": 20,
+        "тридцят": 30, "тридцат": 30, "п'ятдесят": 50, "пятьдесят": 50,
+        "шістдесят": 60, "шестьдесят": 60, "сімдесят": 70, "семьдесят": 70,
+        "вісімдесят": 80, "восемьдесят": 80, "дев'яност": 90, "девяност": 90
+    ]
 
     private static func canonical(_ word: String) -> String {
         var value = word.lowercased().trimmingCharacters(in: .punctuationCharacters)

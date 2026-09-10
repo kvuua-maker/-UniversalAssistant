@@ -15,6 +15,51 @@ enum NaturalDateTimeResolution: Equatable, Sendable {
 
 struct NaturalDateTimeResolver: Sendable {
     func resolve(
+        _ command: StructuredCommand,
+        locale: Locale,
+        timeZone: TimeZone,
+        relativeTo reference: Date
+    ) -> NaturalDateTimeResolution {
+        if let interval = command.entities["relative_interval_seconds"].flatMap(TimeInterval.init) {
+            return .resolved(.init(
+                instant: reference.addingTimeInterval(interval),
+                timeZoneIdentifier: timeZone.identifier,
+                precision: .minute
+            ))
+        }
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = locale
+        calendar.timeZone = timeZone
+        var targetDay: Date?
+        if let offset = command.entities["relative_day_offset"].flatMap(Int.init) {
+            targetDay = calendar.date(byAdding: .day, value: offset, to: calendar.startOfDay(for: reference))
+        } else if let month = command.entities["calendar_month"].flatMap(Int.init),
+                  let day = command.entities["calendar_day"].flatMap(Int.init) {
+            let referenceYear = calendar.component(.year, from: reference)
+            let requestedYear = command.entities["calendar_year"].flatMap(Int.init) ?? referenceYear
+            targetDay = calendar.date(from: .init(timeZone: timeZone, year: requestedYear, month: month, day: day))
+            if command.entities["calendar_year"] == nil, let value = targetDay,
+               value < calendar.startOfDay(for: reference) {
+                targetDay = calendar.date(byAdding: .year, value: 1, to: value)
+            }
+        } else if let weekday = command.entities["weekday"].flatMap(Int.init) ?? weekday(in: command.normalizedText) {
+            targetDay = next(weekday: weekday, after: reference, calendar: calendar)
+        }
+
+        if let targetDay {
+            let hour = command.entities["hour"].flatMap(Int.init)
+            let minute = command.entities["minute"].flatMap(Int.init)
+            if let hour, let minute,
+               let instant = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: targetDay) {
+                return .resolved(.init(instant: instant, timeZoneIdentifier: timeZone.identifier, precision: .minute))
+            }
+            return .resolved(.init(instant: targetDay, timeZoneIdentifier: timeZone.identifier, precision: .day))
+        }
+        return resolve(command.normalizedText, locale: locale, timeZone: timeZone, relativeTo: reference)
+    }
+
+    func resolve(
         _ input: String,
         locale: Locale,
         timeZone: TimeZone,
@@ -68,6 +113,28 @@ struct NaturalDateTimeResolver: Sendable {
             ("сьогодні", 0), ("сегодня", 0), ("today", 0), ("heute", 0), ("aujourd'hui", 0)
         ]
         return phrases.first(where: { text.contains($0.0) })?.1
+    }
+
+    private func weekday(in text: String) -> Int? {
+        let weekdays: [(Int, [String])] = [
+            (2, ["понеділ", "понедель", "monday"]),
+            (3, ["вівтор", "вторник", "tuesday"]),
+            (4, ["серед", "сред", "wednesday"]),
+            (5, ["четвер", "thursday"]),
+            (6, ["п'ятниц", "пятниц", "friday"]),
+            (7, ["субот", "суббот", "saturday"]),
+            (1, ["неділ", "воскрес", "sunday"])
+        ]
+        return weekdays.first(where: { entry in
+            entry.1.contains(where: text.contains)
+        })?.0
+    }
+
+    private func next(weekday: Int, after reference: Date, calendar: Calendar) -> Date? {
+        let start = calendar.startOfDay(for: reference)
+        let current = calendar.component(.weekday, from: start)
+        let delta = (weekday - current + 7) % 7
+        return calendar.date(byAdding: .day, value: delta == 0 ? 7 : delta, to: start)
     }
 
     private func spokenTime(in text: String) -> (hour: Int, minute: Int)? {

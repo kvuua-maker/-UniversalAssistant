@@ -26,7 +26,7 @@ struct EventKitCommandArguments: Equatable, Sendable { let subject: String?; let
 struct EventKitCommandArgumentExtractor: Sendable {
     func extract(_ command: StructuredCommand, now: Date = .now, timeZone: TimeZone = .autoupdatingCurrent) -> EventKitCommandArguments {
         let locale = LanguageConfiguration(uiLanguage: .uk, commandLanguage: command.language).voiceLocale
-        let resolution = NaturalDateTimeResolver().resolve(command.originalText, locale: locale, timeZone: timeZone, relativeTo: now)
+        let resolution = NaturalDateTimeResolver().resolve(command, locale: locale, timeZone: timeZone, relativeTo: now)
         let dateTime: ResolvedNaturalDateTime? = if case let .resolved(value) = resolution { value } else { nil }
         let action = ["запиши", "створи", "додай", "заплануй", "запланируй", "подію", "подія", "зустріч", "перенеси", "видали", "скасуй", "нагадай", "нагадати", "покажи", "календарі", "нагадування", "виконай", "познач", "виконаним", "заверши", "complete", "создай", "событие", "встречу", "удали", "напомни", "календаре", "напоминания", "add", "create", "event", "move", "delete", "remind", "show", "calendar", "reminders", "termin", "erstellen", "verschieben", "löschen", "erinnere", "kalendertermine", "rendez-vous", "ajoute", "déplace", "supprime", "rappelle", "événements", "rappels"]
         let temporal = ["будь ласка", "пожалуйста", "please", "на сьогодні", "на завтра", "на післязавтра", "на сегодня", "на послезавтра", "сьогодні", "завтра", "післязавтра", "сегодня", "послезавтра", "today", "tomorrow", "day after tomorrow", "heute", "morgen", "übermorgen", "aujourd’hui", "demain", "après-demain", "мені", "мне", "через", "ранку", "утра", "вранці", "вечора", "вечером"]
@@ -59,7 +59,7 @@ struct EventKitCommandArgumentExtractor: Sendable {
             options: [.regularExpression, .caseInsensitive]
         )
         subject = subject.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
-        let durationSeconds = duration(in: command.originalText)
+        let durationSeconds = command.entities["duration_seconds"].flatMap(TimeInterval.init) ?? duration(in: command.originalText)
         return .init(subject: subject.isEmpty ? nil : subject, dateTime: dateTime, durationSeconds: durationSeconds)
     }
 

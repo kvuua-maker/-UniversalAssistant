@@ -11,10 +11,20 @@ struct CanonicalSemanticFrame: Equatable, Sendable {
 
     struct TemporalRole: Equatable, Sendable {
         let expression: String
+        let kind: CanonicalTemporalAnalyzer.Kind
         let durationSeconds: Int?
+        let relativeIntervalSeconds: Int?
+        let relativeDayOffset: Int?
+        let weekday: Int?
+        let calendarYear: Int?
+        let calendarMonth: Int?
+        let calendarDay: Int?
         let hour: Int?
         let minute: Int?
         let dayPeriod: String?
+        let confidence: Double
+        let evidence: Set<String>
+        let requiresClarification: Bool
     }
     struct NumericRole: Equatable, Sendable { let orderedTokens: [String]; let percentage: Decimal? }
     struct CompoundRole: Equatable, Sendable { let clauses: [String]; let isSequential: Bool }
@@ -119,7 +129,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         if frame.action == .navigate, frame.location == nil {
             frame.location = navigationDestination(in: original)
         }
-        frame.temporal = temporalRole(in: original, normalized: normalized)
+        frame.temporal = temporalRole(in: original, normalized: normalized, object: frame.object)
         frame.numeric = numericRole(in: normalized)
         frame.contextReference = contextReference(in: normalized)
         frame.compound = compoundRole(in: original, normalized: normalized)
@@ -137,12 +147,22 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         var entities: [String: String] = [:]
         if let temporal = frame.temporal {
             entities["temporal_expression"] = temporal.expression
+            entities["temporal_kind"] = temporal.kind.rawValue
+            entities["temporal_confidence"] = String(format: "%.3f", temporal.confidence)
+            entities["temporal_evidence"] = temporal.evidence.sorted().joined(separator: "|")
             if let duration = temporal.durationSeconds { entities["duration_seconds"] = String(duration) }
+            if let interval = temporal.relativeIntervalSeconds { entities["relative_interval_seconds"] = String(interval) }
+            if let offset = temporal.relativeDayOffset { entities["relative_day_offset"] = String(offset) }
+            if let weekday = temporal.weekday { entities["weekday"] = String(weekday) }
+            if let year = temporal.calendarYear { entities["calendar_year"] = String(year) }
+            if let month = temporal.calendarMonth { entities["calendar_month"] = String(month) }
+            if let day = temporal.calendarDay { entities["calendar_day"] = String(day) }
             if let hour = temporal.hour, let minute = temporal.minute {
                 entities["hour"] = String(format: "%02d", hour)
                 entities["minute"] = String(format: "%02d", minute)
             }
             if let dayPeriod = temporal.dayPeriod { entities["day_period"] = dayPeriod }
+            if temporal.requiresClarification { entities["temporal_requires_clarification"] = "true" }
         }
         if let numeric = frame.numeric {
             entities["numeric_tokens"] = numeric.orderedTokens.joined(separator: "|")
@@ -570,47 +590,29 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         return output
     }
 
-    private func temporalRole(in original: String, normalized: String) -> CanonicalSemanticFrame.TemporalRole? {
-        let signals = ["сьогодні", "завтра", "післязавтра", "вчора", "через", "сегодня", "послезавтра", "вчера", "today", "tomorrow", "tonight", "yesterday", "in "]
-        let timePattern = #"\b(?:[01]?\d|2[0-3])[:.]([0-5]\d)\b"#
-        let durationPattern = #"\b([0-9]+(?:[.,][0-9]+)?)\s*(секунд\p{L}*|сек|seconds?|secs?|хвилин\p{L}*|хв|минут\p{L}*|мин|minutes?|mins?|годин\p{L}*|час\p{L}*|hours?|hrs?)\b"#
-        guard signals.contains(where: normalized.contains)
-                || normalized.range(of: timePattern, options: .regularExpression) != nil
-                || normalized.range(of: durationPattern, options: .regularExpression) != nil else { return nil }
-        var durationSeconds: Int?
-        if let range = normalized.range(of: durationPattern, options: [.regularExpression, .caseInsensitive]) {
-            let match = String(normalized[range])
-            let parts = match.split(whereSeparator: { !$0.isNumber && $0 != "." && $0 != "," })
-            if let number = parts.first.flatMap({ Double($0.replacingOccurrences(of: ",", with: ".")) }) {
-                let multiplier: Double = match.contains("сек") || match.contains("sec") ? 1 : (match.contains("год") || match.contains("час") || match.contains("hour") || match.contains("hr") ? 3_600 : 60)
-                durationSeconds = Int((number * multiplier).rounded())
-            }
-        }
-        let clock = explicitClock(in: normalized)
-        let dayPeriod: String? = if ["після обіду", "по обіді", "пополудні", "после обеда", "afternoon"].contains(where: normalized.contains) {
-            "afternoon"
-        } else if ["увечері", "вечором", "вечером", "evening"].contains(where: normalized.contains) {
-            "evening"
-        } else if ["вранці", "зранку", "утром", "morning"].contains(where: normalized.contains) {
-            "morning"
-        } else { nil }
+    private func temporalRole(
+        in original: String,
+        normalized: String,
+        object: CanonicalSemanticFrame.Object?
+    ) -> CanonicalSemanticFrame.TemporalRole? {
+        guard let result = CanonicalTemporalAnalyzer().analyze(normalized: normalized, object: object) else { return nil }
         return .init(
             expression: original.trimmingCharacters(in: .whitespacesAndNewlines),
-            durationSeconds: durationSeconds,
-            hour: clock?.hour,
-            minute: clock?.minute,
-            dayPeriod: dayPeriod
+            kind: result.kind,
+            durationSeconds: result.durationSeconds,
+            relativeIntervalSeconds: result.relativeIntervalSeconds,
+            relativeDayOffset: result.relativeDayOffset,
+            weekday: result.weekday,
+            calendarYear: result.calendarYear,
+            calendarMonth: result.calendarMonth,
+            calendarDay: result.calendarDay,
+            hour: result.hour,
+            minute: result.minute,
+            dayPeriod: result.dayPeriod,
+            confidence: result.confidence,
+            evidence: result.evidence,
+            requiresClarification: result.requiresClarification
         )
-    }
-
-    private func explicitClock(in text: String) -> (hour: Int, minute: Int)? {
-        let pattern = #"(?<!\d)(?:о|об|в|at|um|a)?\s*([01]?\d|2[0-3])[:.]([0-5]\d)\b"#
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
-              let hourRange = Range(match.range(at: 1), in: text),
-              let minuteRange = Range(match.range(at: 2), in: text),
-              let hour = Int(text[hourRange]), let minute = Int(text[minuteRange]) else { return nil }
-        return (hour, minute)
     }
 
     private func numericRole(in normalized: String) -> CanonicalSemanticFrame.NumericRole? {

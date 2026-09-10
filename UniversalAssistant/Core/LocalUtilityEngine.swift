@@ -15,6 +15,7 @@ struct LocalUtilityEngine: Sendable {
 
     static func recognizes(_ raw: String) -> Bool {
         let text = normalized(raw)
+        if CanonicalArithmeticExpressionAnalyzer.analyze(text) != nil { return true }
         let signals = ["обчисл", "порах", "розрах", "вычисл", "посчитай", "calculate", "різниц", "разниц", "difference", "сума", "сумм", "sum", "добут", "произвед", "product", "частк", "частн", "quotient", "скільки буде", "сколько будет", "помнож", "умнож", "поділити", "разделить", "kilometer", "кілометр", "километр", "miles", "мил", "кілограм", "килограмм", "pounds", "фунт", "celsius", "fahrenheit", "цельсі", "цельси", "який сьогодні день", "какой сегодня день", "яка сьогодні дата", "какая сегодня дата", "яке сьогодні число", "какое сегодня число", "котра година", "который час", "скільки зараз часу", "сколько сейчас времени", "який зараз час", "local time"]
         let lexicalTokens = text.split(whereSeparator: { !$0.isLetter }).map(String.init)
         let hasSignal = signals.contains { signal in
@@ -55,6 +56,9 @@ struct LocalUtilityEngine: Sendable {
     }
 
     private func arithmetic(_ text: String) throws -> Double? {
+        if let expression = CanonicalArithmeticExpressionAnalyzer.analyze(text) {
+            return try expression.evaluate()
+        }
         if let value = try relationalArithmetic(text) { return value }
         if let value = try chainedArithmetic(text) { return value }
         let operators: [(String, (Double, Double) throws -> Double)] = [
