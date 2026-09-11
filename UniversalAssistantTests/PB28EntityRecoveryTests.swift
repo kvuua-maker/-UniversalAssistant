@@ -5,7 +5,10 @@ import Testing
 @Suite("PB28 context-scoped entity recovery")
 struct PB28EntityRecoveryTests {
     @Test func serviceNoiseResolvesOnlyInsideServiceRole() {
-        let command = LocalCommandEngine().parse("Зателефонуй Маркові через whatsap")
+        // Production voice and typed input are authoritative only after the
+        // LanguageUnderstandingBlock. The legacy parser is a bounded candidate
+        // generator inside that block and is not a separate semantic contract.
+        let command = LanguageUnderstandingBlock().parse("Зателефонуй Маркові через whatsap")
         #expect(command.intent == .contactCall)
         #expect(command.entities["contact"] == "Маркові")
         #expect(command.entities["call_service"] == "whatsapp")
@@ -13,7 +16,7 @@ struct PB28EntityRecoveryTests {
     }
 
     @Test func weakEntityDoesNotBecomeMessengerOrWebIntent() {
-        let command = LocalCommandEngine().parse("Набери Ірину через невідомий канал")
+        let command = LanguageUnderstandingBlock().parse("Набери Ірину через невідомий канал")
         #expect(command.intent == .contactCall)
         #expect(command.entities["call_service"] == nil)
         #expect(command.intent != .webSearch)

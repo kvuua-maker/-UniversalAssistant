@@ -44,12 +44,12 @@ struct ContextScopedEntityResolver<Value: Equatable & Sendable>: Sendable {
     }
 
     func resolveWithEvidence(_ transcript: String) -> ScopedEntityResolutionEvidence<Value> {
-        let query = Self.normalize(transcript)
+        let query = CanonicalMorphology.comparableText(transcript)
         guard !query.isEmpty else {
             return .init(resolution: .unresolved, bestScore: 0, confidenceMargin: 0, mechanism: .unresolved)
         }
         let exact = candidates.filter { candidate in
-            candidate.aliases.union([candidate.displayName]).map(Self.normalize).contains(query)
+            candidate.aliases.union([candidate.displayName]).map(CanonicalMorphology.comparableText).contains(query)
         }
         if exact.count == 1, let value = exact.first?.value {
             return .init(resolution: .resolved(value), bestScore: 1, confidenceMargin: 1, mechanism: .exact)
@@ -59,6 +59,18 @@ struct ContextScopedEntityResolver<Value: Equatable & Sendable>: Sendable {
         }
 
         var ranked: [(candidate: ScopedEntityCandidate<Value>, score: Double, mechanism: ScopedEntityMatchMechanism)] = []
+        let morphological = candidates.filter { candidate in
+            candidate.aliases.union([candidate.displayName]).contains {
+                Self.sameMorphologicalPhrase(transcript, $0)
+            }
+        }
+        if morphological.count == 1, let value = morphological.first?.value {
+            return .init(resolution: .resolved(value), bestScore: 0.96, confidenceMargin: 0.96, mechanism: .morphology)
+        }
+        if morphological.count > 1 {
+            return .init(resolution: .ambiguous(Self.names(morphological)), bestScore: 0.96, confidenceMargin: 0, mechanism: .morphology)
+        }
+
         for candidate in candidates {
             let score = Self.bestScore(for: candidate, query: query)
             ranked.append((candidate, score.value, score.mechanism))
@@ -88,9 +100,9 @@ struct ContextScopedEntityResolver<Value: Equatable & Sendable>: Sendable {
     }
 
     private static func bestScore(for candidate: ScopedEntityCandidate<Value>, query: String) -> (value: Double, mechanism: ScopedEntityMatchMechanism) {
-        var output = evidenceScore(query, normalize(candidate.displayName))
+        var output = evidenceScore(query, CanonicalMorphology.comparableText(candidate.displayName))
         for alias in candidate.aliases {
-            let value = evidenceScore(query, normalize(alias))
+            let value = evidenceScore(query, CanonicalMorphology.comparableText(alias))
             if value.value > output.value { output = value }
         }
         return output
@@ -98,10 +110,20 @@ struct ContextScopedEntityResolver<Value: Equatable & Sendable>: Sendable {
     private static func names(_ values: [ScopedEntityCandidate<Value>]) -> [String] {
         Array(Set(values.map(\.displayName))).sorted()
     }
-    private static func normalize(_ value: String) -> String {
-        value.precomposedStringWithCompatibilityMapping
-            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
-            .lowercased().filter { $0.isLetter || $0.isNumber }
+    private static func sameMorphologicalPhrase(_ lhs: String, _ rhs: String) -> Bool {
+        let left = tokenForms(lhs)
+        let right = tokenForms(rhs)
+        guard !left.isEmpty, left.count == right.count else { return false }
+        return zip(left, right).allSatisfy { lhsForms, rhsForms in
+            !lhsForms.filter({ $0.count >= 3 }).isDisjoint(with: rhsForms.filter({ $0.count >= 3 }))
+        }
+    }
+
+    private static func tokenForms(_ value: String) -> [Set<String>] {
+        value.split { !$0.isLetter && !$0.isNumber }.map {
+            CanonicalMorphology.forms(for: String($0))
+        }
+
     }
     private static func evidenceScore(_ lhs: String, _ rhs: String) -> (value: Double, mechanism: ScopedEntityMatchMechanism) {
         let folded = similarity(lhs, rhs)
@@ -159,13 +181,27 @@ struct ContextScopedEntityResolver<Value: Equatable & Sendable>: Sendable {
         return String(value.dropLast(suffix.count))
     }
     private static func phoneticSimilarity(_ lhs: String, _ rhs: String) -> Double {
+        // A one-consonant key is not identity evidence. Two or more ordered
+        // consonants can support a clipped spoken query inside a bounded domain.
+        // Keep this evidence directional: a long unrelated input must never
+        // collapse into a short candidate merely because its consonants happen to occur in order.
         let base = similarity(lhs, rhs)
-        let shorterCount = min(lhs.count, rhs.count)
-        guard shorterCount >= 3, lhs.hasPrefix(rhs) || rhs.hasPrefix(lhs) else { return base }
+        guard lhs.count >= 2, rhs.count >= 2, lhs.count <= rhs.count else { return base }
+        var searchStart = rhs.startIndex
+        let isOrderedSubsequence = lhs.allSatisfy { character in
+            guard let index = rhs[searchStart...].firstIndex(of: character) else { return false }
+            searchStart = rhs.index(after: index)
+            return true
+        }
+        if isOrderedSubsequence {
+            let coverage = Double(lhs.count) / Double(rhs.count)
+            return max(base, 0.75 + 0.20 * coverage)
+        }
+        guard rhs.hasPrefix(lhs) else { return base }
         // Speech commonly clips a final syllable. Inside an already-authoritative
         // entity domain, a three-consonant prefix is useful evidence, but direct
         // execution still requires the resolver's runner-up confidence margin.
-        let coverage = Double(shorterCount) / Double(max(lhs.count, rhs.count))
+        let coverage = Double(lhs.count) / Double(rhs.count)
         return max(base, 0.78 + 0.16 * coverage)
     }
     private static func similarity(_ lhs: String, _ rhs: String) -> Double {

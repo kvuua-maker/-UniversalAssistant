@@ -128,13 +128,14 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             frame.person = roles.recipient
             frame.messageBody = roles.body
         } else if frame.object == .contact || frame.action == .call {
-            frame.person = trailingEntity(
+            let contactSubject = trailingEntity(
                 original,
                 afterActionFamilies: [
                     ["контакт", "contact"], ["подзвон", "зателефон", "набер", "позвон", "call", "dial"]
                 ],
                 stoppingAt: [" через ", " via ", " using "]
             )
+            frame.person = communicationPerson(contactSubject, excludingService: frame.service)
         }
         frame.location = locationPhrase(in: original)
         if frame.action == .navigate, frame.location == nil {
@@ -543,6 +544,17 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     }
 
     private func object(in tokens: [String]) -> CanonicalSemanticFrame.Object? {
+        let hasAvailableCapacityModifier = tokens.contains { token in
+            ["вільн", "свободн", "доступн", "залиш", "остат", "free", "available", "remaining"].contains {
+                token.hasPrefix($0)
+            }
+        }
+        let hasStorageMeasure = tokens.contains { token in
+            ["місц", "мест", "простір", "простор", "простран", "сховищ", "памят", "space", "storage", "capacity", "disk"].contains {
+                token.hasPrefix($0)
+            }
+        }
+        if hasAvailableCapacityModifier && hasStorageMeasure { return .storage }
         let audioQualifiers = ["аудіо", "аудио", "звук", "sound", "audio"]
         let routeTargets = [
             "аудіових", "аудиовых", "soundoutput", "audiooutput", "airplay",
@@ -570,7 +582,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.alarm, ["будильник", "розбуд", "alarm", "wake"]),
             (.settings, ["налаштуван", "настрой", "параметр", "settings", "preferences", "einstellungen", "réglages"]),
             (.battery, ["батаре", "акумулятор", "battery"]),
-            (.storage, ["сховищ", "простор", "памят", "storage", "diskspace"]),
+            (.storage, ["сховищ", "простір", "простор", "простран", "памят", "storage", "diskspace"]),
             (.flashlight, ["ліхтар", "фонар", "flashlight", "torch"]),
             (.brightness, ["яскрав", "яркост", "brightness"]),
             (.volume, ["гучніст", "громкост", "volume"]),
@@ -657,19 +669,28 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     }
 
     private func service(in tokens: [String]) -> ScopedEntityResolution<String> {
-        let domain = MessengerKind.allCases.map { kind in
-            ScopedEntityCandidate(value: kind.rawValue, displayName: kind.rawValue, aliases: [kind.rawValue])
-        } + [ScopedEntityCandidate(value: "email", displayName: "email", aliases: ["email", "mail", "пошта", "почта", "електронною"])]
-        let resolver = ContextScopedEntityResolver(candidates: domain)
-        var ambiguity: Set<String> = []
+        let hasElectronicModifier = tokens.contains { token in
+            ["електрон", "электрон", "electronic"].contains { token.hasPrefix($0) }
+        }
+        let hasMailNoun = tokens.contains { token in
+            ["лист", "пошт", "почт", "email", "mail"].contains { token.hasPrefix($0) }
+        }
+        let hasDirectMailName = tokens.contains { token in
+            ["email", "mail", "пошт", "почт"].contains { token.hasPrefix($0) }
+        }
+        if hasDirectMailName || (hasElectronicModifier && hasMailNoun) {
+            return .resolved("email")
+        }
+        // Without an explicit SERVICE/CHANNEL marker only an exact canonical
+        // name is service evidence. Contextual fuzzy recovery happens later
+        // inside the marked channel span, never over action/person tokens.
+        let services = Set(MessengerKind.allCases.map(\.rawValue))
         for token in tokens {
-            switch resolver.resolve(token) {
-            case let .resolved(value): return .resolved(value)
-            case let .ambiguous(values): ambiguity.formUnion(values)
-            case .unresolved: continue
+            if services.contains(token) {
+                return .resolved(token)
             }
         }
-        return ambiguity.isEmpty ? .unresolved : .ambiguous(ambiguity.sorted())
+        return .unresolved
     }
 
     private func application(in tokens: [String]) -> String? {
@@ -803,12 +824,50 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         tail = tail.replacingOccurrences(of: #"^(?:контакт|повідомлення|сообщение|message)\s+"#, with: "", options: [.regularExpression, .caseInsensitive])
         return tail.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
     }
+    private func communicationPerson(_ value: String?, excludingService service: String?) -> String? {
+        guard let value else { return nil }
+        var tokens = value.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        guard !tokens.isEmpty else { return nil }
+
+        if let service,
+           let last = tokens.last,
+           CanonicalMorphology.comparableText(last) == CanonicalMorphology.comparableText(service) {
+            tokens.removeLast()
+            if tokens.last.map({ ["через", "via", "using", "у", "в", "по"].contains(CanonicalMorphology.comparableText($0)) }) == true {
+                tokens.removeLast()
+            }
+        }
+
+        if let last = tokens.last {
+            let forms = CanonicalMorphology.forms(for: last)
+            let isTelephoneChannel = forms.contains { form in
+                ["телефон", "мобільн", "мобильн", "phone", "cellular"].contains { form.hasPrefix($0) }
+            }
+            if isTelephoneChannel {
+                tokens.removeLast()
+                if tokens.last.map({ ["через", "via", "using", "по", "by"].contains(CanonicalMorphology.comparableText($0)) }) == true {
+                    tokens.removeLast()
+                }
+            }
+        }
+
+        let result = tokens.joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        return result.isEmpty ? nil : result
+    }
+
 
     private func locationPhrase(in original: String) -> String? {
         let markers = [" до ", " у ", " в ", " біля ", " поруч із ", " near ", " to "]
         return markers.compactMap { marker -> String? in
             guard let range = original.range(of: marker, options: [.caseInsensitive, .diacriticInsensitive]) else { return nil }
-            let value = original[range.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+            var value = String(original[range.upperBound...])
+                .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+            let temporalSuffix = #"\s+(?:на\s+)?(?:сьогодні|завтра|післязавтра|сегодня|послезавтра|today|tomorrow|heute|morgen)(?:\s+.*)?$"#
+            if let suffix = value.range(of: temporalSuffix, options: [.regularExpression, .caseInsensitive]) {
+                value = String(value[..<suffix.lowerBound])
+                    .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+            }
             return value.isEmpty ? nil : value
         }.first
     }

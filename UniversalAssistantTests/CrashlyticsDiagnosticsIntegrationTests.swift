@@ -243,6 +243,34 @@ struct CrashlyticsDiagnosticsIntegrationTests {
         #expect(client.values.isEmpty)
         #expect(client.errors.isEmpty)
     }
+    @Test func metricKitSideCarUsesExistingCrashlyticsChannelWithCorrelationAndBounds() {
+        let client = RecordingCrashlyticsClient()
+        let bridge = CrashlyticsDiagnosticBridge(client: client, readiness: { true })
+        let identity = CrashlyticsDiagnosticRequestIdentity(
+            diagnosticSessionID: UUID(),
+            requestID: UUID(),
+            generation: 81,
+            appVersion: "0.1.0",
+            build: 35
+        )
+        let payload = "{\"hangDiagnostic\":\"\(String(repeating: "frame ", count: 3_000))\"}"
+
+        bridge.recordMetricKitPayload(
+            kind: "diagnostic",
+            fingerprint: String(repeating: "a", count: 64),
+            payload: payload,
+            identity: identity
+        )
+
+        #expect(client.value(for: "ua_request_id") == identity.requestID.uuidString)
+        #expect(client.value(for: "ua_request_generation") == "81")
+        #expect(client.value(for: "ua_metrickit_kind") == "diagnostic")
+        #expect(client.value(for: "ua_metrickit_fingerprint") == String(repeating: "a", count: 64))
+        #expect(client.logs.contains { $0.contains("marker=METRICKIT_PAYLOAD_RECEIVED") })
+        #expect(client.logs.contains { $0.contains("TRUNCATED_BY_PROVIDER_LIMIT") })
+        #expect(client.errors.map(\.domain) == ["UA_METRICKIT_PAYLOAD"])
+    }
+
 
     private func makeSession(
         diagnosticSessionID: UUID,
@@ -350,4 +378,10 @@ private final class RecordingDiagnosticRecorder: CrashlyticsDiagnosticRecording,
     }
 
     func recordRecoveredUncleanSession(_ session: PhysicalDiagnosticSession) {}
+    func recordMetricKitPayload(
+        kind: String,
+        fingerprint: String,
+        payload: String,
+        identity: CrashlyticsDiagnosticRequestIdentity
+    ) {}
 }

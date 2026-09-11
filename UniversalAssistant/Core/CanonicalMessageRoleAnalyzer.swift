@@ -84,9 +84,7 @@ enum CanonicalMessageRoleAnalyzer {
             !character.isLetter && !character.isNumber && character != "'" && character != "’"
         }.map { slice in
             let surface = String(slice)
-            let normalized = surface.precomposedStringWithCompatibilityMapping
-                .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "uk_UA"))
-                .lowercased()
+            let normalized = CanonicalMorphology.comparableText(surface)
             return .init(
                 surface: surface,
                 normalized: normalized,
@@ -142,7 +140,15 @@ enum CanonicalMessageRoleAnalyzer {
     }
 
     private static func removeExplicitService(from tokens: inout [Token], service: String?) {
-        guard let service, let serviceKind = normalizedService(service) else { return }
+        let serviceKind = service.flatMap(normalizedService)
+        if serviceKind == "email" {
+            tokens.removeAll(where: isEmailServiceToken)
+            while tokens.last.map({ ["через", "via", "using", "у", "в", "по", "канал", "каналом"].contains($0.normalized) }) == true {
+                tokens.removeLast()
+            }
+            return
+        }
+        guard let serviceKind else { return }
         let resolver = ContextScopedEntityResolver(candidates: serviceCandidates)
         guard let index = tokens.firstIndex(where: { token in
             guard case let .resolved(value) = resolver.resolve(token.surface) else { return false }
@@ -167,9 +173,17 @@ enum CanonicalMessageRoleAnalyzer {
         MessengerKind.allCases.map { kind in
             .init(value: kind.rawValue, displayName: kind.rawValue, aliases: [kind.rawValue])
         } + [
-            .init(value: "email", displayName: "email", aliases: ["email", "mail", "пошта", "почта", "електронною"])
+            .init(value: "email", displayName: "email", aliases: ["email", "mail", "пошта", "почта"])
         ]
 
+
+    private static func isEmailServiceToken(_ token: Token) -> Bool {
+        token.morphology.contains { form in
+            ["email", "mail", "пошт", "почт", "електрон", "электрон", "лист"].contains {
+                form.hasPrefix($0)
+            }
+        }
+    }
     private static func recipientText(_ tokens: [Token]) -> String? {
         var value = tokens
         trimLeadingRecipientMarker(&value)

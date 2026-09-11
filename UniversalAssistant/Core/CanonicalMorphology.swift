@@ -8,6 +8,20 @@ import Foundation
 /// forms*, never an asserted dictionary lemma. Capability selection still needs
 /// a compatible action/object/source role combination.
 enum CanonicalMorphology {
+    /// Canonical comparison form shared by semantic-role and entity helpers.
+    /// Latin diacritics are comparison noise, while Cyrillic diacritics can be
+    /// distinct letters (for example Ukrainian й), so they must be preserved.
+    static func comparableText(_ rawValue: String) -> String {
+        let lowered = rawValue.precomposedStringWithCompatibilityMapping
+            .lowercased(with: Locale(identifier: "uk_UA"))
+        let containsCyrillic = lowered.unicodeScalars.contains { cyrillic.contains($0) }
+        let normalized = containsCyrillic ? lowered : lowered.folding(
+            options: .diacriticInsensitive,
+            locale: Locale(identifier: "en_US_POSIX")
+        )
+        return normalized.filter { $0.isLetter || $0.isNumber }
+    }
+
     static func forms(for rawToken: String) -> Set<String> {
         let lowered = rawToken.precomposedStringWithCompatibilityMapping
             .lowercased(with: Locale(identifier: "uk_UA"))

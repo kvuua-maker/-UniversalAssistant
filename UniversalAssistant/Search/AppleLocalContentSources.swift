@@ -140,7 +140,9 @@ struct PhotoKitAssetImageLoader: PhotoAssetImageLoading {
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 completion.install(continuation)
-                let options = PHImageRequestOptions(); options.isNetworkAccessAllowed = true; options.deliveryMode = .highQualityFormat
+                let options = PHImageRequestOptions()
+                options.isNetworkAccessAllowed = false
+                options.deliveryMode = .highQualityFormat
                 let id = manager.requestImageDataAndOrientation(for: asset, options: options) { data, _, _, info in
                     if let error = info?[PHImageErrorKey] as? Error { completion.finish(.failure(error)) }
                     else if let data { completion.finish(.success(data)) }
@@ -148,7 +150,7 @@ struct PhotoKitAssetImageLoader: PhotoAssetImageLoading {
                 }
                 completion.setRequestID(id)
                 Task {
-                    try? await Task.sleep(for: .seconds(5))
+                    try? await Task.sleep(for: .seconds(3))
                     completion.finish(.failure(PhotoAssetImageLoadError.timedOut), cancelRequest: true)
                 }
             }
@@ -160,23 +162,15 @@ struct PhotoKitAssetImageLoader: PhotoAssetImageLoading {
 
 struct VisionPhotoSemanticLabeler: PhotoSemanticLabeling {
     func labels(imageData: Data) async throws -> [PhotoSemanticLabel] {
-        try await Task.detached(priority: .userInitiated) {
+        try Task.checkCancellation()
+        let values: [PhotoSemanticLabel] = try await Task.detached(priority: .userInitiated) { () throws -> [PhotoSemanticLabel] in
             let request = VNClassifyImageRequest(); try VNImageRequestHandler(data: imageData).perform([request])
-            return (request.results ?? []).filter { $0.confidence >= 0.2 }.prefix(12).map { .init(name: $0.identifier, confidence: $0.confidence) }
+            return (request.results ?? []).filter { $0.confidence >= 0.2 }.prefix(12).map {
+                PhotoSemanticLabel(name: $0.identifier, confidence: $0.confidence)
+            }
         }.value
-    }
-}
-
-private final class PhotoSemanticSearchCompletion<Value: Sendable>: @unchecked Sendable {
-    private let lock = NSLock()
-    private var continuation: CheckedContinuation<[Value], Never>?
-    private var result: [Value]?
-    func install(_ value: CheckedContinuation<[Value], Never>) {
-        lock.lock(); if let result { lock.unlock(); value.resume(returning: result) } else { continuation = value; lock.unlock() }
-    }
-    func finish(_ value: [Value]) {
-        lock.lock(); guard result == nil else { lock.unlock(); return }; result = value
-        let continuation = continuation; self.continuation = nil; lock.unlock(); continuation?.resume(returning: value)
+        try Task.checkCancellation()
+        return values
     }
 }
 
@@ -191,42 +185,56 @@ struct PhotoSemanticSearchEngine: Sendable {
         guard [.permitted, .limited].contains(library.authorization()) else { return [] }
         let terms = Self.semanticTerms(query)
         guard !terms.isEmpty else { return [] }
-        let candidates = await library.search(criteria, limit: min(max(limit * 4, 8), 20))
-        let completion = PhotoSemanticSearchCompletion<PhotoSemanticMatch>()
-        return await withTaskCancellationHandler {
-            await withCheckedContinuation { continuation in
-                completion.install(continuation)
-                Task.detached(priority: .userInitiated) {
-                    let matches = await withTaskGroup(of: (Int, PhotoSemanticMatch)?.self) { group in
-                        for (index, asset) in candidates.enumerated() {
-                            group.addTask(priority: .userInitiated) {
-                                guard let data = try? await loader.imageData(localIdentifier: asset.localIdentifier),
-                                      let labels = try? await labeler.labels(imageData: data) else { return nil }
-                                let evidence = labels.filter { label in
-                                          let labelTerms = Self.semanticTerms(label.name)
-                                          return !terms.isDisjoint(with: labelTerms)
-                                      }.sorted { $0.confidence > $1.confidence }
-                                guard let confidence = evidence.first?.confidence,
-                                      confidence >= Self.minimumReliableConfidence else { return nil }
-                                return (index, .init(asset: asset, confidence: confidence, matchedLabels: evidence.map(\.name)))
-                            }
+        let candidates = await library.search(criteria, limit: min(max(limit * 2, 4), 8))
+        return await withTaskGroup(of: [PhotoSemanticMatch].self) { race in
+            race.addTask(priority: .userInitiated) {
+                await withTaskGroup(of: (Int, PhotoSemanticMatch)?.self) { group in
+                    for (index, asset) in candidates.enumerated() {
+                        group.addTask(priority: .userInitiated) {
+                            guard !Task.isCancelled,
+                                  let data = try? await loader.imageData(localIdentifier: asset.localIdentifier),
+                                  !Task.isCancelled,
+                                  let labels = try? await labeler.labels(imageData: data),
+                                  !Task.isCancelled else { return nil }
+                            let evidence = labels.filter { label in
+                                let labelTerms = Self.semanticTerms(label.name)
+                                return !terms.isDisjoint(with: labelTerms)
+                            }.sorted { $0.confidence > $1.confidence }
+                            guard let confidence = evidence.first?.confidence,
+                                  confidence >= Self.minimumReliableConfidence else { return nil }
+                            return (
+                                index,
+                                .init(
+                                    asset: asset,
+                                    confidence: confidence,
+                                    matchedLabels: evidence.map(\.name)
+                                )
+                            )
                         }
-                        var values: [(Int, PhotoSemanticMatch)] = []
-                        for await value in group { if let value { values.append(value) } }
-                        return values.sorted {
-                            if $0.1.confidence != $1.1.confidence { return $0.1.confidence > $1.1.confidence }
-                            return $0.0 < $1.0
-                        }.prefix(max(1, min(limit, 10))).map { $0.1 }
                     }
-                    completion.finish(matches)
-                }
-                Task.detached(priority: .background) {
-                    try? await Task.sleep(for: timeout)
-                    completion.finish([])
+                    var values: [(Int, PhotoSemanticMatch)] = []
+                    for await value in group {
+                        guard !Task.isCancelled else {
+                            group.cancelAll()
+                            return []
+                        }
+                        if let value { values.append(value) }
+                    }
+                    return values.sorted {
+                        if $0.1.confidence != $1.1.confidence {
+                            return $0.1.confidence > $1.1.confidence
+                        }
+                        return $0.0 < $1.0
+                    }.prefix(max(1, min(limit, 10))).map { $0.1 }
                 }
             }
-        } onCancel: {
-            completion.finish([])
+            race.addTask(priority: .background) {
+                do { try await Task.sleep(for: timeout) } catch { return [] }
+                return []
+            }
+            let first = await race.next() ?? []
+            race.cancelAll()
+            return first
         }
     }
 

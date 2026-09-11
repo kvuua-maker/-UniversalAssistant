@@ -60,7 +60,8 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         "contact_identifier_hash", "photo_asset_id_hash", "url_host_class", "coarse_location_role", "ocr_block_count", "ocr_confidence",
         "input_type", "output_type", "permission", "terminal", "stage", "last_stage", "last_pre", "last_post",
         "missing_expected_post", "http_status", "schema", "detailed", "scheme", "operation", "provider", "route", "result",
-        "parameter", "pages", "type", "accepted", "confirmed", "elapsed_ms", "fallback"
+        "parameter", "pages", "type", "accepted", "confirmed", "elapsed_ms", "fallback",
+        "location_source", "input_count", "output_count", "nearest_m_bucket", "radius_m"
     ]
 
     init(
@@ -510,16 +511,21 @@ private final class VoiceBufferDiagnosticCounter: @unchecked Sendable {
 
 final class VoiceSpeechActivityTracker: @unchecked Sendable {
     private let lock = NSLock()
-    private let minimumMeanSquare: Float
+    private let initialVoiceRMS: Float
+    private let minimumAdaptiveRMS: Float
+    private var noiseFloorRMS: Float
     private var lastVoiceUptime: TimeInterval?
 
-    init(minimumRMS: Float = 0.002) {
-        minimumMeanSquare = minimumRMS * minimumRMS
+    init(minimumRMS: Float = 0.002, minimumAdaptiveRMS: Float = 0.0004) {
+        initialVoiceRMS = max(minimumRMS, minimumAdaptiveRMS)
+        self.minimumAdaptiveRMS = max(0.0001, minimumAdaptiveRMS)
+        noiseFloorRMS = max(0.0001, minimumAdaptiveRMS * 0.5)
     }
 
     func reset() {
         lock.lock()
         lastVoiceUptime = nil
+        noiseFloorRMS = max(0.0001, minimumAdaptiveRMS * 0.5)
         lock.unlock()
     }
 
@@ -534,9 +540,17 @@ final class VoiceSpeechActivityTracker: @unchecked Sendable {
             for sample in samples { sumOfSquares += sample * sample }
         }
         let meanSquare = sumOfSquares / Float(frameCount * channelCount)
-        guard meanSquare >= minimumMeanSquare else { return }
+        let rms = sqrt(meanSquare)
         lock.lock()
-        lastVoiceUptime = ProcessInfo.processInfo.systemUptime
+        let adaptiveThreshold = max(
+            minimumAdaptiveRMS,
+            min(initialVoiceRMS, max(minimumAdaptiveRMS, noiseFloorRMS * 2.4))
+        )
+        if rms >= adaptiveThreshold {
+            lastVoiceUptime = ProcessInfo.processInfo.systemUptime
+        } else {
+            noiseFloorRMS = (noiseFloorRMS * 0.94) + (rms * 0.06)
+        }
         lock.unlock()
     }
 
@@ -577,12 +591,16 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
         self.requireOnDeviceRecognition = requireOnDeviceRecognition
     }
 
-    static var canonicalVocabulary: [String] {
+    static var canonicalEntityVocabulary: [String] {
         let applications = LaunchDeviceApplications.verified.flatMap {
             [$0.id] + Array($0.aliases)
         }
         let services = MessengerKind.allCases.map(\.rawValue)
-        let functions = [
+        return applications + services
+    }
+
+    static var canonicalFunctionVocabulary: [String] {
+        [
             "UniversalAssistant", "Apple Music", "подкаст", "календар",
             "нагадування", "маршрут", "погода", "контакт", "нотатка",
             "документ", "файл", "світлина", "будильник", "таймер",
@@ -590,29 +608,48 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
             "відскануй", "розпізнай", "знайди", "покажи", "проклади",
             "подзвони", "набери", "повідомлення", "переклади", "ліхтарик"
         ]
-        return boundedVocabulary(additional: applications + services + functions, includeCanonical: false)
+    }
+
+    static var canonicalVocabulary: [String] {
+        boundedVocabulary(
+            additional: canonicalEntityVocabulary + canonicalFunctionVocabulary,
+            includeCanonical: false
+        )
     }
 
     static func boundedVocabulary(additional: [String], includeCanonical: Bool = true) -> [String] {
         var seen: Set<String> = []
-        // Request-scoped candidates are the most relevant evidence for the
-        // current utterance. Keep them ahead of the shared vocabulary so the
-        // Speech framework's 100-entry limit cannot evict the very entities
-        // supplied for this recognition request.
-        let source = additional + (includeCanonical ? canonicalVocabulary : [])
-        return source.compactMap { phrase -> String? in
-            let trimmed = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty, trimmed.split(whereSeparator: \.isWhitespace).count <= 2 else { return nil }
-            let key = trimmed.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "uk_UA"))
-            guard seen.insert(key).inserted else { return nil }
-            return trimmed
-        }.prefix(100).map { $0 }
+        var output: [String] = []
+        func append<S: Sequence>(_ source: S) where S.Element == String {
+            for phrase in source where output.count < 100 {
+                let trimmed = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty,
+                      trimmed.split(whereSeparator: \.isWhitespace).count <= 2 else { continue }
+                let key = trimmed.folding(
+                    options: [.caseInsensitive, .diacriticInsensitive],
+                    locale: Locale(identifier: "uk_UA")
+                )
+                guard seen.insert(key).inserted else { continue }
+                output.append(trimmed)
+            }
+        }
+        if includeCanonical {
+            // Apple accepts at most 100 contextual phrases. Bound request-
+            // scoped Contacts/catalog evidence so verified app/service names
+            // and core command vocabulary always retain capacity.
+            append(additional.prefix(40))
+            append(canonicalEntityVocabulary)
+            append(canonicalFunctionVocabulary)
+        } else {
+            append(additional)
+        }
+        return output
     }
 
     func apply(to request: SFSpeechAudioBufferRecognitionRequest, recognizer: SFSpeechRecognizer? = nil) {
         request.shouldReportPartialResults = true
         request.addsPunctuation = true
-        request.taskHint = .search
+        request.taskHint = .dictation
         request.contextualStrings = contextualVocabulary
         request.requiresOnDeviceRecognition = requireOnDeviceRecognition && recognizer?.supportsOnDeviceRecognition == true
     }
@@ -808,11 +845,13 @@ final class VoiceInputController {
     @ObservationIgnored private var eventHandler: (@MainActor @Sendable (VoiceInputEvent) -> Void)?
     @ObservationIgnored private var recognitionCallbackCount = 0
     @ObservationIgnored private var partialResultCount = 0
+    @ObservationIgnored private var cachedContextualVocabulary: [String] = []
+    @ObservationIgnored private var vocabularyRefresh: Task<Void, Never>?
     @ObservationIgnored private var finalResultCount = 0
 
     init(
         captureBackend: (any VoiceAudioCaptureBackend)? = nil,
-        endOfSpeechDelay: Duration = .milliseconds(2_000),
+        endOfSpeechDelay: Duration = .milliseconds(2_400),
         authorization: (@Sendable () async -> Bool)? = nil,
         contextualVocabulary: @escaping @Sendable () async -> [String] = { [] }
     ) {
@@ -823,9 +862,11 @@ final class VoiceInputController {
         audioEvents = AudioSessionEventMonitor(
             onInterruption: { [weak self] in self?.handleAudioInterruptionBegan() },
             onRouteChange: { [weak self] evidence in self?.handleAudioRouteChanged(evidence) })
+        prewarmContextualVocabulary()
     }
 
     func start(locale: Locale = .current) async {
+        prewarmContextualVocabulary()
         stop(reason: .sessionRestart)
         let sessionID = UUID()
         activeSessionID = sessionID
@@ -855,9 +896,9 @@ final class VoiceInputController {
         }
         LocalVoiceDiagnosticReport.shared.record("recognizer_ready", "locale=\(locale.identifier) available=\(recognizer.isAvailable)")
         self.recognizer = recognizer
-        let requestVocabulary = await contextualVocabulary()
+        let requestVocabulary = cachedContextualVocabulary
         guard owns(sessionID) else {
-            LocalVoiceDiagnosticReport.shared.record("stale_start_suppressed", "reason=context_vocabulary_completed")
+            LocalVoiceDiagnosticReport.shared.record("stale_start_suppressed", "reason=recognizer_completed")
             return
         }
         let request = SFSpeechAudioBufferRecognitionRequest()
@@ -865,7 +906,7 @@ final class VoiceInputController {
         configuration.apply(to: request, recognizer: recognizer)
         LocalVoiceDiagnosticReport.shared.record(
             "recognition_request_created",
-            "api=sfspeechrecognizer partial_results=true punctuation=true task_hint=search context_count=\(configuration.contextualVocabulary.count) on_device_supported=\(recognizer.supportsOnDeviceRecognition) on_device_required=\(request.requiresOnDeviceRecognition)"
+            "api=sfspeechrecognizer partial_results=true punctuation=true task_hint=dictation context_count=\(configuration.contextualVocabulary.count) on_device_supported=\(recognizer.supportsOnDeviceRecognition) on_device_required=\(request.requiresOnDeviceRecognition)"
         )
         self.request = request
         let requestSink = VoiceRecognitionRequestSink(request)
@@ -884,11 +925,26 @@ final class VoiceInputController {
                 return
             }
             setState(.listening)
+            prewarmContextualVocabulary()
             LocalVoiceDiagnosticReport.shared.recordBoundaryPost("SPEECH_START", "locale=\(locale.identifier) status=success")
         } catch {
             guard owns(sessionID) else { return }
             LocalVoiceDiagnosticReport.shared.record("voice_start_failed", "error_type=\(String(describing: type(of: error)))")
             stop(reason: .startFailure, ownedBy: sessionID); setState(.failed)
+        }
+    }
+
+    func prewarmContextualVocabulary() {
+        vocabularyRefresh?.cancel()
+        let provider = contextualVocabulary
+        vocabularyRefresh = Task { @MainActor [weak self] in
+            let values = await provider()
+            guard !Task.isCancelled else { return }
+            self?.cachedContextualVocabulary = values
+            LocalVoiceDiagnosticReport.shared.record(
+                "speech_context_vocabulary_refreshed",
+                "count=\(values.count)"
+            )
         }
     }
 
@@ -957,7 +1013,7 @@ final class VoiceInputController {
                 let speechActivity = speechActivity
                 endOfSpeechFinalizer.receivedPartial(
                     shouldDeferForVoiceActivity: {
-                        speechActivity.hasRecentVoiceActivity(within: 0.8)
+                        speechActivity.hasRecentVoiceActivity(within: 1.25)
                     }
                 ) { [weak self] in
                     self?.finishAfterEndOfSpeech(sessionID: sessionID)

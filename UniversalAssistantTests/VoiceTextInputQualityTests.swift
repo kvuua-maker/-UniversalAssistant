@@ -11,7 +11,7 @@ struct VoiceTextInputQualityTests {
         configuration.apply(to: request)
         #expect(request.shouldReportPartialResults)
         #expect(request.addsPunctuation)
-        #expect(request.taskHint == .search)
+        #expect(request.taskHint == .dictation)
         #expect(request.contextualStrings == configuration.contextualVocabulary)
         #expect(request.contextualStrings.count <= 100)
         #expect(request.contextualStrings.allSatisfy { $0.split(separator: " ").count <= 2 })

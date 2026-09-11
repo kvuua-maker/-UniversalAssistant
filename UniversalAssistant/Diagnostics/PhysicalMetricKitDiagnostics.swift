@@ -14,6 +14,7 @@ final class PhysicalMetricKitDiagnostics: NSObject, MXMetricManagerSubscriber, @
     private var launchCorrelation: DiagnosticActiveRequestSnapshot?
     private let localStore: PhysicalDiagnosticLocalStore
     private let delivery: PhysicalDiagnosticDelivery
+    private let crashlyticsRecorder: any CrashlyticsDiagnosticRecording
     private let osVersion = ProcessInfo.processInfo.operatingSystemVersionString
     private let deviceClass: String = {
         #if targetEnvironment(simulator)
@@ -25,10 +26,12 @@ final class PhysicalMetricKitDiagnostics: NSObject, MXMetricManagerSubscriber, @
 
     init(
         localStore: PhysicalDiagnosticLocalStore = .shared,
-        delivery: PhysicalDiagnosticDelivery = .shared
+        delivery: PhysicalDiagnosticDelivery = .shared,
+        crashlyticsRecorder: any CrashlyticsDiagnosticRecording = CrashlyticsDiagnosticBridge.shared
     ) {
         self.localStore = localStore
         self.delivery = delivery
+        self.crashlyticsRecorder = crashlyticsRecorder
         super.init()
     }
 
@@ -41,61 +44,91 @@ final class PhysicalMetricKitDiagnostics: NSObject, MXMetricManagerSubscriber, @
         }
         guard shouldStart else { return }
         MXMetricManager.shared.add(self)
-        process(MXMetricManager.shared.pastDiagnosticPayloads)
+        processDiagnostics(MXMetricManager.shared.pastDiagnosticPayloads)
+        processMetrics(MXMetricManager.shared.pastPayloads)
     }
 
     func didReceive(_ payloads: [MXDiagnosticPayload]) {
-        process(payloads)
+        processDiagnostics(payloads)
     }
 
-    private func process(_ payloads: [MXDiagnosticPayload]) {
+    func didReceive(_ payloads: [MXMetricPayload]) {
+        processMetrics(payloads)
+    }
+
+    private func processDiagnostics(_ payloads: [MXDiagnosticPayload]) {
         for payload in payloads {
-            guard let json = Self.privacySafeJSON(payload.jsonRepresentation()) else { continue }
-            let fingerprint = SHA256.hash(data: Data(json.utf8)).map { String(format: "%02x", $0) }.joined()
-            guard localStore.addAppleDiagnostic(json: json, fingerprint: fingerprint) else { continue }
-            let reportID = UUID()
-            let correlation = lock.withLock { launchCorrelation }
-            let now = Date()
-            var event = PhysicalDiagnosticEvent(
-                sequence: 1,
-                timestamp: now,
-                marker: "apple_diagnostic_received",
-                attributes: ["kind": "MetricKit", "count": "1"]
-            )
-            event.diagnosticSessionID = correlation?.diagnosticSessionID ?? reportID
-            event.requestID = correlation?.requestID ?? reportID
-            event.requestGeneration = correlation?.requestGeneration ?? 0
-            event.build = Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0") ?? 0
-            var session = PhysicalDiagnosticSession(
-                schema: 2,
-                sessionID: reportID,
-                liveTestID: "BUILD32-PRODUCTION-BLACK-BOX",
-                feature: "apple_diagnostic",
-                appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
-                build: Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0") ?? 0,
-                environment: "internal-testflight",
-                osVersion: osVersion,
-                deviceClass: deviceClass,
-                startedAt: now,
-                endedAt: now,
-                durationMilliseconds: 0,
-                result: .crashSuspected,
-                failureStage: correlation?.lastPRE ?? correlation?.lastStage,
-                errorDomain: "MetricKit",
-                errorCode: nil,
-                events: [event]
-            )
-            session.diagnosticSessionID = correlation?.diagnosticSessionID ?? reportID
-            session.requestID = correlation?.requestID ?? reportID
-            session.requestGeneration = correlation?.requestGeneration ?? 0
-            session.terminalState = .error
-            session.detailedDiagnosticsConsent = false
-            session.appleDiagnosticJSON = json
-            if let correlation {
-                session.anomaly = DiagnosticAnomalyAnalyzer.analyze(events: [event], active: correlation)
-            }
-            Task { await delivery.enqueue(session) }
+            process(payload.jsonRepresentation(), kind: "diagnostic", probableFailure: true)
         }
+    }
+
+    private func processMetrics(_ payloads: [MXMetricPayload]) {
+        for payload in payloads {
+            process(payload.jsonRepresentation(), kind: "metric", probableFailure: false)
+        }
+    }
+
+    private func process(_ data: Data, kind: String, probableFailure: Bool) {
+        guard let json = Self.privacySafeJSON(data) else { return }
+        let fingerprint = SHA256.hash(data: Data(json.utf8)).map { String(format: "%02x", $0) }.joined()
+        guard localStore.addAppleDiagnostic(json: json, fingerprint: fingerprint) else { return }
+        let reportID = UUID()
+        let correlation = lock.withLock { launchCorrelation }
+        let now = Date()
+        let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+        let build = Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0") ?? 0
+        let identity = CrashlyticsDiagnosticRequestIdentity(
+            diagnosticSessionID: correlation?.diagnosticSessionID ?? reportID,
+            requestID: correlation?.requestID ?? reportID,
+            generation: correlation?.requestGeneration ?? 0,
+            appVersion: appVersion,
+            build: build
+        )
+        var event = PhysicalDiagnosticEvent(
+            sequence: 1,
+            timestamp: now,
+            marker: probableFailure ? "apple_diagnostic_received" : "apple_metric_received",
+            attributes: ["kind": kind, "count": "1", "fingerprint": fingerprint]
+        )
+        event.diagnosticSessionID = identity.diagnosticSessionID
+        event.requestID = identity.requestID
+        event.requestGeneration = identity.generation
+        event.build = build
+        var session = PhysicalDiagnosticSession(
+            schema: 2,
+            sessionID: reportID,
+            liveTestID: "BUILD32-PRODUCTION-BLACK-BOX",
+            feature: probableFailure ? "apple_diagnostic" : "apple_metric",
+            appVersion: appVersion,
+            build: build,
+            environment: "internal-testflight",
+            osVersion: osVersion,
+            deviceClass: deviceClass,
+            startedAt: now,
+            endedAt: now,
+            durationMilliseconds: 0,
+            result: probableFailure ? .crashSuspected : .success,
+            failureStage: probableFailure ? correlation?.lastPRE ?? correlation?.lastStage : nil,
+            errorDomain: probableFailure ? "MetricKitDiagnostic" : "MetricKitMetric",
+            errorCode: nil,
+            events: [event]
+        )
+        session.diagnosticSessionID = identity.diagnosticSessionID
+        session.requestID = identity.requestID
+        session.requestGeneration = identity.generation
+        session.terminalState = probableFailure ? .error : .success
+        session.detailedDiagnosticsConsent = false
+        session.appleDiagnosticJSON = json
+        if probableFailure, let correlation {
+            session.anomaly = DiagnosticAnomalyAnalyzer.analyze(events: [event], active: correlation)
+        }
+        crashlyticsRecorder.recordMetricKitPayload(
+            kind: kind,
+            fingerprint: fingerprint,
+            payload: json,
+            identity: identity
+        )
+        Task { await delivery.enqueue(session) }
     }
 
     /// MetricKit contains stack symbols and process telemetry, but diagnostics

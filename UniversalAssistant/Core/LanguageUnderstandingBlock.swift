@@ -389,6 +389,12 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             entities.removeValue(forKey: "clarification_role")
         }
         if providerInference?.domain == "car_rental" {
+        if providerInference?.domain == "car_rental",
+           entities["location"] == nil,
+           let explicitLocation = frameResult.frame.location?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !explicitLocation.isEmpty {
+            entities["location"] = explicitLocation
+        }
             entities["serviceCategory"] = LocalServiceCategory.carRental.rawValue
         } else if providerInference == nil,
                   CanonicalExternalProviderBoundaryAnalyzer.hasAmbiguousVehicleServiceGoal(
@@ -796,10 +802,21 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
     }
 
     private func communicationRecipient(_ value: String, excludingResolvedService service: String) -> String? {
-        guard let candidate = serviceCandidates.first(where: { $0.value == service }) else { return value }
-        let resolver = ContextScopedEntityResolver(candidates: [candidate])
         var tokens = value.split(whereSeparator: { !$0.isLetter && !$0.isNumber && $0 != "@" })
             .map(String.init)
+        if service == "email" {
+            tokens.removeAll { token in
+                CanonicalMorphology.forms(for: token).contains { form in
+                    ["email", "mail", "пошт", "почт", "електрон", "электрон", "лист"].contains {
+                        form.hasPrefix($0)
+                    }
+                }
+            }
+            let output = tokens.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+            return output.isEmpty ? nil : output
+        }
+        guard let candidate = serviceCandidates.first(where: { $0.value == service }) else { return value }
+        let resolver = ContextScopedEntityResolver(candidates: [candidate])
         guard let index = tokens.firstIndex(where: { token in
             if case .resolved = resolver.resolve(token) { return true }
             return false

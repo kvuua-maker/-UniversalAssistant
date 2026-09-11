@@ -28,6 +28,12 @@ protocol CrashlyticsDiagnosticRecording: Sendable {
     )
     func recordTerminal(_ session: PhysicalDiagnosticSession)
     func recordRecoveredUncleanSession(_ session: PhysicalDiagnosticSession)
+    func recordMetricKitPayload(
+        kind: String,
+        fingerprint: String,
+        payload: String,
+        identity: CrashlyticsDiagnosticRequestIdentity
+    )
 }
 
 protocol CrashlyticsClient: AnyObject {
@@ -228,6 +234,42 @@ final class CrashlyticsDiagnosticBridge: CrashlyticsDiagnosticRecording, @unchec
             sequence: session.events.count
         )
     }
+    func recordMetricKitPayload(
+        kind: String,
+        fingerprint: String,
+        payload: String,
+        identity: CrashlyticsDiagnosticRequestIdentity
+    ) {
+        guard isReady else { return }
+        setIdentity(identity)
+        setValue("METRICKIT_PAYLOAD_RECEIVED", forKey: "ua_last_stage")
+        setValue(kind, forKey: "ua_metrickit_kind")
+        setValue(fingerprint, forKey: "ua_metrickit_fingerprint")
+
+        let safePayload = Self.redactSecrets(payload)
+        let boundedPayload = Self.bounded(safePayload, maximumUTF8Bytes: Self.maximumTranscriptLogBytes)
+        let truncation = boundedPayload.utf8.count < safePayload.utf8.count
+            ? " TRUNCATED_BY_PROVIDER_LIMIT original_length=\(safePayload.utf8.count) sha256=\(fingerprint)"
+            : ""
+        log(
+            "UA_TRACE marker=METRICKIT_PAYLOAD_RECEIVED kind=\(kind) payload=\(Self.singleLine(boundedPayload))\(truncation)",
+            identity: identity,
+            sequence: 0
+        )
+        client.record(
+            error: NSError(
+                domain: "UA_METRICKIT_PAYLOAD",
+                code: kind == "diagnostic" ? 1 : 2,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "Apple MetricKit payload received",
+                    "kind": kind,
+                    "fingerprint": fingerprint,
+                    "request_id": identity.requestID.uuidString
+                ]
+            )
+        )
+    }
+
 
     private var isReady: Bool {
         readiness()

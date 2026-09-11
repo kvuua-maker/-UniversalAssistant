@@ -400,8 +400,9 @@ struct LocalCommandEngine: CommandParsing {
         let actionPattern = #"(?:перекла\p{L}*|переве\p{L}*|translate\p{L}*|übersetz\p{L}*|tradui\p{L}*)"#
         guard let action = trimmed.range(of: actionPattern, options: [.regularExpression, .caseInsensitive]) else { return nil }
         var value = String(trimmed[action.upperBound...])
-        value = value.replacingOccurrences(of: #"^\s*(?:мені|мне|please|будь ласка)?\s*(?:(?:англій|англий|english|німець|немец|german|француз|french|україн|украин|ukrainian)\p{L}*|(?:на|into|to)\s+(?:англій|англий|english|німець|немец|german|француз|french|україн|украин|ukrainian)\p{L}*)(?:\s+(?:мовою|языком|language))?\s*(?:(?:переклад|перевод|translation)\p{L}*\s*)?[:,-]?\s*(?:(?:текст|фраз|реченн|предложен|sentence|phrase|text)\p{L}*\s*[:,-]?\s*)?"#, with: "", options: [.regularExpression, .caseInsensitive])
+        value = value.replacingOccurrences(of: #"^\s*(?:мені|мне|please|будь ласка)?\s*(?:(?:англій|англий|english|німець|немец|german|француз|french|україн|украин|ukrainian|росій|русск|russian)\p{L}*|(?:на|into|to)\s+(?:англій|англий|english|німець|немец|german|француз|french|україн|украин|ukrainian|росій|русск|russian)\p{L}*)(?:\s+(?:мовою|мову|языком|язык|language))?\s*(?:(?:переклад|перевод|translation)\p{L}*\s*)?[:,-]?\s*(?:(?:текст|фраз|реченн|предложен|sentence|phrase|text)\p{L}*\s*[:,-]?\s*)?"#, with: "", options: [.regularExpression, .caseInsensitive])
         value = value.replacingOccurrences(of: #"^\s*(?:(?:текст|фраз|реченн|предложен|sentence|phrase|text)\p{L}*\s*[:,-]?\s*)"#, with: "", options: [.regularExpression, .caseInsensitive])
+        value = value.replacingOccurrences(of: #"\s*[,;:-]?\s*(?:на|into|to)\s+(?:англій|англий|english|німець|немец|german|француз|french|україн|украин|ukrainian|росій|русск|russian)\p{L}*(?:\s+(?:мову|мовою|язык|языком|language))?\s*$"#, with: "", options: [.regularExpression, .caseInsensitive])
         let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
         return cleaned.isEmpty ? nil : cleaned
     }

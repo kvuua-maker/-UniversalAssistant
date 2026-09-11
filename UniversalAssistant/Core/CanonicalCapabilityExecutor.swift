@@ -642,10 +642,13 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             throw CanonicalCapabilityExecutionError.externalProviderRequired(command.intent.rawValue)
         }
         let location: ValidatedLocation
+        let locationSource: String
         if let area = command.entities["location"]?.trimmingCharacters(in: .whitespacesAndNewlines), !area.isEmpty {
             location = try await locationResolver.resolve(area)
+            locationSource = "explicit"
         } else {
             location = try await currentLocation.resolveCurrent(for: .nearbySearch)
+            locationSource = "current"
         }
         let request: LocalServiceRequest
         do {
@@ -654,7 +657,17 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             throw CanonicalCapabilityExecutionError.externalProviderRequired(command.intent.rawValue)
         }
         let response = try await placeSearch.search(try request.placeQuery())
-        let places = PlaceProximityOrdering().nearestFirst(response.places, from: location)
+        let orderedPlaces = PlaceProximityOrdering().nearestFirst(response.places, from: location)
+        let places = orderedPlaces.filter {
+            ($0.distanceMeters ?? .greatestFiniteMagnitude) <= request.radiusMeters
+        }
+        let nearestBucket = orderedPlaces.first?.distanceMeters.map {
+            String(Int(($0 / 100).rounded()) * 100)
+        } ?? "none"
+        LocalVoiceDiagnosticReport.shared.record(
+            "local_service_proximity_applied",
+            "location_source=\(locationSource) input_count=\(response.places.count) output_count=\(places.count) nearest_m_bucket=\(nearestBucket) radius_m=\(Int(request.radiusMeters))"
+        )
         guard !places.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_local_services_found") }
 
         let planner = LocalServiceHandoffPlanner()

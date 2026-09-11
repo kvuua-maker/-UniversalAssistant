@@ -129,18 +129,25 @@ final class SystemContactStoreQuery: ContactStoreQuerying, Sendable {
 private final class ContactQueryCompletion<Value: Sendable>: @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<Value, Error>?
-    private var result: Result<Value, Error>?
+    private var result: Result<Value, ContactResolutionError>?
     func install(_ continuation: CheckedContinuation<Value, Error>) {
         lock.lock(); if let result { lock.unlock(); continuation.resume(with: result) } else { self.continuation = continuation; lock.unlock() }
     }
-    func finish(_ result: Result<Value, Error>) {
+    func finish(_ result: Result<Value, ContactResolutionError>) {
         lock.lock(); guard self.result == nil else { lock.unlock(); return }; self.result = result
-        let continuation = self.continuation; self.continuation = nil; lock.unlock(); continuation?.resume(with: result)
+        let continuation = self.continuation; self.continuation = nil; lock.unlock()
+        switch result {
+        case let .success(value): continuation?.resume(returning: value)
+        case let .failure(error): continuation?.resume(throwing: error)
+        }
     }
 }
 
 final class SystemContactQuery: ContactQuerying, @unchecked Sendable {
     private static let deadlineQueue = DispatchQueue(label: "com.universalassistant.contacts.deadline", qos: .userInteractive)
+    /// Provides an explicit happens-before edge between the blocking Contacts
+    /// producer and the actor consuming its owned Swift value.
+    private static let resultQueue = DispatchQueue(label: "com.universalassistant.contacts.result", qos: .userInitiated)
     private let store: any ContactStoreQuerying
     private let queue = DispatchQueue(label: "com.universalassistant.contacts.query", qos: .userInitiated)
     init(store: any ContactStoreQuerying = SystemContactStoreQuery()) { self.store = store }
@@ -159,20 +166,24 @@ final class SystemContactQuery: ContactQuerying, @unchecked Sendable {
             try await withCheckedThrowingContinuation { continuation in
                 completion.install(continuation)
                 queue.async {
-                    do { completion.finish(.success(try operation())) }
-                    catch is CancellationError { completion.finish(.failure(ContactResolutionError.cancelled)) }
+                    let result: Result<Value, ContactResolutionError>
+                    do { result = .success(try operation()) }
+                    catch is CancellationError { result = .failure(.cancelled) }
                     // Foundation/Contacts errors are Objective-C reference values.
                     // Do not send them across this concurrency boundary; the Home
                     // layer needs a stable typed failure, not framework internals.
-                    catch { completion.finish(.failure(ContactResolutionError.queryFailed)) }
+                    catch { result = .failure(.queryFailed) }
+                    Self.resultQueue.async { completion.finish(result) }
                 }
                 let components = timeout.components
                 let delay = Double(components.seconds) + Double(components.attoseconds) / 1_000_000_000_000_000_000
                 Self.deadlineQueue.asyncAfter(deadline: .now() + delay) {
-                    completion.finish(.failure(ContactResolutionError.timedOut))
+                    Self.resultQueue.async { completion.finish(.failure(.timedOut)) }
                 }
             }
-        } onCancel: { completion.finish(.failure(ContactResolutionError.cancelled)) }
+        } onCancel: {
+            Self.resultQueue.async { completion.finish(.failure(.cancelled)) }
+        }
     }
 }
 
@@ -208,27 +219,33 @@ actor LocalContactResolver: ContactResolving {
         defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CONTACT_FETCH", "kind=name status=returned") }
         LocalVoiceDiagnosticReport.shared.record("contacts_query_started", "kind=name")
         let predicateContacts = try await query.contacts(matching: name, timeout: queryTimeout)
-        let predicateEvidence = resolveCandidates(predicateContacts, query: name)
-        let result: ContactResolution
-        switch predicateEvidence.resolution {
-        case .resolved, .ambiguous:
-            result = predicateEvidence.resolution
-        case .notFound:
-            // CNContact's name predicate is a candidate source, not proof of
-            // identity. Build 34 proved that blindly accepting its sole fuzzy
-            // result can call a different person. Validate against the complete
-            // privacy-authorized domain before selecting any person.
-            let accessible = try await query.accessibleContacts(limit: 200, timeout: queryTimeout)
-            let domainEvidence = resolveCandidates(accessible, query: name)
-            result = domainEvidence.resolution
+        let accessibleContacts: [ContactCandidate]
+        do {
+            accessibleContacts = try await query.accessibleContacts(limit: 500, timeout: queryTimeout)
+        } catch {
+            // A predicate result is safe on its own only when it is exact.
+            // Fuzzy evidence from a provider-pruned subset cannot identify a
+            // person without comparison against the authorized domain.
+            let predicateOnly = resolveCandidates(predicateContacts, query: name)
+            let result = predicateOnly.mechanism == .exact ? predicateOnly.resolution : .notFound
             LocalVoiceDiagnosticReport.shared.record(
                 "contacts_domain_recovery_finished",
-                "status=\(Self.status(domainEvidence.resolution)) count=\(domainEvidence.candidateCount) mechanism=\(domainEvidence.mechanism.rawValue)"
+                "status=\(Self.status(result)) count=\(predicateOnly.candidateCount) mechanism=predicate_only"
             )
+            return result
         }
+        // CNContact's predicate is a candidate source, not identity proof.
+        // Rank the union exactly once so a short unrelated predicate hit cannot
+        // win simply because the real contact was excluded from that subset.
+        let candidates = Self.deduplicated(predicateContacts + accessibleContacts)
+        let domainEvidence = resolveCandidates(candidates, query: name)
+        let result = domainEvidence.resolution
         LocalVoiceDiagnosticReport.shared.record(
-            "contacts_query_finished",
-            "status=\(Self.status(result)) count=\(predicateEvidence.candidateCount)"
+            "contacts_domain_recovery_finished",
+            "status=\(Self.status(result)) count=\(domainEvidence.candidateCount) mechanism=\(domainEvidence.mechanism.rawValue)"
+        )
+        LocalVoiceDiagnosticReport.shared.record(
+            "contacts_query_finished", "status=\(Self.status(result)) count=\(domainEvidence.candidateCount)"
         )
         return result
     }
@@ -280,7 +297,12 @@ actor LocalContactResolver: ContactResolving {
                 aliases: Set([$0.displayName] + $0.aliases)
             )
         }
-        let evidence = ContextScopedEntityResolver(candidates: domain).resolveWithEvidence(name)
+        let evidence = ContextScopedEntityResolver(
+            candidates: domain,
+            directThreshold: 0.82,
+            ambiguityThreshold: 0.55,
+            requiredMargin: 0.16
+        ).resolveWithEvidence(name)
         switch evidence.resolution {
         case let .resolved(contact):
             return (.resolved(contact), evidence.mechanism, contacts.count)
@@ -289,6 +311,16 @@ actor LocalContactResolver: ContactResolving {
             return (.ambiguous(selected.isEmpty ? contacts : selected), evidence.mechanism, contacts.count)
         case .unresolved:
             return (.notFound, evidence.mechanism, contacts.count)
+        }
+    }
+
+    private static func deduplicated(_ contacts: [ContactCandidate]) -> [ContactCandidate] {
+        var values: [String: ContactCandidate] = [:]
+        for contact in contacts {
+            values[contact.identifier] = contact
+        }
+        return values.values.sorted {
+            $0.displayName == $1.displayName ? $0.identifier < $1.identifier : $0.displayName < $1.displayName
         }
     }
 

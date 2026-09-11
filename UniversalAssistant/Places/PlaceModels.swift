@@ -95,8 +95,9 @@ struct PlaceDeduplicator: Sendable {
 struct PlaceProximityOrdering: Sendable {
     func nearestFirst(_ places: [Place], from origin: ValidatedLocation) -> [Place] {
         nearestFirst(places.map { place in
-            guard place.distanceMeters == nil else { return place }
             var value = place
+            // The typed origin is authoritative. Provider distances may be
+            // absent, stale, or calculated from a provider-default region.
             value.distanceMeters = Self.distance(fromLatitude: origin.sample.latitude, longitude: origin.sample.longitude, toLatitude: place.latitude, longitude: place.longitude)
             return value
         })
