@@ -114,6 +114,8 @@ enum CanonicalCapabilityExecutionError: Error, Equatable, Sendable {
     case ambiguous([String])
     case unavailable(String)
     case externalProviderRequired(String)
+    case providerRequiredNoFallback(String)
+    case confirmationRequired(StructuredCommand)
 }
 
 private enum PhotoSearchDeadlineResult: Sendable {
@@ -181,9 +183,15 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let publicDeviceExecute: @MainActor (SystemQuickAction) throws -> String
     private let clipboardRead: @MainActor () throws -> SharedContent
     private let fx: any CurrentFXProviding
+    private let restaurantDiscovery: RestaurantDiscoveryEngine
     private let photoSearchTimeout: Duration
     private let alarmExecute: ( (SystemQuickAction) async throws -> String)?
     private let commandParser: any CommandParsing
+    private var restaurantOffersByID: [String: RestaurantOffer] = [:]
+    private var restaurantSlotsByID: [String: RestaurantReservationSlot] = [:]
+    private var restaurantSlotOrder: [String] = []
+    private var restaurantBookingsByID: [String: RestaurantReservation] = [:]
+    private var latestRestaurantBookingID: String?
 
     init(
         deviceRouter: UniversalDeviceCommandRouter = .init(applications: .init(applications: LaunchDeviceApplications.verified)),
@@ -205,6 +213,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         publicDeviceExecute: @escaping @MainActor (SystemQuickAction) throws -> String = { try ProductionPublicDeviceExecutor().execute($0) },
         clipboardRead: @escaping @MainActor () throws -> SharedContent = { try SystemUserInitiatedClipboardReader().readAfterUserAction() },
         fx: any CurrentFXProviding = ECBCurrentFXProvider(),
+        restaurantProviders: [any ReservationProvider] = [],
         alarmExecute: (  (SystemQuickAction) async throws -> String)? = nil,
         photoSearchTimeout: Duration = .seconds(3),
         personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())],
@@ -229,6 +238,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.publicDeviceExecute = publicDeviceExecute
         self.clipboardRead = clipboardRead
         self.fx = fx
+        self.restaurantDiscovery = RestaurantDiscoveryEngine(providers: restaurantProviders)
         self.alarmExecute = alarmExecute
         self.photoSearchTimeout = photoSearchTimeout
         self.commandParser = commandParser
@@ -388,8 +398,10 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             return .result(try result("Скасовано", facts: []))
         case .transportRoute:
             return try await route(command, mode: .transit)
+        case .reservation:
+            return try await restaurantReservation(command)
         case .productSearch, .fashionDiscovery, .groceryBasket, .serviceSearch, .restaurantSearch,
-             .reservation, .taxiSearch, .taxiCompare, .publicTransport,
+             .taxiSearch, .taxiCompare, .publicTransport,
              .ticketSearch, .ticketPurchaseHandoff, .hotelSearch, .travelPlan, .parcelTrack:
             throw CanonicalCapabilityExecutionError.externalProviderRequired(command.intent.rawValue)
         case .placeSearch:
@@ -610,6 +622,262 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         return .result(output)
     }
 
+    private func restaurantReservation(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        switch command.entities["reservation_operation"] ?? "availability" {
+        case "availability":
+            return try await restaurantAvailability(command)
+        case "book":
+            return try await bookRestaurant(command)
+        case "modify":
+            return try await modifyRestaurantBooking(command)
+        case "cancel":
+            return try await cancelRestaurantBooking(command)
+        default:
+            throw CanonicalCapabilityExecutionError.unavailable("unsupported_restaurant_reservation_operation")
+        }
+    }
+
+    private func restaurantAvailability(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        let partySize = try requiredInteger(command.entities["party_size"], "restaurant_party_size", range: 1...50)
+        let interval = try restaurantInterval(command)
+        let location: ValidatedLocation
+        if let area = command.entities["location"]?.trimmingCharacters(in: .whitespacesAndNewlines), !area.isEmpty {
+            location = try await locationResolver.resolve(area)
+        } else {
+            location = try await currentLocation.resolveCurrent(for: .nearbySearch)
+        }
+        let query = command.entities["restaurant_query"]?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let searchText = query?.isEmpty == false ? query! : "restaurant"
+        let response = try await placeSearch.search(.init(
+            text: searchText, category: .restaurant, location: location,
+            radiusMeters: 10_000, limit: 8
+        ))
+        let places = PlaceProximityOrdering().nearestFirst(
+            response.places.filter { $0.category == .restaurant },
+            from: location
+        )
+        guard !places.isEmpty else {
+            throw CanonicalCapabilityExecutionError.unavailable("no_restaurants_found")
+        }
+        let request = RestaurantSearchRequest(
+            maximumDistanceMeters: 10_000,
+            partySize: partySize,
+            interval: interval
+        )
+        let offers = places.prefix(8).map { place in
+            RestaurantOffer(
+                id: place.id, place: place, cuisines: [], dietaryOptions: [],
+                evidenceTimestamp: place.timestamp,
+                sourceReference: "\(place.source):\(place.id)",
+                officialBookingURL: place.officialWebsite
+            )
+        }
+        restaurantOffersByID = offers.reduce(into: [:]) { values, offer in
+            if values[offer.id] == nil { values[offer.id] = offer }
+        }
+
+        var slots: [RestaurantReservationSlot] = []
+        for offer in offers {
+            slots.append(contentsOf: await restaurantDiscovery.availability(for: offer, request: request))
+        }
+        restaurantSlotsByID = slots.reduce(into: [:]) { values, slot in
+            if values[slot.id] == nil { values[slot.id] = slot }
+        }
+        restaurantSlotOrder = slots.reduce(into: []) { identifiers, slot in
+            if !identifiers.contains(slot.id) { identifiers.append(slot.id) }
+        }
+        if !slots.isEmpty {
+            let facts = slots.prefix(12).enumerated().map { index, slot in
+                ResultFact(
+                    id: slot.id,
+                    label: restaurantOffersByID[slot.restaurantID]?.place.name ?? "Restaurant",
+                    value: "\(slot.interval.start.formatted(date: .abbreviated, time: .shortened)), \(slot.partySize) ос.",
+                    state: .verified,
+                    source: slot.providerID,
+                    observedAt: slot.observedAt,
+                    priority: 100 - index
+                )
+            }
+            return .result(try result(
+                "Підтверджені доступні часи. Оберіть варіант для бронювання.",
+                facts: facts
+            ))
+        }
+
+        let fallback = try restaurantFallbackResult(offers: Array(offers), partySize: partySize, interval: interval)
+        currentContext.replacePlaceResults(fallback, places: Array(places.prefix(8)))
+        return .result(fallback)
+    }
+
+    private func bookRestaurant(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        let slot = try selectedRestaurantSlot(command)
+        guard command.entities["reservation_confirmed"] == "true" else {
+            throw CanonicalCapabilityExecutionError.confirmationRequired(
+                restaurantConfirmedCommand(command, slotID: slot.id)
+            )
+        }
+        guard case let .confirmed(booking) = try await restaurantDiscovery.book(slot, confirmed: true) else {
+            throw CanonicalCapabilityExecutionError.unavailable("restaurant_booking_not_confirmed")
+        }
+        restaurantBookingsByID[booking.id] = booking
+        latestRestaurantBookingID = booking.id
+        return .result(try verifiedRestaurantMutationResult(
+            title: "Бронювання підтверджено",
+            booking: booking
+        ))
+    }
+
+    private func modifyRestaurantBooking(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        guard let booking = selectedRestaurantBooking(command) else {
+            throw CanonicalCapabilityExecutionError.providerRequiredNoFallback("restaurant_booking_reference_required")
+        }
+        guard let slot = selectedReplacementRestaurantSlot(command, booking: booking) else {
+            throw CanonicalCapabilityExecutionError.missingParameter("restaurant_replacement_slot")
+        }
+        guard command.entities["reservation_confirmed"] == "true" else {
+            throw CanonicalCapabilityExecutionError.confirmationRequired(
+                restaurantConfirmedCommand(command, slotID: slot.id, bookingID: booking.id)
+            )
+        }
+        let updated = try await restaurantDiscovery.modify(booking, to: slot, confirmed: true)
+        restaurantBookingsByID[updated.id] = updated
+        latestRestaurantBookingID = updated.id
+        return .result(try verifiedRestaurantMutationResult(title: "Бронювання змінено", booking: updated))
+    }
+
+    private func cancelRestaurantBooking(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        guard let booking = selectedRestaurantBooking(command) else {
+            throw CanonicalCapabilityExecutionError.providerRequiredNoFallback("restaurant_booking_reference_required")
+        }
+        guard command.entities["reservation_confirmed"] == "true" else {
+            throw CanonicalCapabilityExecutionError.confirmationRequired(
+                restaurantConfirmedCommand(command, bookingID: booking.id)
+            )
+        }
+        let cancelled = try await restaurantDiscovery.cancel(booking, confirmed: true)
+        restaurantBookingsByID[cancelled.id] = cancelled
+        latestRestaurantBookingID = cancelled.id
+        return .result(try verifiedRestaurantMutationResult(title: "Бронювання скасовано", booking: cancelled))
+    }
+
+    private func restaurantFallbackResult(
+        offers: [RestaurantOffer],
+        partySize: Int,
+        interval: DateInterval
+    ) throws -> DeterministicResult {
+        var actions: [ResultAction] = []
+        for offer in offers.prefix(5) {
+            guard let outcome = try? restaurantDiscovery.fallback(for: offer) else { continue }
+            switch outcome {
+            case let .officialHandoff(url):
+                actions.append(.init(id: offer.id, title: "Офіційне бронювання", kind: .purchaseHandoff, destination: url))
+            case let .phone(url):
+                actions.append(.init(id: offer.id, title: "Зателефонувати", kind: .open, destination: url))
+            case let .navigation(url):
+                actions.append(.init(id: offer.id, title: "Маршрут", kind: .navigate, destination: url))
+            case .confirmed:
+                break
+            }
+        }
+        let facts = offers.prefix(5).enumerated().map { index, offer in
+            ResultFact(
+                id: offer.id,
+                label: offer.place.name,
+                value: offer.place.address ?? offer.place.category.rawValue,
+                state: .verified,
+                source: offer.place.source,
+                observedAt: offer.place.timestamp,
+                priority: 100 - index
+            )
+        }
+        let requestLabel = "\(interval.start.formatted(date: .abbreviated, time: .shortened)), \(partySize) ос."
+        return try DeterministicResultComposer().compose(
+            primaryAnswer: "Пряме бронювання недоступне. Доступні лише перевірені способи звернення.",
+            facts: facts,
+            actions: actions,
+            warnings: ["Запит: \(requestLabel). Бронювання не підтверджено провайдером."]
+        )
+    }
+
+    private func selectedRestaurantSlot(_ command: StructuredCommand) throws -> RestaurantReservationSlot {
+        if let id = command.entities["reservation_slot_id"], let slot = restaurantSlotsByID[id] { return slot }
+        if let ordinal = command.constraints.ordinal,
+           restaurantSlotOrder.indices.contains(ordinal - 1),
+           let slot = restaurantSlotsByID[restaurantSlotOrder[ordinal - 1]] { return slot }
+        if restaurantSlotOrder.count == 1, let id = restaurantSlotOrder.first,
+           let slot = restaurantSlotsByID[id] { return slot }
+        throw CanonicalCapabilityExecutionError.missingParameter("restaurant_reservation_slot")
+    }
+
+    private func selectedRestaurantBooking(_ command: StructuredCommand) -> RestaurantReservation? {
+        if let id = command.entities["reservation_booking_id"], let booking = restaurantBookingsByID[id] { return booking }
+        return latestRestaurantBookingID.flatMap { restaurantBookingsByID[$0] }
+    }
+
+    private func selectedReplacementRestaurantSlot(
+        _ command: StructuredCommand,
+        booking: RestaurantReservation
+    ) -> RestaurantReservationSlot? {
+        let selected: RestaurantReservationSlot?
+        if let id = command.entities["reservation_slot_id"] {
+            selected = restaurantSlotsByID[id]
+        } else if let ordinal = command.constraints.ordinal,
+                  restaurantSlotOrder.indices.contains(ordinal - 1) {
+            selected = restaurantSlotsByID[restaurantSlotOrder[ordinal - 1]]
+        } else {
+            selected = nil
+        }
+        guard let selected, selected.id != booking.slotID else { return nil }
+        return selected
+    }
+
+    private func restaurantConfirmedCommand(
+        _ command: StructuredCommand,
+        slotID: String? = nil,
+        bookingID: String? = nil
+    ) -> StructuredCommand {
+        var entities = command.entities
+        entities["reservation_confirmed"] = "true"
+        if let slotID { entities["reservation_slot_id"] = slotID }
+        if let bookingID { entities["reservation_booking_id"] = bookingID }
+        return .init(
+            id: command.id, originalText: command.originalText,
+            normalizedText: command.normalizedText, language: command.language,
+            intent: command.intent, entities: entities, constraints: command.constraints,
+            risk: .consequential, needsClarification: false
+        )
+    }
+
+    private func verifiedRestaurantMutationResult(
+        title: String,
+        booking: RestaurantReservation
+    ) throws -> DeterministicResult {
+        try result(title, facts: [
+            .init(
+                id: booking.id, label: "Provider reference",
+                value: booking.providerReference, state: .verified,
+                source: booking.providerID, observedAt: booking.observedAt, priority: 100
+            )
+        ])
+    }
+
+    private func restaurantInterval(_ command: StructuredCommand, now: Date = .now) throws -> DateInterval {
+        let locale = Locale(identifier: command.language == .ru ? "ru_RU" : "uk_UA")
+        guard case let .resolved(value) = NaturalDateTimeResolver().resolve(
+            command, locale: locale, timeZone: .autoupdatingCurrent, relativeTo: now
+        ), value.precision == .minute else {
+            throw CanonicalCapabilityExecutionError.missingParameter("restaurant_date_time")
+        }
+        return .init(start: value.instant, duration: 2 * 60 * 60)
+    }
+
+    private func requiredInteger(_ value: String?, _ parameter: String, range: ClosedRange<Int>) throws -> Int {
+        guard let value, let number = Int(value), range.contains(number) else {
+            throw CanonicalCapabilityExecutionError.missingParameter(parameter)
+        }
+        return number
+    }
+
     private func route(_ command: StructuredCommand, mode: TravelMode = .driving) async throws -> CapabilityExecutionOutcome {
         let destinationName = try required(command.entities["destination"], "destination")
         let destination: ValidatedLocation
@@ -819,7 +1087,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     }
 
     private func message(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
-        let service = command.entities["message_service"]?.lowercased()
+        let service = command.entities["message_service"]?.lowercased() ?? MessengerKind.messages.rawValue
         let body = command.entities["message_body"]
         if service == "email" || service == "mail" {
             let rawRecipient = command.entities["recipient"]?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -831,9 +1099,27 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             }
             return .presentation(.email(recipients: recipients, subject: command.entities["message_subject"], body: body))
         }
-        guard let rawRecipient = command.entities["recipient"]?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !rawRecipient.isEmpty else {
-            guard service == nil || service == "messages" else {
+        let rawRecipient = command.entities["recipient"]?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if service == MessengerKind.telegram.rawValue {
+            let username = rawRecipient.flatMap(Self.explicitMessengerUsername)
+            switch try MessengerHandoffPlanner().plan(messenger: .telegram, recipient: username, body: body) {
+            case let .verifiedHandoff(url): return .handoff(.init(query: command.originalText, destination: url, kind: .system))
+            case let .unavailable(reason): throw CanonicalCapabilityExecutionError.unavailable(reason)
+            case .systemComposer: throw CanonicalCapabilityExecutionError.unavailable("telegram_handoff_invalid")
+            }
+        }
+        if service == MessengerKind.viber.rawValue || service == MessengerKind.signal.rawValue {
+            let messenger: MessengerKind = service == MessengerKind.viber.rawValue ? .viber : .signal
+            switch try MessengerHandoffPlanner().plan(messenger: messenger, recipient: nil, body: body) {
+            case let .verifiedHandoff(url): return .handoff(.init(query: command.originalText, destination: url, kind: .system))
+            case let .unavailable(reason): throw CanonicalCapabilityExecutionError.unavailable(reason)
+            case .systemComposer: throw CanonicalCapabilityExecutionError.unavailable("messenger_handoff_invalid")
+            }
+        }
+
+        guard let rawRecipient, !rawRecipient.isEmpty else {
+            guard service == MessengerKind.messages.rawValue else {
                 throw CanonicalCapabilityExecutionError.missingParameter("message_recipient")
             }
             return .presentation(.message(recipients: [], body: body))
@@ -860,11 +1146,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
 
         let messenger: MessengerKind
         switch service {
-        case nil, "messages": messenger = .messages
+        case "messages": messenger = .messages
         case "whatsapp": messenger = .whatsapp
-        case "telegram": messenger = .telegram
-        case "viber": messenger = .viber
-        case "signal": messenger = .signal
         default: throw CanonicalCapabilityExecutionError.unavailable("unsupported_message_service")
         }
         switch try MessengerHandoffPlanner().plan(messenger: messenger, recipient: phoneNumber, body: body) {
@@ -875,6 +1158,14 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case let .unavailable(reason):
             throw CanonicalCapabilityExecutionError.unavailable(reason)
         }
+    }
+
+    private static func explicitMessengerUsername(_ raw: String) -> String? {
+        let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard value.hasPrefix("@") else { return nil }
+        let username = value.dropFirst()
+        guard !username.isEmpty, username.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" }) else { return nil }
+        return String(username)
     }
 
     private func callDestination(number: String, service: String?) throws -> URL {

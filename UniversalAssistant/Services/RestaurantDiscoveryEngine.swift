@@ -65,10 +65,27 @@ struct RestaurantReservation: Equatable, Codable, Sendable {
     let observedAt: Date
 }
 
+enum RestaurantProviderCapability: String, Codable, CaseIterable, Sendable {
+    case availability, booking, modification, cancellation
+}
+
 protocol ReservationProvider: Sendable {
     var providerID: String { get }
+    var capabilities: Set<RestaurantProviderCapability> { get }
     func availability(restaurantID: String, partySize: Int, interval: DateInterval) async throws -> [RestaurantReservationSlot]
     func book(slotID: String) async throws -> RestaurantReservation
+    func modify(bookingID: String, slotID: String) async throws -> RestaurantReservation
+    func cancel(bookingID: String) async throws -> RestaurantReservation
+}
+
+extension ReservationProvider {
+    var capabilities: Set<RestaurantProviderCapability> { [.availability, .booking] }
+    func modify(bookingID: String, slotID: String) async throws -> RestaurantReservation {
+        throw RestaurantDiscoveryError.providerOperationUnavailable
+    }
+    func cancel(bookingID: String) async throws -> RestaurantReservation {
+        throw RestaurantDiscoveryError.providerOperationUnavailable
+    }
 }
 
 enum RestaurantBookingOutcome: Equatable, Sendable {
@@ -79,7 +96,8 @@ enum RestaurantBookingOutcome: Equatable, Sendable {
 }
 
 enum RestaurantDiscoveryError: Error, Equatable, Sendable {
-    case invalidRequest, unverifiedSlot, confirmationRequired, unverifiedBooking, noUsefulFallback
+    case invalidRequest, unverifiedSlot, confirmationRequired, unverifiedBooking
+    case providerOperationUnavailable, providerMismatch, unverifiedMutation, noUsefulFallback
 }
 
 struct RestaurantDiscoveryEngine: Sendable {
@@ -101,7 +119,7 @@ struct RestaurantDiscoveryEngine: Sendable {
         guard let partySize = request.partySize, let interval = request.interval else { return [] }
         var result: [RestaurantReservationSlot] = []
         await withTaskGroup(of: [RestaurantReservationSlot].self) { group in
-            for provider in providers.prefix(6) {
+            for provider in providers.prefix(6) where provider.capabilities.contains(.availability) {
                 group.addTask { (try? await provider.availability(restaurantID: offer.id, partySize: partySize, interval: interval)) ?? [] }
             }
             for await slots in group {
@@ -129,6 +147,46 @@ struct RestaurantDiscoveryEngine: Sendable {
               booking.state == .confirmed, !booking.providerReference.isEmpty
         else { throw RestaurantDiscoveryError.unverifiedBooking }
         return .confirmed(booking)
+    }
+
+    func modify(
+        _ booking: RestaurantReservation,
+        to slot: RestaurantReservationSlot,
+        confirmed: Bool,
+        now: Date = .now
+    ) async throws -> RestaurantReservation {
+        guard confirmed else { throw RestaurantDiscoveryError.confirmationRequired }
+        guard booking.state == .confirmed, booking.providerID == slot.providerID,
+              slot.availabilityVerified, !slot.sourceReference.isEmpty,
+              now.timeIntervalSince(slot.observedAt) >= -60,
+              now.timeIntervalSince(slot.observedAt) <= maximumEvidenceAge,
+              let provider = providers.first(where: { $0.providerID == booking.providerID }),
+              provider.capabilities.contains(.modification) else {
+            throw RestaurantDiscoveryError.providerMismatch
+        }
+        let updated = try await provider.modify(bookingID: booking.id, slotID: slot.id)
+        guard updated.id == booking.id, updated.providerID == booking.providerID,
+              updated.slotID == slot.id, updated.state == .confirmed,
+              !updated.providerReference.isEmpty else {
+            throw RestaurantDiscoveryError.unverifiedMutation
+        }
+        return updated
+    }
+
+    func cancel(_ booking: RestaurantReservation, confirmed: Bool) async throws -> RestaurantReservation {
+        guard confirmed else { throw RestaurantDiscoveryError.confirmationRequired }
+        guard booking.state == .confirmed,
+              let provider = providers.first(where: { $0.providerID == booking.providerID }),
+              provider.capabilities.contains(.cancellation) else {
+            throw RestaurantDiscoveryError.providerMismatch
+        }
+        let cancelled = try await provider.cancel(bookingID: booking.id)
+        guard cancelled.id == booking.id, cancelled.providerID == booking.providerID,
+              cancelled.slotID == booking.slotID, cancelled.state == .cancelled,
+              !cancelled.providerReference.isEmpty else {
+            throw RestaurantDiscoveryError.unverifiedMutation
+        }
+        return cancelled
     }
 
     func fallback(for offer: RestaurantOffer) throws -> RestaurantBookingOutcome {

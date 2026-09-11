@@ -390,6 +390,12 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             switch recovered.resolution {
             case let .resolved(identifier):
                 entities[serviceKey] = identifier
+                if intent == .messageCompose, let recipient = entities["recipient"] {
+                    entities["recipient"] = communicationRecipient(
+                        recipient,
+                        excludingResolvedService: identifier
+                    )
+                }
                 entities["service_match_mechanism"] = recovered.mechanism.rawValue
                 entities["service_match_confidence"] = String(format: "%.3f", recovered.bestScore)
                 if entities["clarification_role"] == "service_channel" {
@@ -408,6 +414,27 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 entities["service_resolution"] = "unresolved"
                 needsClarification = true
             }
+        }
+        if intent == .messageCompose,
+           let service = entities["message_service"]?.lowercased(),
+           service == "email",
+           let address = Self.emailAddress(in: text) {
+            entities["recipient"] = address
+        }
+        if intent == .messageCompose,
+           entities["message_service"]?.lowercased() == MessengerKind.telegram.rawValue,
+           let username = Self.explicitMessengerUsername(in: text) {
+            entities["recipient"] = username
+        }
+        // The public Apple Messages composer is the canonical unqualified
+        // communication channel. Make the default explicit in the typed frame
+        // so no downstream renderer/provider can reinterpret a generic message
+        // as email or an arbitrary messenger fallback.
+        if intent == .messageCompose,
+           entities["message_service"] == nil,
+           entities["clarification_role"] != "service_channel" {
+            entities["message_service"] = MessengerKind.messages.rawValue
+            entities["service_resolution"] = "canonical_default"
         }
 
         if let recovered = recoverCatalog(
@@ -450,6 +477,18 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             case .unresolved:
                 break
             }
+        }
+
+        // Availability and a provider mutation are distinct typed operations.
+        // A subsequent ordinal selection may advance an already explicit
+        // booking request, but it never turns a plain restaurant search into a
+        // booking. The executor therefore receives the selected slot as typed
+        // state rather than reparsing the raw sentence.
+        if intent == .reservation,
+           entities["reservation_operation"] == "availability",
+           entities["reservation_requested_mutation"] == "book",
+           constraints.ordinal != nil {
+            entities["reservation_operation"] = "book"
         }
 
         if shouldFailClosed(frame: frameResult.frame, selectedIntent: intent) {
@@ -530,6 +569,11 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 entities["relative_day_offset"] == nil &&
                 entities["calendar_day"] == nil &&
                 entities["weekday"] == nil
+        case .reservation where entities["reservation_operation"] == "availability":
+            let hasDay = entities["relative_day_offset"] != nil ||
+                entities["calendar_day"] != nil || entities["weekday"] != nil
+            return entities["party_size"] == nil || !hasDay ||
+                entities["hour"] == nil || entities["minute"] == nil
         default:
             return false
         }
@@ -669,14 +713,52 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         ]
         let weakMarkers: Set<String> = ["у", "в", "по"]
         let normalized = document.tokens.map(\.normalized)
-        let markerIndex = normalized.indices.first { strongMarkers.contains(normalized[$0]) }
-            ?? normalized.indices.first { weakMarkers.contains(normalized[$0]) }
-        guard let markerIndex, markerIndex + 1 < document.tokens.count else { return nil }
-        let subject = document.tokens[(markerIndex + 1)...].map(\.surface).joined(separator: " ")
-        let evidence = ContextScopedEntityResolver(candidates: serviceCandidates).resolveWithEvidence(subject)
-        let strongScope = strongMarkers.contains(normalized[markerIndex])
-        if !strongScope, case .unresolved = evidence.resolution { return nil }
-        return evidence
+        if let markerIndex = normalized.indices.first(where: { strongMarkers.contains(normalized[$0]) })
+            ?? normalized.indices.first(where: { weakMarkers.contains(normalized[$0]) }),
+           markerIndex + 1 < document.tokens.count {
+            let subject = document.tokens[(markerIndex + 1)...].map(\.surface).joined(separator: " ")
+            let evidence = ContextScopedEntityResolver(candidates: serviceCandidates).resolveWithEvidence(subject)
+            let strongScope = strongMarkers.contains(normalized[markerIndex])
+            if strongScope || evidence.isResolved { return evidence }
+        }
+
+        // A communication action establishes the family, but it does not turn
+        // every person token into a channel candidate. Fuzzy recovery is safe
+        // only inside a structural SERVICE/CHANNEL scope. Exact canonical
+        // service names are already represented by frame.service upstream.
+        return nil
+    }
+
+    private func communicationRecipient(_ value: String, excludingResolvedService service: String) -> String? {
+        guard let candidate = serviceCandidates.first(where: { $0.value == service }) else { return value }
+        let resolver = ContextScopedEntityResolver(candidates: [candidate])
+        var tokens = value.split(whereSeparator: { !$0.isLetter && !$0.isNumber && $0 != "@" })
+            .map(String.init)
+        guard let index = tokens.firstIndex(where: { token in
+            if case .resolved = resolver.resolve(token) { return true }
+            return false
+        }) else { return value }
+        tokens.remove(at: index)
+        if index > 0, tokens.indices.contains(index - 1),
+           ["через", "via", "using", "у", "в", "по", "канал", "каналом"].contains(tokens[index - 1].lowercased()) {
+            tokens.remove(at: index - 1)
+        }
+        let output = tokens.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        return output.isEmpty ? nil : output
+    }
+
+    private static func emailAddress(in text: String) -> String? {
+        let pattern = #"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}"#
+        guard let range = text.range(of: pattern, options: [.regularExpression, .caseInsensitive]) else { return nil }
+        return String(text[range])
+    }
+
+    private static func explicitMessengerUsername(in text: String) -> String? {
+        let pattern = #"@[A-Z0-9_]+"#
+        guard let range = text.range(of: pattern, options: [.regularExpression, .caseInsensitive]) else {
+            return nil
+        }
+        return String(text[range])
     }
 
     private func recoverCatalog(

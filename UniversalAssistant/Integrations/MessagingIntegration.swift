@@ -46,12 +46,17 @@ struct MessengerHandoffPlanner: Sendable {
             if let cleanBody, !cleanBody.isEmpty { components.queryItems = [.init(name: "text", value: cleanBody)] }
             return .verifiedHandoff(components.url!)
         case .telegram:
-            guard let recipient else { throw MessagingPlanningError.invalidRecipient }
-            let username = recipient.trimmingCharacters(in: CharacterSet(charactersIn: "@ "))
-            guard !username.isEmpty, username.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" }) else { throw MessagingPlanningError.invalidRecipient }
-            var components = URLComponents(string: "tg://resolve")!
-            components.queryItems = [.init(name: "domain", value: username)]
-            if let cleanBody, !cleanBody.isEmpty { components.queryItems?.append(.init(name: "text", value: cleanBody)) }
+            if let recipient {
+                let username = recipient.trimmingCharacters(in: CharacterSet(charactersIn: "@ "))
+                guard !username.isEmpty, username.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" }) else { throw MessagingPlanningError.invalidRecipient }
+                var components = URLComponents(string: "tg://resolve")!
+                components.queryItems = [.init(name: "domain", value: username)]
+                if let cleanBody, !cleanBody.isEmpty { components.queryItems?.append(.init(name: "text", value: cleanBody)) }
+                return .verifiedHandoff(components.url!)
+            }
+            guard let cleanBody, !cleanBody.isEmpty else { throw MessagingPlanningError.invalidContext }
+            var components = URLComponents(string: "https://t.me/share/url")!
+            components.queryItems = [.init(name: "url", value: ""), .init(name: "text", value: cleanBody)]
             return .verifiedHandoff(components.url!)
         case .viber:
             guard let cleanBody, !cleanBody.isEmpty else { throw MessagingPlanningError.invalidContext }

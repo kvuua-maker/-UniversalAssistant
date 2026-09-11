@@ -15,7 +15,7 @@ enum CanonicalMessageRoleAnalyzer {
         let morphology: Set<String>
     }
 
-    static func analyze(_ original: String) -> CanonicalMessageRoles? {
+    static func analyze(_ original: String, explicitService: String? = nil) -> CanonicalMessageRoles? {
         let trimmed = original.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
@@ -34,8 +34,14 @@ enum CanonicalMessageRoleAnalyzer {
         }
 
         if let serviceIndex = tail.firstIndex(where: isServiceBoundary) {
-            tail = Array(tail[..<serviceIndex])
+            let prefix = Array(tail[..<serviceIndex])
+            let suffix = Array(tail.dropFirst(serviceIndex + 1))
+            // A trailing channel declaration belongs to SERVICE/CHANNEL and
+            // terminates recipient extraction. A leading declaration leaves
+            // the following recipient/body available to the same role grammar.
+            tail = prefix.isEmpty ? suffix : prefix
         }
+        removeExplicitService(from: &tail, service: explicitService)
         trimLeadingFillers(&tail)
 
         if let colonBody, !colonBody.isEmpty {
@@ -135,6 +141,35 @@ enum CanonicalMessageRoleAnalyzer {
         }
     }
 
+    private static func removeExplicitService(from tokens: inout [Token], service: String?) {
+        guard let service, let serviceKind = normalizedService(service) else { return }
+        let resolver = ContextScopedEntityResolver(candidates: serviceCandidates)
+        guard let index = tokens.firstIndex(where: { token in
+            guard case let .resolved(value) = resolver.resolve(token.surface) else { return false }
+            return value == serviceKind
+        }) else { return }
+        tokens.remove(at: index)
+        if index > 0, tokens.indices.contains(index - 1),
+           ["через", "via", "using", "у", "в", "по", "канал", "каналом"].contains(tokens[index - 1].normalized) {
+            tokens.remove(at: index - 1)
+        }
+    }
+
+    private static func normalizedService(_ value: String) -> String? {
+        switch value.lowercased() {
+        case "messages", "whatsapp", "telegram", "viber", "signal", "email": value.lowercased()
+        case "mail": "email"
+        default: nil
+        }
+    }
+
+    private static let serviceCandidates: [ScopedEntityCandidate<String>] =
+        MessengerKind.allCases.map { kind in
+            .init(value: kind.rawValue, displayName: kind.rawValue, aliases: [kind.rawValue])
+        } + [
+            .init(value: "email", displayName: "email", aliases: ["email", "mail", "пошта", "почта", "електронною"])
+        ]
+
     private static func recipientText(_ tokens: [Token]) -> String? {
         var value = tokens
         trimLeadingRecipientMarker(&value)
@@ -147,4 +182,3 @@ enum CanonicalMessageRoleAnalyzer {
         token.morphology.contains { form in roots.contains { form.hasPrefix($0) } }
     }
 }
-

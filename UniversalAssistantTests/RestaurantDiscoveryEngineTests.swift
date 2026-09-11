@@ -114,4 +114,55 @@ private actor RestaurantHTTPRecorder: RestaurantHTTPTransport {
                 interval: .init(start: .now, duration: 3_600))
         }
     }
+
+    @Test func officialHTTPAdapterUsesConfiguredTypedMutationBoundaries() async throws {
+        let current = RestaurantReservation(id: "booking-7", providerID: "official", slotID: "slot-1",
+            state: .confirmed, providerReference: "official:booking-7", observedAt: .now)
+        let modified = RestaurantReservation(id: current.id, providerID: current.providerID, slotID: "slot-2",
+            state: .confirmed, providerReference: "official:booking-7:modified", observedAt: .now)
+        let cancelled = RestaurantReservation(id: current.id, providerID: current.providerID, slotID: modified.slotID,
+            state: .cancelled, providerReference: "official:booking-7:cancelled", observedAt: .now)
+        let transport = RestaurantHTTPRecorder([
+            (try JSONEncoder().encode(modified), 200),
+            (try JSONEncoder().encode(cancelled), 200)
+        ])
+        let provider = try OfficialRestaurantHTTPProvider(configuration: .init(
+            providerID: "official",
+            availabilityURL: URL(string: "https://booking.example/availability")!,
+            bookingURL: URL(string: "https://booking.example/bookings")!,
+            modificationURL: URL(string: "https://booking.example/bookings/modify")!,
+            cancellationURL: URL(string: "https://booking.example/bookings/cancel")!
+        ), bearerToken: "secret", transport: transport)
+
+        #expect(provider.capabilities == [.availability, .booking, .modification, .cancellation])
+        #expect(try await provider.modify(bookingID: current.id, slotID: modified.slotID) == modified)
+        #expect(try await provider.cancel(bookingID: current.id) == cancelled)
+
+        let requests = await transport.recorded()
+        #expect(requests.map(\.url?.path) == ["/bookings/modify", "/bookings/cancel"])
+        #expect(requests.allSatisfy { $0.httpMethod == "POST" })
+        #expect(requests.allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == "Bearer secret" })
+        let modifyBody = try #require(requests[0].httpBody)
+        let modifyJSON = try #require(JSONSerialization.jsonObject(with: modifyBody) as? [String: String])
+        #expect(modifyJSON["bookingID"] == current.id)
+        #expect(modifyJSON["slotID"] == modified.slotID)
+        let cancelBody = try #require(requests[1].httpBody)
+        let cancelJSON = try #require(JSONSerialization.jsonObject(with: cancelBody) as? [String: String])
+        #expect(cancelJSON["bookingID"] == current.id)
+    }
+
+    @Test func mutationWithoutConfiguredProviderBoundaryFailsTruthfully() async throws {
+        let config = RestaurantProviderConfiguration(providerID: "official",
+            availabilityURL: URL(string: "https://booking.example/availability")!,
+            bookingURL: URL(string: "https://booking.example/bookings")!)
+        let provider = try OfficialRestaurantHTTPProvider(configuration: config, bearerToken: "token",
+            transport: RestaurantHTTPRecorder([]))
+        #expect(provider.capabilities == [.availability, .booking])
+        await #expect(throws: RestaurantDiscoveryError.providerOperationUnavailable) {
+            try await provider.modify(bookingID: "booking-8", slotID: "slot-9")
+        }
+        await #expect(throws: RestaurantDiscoveryError.providerOperationUnavailable) {
+            try await provider.cancel(bookingID: "booking-8")
+        }
+    }
 }

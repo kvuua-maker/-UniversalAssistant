@@ -26,6 +26,13 @@ struct ScopedEntityResolutionEvidence<Value: Equatable & Sendable>: Equatable, S
     let mechanism: ScopedEntityMatchMechanism
 }
 
+extension ScopedEntityResolutionEvidence {
+    var isResolved: Bool {
+        if case .resolved = resolution { return true }
+        return false
+    }
+}
+
 struct ContextScopedEntityResolver<Value: Equatable & Sendable>: Sendable {
     let candidates: [ScopedEntityCandidate<Value>]
     var directThreshold = 0.72

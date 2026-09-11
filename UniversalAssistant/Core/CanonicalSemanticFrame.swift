@@ -5,7 +5,7 @@ import Foundation
 /// noun (for example “document”) as an intent.
 struct CanonicalSemanticFrame: Equatable, Sendable {
     enum Action: String, Sendable { case open, choose, search, show, create, update, delete, copy, call, message, scan, recognize, share, navigate, query, set, record, enable, disable }
-    enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, settings, battery, storage, flashlight, brightness, volume, powerMode, networkControl, phoneHistory, deviceLocator, url, place, weather, travelTime, text, code, note, audio, media }
+    enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, settings, battery, storage, flashlight, brightness, volume, powerMode, networkControl, phoneHistory, deviceLocator, url, place, restaurant, reservation, weather, travelTime, text, code, note, audio, media }
     enum Source: String, Sendable { case files, photos, documents, clipboard, camera, calendar, reminders }
     enum ContextReference: String, Sendable { case currentLocation, activeRoute, selectedResult, sharedContent, previousResult }
 
@@ -71,6 +71,10 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         var frame = CanonicalSemanticFrame()
         frame.action = action(in: tokens)
         frame.object = object(in: tokens)
+        if frame.object == nil, isReservationMutation(in: tokens) {
+            frame.object = .reservation
+            if frame.action == nil { frame.action = .create }
+        }
         if isApplicationSettingsRequest(tokens: tokens, normalized: normalized) {
             frame.object = .settings
         }
@@ -113,7 +117,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         frame.app = application(in: tokens)
         frame.modifiers = modifiers(in: tokens)
 
-        if frame.action == .message, let roles = CanonicalMessageRoleAnalyzer.analyze(original) {
+        if frame.action == .message, let roles = CanonicalMessageRoleAnalyzer.analyze(original, explicitService: frame.service) {
             frame.person = roles.recipient
             frame.messageBody = roles.body
         } else if frame.object == .contact || frame.action == .call {
@@ -296,6 +300,34 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             return (.messageCompose, entities)
         }
 
+        if frame.object == .restaurant || frame.object == .reservation {
+            if let partySize = partySize(in: normalized) { entities["party_size"] = String(partySize) }
+            entities["restaurant_query"] = restaurantSubject(original)
+            if frame.modifiers.contains("current_location") { entities["near_current_location"] = "true" }
+            switch frame.action {
+            case .update:
+                entities["reservation_operation"] = "modify"
+                return (.reservation, entities)
+            case .delete:
+                entities["reservation_operation"] = "cancel"
+                return (.reservation, entities)
+            case .create, .set:
+                entities["reservation_operation"] = "availability"
+                entities["reservation_requested_mutation"] = "book"
+                return (.reservation, entities)
+            case .search, .show, .query:
+                if frame.temporal != nil || entities["party_size"] != nil {
+                    entities["reservation_operation"] = "availability"
+                    return (.reservation, entities)
+                }
+                entities["query"] = entities["restaurant_query"]
+                return (.placeSearch, entities)
+            default:
+                entities["reservation_operation"] = "availability"
+                return (.reservation, entities)
+            }
+        }
+
         if frame.object == .weather || weatherQuestion(normalized) {
             if frame.modifiers.contains("current_location") || frame.contextReference == .currentLocation {
                 entities["near_current_location"] = "true"
@@ -433,7 +465,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.call, ["подзвон", "зателефон", "набер", "позвон", "call", "dial"]),
             (.message, ["напиш", "повідом", "сообщ", "message"]),
             (.navigate, ["маршрут", "шлях", "дорог", "путь", "вед", "проклад", "їхат", "ехать", "діст", "добрат", "reach", "navigat", "route", "path"]),
-            (.create, ["створ", "дод", "заплан", "созд", "добав", "create", "add", "schedule"]),
+            (.create, ["створ", "дод", "заплан", "заброн", "резерв", "созд", "добав", "create", "add", "schedule", "book", "reserve"]),
             (.set, ["постав", "встанов", "установ", "запуст", "увімк", "включ", "розбуд", "start", "activate", "set"]),
             (.open, ["відкр", "откр", "open", "перейд"]),
             (.search, ["знайд", "пошук", "найд", "search", "find"]),
@@ -492,6 +524,8 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     private func object(in tokens: [String]) -> CanonicalSemanticFrame.Object? {
         let families: [(CanonicalSemanticFrame.Object, [String])] = [
             (.contact, ["контакт"]),
+            (.reservation, ["бронюван", "резервац", "reservation", "booking"]),
+            (.restaurant, ["ресторан", "restaurant", "столик", "table"]),
             (.audio, ["аудіозап", "аудиозап", "голосов", "звуков", "звукозап", "voice", "recording"]),
             (.reminder, ["нагадув", "напомин", "reminder"]),
             (.calendar, ["календар", "поді", "зустр", "событ", "event", "appointment"]),
@@ -520,6 +554,44 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.app, ["програм", "застос", "прилож", "app"])
         ]
         return families.first { _, roots in tokens.contains { token in roots.contains { token.hasPrefix($0) } } }?.0
+    }
+
+    private func isReservationMutation(in tokens: [String]) -> Bool {
+        tokens.contains { token in
+            ["заброн", "резерв", "book", "reserve"].contains { actionToken(token, matches: $0) }
+        }
+    }
+
+    private func partySize(in text: String) -> Int? {
+        let patterns = [
+            #"\b(?:на|для|for)\s+(\d{1,2})\s*(?:осіб\p{L}*|люд\p{L}*|персон\p{L}*|гост\p{L}*|people|persons?|guests?)\b"#,
+            #"\b(\d{1,2})\s*(?:осіб\p{L}*|люд\p{L}*|персон\p{L}*|гост\p{L}*|people|persons?|guests?)\b"#
+        ]
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+                  let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+                  let range = Range(match.range(at: 1), in: text),
+                  let value = Int(text[range]), (1...50).contains(value) else { continue }
+            return value
+        }
+        return nil
+    }
+
+    private func restaurantSubject(_ original: String) -> String {
+        let structuralRoots = [
+            "знайд", "покаж", "заброн", "резерв", "перенес", "змін", "скас", "видал",
+            "find", "show", "book", "reserve", "modify", "reschedul", "cancel",
+            "ресторан", "столик", "бронюван", "резервац", "restaurant", "table", "booking",
+            "сьогодні", "завтра", "післязавтра", "today", "tomorrow",
+            "особ", "люд", "персон", "гост", "people", "person", "guest"
+        ]
+        let structuralWords: Set<String> = ["на", "для", "о", "об", "at", "for", "у", "в", "біля", "near"]
+        let values = lexicalTokens(original).filter { token in
+            !structuralWords.contains(token) &&
+                !token.allSatisfy(\.isNumber) &&
+                !structuralRoots.contains(where: token.hasPrefix)
+        }
+        return values.isEmpty ? "restaurant" : values.joined(separator: " ")
     }
 
     private func isApplicationSettingsRequest(tokens: [String], normalized: String) -> Bool {

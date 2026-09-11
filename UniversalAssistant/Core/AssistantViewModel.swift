@@ -631,6 +631,20 @@ final class AssistantViewModel {
                 resultState = .clarification(summary)
                 statusText = AppText.value("clarification_needed")
                 LocalVoiceDiagnosticReport.shared.recordTerminal(.clarification)
+            } catch let CanonicalCapabilityExecutionError.confirmationRequired(preparedCommand) {
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=confirmation_required")
+                guard activeRequestGeneration == requestGeneration else { return }
+                requireConfirmation(
+                    preparedCommand,
+                    summary: .init(request: command.originalText, intent: command.intent, risk: .consequential),
+                    generation: requestGeneration
+                )
+            } catch let CanonicalCapabilityExecutionError.providerRequiredNoFallback(providerClass) {
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=provider_required")
+                guard activeRequestGeneration == requestGeneration else { return }
+                LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=provider_required_no_web_fallback capability=\(providerClass)")
+                presentFailure(message: "Потрібен підключений провайдер бронювання")
+                LocalVoiceDiagnosticReport.shared.recordTerminal(.providerRequired)
             } catch let CanonicalCapabilityExecutionError.externalProviderRequired(providerClass) {
                 LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=error")
                 guard activeRequestGeneration == requestGeneration else { return }

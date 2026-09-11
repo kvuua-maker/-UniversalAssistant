@@ -228,3 +228,35 @@ next material operation: create one coherent source checkpoint, verify
 `HEAD == origin/main`, clean tracked tree and unchanged recovery artifacts,
 then increment only Build 32 → 33 and execute the canonical signed archive,
 IPA, SHA-256 and TestFlight upload workflow. Build 34 is forbidden.
+
+### Post-Build-33 communication and restaurant-family extension
+
+The canonical communication family now owns a typed SERVICE/CHANNEL decision:
+an unqualified message selects the public Apple Messages composer, explicit
+email selects Mail, and an explicit verified messenger selects only that
+messenger's legitimate handoff. Recipient, body and service are extracted as
+separate roles. Fuzzy service recovery is constrained to a structural channel
+scope so a person's name cannot be reinterpreted as a messenger; exact
+canonical service entities remain available through the semantic frame. The
+first adjacent regression exposed the unsafe unscoped fuzzy candidate scan and
+is CLOSED. No owner phrase or contact-specific alias was added.
+
+The restaurant family is connected through the shipped
+`ProductionAssistantComposition`: MapKit restaurant discovery feeds typed
+availability requests; only fresh provider-verified slots may be booked; book,
+modify and cancel require confirmation and consume authoritative provider state.
+The official HTTP adapter declares operation capabilities and sends authenticated
+typed requests for supported mutations. Without a booking provider the executor
+offers only verified official-page, telephone or Apple Maps handoffs and states
+that no booking is confirmed. Fake booking success and generic-web mutation
+fallback are prohibited.
+
+Evidence: affected shipped Release-root, language, messaging, restaurant,
+provider-boundary and HTTP-adapter suites `48/48 PASS`; Production compile PASS;
+`git diff --check` PASS. The generic external-provider test no longer asserts
+that restaurant booking must use Google because the dedicated canonical
+MapKit/provider/handoff suite now proves the deeper truthful boundary.
+
+Status: **COMMUNICATION + RESTAURANT FAMILIES AUTOMATED GREEN — PHYSICAL IPHONE
+VERIFICATION REQUIRED**. Build 33 predates this checkpoint; no Build 34 was
+created because it remains outside the authorized release scope.

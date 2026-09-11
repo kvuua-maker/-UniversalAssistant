@@ -20,12 +20,30 @@ struct RestaurantProviderConfiguration: Sendable {
     let providerID: String
     let availabilityURL: URL
     let bookingURL: URL
+    let modificationURL: URL?
+    let cancellationURL: URL?
+
+    init(
+        providerID: String,
+        availabilityURL: URL,
+        bookingURL: URL,
+        modificationURL: URL? = nil,
+        cancellationURL: URL? = nil
+    ) {
+        self.providerID = providerID
+        self.availabilityURL = availabilityURL
+        self.bookingURL = bookingURL
+        self.modificationURL = modificationURL
+        self.cancellationURL = cancellationURL
+    }
 }
 
 struct OfficialRestaurantHTTPProvider: ReservationProvider {
     let providerID: String
     private let availabilityURL: URL
     private let bookingURL: URL
+    private let modificationURL: URL?
+    private let cancellationURL: URL?
     private let bearerToken: String
     private let transport: any RestaurantHTTPTransport
 
@@ -33,13 +51,24 @@ struct OfficialRestaurantHTTPProvider: ReservationProvider {
          transport: any RestaurantHTTPTransport = URLSessionRestaurantTransport()) throws {
         let token = bearerToken.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !token.isEmpty else { throw RestaurantHTTPError.missingCredential }
+        let optionalURLs = [configuration.modificationURL, configuration.cancellationURL].compactMap { $0 }
         guard configuration.availabilityURL.scheme == "https", configuration.bookingURL.scheme == "https",
+              optionalURLs.allSatisfy({ $0.scheme == "https" }),
               !configuration.providerID.isEmpty else { throw RestaurantHTTPError.invalidConfiguration }
         providerID = configuration.providerID
         availabilityURL = configuration.availabilityURL
         bookingURL = configuration.bookingURL
+        modificationURL = configuration.modificationURL
+        cancellationURL = configuration.cancellationURL
         self.bearerToken = token
         self.transport = transport
+    }
+
+    var capabilities: Set<RestaurantProviderCapability> {
+        var values: Set<RestaurantProviderCapability> = [.availability, .booking]
+        if modificationURL != nil { values.insert(.modification) }
+        if cancellationURL != nil { values.insert(.cancellation) }
+        return values
     }
 
     func availability(restaurantID: String, partySize: Int, interval: DateInterval) async throws -> [RestaurantReservationSlot] {
@@ -54,6 +83,22 @@ struct OfficialRestaurantHTTPProvider: ReservationProvider {
         struct Body: Encodable { let slotID: String }
         var request = base(bookingURL)
         request.httpBody = try JSONEncoder().encode(Body(slotID: slotID))
+        return try JSONDecoder().decode(RestaurantReservation.self, from: await execute(request))
+    }
+
+    func modify(bookingID: String, slotID: String) async throws -> RestaurantReservation {
+        guard let modificationURL else { throw RestaurantDiscoveryError.providerOperationUnavailable }
+        struct Body: Encodable { let bookingID: String; let slotID: String }
+        var request = base(modificationURL)
+        request.httpBody = try JSONEncoder().encode(Body(bookingID: bookingID, slotID: slotID))
+        return try JSONDecoder().decode(RestaurantReservation.self, from: await execute(request))
+    }
+
+    func cancel(bookingID: String) async throws -> RestaurantReservation {
+        guard let cancellationURL else { throw RestaurantDiscoveryError.providerOperationUnavailable }
+        struct Body: Encodable { let bookingID: String }
+        var request = base(cancellationURL)
+        request.httpBody = try JSONEncoder().encode(Body(bookingID: bookingID))
         return try JSONDecoder().decode(RestaurantReservation.self, from: await execute(request))
     }
 
