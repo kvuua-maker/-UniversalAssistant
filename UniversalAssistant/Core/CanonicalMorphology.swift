@@ -9,9 +9,17 @@ import Foundation
 /// a compatible action/object/source role combination.
 enum CanonicalMorphology {
     static func forms(for rawToken: String) -> Set<String> {
-        let token = rawToken.precomposedStringWithCompatibilityMapping
-            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "uk_UA"))
-            .lowercased()
+        let lowered = rawToken.precomposedStringWithCompatibilityMapping
+            .lowercased(with: Locale(identifier: "uk_UA"))
+        // Diacritic folding is a Latin-name comparison aid. On Cyrillic it
+        // changes real letters (Ukrainian й → и), so morphology would emit
+        // evidence for a different word and could corrupt structural roles.
+        let containsCyrillic = lowered.unicodeScalars.contains { cyrillic.contains($0) }
+        let normalized = containsCyrillic ? lowered : lowered.folding(
+            options: .diacriticInsensitive,
+            locale: Locale(identifier: "en_US_POSIX")
+        )
+        let token = normalized
             .filter { $0.isLetter || $0.isNumber }
         guard !token.isEmpty else { return [] }
 

@@ -167,7 +167,23 @@ struct CanonicalTemporalAnalyzer: Sendable {
             (7, ["субот", "суббот", "saturday"]),
             (1, ["неділ", "воскрес", "sunday"])
         ]
-        guard let weekday = weekdays.first(where: { entry in entry.1.contains(where: text.contains) })?.0 else { return nil }
+        let words = text.lowercased()
+            .split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+            .map(String.init)
+        guard let weekday = weekdays.first(where: { entry in
+            entry.1.contains { root in
+                words.contains { word in
+                    guard word.hasPrefix(root) else { return false }
+                    // Ukrainian/Russian "серед/сред" are also productive
+                    // prepositions ("among"). A weekday interpretation needs
+                    // an inflected weekday token, never the bare preposition.
+                    if root == "серед" || root == "сред" {
+                        return word.count > root.count
+                    }
+                    return true
+                }
+            }
+        })?.0 else { return nil }
         let explicitNext = ["наступн", "следующ", "next"].contains(where: text.contains)
         return .init(offset: nil, weekday: weekday, confidence: explicitNext ? 0.95 : 0.82)
     }
@@ -188,6 +204,13 @@ struct CanonicalTemporalAnalyzer: Sendable {
            let day = integerCapture(3, match, text) {
             return .init(year: year, month: month, day: day, confidence: 0.99, ambiguous: false)
         }
+        let named = #"\b(0?[1-9]|[12]\d|3[01])\s+([\p{L}.'’]+)(?:\s+(20\d{2}))?\b"#
+        if let match = firstMatch(named, in: text),
+           let day = integerCapture(1, match, text),
+           let name = capture(2, from: match, in: text),
+           let month = monthNumber(for: name) {
+            return .init(year: integerCapture(3, match, text), month: month, day: day, confidence: 0.97, ambiguous: false)
+        }
         let local = #"\b(0?[1-9]|[12]\d|3[01])([./-])(0?[1-9]|1[0-2])(?:\2(20\d{2}))?\b"#
         guard let match = firstMatch(local, in: text),
               let day = integerCapture(1, match, text),
@@ -198,6 +221,25 @@ struct CanonicalTemporalAnalyzer: Sendable {
         let marker = text.range(of: markerPattern, options: [.regularExpression, .caseInsensitive]) != nil
         let couldBeClock = year == nil && day <= 23 && raw.contains(".")
         return .init(year: year, month: month, day: day, confidence: marker || year != nil ? 0.96 : 0.84, ambiguous: couldBeClock && !marker)
+    }
+
+    private func monthNumber(for raw: String) -> Int? {
+        let value = raw.lowercased().folding(options: [.diacriticInsensitive], locale: .current)
+        let roots: [(Int, [String])] = [
+            (1, ["січ", "январ", "januar"]),
+            (2, ["лют", "феврал", "februar"]),
+            (3, ["берез", "март", "march"]),
+            (4, ["квіт", "апрел", "april"]),
+            (5, ["трав", "мая", "май", "may"]),
+            (6, ["черв", "июн", "june"]),
+            (7, ["лип", "июл", "july"]),
+            (8, ["серп", "август", "august"]),
+            (9, ["верес", "сентябр", "september"]),
+            (10, ["жовт", "октябр", "october"]),
+            (11, ["листопад", "ноябр", "november"]),
+            (12, ["груд", "декабр", "december"])
+        ]
+        return roots.first { _, variants in variants.contains(where: value.hasPrefix) }?.0
     }
 
     private struct ClockMatch {

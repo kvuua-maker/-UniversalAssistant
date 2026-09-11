@@ -82,6 +82,10 @@ enum LaunchDeviceApplications {
         .init(id: "apple-website", aliases: ["apple", "епл"], launchURL: URL(string: "https://www.apple.com/ua/")!, exactContext: nil),
         .init(id: "spotify", aliases: ["spotify", "спотіфай", "спотифай"], launchURL: URL(string: "spotify://")!, exactContext: nil),
         .init(id: "apple-music", aliases: ["apple music", "епл мюзік", "эппл мьюзик"], launchURL: URL(string: "https://music.apple.com")!, exactContext: nil),
+        // WhatsApp documents this public app-opening scheme. Keeping it in the
+        // verified registry lets the existing scoped resolver recover clipped
+        // app names without a transcript-specific substitution.
+        .init(id: "whatsapp", aliases: ["whatsapp"], launchURL: URL(string: "whatsapp://app")!, exactContext: nil),
         .init(id: "telegram", aliases: ["telegram", "телеграм", "телега"],
               launchURL: URL(string: "tg://")!, exactContext: { value in
                   var components = URLComponents(string: "tg://resolve")

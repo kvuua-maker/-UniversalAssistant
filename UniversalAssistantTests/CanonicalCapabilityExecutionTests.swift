@@ -148,26 +148,25 @@ struct CanonicalCapabilityExecutionTests {
         #expect(executor.received == [.cameraCapture])
     }
 
-    @Test func simpleProductRequestUsesTruthfulCurrentSourceFallbackWithoutMultiStepLeakage() async throws {
+    @Test func simpleProductRequestStopsAtTruthfulProviderBoundaryWithoutMultiStepLeakage() async throws {
         let executor = CapabilityExecutorStub(.failure(CanonicalCapabilityExecutionError.externalProviderRequired("productSearch")))
         let model = AssistantViewModel(capabilityExecutor: executor)
         model.input = "Знайди iPhone 17 Pro"
         model.submit()
-        try await waitUntil { if case .webHandoff = model.resultState { true } else { false } }
+        try await waitUntil { if case .failure = model.resultState { true } else { false } }
         #expect(executor.received == [.productSearch])
-        guard case let .webHandoff(result) = model.resultState else { return }
-        #expect(result.query == "Знайди iPhone 17 Pro")
-        #expect(!result.query.contains("typedCommand"))
-        #expect(!result.query.contains("deterministicCompose"))
+        guard case let .failure(result) = model.resultState else { return }
+        #expect(result.message.contains("провайдер"))
     }
 
-    @Test func externalProviderRequirementUsesTruthfulWebFallback() async throws {
+    @Test func externalProductProviderRequirementNeverUsesGenericWebAsErrorHandler() async throws {
         let executor = CapabilityExecutorStub(.failure(CanonicalCapabilityExecutionError.externalProviderRequired("productSearch")))
         let model = AssistantViewModel(capabilityExecutor: executor)
         model.input = "Знайди черевики"
         model.submit()
-        try await waitUntil { if case .webHandoff = model.resultState { true } else { false } }
+        try await waitUntil { if case .failure = model.resultState { true } else { false } }
         #expect(executor.received == [.productSearch])
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
     }
 
     @Test func verifiedSystemHandoffExecutesImmediatelyWithoutNarrationCard() async throws {

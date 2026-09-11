@@ -41,6 +41,12 @@ private final class SequencedCapabilityExecutor: CanonicalCapabilityExecuting {
     }
 }
 
+@MainActor
+private final class ContactHandoffCapture {
+    private(set) var destinations: [URL] = []
+    func open(_ url: URL) { destinations.append(url) }
+}
+
 
 private actor LimitedContactResolverStub: ContactResolving {
     let state: ContactAuthorizationState
@@ -235,6 +241,87 @@ struct ContactsRequestLifecycleTests {
             authorization: ContactAuthorizationStub(status: .denied, granted: false), query: query
         )
         #expect(await denied.contextualVocabulary(limit: 10).isEmpty)
+    }
+
+    @Test func systemPredicateCandidateIsValidatedBeforeItCanSelectAContact() async throws {
+        let wrongPredicateCandidate = ContactCandidate(
+            identifier: "wrong",
+            displayName: "Лідія Савчук",
+            phoneNumbers: ["+380501110000"]
+        )
+        let intended = ContactCandidate(
+            identifier: "intended",
+            displayName: "Дарина Романюк",
+            phoneNumbers: ["+380502220000"],
+            emailAddresses: ["daryna@example.org"],
+            aliases: ["Дарина", "колега Дарина"]
+        )
+        let store = ContactDomainStoreStub(
+            matchingValues: [wrongPredicateCandidate],
+            accessibleValues: [wrongPredicateCandidate, intended]
+        )
+        let resolver = LocalContactResolver(
+            authorization: ContactAuthorizationStub(status: .authorized, granted: true),
+            query: SystemContactQuery(store: store)
+        )
+
+        #expect(try await resolver.resolve(name: "Дарині Романюк") == .resolved(intended))
+        #expect(try await resolver.resolve(name: "колега Дарина") == .resolved(intended))
+    }
+
+    @Test func weakUniqueSystemPredicateCandidateFailsClosedInsteadOfSelectingAnotherPerson() async throws {
+        let unrelated = ContactCandidate(
+            identifier: "unrelated",
+            displayName: "Мирослав Черниш",
+            phoneNumbers: ["+380673330000"]
+        )
+        let store = ContactDomainStoreStub(
+            matchingValues: [unrelated],
+            accessibleValues: [unrelated]
+        )
+        let resolver = LocalContactResolver(
+            authorization: ContactAuthorizationStub(status: .authorized, granted: true),
+            query: SystemContactQuery(store: store)
+        )
+        #expect(try await resolver.resolve(name: "Надії Левченко") == .notFound)
+    }
+
+    @Test @MainActor func telephoneNumberSelectionResumesOwnedReleaseRequestAndStaleChoiceIsIgnored() async throws {
+        let contact = ContactCandidate(
+            identifier: "multi-phone",
+            displayName: "Дарина Романюк",
+            phoneNumbers: ["+380501112233", "+380672223344"]
+        )
+        let resolver = LimitedContactResolverStub(state: .authorized, named: .resolved(contact))
+        let capture = ContactHandoffCapture()
+        let model = ProductionAssistantComposition.makeModel(
+            contacts: resolver,
+            personalSearchSources: [],
+            compactResultDuration: .seconds(60),
+            systemHandoffOpen: capture.open
+        )
+        model.input = "Зателефонуй Дарині Романюк"
+        model.submit()
+        for _ in 0..<200 {
+            if case .actionRequired = model.resultState { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        guard case .actionRequired = model.resultState else {
+            Issue.record("Expected typed telephone-number choice")
+            return
+        }
+        model.resolveActionRequiredChoice("+380672223344")
+        for _ in 0..<200 where capture.destinations.isEmpty {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(capture.destinations.first?.absoluteString == "tel:+380672223344")
+
+        model.input = "Покажи заряд батареї"
+        model.submit()
+        let countAfterSupersedingRequest = capture.destinations.count
+        model.resolveActionRequiredChoice("+380501112233")
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(capture.destinations.count == countAfterSupersedingRequest)
     }
 
     @Test @MainActor func newerHomeRequestOwnsResultAndSpinnerTerminates() async throws {

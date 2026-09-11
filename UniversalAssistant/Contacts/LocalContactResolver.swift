@@ -1,7 +1,27 @@
 @preconcurrency import Contacts
 import Foundation
 
-struct ContactCandidate: Equatable, Sendable { let identifier: String; let displayName: String; let phoneNumbers: [String] }
+struct ContactCandidate: Equatable, Sendable {
+    let identifier: String
+    let displayName: String
+    let phoneNumbers: [String]
+    let emailAddresses: [String]
+    let aliases: [String]
+
+    init(
+        identifier: String,
+        displayName: String,
+        phoneNumbers: [String],
+        emailAddresses: [String] = [],
+        aliases: [String] = []
+    ) {
+        self.identifier = identifier
+        self.displayName = displayName
+        self.phoneNumbers = phoneNumbers
+        self.emailAddresses = emailAddresses
+        self.aliases = aliases
+    }
+}
 enum ContactResolution: Equatable, Sendable { case resolved(ContactCandidate), ambiguous([ContactCandidate]), notFound }
 enum ContactResolutionError: Error, Equatable, Sendable { case permissionRequired, permissionDenied, timedOut, cancelled, queryFailed }
 
@@ -79,10 +99,30 @@ final class SystemContactStoreQuery: ContactStoreQuerying, Sendable {
         }
         return values
     }
-    private static let keys: [CNKeyDescriptor] = [CNContactIdentifierKey as CNKeyDescriptor, CNContactGivenNameKey as CNKeyDescriptor, CNContactFamilyNameKey as CNKeyDescriptor, CNContactOrganizationNameKey as CNKeyDescriptor, CNContactPhoneNumbersKey as CNKeyDescriptor]
+    private static let keys: [CNKeyDescriptor] = [
+        CNContactIdentifierKey as CNKeyDescriptor,
+        CNContactGivenNameKey as CNKeyDescriptor,
+        CNContactFamilyNameKey as CNKeyDescriptor,
+        CNContactNicknameKey as CNKeyDescriptor,
+        CNContactOrganizationNameKey as CNKeyDescriptor,
+        CNContactRelationsKey as CNKeyDescriptor,
+        CNContactPhoneNumbersKey as CNKeyDescriptor,
+        CNContactEmailAddressesKey as CNKeyDescriptor
+    ]
     private static func candidate(_ contact: CNContact) -> ContactCandidate {
         let name = [contact.givenName, contact.familyName].filter { !$0.isEmpty }.joined(separator: " ")
-        return .init(identifier: contact.identifier, displayName: name.isEmpty ? contact.organizationName : name, phoneNumbers: contact.phoneNumbers.map { $0.value.stringValue })
+        let displayName = name.isEmpty ? contact.organizationName : name
+        let aliases = [
+            displayName, contact.givenName, contact.familyName, contact.nickname,
+            contact.organizationName
+        ] + contact.contactRelations.map(\.value.name)
+        return .init(
+            identifier: contact.identifier,
+            displayName: displayName,
+            phoneNumbers: contact.phoneNumbers.map { $0.value.stringValue },
+            emailAddresses: contact.emailAddresses.map { String($0.value) },
+            aliases: aliases.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        )
     }
 }
 
@@ -167,40 +207,29 @@ actor LocalContactResolver: ContactResolving {
         LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CONTACT_FETCH", "kind=name")
         defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CONTACT_FETCH", "kind=name status=returned") }
         LocalVoiceDiagnosticReport.shared.record("contacts_query_started", "kind=name")
-        var contacts = try await query.contacts(matching: name, timeout: queryTimeout)
-        if contacts.isEmpty {
+        let predicateContacts = try await query.contacts(matching: name, timeout: queryTimeout)
+        let predicateEvidence = resolveCandidates(predicateContacts, query: name)
+        let result: ContactResolution
+        switch predicateEvidence.resolution {
+        case .resolved, .ambiguous:
+            result = predicateEvidence.resolution
+        case .notFound:
+            // CNContact's name predicate is a candidate source, not proof of
+            // identity. Build 34 proved that blindly accepting its sole fuzzy
+            // result can call a different person. Validate against the complete
+            // privacy-authorized domain before selecting any person.
             let accessible = try await query.accessibleContacts(limit: 200, timeout: queryTimeout)
-            let domain = accessible.map {
-                ScopedEntityCandidate(value: $0, displayName: $0.displayName, aliases: [$0.displayName])
-            }
-            let evidence = ContextScopedEntityResolver(candidates: domain).resolveWithEvidence(name)
-            switch evidence.resolution {
-            case let .resolved(contact): contacts = [contact]
-            case let .ambiguous(names): contacts = accessible.filter { names.contains($0.displayName) }
-            case .unresolved: break
-            }
+            let domainEvidence = resolveCandidates(accessible, query: name)
+            result = domainEvidence.resolution
             LocalVoiceDiagnosticReport.shared.record(
                 "contacts_domain_recovery_finished",
-                "status=\(contacts.isEmpty ? "no_result" : "candidate") count=\(contacts.count) mechanism=\(evidence.mechanism.rawValue)"
+                "status=\(Self.status(domainEvidence.resolution)) count=\(domainEvidence.candidateCount) mechanism=\(domainEvidence.mechanism.rawValue)"
             )
         }
-        let result: ContactResolution
-        if contacts.isEmpty { result = .notFound }
-        else if contacts.count == 1 { result = .resolved(contacts[0]) }
-        else {
-            let domain = contacts.map { ScopedEntityCandidate(value: $0, displayName: $0.displayName, aliases: [$0.displayName]) }
-            switch ContextScopedEntityResolver(candidates: domain).resolve(name) {
-            case let .resolved(contact): result = .resolved(contact)
-            case let .ambiguous(names):
-                let selected = contacts.filter { names.contains($0.displayName) }
-                result = .ambiguous(selected.isEmpty ? contacts : selected)
-            case .unresolved:
-                // Contacts supplied every candidate in this set; an unsafe fuzzy
-                // winner remains a real ambiguity rather than becoming no-result.
-                result = .ambiguous(contacts)
-            }
-        }
-        LocalVoiceDiagnosticReport.shared.record("contacts_query_finished", "status=success count=\(contacts.count)")
+        LocalVoiceDiagnosticReport.shared.record(
+            "contacts_query_finished",
+            "status=\(Self.status(result)) count=\(predicateEvidence.candidateCount)"
+        )
         return result
     }
     func resolve(exactIdentifier identifier: String) async throws -> ContactResolution {
@@ -236,6 +265,38 @@ actor LocalContactResolver: ContactResolving {
         case .authorized, .limited: return
         case .notDetermined: throw ContactResolutionError.permissionRequired
         case .denied, .restricted: throw ContactResolutionError.permissionDenied
+        }
+    }
+
+    private func resolveCandidates(
+        _ contacts: [ContactCandidate],
+        query name: String
+    ) -> (resolution: ContactResolution, mechanism: ScopedEntityMatchMechanism, candidateCount: Int) {
+        guard !contacts.isEmpty else { return (.notFound, .unresolved, 0) }
+        let domain = contacts.map {
+            ScopedEntityCandidate(
+                value: $0,
+                displayName: $0.displayName,
+                aliases: Set([$0.displayName] + $0.aliases)
+            )
+        }
+        let evidence = ContextScopedEntityResolver(candidates: domain).resolveWithEvidence(name)
+        switch evidence.resolution {
+        case let .resolved(contact):
+            return (.resolved(contact), evidence.mechanism, contacts.count)
+        case let .ambiguous(names):
+            let selected = contacts.filter { names.contains($0.displayName) }
+            return (.ambiguous(selected.isEmpty ? contacts : selected), evidence.mechanism, contacts.count)
+        case .unresolved:
+            return (.notFound, evidence.mechanism, contacts.count)
+        }
+    }
+
+    private static func status(_ resolution: ContactResolution) -> String {
+        switch resolution {
+        case .resolved: "resolved"
+        case .ambiguous: "ambiguous"
+        case .notFound: "no_result"
         }
     }
 }

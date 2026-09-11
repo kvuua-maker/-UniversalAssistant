@@ -38,6 +38,12 @@ struct InteractionDecisionEngine: InteractionDeciding {
         // Search/discovery must first produce a concrete provider result. Confirmation
         // belongs to the verified booking/purchase action, not to discovery itself.
         if [.ticketPurchaseHandoff, .reservation].contains(command.intent) { return false }
+        if command.intent == .cancel,
+           command.entities["reservation_operation"] == "cancel" {
+            // The reservation executor first proves a concrete stored booking,
+            // then returns its typed confirmation continuation.
+            return false
+        }
         return command.risk == .consequential || command.risk == .emergency || [
             .calendarDelete, .cancel
         ].contains(command.intent)

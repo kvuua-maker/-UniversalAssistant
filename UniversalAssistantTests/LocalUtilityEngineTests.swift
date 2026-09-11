@@ -93,7 +93,8 @@ struct LocalUtilityEngineTests {
 
     @Test("Inflected cardinal forms", arguments: [
         ("п'ятьох", "5"), ("шести", "6"), ("двадцяти", "20"),
-        ("пяти", "5"), ("семи", "7"), ("тридцати", "30")
+        ("пяти", "5"), ("семи", "7"), ("тридцати", "30"),
+        ("чотирьох", "4"), ("четырех", "4")
     ]) func inflectedCardinals(form: String, expected: String) {
         #expect(SpokenCardinalNormalizer.normalize(form) == expected)
     }

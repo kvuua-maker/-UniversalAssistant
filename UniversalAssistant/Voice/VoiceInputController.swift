@@ -508,8 +508,64 @@ private final class VoiceBufferDiagnosticCounter: @unchecked Sendable {
     }
 }
 
+final class VoiceSpeechActivityTracker: @unchecked Sendable {
+    private let lock = NSLock()
+    private let minimumMeanSquare: Float
+    private var lastVoiceUptime: TimeInterval?
+
+    init(minimumRMS: Float = 0.002) {
+        minimumMeanSquare = minimumRMS * minimumRMS
+    }
+
+    func reset() {
+        lock.lock()
+        lastVoiceUptime = nil
+        lock.unlock()
+    }
+
+    func record(_ buffer: AVAudioPCMBuffer) {
+        guard buffer.frameLength > 0, let channels = buffer.floatChannelData else { return }
+        let frameCount = Int(buffer.frameLength)
+        let channelCount = Int(buffer.format.channelCount)
+        guard channelCount > 0 else { return }
+        var sumOfSquares: Float = 0
+        for channel in 0..<channelCount {
+            let samples = UnsafeBufferPointer(start: channels[channel], count: frameCount)
+            for sample in samples { sumOfSquares += sample * sample }
+        }
+        let meanSquare = sumOfSquares / Float(frameCount * channelCount)
+        guard meanSquare >= minimumMeanSquare else { return }
+        lock.lock()
+        lastVoiceUptime = ProcessInfo.processInfo.systemUptime
+        lock.unlock()
+    }
+
+    func hasRecentVoiceActivity(within interval: TimeInterval) -> Bool {
+        lock.lock()
+        let lastVoiceUptime = lastVoiceUptime
+        lock.unlock()
+        guard let lastVoiceUptime else { return false }
+        return ProcessInfo.processInfo.systemUptime - lastVoiceUptime <= interval
+    }
+}
+
+
 enum VoiceAudioCaptureError: Error, Equatable {
     case invalidInputFormat
+}
+
+/// Input-node taps must follow the format negotiated by the active hardware
+/// route. Supplying a cached format is unsafe after a route/sample-rate change:
+/// AVAudioEngine raises an Objective-C exception instead of a Swift error when
+/// that format no longer matches. A nil install format asks AVFAudio to use the
+/// freshly materialized input node's current format.
+enum VoiceInputTapFormatPolicy {
+    static func installationFormat(for activeFormat: AVAudioFormat) throws -> AVAudioFormat? {
+        guard activeFormat.sampleRate > 0, activeFormat.channelCount > 0 else {
+            throw VoiceAudioCaptureError.invalidInputFormat
+        }
+        return nil
+    }
 }
 
 struct VoiceRecognitionRequestConfiguration: Sendable {
@@ -572,25 +628,32 @@ protocol VoiceAudioCaptureBackend: AnyObject {
 
 @MainActor
 final class AppleVoiceAudioCaptureBackend: VoiceAudioCaptureBackend {
-    private let audioEngine = AVAudioEngine()
+    /// AVAudioEngine caches its I/O graph. Reusing the same graph across
+    /// AVAudioSession activation, Bluetooth changes, or a previous capture can
+    /// leave its input node on the old hardware format. Build 34 Crashlytics
+    /// proved that exact failure at installTap. Materialize a new graph only
+    /// after the session has negotiated the current route.
+    private var audioEngine: AVAudioEngine?
     private var tapInstalled = false
 
     func configureSession() throws {
+        tearDownEngine()
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.record, mode: .measurement, options: [.duckOthers, .allowBluetoothHFP])
         try session.setActive(true, options: .notifyOthersOnDeactivation)
+        audioEngine = AVAudioEngine()
         let input = session.currentRoute.inputs.first?.portType.rawValue ?? "none"
         LocalVoiceDiagnosticReport.shared.record("audio_session_activated", "input=\(input) sample_rate=\(session.sampleRate)")
     }
 
     func installTap(_ receive: @escaping @Sendable (AVAudioPCMBuffer) -> Void) throws {
+        guard let audioEngine else { throw VoiceAudioCaptureError.invalidInputFormat }
         let input = audioEngine.inputNode
-        let format = input.outputFormat(forBus: 0)
-        guard format.sampleRate > 0, format.channelCount > 0 else {
-            throw VoiceAudioCaptureError.invalidInputFormat
-        }
-        LocalVoiceDiagnosticReport.shared.record("audio_tap_installed", "sample_rate=\(format.sampleRate) channels=\(format.channelCount)")
-        input.installTap(onBus: 0, bufferSize: 1_024, format: format,
+        let activeFormat = input.outputFormat(forBus: 0)
+        let installationFormat = try VoiceInputTapFormatPolicy.installationFormat(for: activeFormat)
+        LocalVoiceDiagnosticReport.shared.record(
+            "audio_tap_installed", "sample_rate=\(activeFormat.sampleRate) channels=\(activeFormat.channelCount) format=automatic")
+        input.installTap(onBus: 0, bufferSize: 1_024, format: installationFormat,
                          block: Self.makeTapHandler(receive))
         tapInstalled = true
     }
@@ -606,19 +669,28 @@ final class AppleVoiceAudioCaptureBackend: VoiceAudioCaptureBackend {
     }
 
     func startEngine() throws {
+        guard let audioEngine else { throw VoiceAudioCaptureError.invalidInputFormat }
         audioEngine.prepare()
         try audioEngine.start()
         LocalVoiceDiagnosticReport.shared.record("audio_engine_started", "running=\(audioEngine.isRunning)")
     }
 
     func stop() {
-        LocalVoiceDiagnosticReport.shared.record("audio_capture_stop", "running=\(audioEngine.isRunning)")
-        if audioEngine.isRunning { audioEngine.stop() }
-        if tapInstalled {
-            audioEngine.inputNode.removeTap(onBus: 0)
-            tapInstalled = false
-        }
+        LocalVoiceDiagnosticReport.shared.record("audio_capture_stop", "running=\(audioEngine?.isRunning == true)")
+        tearDownEngine()
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    private func tearDownEngine() {
+        guard let audioEngine else {
+            tapInstalled = false
+            return
+        }
+        if audioEngine.isRunning { audioEngine.stop() }
+        if tapInstalled { audioEngine.inputNode.removeTap(onBus: 0) }
+        tapInstalled = false
+        audioEngine.reset()
+        self.audioEngine = nil
     }
 }
 
@@ -673,18 +745,37 @@ private final class VoiceRecognitionRequestSink: @unchecked Sendable {
 @MainActor
 final class VoiceEndOfSpeechFinalizer {
     private let delay: Duration
+    private let activityPollDelay: Duration
+    private let maximumActivityDeferrals: Int
     private var pending: Task<Void, Never>?
 
-    init(delay: Duration = .milliseconds(1_200)) {
+    init(
+        delay: Duration = .milliseconds(1_200),
+        activityPollDelay: Duration = .milliseconds(250),
+        maximumActivityDeferrals: Int = 12
+    ) {
         self.delay = delay
+        self.activityPollDelay = activityPollDelay
+        self.maximumActivityDeferrals = maximumActivityDeferrals
     }
 
-    func receivedPartial(_ finish: @escaping @MainActor @Sendable () -> Void) {
+    func receivedPartial(
+        shouldDeferForVoiceActivity: @escaping @MainActor @Sendable () -> Bool = { false },
+        _ finish: @escaping @MainActor @Sendable () -> Void
+    ) {
         pending?.cancel()
         let delay = delay
+        let activityPollDelay = activityPollDelay
+        let maximumActivityDeferrals = maximumActivityDeferrals
         pending = Task { @MainActor in
             try? await Task.sleep(for: delay)
             guard !Task.isCancelled else { return }
+            var deferrals = 0
+            while deferrals < maximumActivityDeferrals, shouldDeferForVoiceActivity() {
+                deferrals += 1
+                try? await Task.sleep(for: activityPollDelay)
+                guard !Task.isCancelled else { return }
+            }
             finish()
         }
     }
@@ -711,6 +802,7 @@ final class VoiceInputController {
     // One token owns every resource and callback for one Speech/audio session.
     private var activeSessionID: UUID?
     private let endOfSpeechFinalizer: VoiceEndOfSpeechFinalizer
+    private let speechActivity = VoiceSpeechActivityTracker()
     private var isFinalizingRecognition = false
     @ObservationIgnored private var audioEvents: AudioSessionEventMonitor?
     @ObservationIgnored private var eventHandler: (@MainActor @Sendable (VoiceInputEvent) -> Void)?
@@ -742,6 +834,7 @@ final class VoiceInputController {
         partialResultCount = 0
         finalResultCount = 0
         isFinalizingRecognition = false
+        speechActivity.reset()
         LocalVoiceDiagnosticReport.shared.record("mic_tap", "source=home")
         LocalVoiceDiagnosticReport.shared.record("start_listening_invoked")
         setState(.requestingPermission)
@@ -781,7 +874,11 @@ final class VoiceInputController {
         do {
             task = recognizer.recognitionTask(with: request, resultHandler: Self.makeRecognitionHandler(owner: self, sessionID: sessionID))
             LocalVoiceDiagnosticReport.shared.record("recognition_task_created")
-            try capture.start { buffer in requestSink.append(buffer) }
+            let speechActivity = speechActivity
+            try capture.start { buffer in
+                speechActivity.record(buffer)
+                requestSink.append(buffer)
+            }
             guard owns(sessionID) else {
                 stop(reason: .sessionRestart, ownedBy: sessionID)
                 return
@@ -857,7 +954,12 @@ final class VoiceInputController {
             eventHandler?(.transcript(transcript, isFinal: isFinal))
             LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_ui", "length=\(transcript.count) final=\(isFinal)")
             if !isFinal, !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                endOfSpeechFinalizer.receivedPartial { [weak self] in
+                let speechActivity = speechActivity
+                endOfSpeechFinalizer.receivedPartial(
+                    shouldDeferForVoiceActivity: {
+                        speechActivity.hasRecentVoiceActivity(within: 0.8)
+                    }
+                ) { [weak self] in
                     self?.finishAfterEndOfSpeech(sessionID: sessionID)
                 }
             }

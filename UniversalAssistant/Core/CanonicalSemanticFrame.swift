@@ -5,7 +5,7 @@ import Foundation
 /// noun (for example “document”) as an intent.
 struct CanonicalSemanticFrame: Equatable, Sendable {
     enum Action: String, Sendable { case open, choose, search, show, create, update, delete, copy, call, message, scan, recognize, share, navigate, query, set, record, enable, disable }
-    enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, settings, battery, storage, flashlight, brightness, volume, powerMode, networkControl, phoneHistory, deviceLocator, url, place, restaurant, reservation, weather, travelTime, text, code, note, audio, media }
+    enum Object: String, Sendable { case file, photo, document, contact, calendar, reminder, timer, alarm, app, settings, battery, storage, flashlight, brightness, volume, powerMode, networkControl, phoneHistory, deviceLocator, url, place, restaurant, reservation, weather, travelTime, text, code, note, audio, audioRoute, media }
     enum Source: String, Sendable { case files, photos, documents, clipboard, camera, calendar, reminders }
     enum ContextReference: String, Sendable { case currentLocation, activeRoute, selectedResult, sharedContent, previousResult }
 
@@ -69,8 +69,15 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         let evidence = morphologyForms.flatMap { $0 }.filter { !lexicalSet.contains($0) }.sorted()
         let tokens = lexical + evidence
         var frame = CanonicalSemanticFrame()
-        frame.action = action(in: tokens)
-        frame.object = object(in: tokens)
+        if isLeadingReminderCreation(in: tokens) {
+            // The remainder is reminder payload. Words such as “reservation”
+            // or “copy” inside that payload cannot steal ACTION/OBJECT roles.
+            frame.action = .create
+            frame.object = .reminder
+        } else {
+            frame.action = action(in: tokens)
+            frame.object = object(in: tokens)
+        }
         if frame.object == nil, isReservationMutation(in: tokens) {
             frame.object = .reservation
             if frame.action == nil { frame.action = .create }
@@ -196,20 +203,17 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         // SOURCE controls the domain. “documents in Photos” is a Photos query;
         // the object alone must never redirect it to Files.
         if frame.source == .photos {
-            let subject = semanticPhotoSubject(original)
-            let recentSelection = frame.modifiers.contains("latest") ||
-                frame.modifiers.contains("penultimate") ||
-                (subject.isEmpty && frame.action.map { [.open, .show].contains($0) } == true)
-            entities["photo_query_kind"] = recentSelection ? "recent" : "semantic"
-            entities["query"] = recentSelection ? "recent" : subject
+            entities.merge(photoQueryEntities(frame: frame, original: original)) { _, new in new }
             if frame.action == .open { entities["requested_action"] = "open" }
             if frame.action == .share { entities["requested_action"] = "share" }
             if frame.action == .recognize { entities["requested_action"] = "ocr" }
             return (.photoSearch, entities)
         }
         if frame.source == .files || frame.object == .file ||
-            (frame.object == .document && frame.action.map { [.open, .choose].contains($0) } == true) {
-            entities["query"] = frame.object == .file ? "file" : "document"
+            (frame.object == .document && frame.action.map { [.open, .choose, .search, .show, .query].contains($0) } == true) {
+            let asksForPDF = lexicalTokens(normalized).contains("pdf")
+            entities["query"] = asksForPDF ? "pdf" : (frame.object == .file ? "file" : "document")
+            if asksForPDF { entities["file_type"] = "public.pdf" }
             return (.fileSearch, entities)
         }
         if frame.source == .camera, frame.action.map({ [.scan, .recognize].contains($0) }) == true {
@@ -252,6 +256,10 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             entities["enabled"] = frame.action == .disable ? "false" : "true"
             return (.deviceAction, entities)
         }
+        if frame.object == .audioRoute {
+            entities["system_action"] = "audio_route_picker"
+            return (.deviceAction, entities)
+        }
         if let object = frame.object, [.brightness, .volume, .powerMode, .networkControl, .phoneHistory, .deviceLocator].contains(object) {
             entities["system_action"] = "unsupported_system_control"
             entities["system_target"] = object.rawValue
@@ -269,12 +277,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
                 return (.cameraCapture, entities)
             }
             guard frame.action != nil || frame.modifiers.contains("latest") else { return (nil, entities) }
-            let subject = semanticPhotoSubject(original)
-            let recentSelection = frame.modifiers.contains("latest") ||
-                frame.modifiers.contains("penultimate") ||
-                (subject.isEmpty && [.open, .show].contains(frame.action))
-            entities["photo_query_kind"] = recentSelection ? "recent" : "semantic"
-            entities["query"] = recentSelection ? "recent" : subject
+            entities.merge(photoQueryEntities(frame: frame, original: original)) { _, new in new }
             if frame.action == .open { entities["requested_action"] = "open" }
             if frame.action == .share { entities["requested_action"] = "share" }
             if frame.action == .recognize { entities["requested_action"] = "ocr" }
@@ -309,8 +312,12 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
                 entities["reservation_operation"] = "modify"
                 return (.reservation, entities)
             case .delete:
+                // Cancellation remains the general canonical action. The typed
+                // reservation operation lets the executor bind it to the
+                // currently verified restaurant booking without redefining
+                // every generic “cancel booking” command as discovery.
                 entities["reservation_operation"] = "cancel"
-                return (.reservation, entities)
+                return (.cancel, entities)
             case .create, .set:
                 entities["reservation_operation"] = "availability"
                 entities["reservation_requested_mutation"] = "book"
@@ -323,6 +330,12 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
                 entities["query"] = entities["restaurant_query"]
                 return (.placeSearch, entities)
             default:
+                if frame.object == .restaurant {
+                    // A restaurant noun plus proximity is a Place search, not
+                    // an underspecified table mutation.
+                    entities["query"] = entities["restaurant_query"]
+                    return (.placeSearch, entities)
+                }
                 entities["reservation_operation"] = "availability"
                 return (.reservation, entities)
             }
@@ -456,7 +469,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.enable, ["увімк", "включ", "enable", "turnon"]),
             (.delete, ["видал", "скас", "удал", "отмен", "delete", "remove", "cancel"]),
             (.update, ["перенес", "перенос", "змін", "измени", "move", "reschedul", "update"]),
-            (.choose, ["вибер", "обер", "выбер", "select", "choose"]),
+            (.choose, ["вибер", "обер", "выбер", "перемк", "переключ", "switch", "select", "choose"]),
             (.share, ["поділ", "подел", "надішл", "відправ", "отправ", "share", "send"]),
             (.recognize, ["розпіз", "распозн", "прочит", "recogn", "read"]),
             (.copy, ["скопію", "копію", "скопир", "copy"]),
@@ -469,7 +482,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.set, ["постав", "встанов", "установ", "запуст", "увімк", "включ", "розбуд", "start", "activate", "set"]),
             (.open, ["відкр", "откр", "open", "перейд"]),
             (.search, ["знайд", "пошук", "найд", "search", "find"]),
-            (.show, ["покаж", "show", "display"])
+            (.show, ["покаж", "відобраз", "відображ", "show", "display", "render"])
         ]
         if let leading = tokens.first,
            let explicit = families.first(where: { _, roots in roots.contains { actionToken(leading, matches: $0) } }) {
@@ -483,6 +496,14 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         ]
         if !interrogatives.isDisjoint(with: tokens) { return .query }
         return families.first { _, roots in tokens.contains { token in roots.contains { actionToken(token, matches: $0) } } }?.0
+    }
+
+    private func isLeadingReminderCreation(in tokens: [String]) -> Bool {
+        guard let leading = tokens.first else { return false }
+        let roots = [
+            "нагада", "напомн", "remind", "erinner", "rappel"
+        ]
+        return roots.contains { actionToken(leading, matches: $0) }
     }
 
     private func pdfOperation(in tokens: [String]) -> PDFWorkflowOperation? {
@@ -522,6 +543,22 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     }
 
     private func object(in tokens: [String]) -> CanonicalSemanticFrame.Object? {
+        let audioQualifiers = ["аудіо", "аудио", "звук", "sound", "audio"]
+        let routeTargets = [
+            "аудіових", "аудиовых", "soundoutput", "audiooutput", "airplay",
+            "колонк", "динамік", "динамик", "speaker"
+        ]
+        let deviceTargets = ["пристр", "устрой", "device", "output", "route", "вихід", "выход"]
+        let hasAudioQualifier = tokens.contains { token in audioQualifiers.contains { token.hasPrefix($0) } }
+        let hasRouteTarget = tokens.contains { token in routeTargets.contains { token.hasPrefix($0) } }
+        let hasDeviceTarget = tokens.contains { token in deviceTargets.contains { token.hasPrefix($0) } }
+        let hasMergedAudioDevice = tokens.contains { token in
+            audioQualifiers.contains(where: token.hasPrefix) &&
+                deviceTargets.contains { target in token.dropFirst().contains(target) }
+        }
+        if hasRouteTarget || hasMergedAudioDevice || (hasAudioQualifier && hasDeviceTarget) {
+            return .audioRoute
+        }
         let families: [(CanonicalSemanticFrame.Object, [String])] = [
             (.contact, ["контакт"]),
             (.reservation, ["бронюван", "резервац", "reservation", "booking"]),
@@ -583,7 +620,8 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             "find", "show", "book", "reserve", "modify", "reschedul", "cancel",
             "ресторан", "столик", "бронюван", "резервац", "restaurant", "table", "booking",
             "сьогодні", "завтра", "післязавтра", "today", "tomorrow",
-            "особ", "люд", "персон", "гост", "people", "person", "guest"
+            "особ", "люд", "персон", "гост", "people", "person", "guest",
+            "поруч", "поблиз", "неподал", "рядом", "nearby", "nearest", "closest"
         ]
         let structuralWords: Set<String> = ["на", "для", "о", "об", "at", "for", "у", "в", "біля", "near"]
         let values = lexicalTokens(original).filter { token in
@@ -658,6 +696,13 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         }
         if tokens.contains(where: { token in ["поруч", "поблиз", "неподал", "рядом", "nearby", "near", "найближ", "ближайш", "nearest", "closest"].contains(where: token.hasPrefix) }) {
             output.insert("proximity")
+        }
+        let universalQuantifiers: Set<String> = [
+            "всі", "вся", "все", "всю", "весь", "всіх", "усі", "уся", "усе", "усю", "усіх",
+            "всех", "all", "every"
+        ]
+        if tokens.contains(where: universalQuantifiers.contains) {
+            output.insert("all")
         }
         return output
     }
@@ -788,6 +833,48 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         ["температур", "холодн", "спекотн", "жарк", "чи буде дощ", "будет дождь", "weather", "rain", "cold", "hot"].contains(where: text.contains)
     }
 
+    private func photoQueryEntities(frame: CanonicalSemanticFrame, original: String) -> [String: String] {
+        if frame.modifiers.contains("latest") || frame.modifiers.contains("penultimate") {
+            return ["photo_query_kind": "recent", "query": "recent"]
+        }
+        if frame.modifiers.contains("all") {
+            return ["photo_query_kind": "all", "query": "all"]
+        }
+        var metadata: [String: String] = [:]
+        if let temporal = frame.temporal,
+           temporal.relativeDayOffset != nil || temporal.calendarDay != nil || temporal.weekday != nil {
+            metadata["photo_date_filter"] = "true"
+        }
+        if let place = photoLocationSubject(original) {
+            metadata["photo_location_query"] = place
+        }
+        if !metadata.isEmpty {
+            metadata["photo_query_kind"] = "metadata"
+            metadata["query"] = "metadata"
+            return metadata
+        }
+        let subject = semanticPhotoSubject(original)
+        if subject.isEmpty { return ["photo_query_kind": "recent", "query": "recent"] }
+        return ["photo_query_kind": "semantic", "query": subject]
+    }
+
+    private func photoLocationSubject(_ original: String) -> String? {
+        let explicitPatterns = [
+            #"\b(?:у|в)\s+(?:місті|городе|city)\s+([\p{L}'’ -]{2,80})$"#,
+            #"\b(?:з|із|зі|from)\s+(?:міста|города|city)?\s*([\p{L}'’ -]{2,80})$"#
+        ]
+        for pattern in explicitPatterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+                  let match = regex.firstMatch(in: original, range: NSRange(original.startIndex..., in: original)),
+                  let range = Range(match.range(at: 1), in: original) else { continue }
+            let value = original[range].trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+            let last = value.lowercased().split(separator: " ").last.map(String.init) ?? ""
+            if ["ою", "ею", "ом", "ем", "ами", "ями"].contains(where: last.hasSuffix) { return nil }
+            if !value.isEmpty { return String(value) }
+        }
+        return nil
+    }
+
     private func semanticPhotoSubject(_ original: String) -> String {
         // Keep the content-bearing part of the request while removing only
         // structural action/source/object tokens. This is deliberately role
@@ -800,7 +887,8 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         ]
         let structuralWords: Set<String> = [
             "у", "в", "на", "серед", "поміж", "из", "среди", "among", "in", "from",
-            "моє", "мої", "моїх", "мою", "мій", "моя", "мои", "моих", "my", "the", "a"
+            "моє", "мої", "моїх", "мою", "мій", "моя", "мои", "моих", "my", "the", "a",
+            "всі", "усі", "все", "all", "every"
         ]
         return lexicalTokens(original).filter { token in
             !structuralWords.contains(token) &&

@@ -198,6 +198,64 @@ struct VoiceAudioCaptureLifecycleTests {
         #expect(count == 0)
     }
 
+    @Test func microphoneActivityDefersFinalizationUntilSpeechBecomesQuiet() async {
+        let finalizer = VoiceEndOfSpeechFinalizer(
+            delay: .milliseconds(30),
+            activityPollDelay: .milliseconds(20),
+            maximumActivityDeferrals: 5
+        )
+        var microphoneIsActive = true
+        var count = 0
+        finalizer.receivedPartial(
+            shouldDeferForVoiceActivity: { microphoneIsActive }
+        ) {
+            count += 1
+        }
+
+        try? await Task.sleep(for: .milliseconds(70))
+        #expect(count == 0)
+        microphoneIsActive = false
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(count == 1)
+    }
+
+    @Test func persistentMicrophoneActivityStillHasABoundedFinalizationWindow() async {
+        let finalizer = VoiceEndOfSpeechFinalizer(
+            delay: .milliseconds(20),
+            activityPollDelay: .milliseconds(20),
+            maximumActivityDeferrals: 2
+        )
+        var count = 0
+        finalizer.receivedPartial(
+            shouldDeferForVoiceActivity: { true }
+        ) {
+            count += 1
+        }
+
+        // Under the full suite, another MainActor task may resume first at the
+        // same deadline. Poll the bounded outcome instead of assuming one
+        // scheduler ordering.
+        for _ in 0..<100 where count == 0 { try? await Task.sleep(for: .milliseconds(10)) }
+        #expect(count == 1)
+    }
+
+    @Test func speechActivityTrackerDetectsQuietNaturalVoiceAndCanReset() {
+        let tracker = VoiceSpeechActivityTracker(minimumRMS: 0.002)
+        let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
+        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 64)!
+        buffer.frameLength = 64
+        guard let samples = buffer.floatChannelData?[0] else {
+            Issue.record("Expected Float32 audio samples")
+            return
+        }
+        for index in 0..<Int(buffer.frameLength) { samples[index] = 0.003 }
+
+        tracker.record(buffer)
+        #expect(tracker.hasRecentVoiceActivity(within: 0.8))
+        tracker.reset()
+        #expect(!tracker.hasRecentVoiceActivity(within: 0.8))
+    }
+
     @Test func realtimeTapCallbackHasNoMainActorExecutorRequirementAndDeliversBuffer() {
         let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
         let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 64)!
@@ -209,6 +267,15 @@ struct VoiceAudioCaptureLifecycleTests {
             invocation.invoke()
         }
         #expect(delivered.wait(timeout: .now() + 2) == .success)
+    }
+
+
+    @Test func inputTapLetsFreshAudioEngineNegotiateTheActiveHardwareFormat() throws {
+        let builtInMicrophone = AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1)!
+        let bluetoothMicrophone = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
+
+        #expect(try VoiceInputTapFormatPolicy.installationFormat(for: builtInMicrophone) == nil)
+        #expect(try VoiceInputTapFormatPolicy.installationFormat(for: bluetoothMicrophone) == nil)
     }
 
     @Test func routeChangeEvidenceIncludesReasonRoutesAndInputAvailability() {

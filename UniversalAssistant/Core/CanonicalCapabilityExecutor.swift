@@ -22,6 +22,8 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case contactAccess(query: String, command: StructuredCommand)
     case translationTarget(String)
     case translation(LocalTranslationPlan)
+    case photoLibrary
+    case audioRoutes
     case photoAsset(String)
     case photoOCR(String)
     case photoShare(String)
@@ -45,6 +47,8 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
         case .contactAccess: "contact-access"
         case .translationTarget: "translation-target"
         case .translation: "translation"
+        case .photoLibrary: "photo-library"
+        case .audioRoutes: "audio-routes"
         case .photoAsset: "photo-asset"
         case .photoOCR: "photo-ocr"
         case .photoShare: "photo-share"
@@ -395,12 +399,17 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .show, .contextualSelection:
             return try await contextual(command, opensSelection: command.normalizedText.contains("відк") || command.normalizedText.contains("откр") || command.normalizedText.contains("open"))
         case .cancel:
+            if command.entities["reservation_operation"] == "cancel" {
+                return try await restaurantReservation(command)
+            }
             return .result(try result("Скасовано", facts: []))
         case .transportRoute:
             return try await route(command, mode: .transit)
         case .reservation:
             return try await restaurantReservation(command)
-        case .productSearch, .fashionDiscovery, .groceryBasket, .serviceSearch, .restaurantSearch,
+        case .serviceSearch:
+            return try await localServices(command)
+        case .productSearch, .fashionDiscovery, .groceryBasket, .restaurantSearch,
              .taxiSearch, .taxiCompare, .publicTransport,
              .ticketSearch, .ticketPurchaseHandoff, .hotelSearch, .travelPlan, .parcelTrack:
             throw CanonicalCapabilityExecutionError.externalProviderRequired(command.intent.rawValue)
@@ -496,7 +505,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             switch value {
             case .message, .email, .share, .documents, .contactImport, .photoAsset, .photoOCR, .photoShare, .audioFile, .documentFile, .documentFiles:
                 return .init(id: step.id, label: command.intent.rawValue, value: value.id, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
-            case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .contactAccess, .translationTarget, .translation, .pdfWorkflow:
+            case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .contactAccess, .translationTarget, .translation, .photoLibrary, .audioRoutes, .pdfWorkflow:
                 throw CoordinationOperationError.confirmationRequired
             }
         case .suspended:
@@ -553,6 +562,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             let minutes = max(1, Int((route.expectedTravelTime / 60).rounded()))
             currentContext.replaceRoute(origin: origin, destination: destination, destinationName: destinationName)
             return .result(try result("Приблизно \(minutes) хв", facts: [.init(id: "travel-time", label: destinationName, value: "\(minutes) хв", state: .verified, source: route.source, observedAt: route.timestamp, priority: 100)]))
+        }
+        if kind == "audio_route_picker" {
+            return .presentation(.audioRoutes)
         }
         if kind == "unsupported_system_control" { throw CanonicalCapabilityExecutionError.unavailable("system_control_not_publicly_available") }
         let action: SystemQuickAction
@@ -619,6 +631,57 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             return ResultAction(id: place.id, title: "Маршрут", kind: .open, destination: destination)
         })
         currentContext.replacePlaceResults(output, places: Array(places.prefix(5)))
+        return .result(output)
+    }
+
+    private func localServices(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        // Validate the typed service role before requesting CoreLocation. An
+        // unresolved external service must terminate at its provider boundary,
+        // not wait for location permission that cannot make the request valid.
+        guard command.entities["serviceCategory"] != nil else {
+            throw CanonicalCapabilityExecutionError.externalProviderRequired(command.intent.rawValue)
+        }
+        let location: ValidatedLocation
+        if let area = command.entities["location"]?.trimmingCharacters(in: .whitespacesAndNewlines), !area.isEmpty {
+            location = try await locationResolver.resolve(area)
+        } else {
+            location = try await currentLocation.resolveCurrent(for: .nearbySearch)
+        }
+        let request: LocalServiceRequest
+        do {
+            request = try LocalServiceRequest(command: command, location: location)
+        } catch {
+            throw CanonicalCapabilityExecutionError.externalProviderRequired(command.intent.rawValue)
+        }
+        let response = try await placeSearch.search(try request.placeQuery())
+        let places = PlaceProximityOrdering().nearestFirst(response.places, from: location)
+        guard !places.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_local_services_found") }
+
+        let planner = LocalServiceHandoffPlanner()
+        let handoffs = places.prefix(8).compactMap { place -> (Place, ServiceHandoff)? in
+            guard let handoff = try? planner.handoff(for: .init(place: place)) else { return nil }
+            return (place, handoff)
+        }
+        guard !handoffs.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_legitimate_service_handoff") }
+        let facts = handoffs.enumerated().map { index, value in
+            ResultFact(
+                id: value.0.id, label: value.0.name,
+                value: value.0.address ?? value.0.category.rawValue,
+                state: .verified, source: value.0.source,
+                observedAt: value.0.timestamp, priority: 100 - index
+            )
+        }
+        let actions = handoffs.map { place, handoff in
+            let title: String = switch handoff.kind {
+            case .directOrder: "Замовити"
+            case .phone: "Зателефонувати"
+            case .officialWebsite: "Офіційний сайт"
+            case .navigation: "Маршрут"
+            }
+            return ResultAction(id: place.id, title: title, kind: .open, destination: handoff.destination)
+        }
+        let output = try result("Знайдено відповідні місцеві сервіси", facts: facts, actions: actions)
+        currentContext.replacePlaceResults(output, places: handoffs.map(\.0))
         return .result(output)
     }
 
@@ -945,10 +1008,44 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         }
     }
 
+    private func photoDateRange(_ command: StructuredCommand, now: Date = .now) -> Range<Date>? {
+        guard command.entities["photo_date_filter"] == "true",
+              case let .resolved(resolved) = NaturalDateTimeResolver().resolve(
+                command, locale: Locale(identifier: command.language == .ru ? "ru_RU" : "uk_UA"),
+                timeZone: .autoupdatingCurrent, relativeTo: now
+              ) else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .autoupdatingCurrent
+        let start = calendar.startOfDay(for: resolved.instant)
+        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return nil }
+        return start..<end
+    }
+
+    private func metadataPhotoResult(
+        _ assets: [PhotoAssetReference], command: StructuredCommand, title: String
+    ) throws -> CapabilityExecutionOutcome {
+        guard !assets.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("photos_no_metadata_match") }
+        let facts = assets.enumerated().map { index, asset in
+            ResultFact(id: "photos:" + asset.localIdentifier, label: "Фото \(index + 1)",
+                       value: asset.creationDate?.formatted() ?? "Фото", state: .verified,
+                       source: "Photos", observedAt: asset.creationDate ?? .now, priority: 100 - index)
+        }
+        let actions = assets.map {
+            ResultAction(id: "photos:" + $0.localIdentifier, title: "Відкрити", kind: .showPhoto, destination: nil)
+        }
+        let output = try result(title, facts: facts, actions: actions)
+        currentContext.replacePhotoResults(output)
+        if command.entities["requested_action"] == "open", let first = assets.first {
+            return .presentation(.photoAsset(first.localIdentifier))
+        }
+        return .result(output)
+    }
+
     private func photo(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         let query = command.entities["query"] ?? ""
         let queryKind = command.entities["photo_query_kind"]
         let latest = queryKind == "recent" || query == "latest" || query == "recent"
+        if queryKind == "all" { return .presentation(.photoLibrary) }
         guard latest || !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             // A malformed semantic request must never degrade into returning a
             // private latest asset. Keep the failure in the Photos family so
@@ -958,6 +1055,18 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let access = photos.authorization() == .permissionRequired ? await photos.requestAuthorization() : photos.authorization()
         guard access == .permitted || access == .limited else { throw CanonicalCapabilityExecutionError.unavailable("photos_access_unavailable") }
         let recentIndex = max(0, (command.constraints.ordinal ?? 1) - 1)
+        if queryKind == "metadata" {
+            var criteria = PhotoSearchCriteria(dateRange: photoDateRange(command))
+            if let place = command.entities["photo_location_query"], !place.isEmpty {
+                let location = try await locationResolver.resolve(place)
+                criteria = .init(dateRange: criteria.dateRange,
+                                 coordinate: .init(latitude: location.sample.latitude, longitude: location.sample.longitude),
+                                 radiusMeters: 50_000)
+            }
+            let values = try await boundedPhotoSearch(criteria, limit: 20)
+            let title = command.entities["photo_location_query"] == nil ? "Фото за датою" : "Фото з вибраного місця"
+            return try metadataPhotoResult(values, command: command, title: title)
+        }
         let assets = try await boundedPhotoSearch(.init(), limit: latest ? recentIndex + 1 : 20)
         guard !assets.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("photos_empty") }
         if latest {
@@ -1091,13 +1200,33 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let body = command.entities["message_body"]
         if service == "email" || service == "mail" {
             let rawRecipient = command.entities["recipient"]?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let recipients: [String]
-            if let rawRecipient, !rawRecipient.isEmpty, rawRecipient.contains("@") {
-                recipients = [rawRecipient]
-            } else {
-                recipients = []
+            guard let rawRecipient, !rawRecipient.isEmpty else {
+                return .presentation(.email(recipients: [], subject: command.entities["message_subject"], body: body))
             }
-            return .presentation(.email(recipients: recipients, subject: command.entities["message_subject"], body: body))
+            if rawRecipient.contains("@") {
+                return .presentation(.email(recipients: [rawRecipient], subject: command.entities["message_subject"], body: body))
+            }
+            try await contacts.requestAccessIfNeeded()
+            switch try await contacts.resolve(name: rawRecipient) {
+            case .notFound:
+                throw CanonicalCapabilityExecutionError.unavailable("email_contact_not_found")
+            case let .ambiguous(values):
+                throw CanonicalCapabilityExecutionError.ambiguous(values.map(\.displayName))
+            case let .resolved(value):
+                guard !value.emailAddresses.isEmpty else {
+                    throw CanonicalCapabilityExecutionError.unavailable("contact_has_no_email_address")
+                }
+                guard value.emailAddresses.count == 1, let email = value.emailAddresses.first else {
+                    throw CanonicalCapabilityExecutionError.ambiguous(value.emailAddresses)
+                }
+                return .presentation(
+                    .email(
+                        recipients: [email],
+                        subject: command.entities["message_subject"],
+                        body: body
+                    )
+                )
+            }
         }
         let rawRecipient = command.entities["recipient"]?.trimmingCharacters(in: .whitespacesAndNewlines)
 

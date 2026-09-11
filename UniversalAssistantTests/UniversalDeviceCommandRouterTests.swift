@@ -2,6 +2,12 @@ import Foundation
 import Testing
 @testable import UniversalAssistant
 
+@MainActor
+private final class DeviceApplicationOpenCapture {
+    private(set) var values: [URL] = []
+    func open(_ value: URL) { values.append(value) }
+}
+
 @Suite("Universal device and outside-world command routing")
 struct UniversalDeviceCommandRouterTests {
     private var router: UniversalDeviceCommandRouter {
@@ -28,6 +34,37 @@ struct UniversalDeviceCommandRouterTests {
         guard case let .direct(recovered) = DeviceApplicationResolver(applications: LaunchDeviceApplications.verified).resolve(spokenName: "telegrm") else { Issue.record("Expected high-confidence unique registry recovery"); return }
         #expect(recovered.id == "telegram")
         #expect(DeviceApplicationResolver(applications: apps).resolve(spokenName: "unrelated assistant") == .unsupported)
+    }
+
+    @Test @MainActor func clippedVerifiedAppNamesRecoverByScopedEvidenceThroughReleaseRoot() async throws {
+        let expected: [(String, String)] = [
+            ("Whats", "whatsapp"),
+            ("Telegr", "telegram"),
+            ("Vibe", "viber"),
+            ("Spotif", "spotify")
+        ]
+        let resolver = DeviceApplicationResolver(applications: LaunchDeviceApplications.verified)
+        for (noisy, identifier) in expected {
+            guard case let .direct(app) = resolver.resolve(spokenName: noisy) else {
+                Issue.record("Expected scoped recovery for \(noisy)")
+                continue
+            }
+            #expect(app.id == identifier)
+        }
+
+        let capture = DeviceApplicationOpenCapture()
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [],
+            compactResultDuration: .seconds(60),
+            systemHandoffOpen: capture.open
+        )
+        model.input = "Open Whats"
+        model.submit()
+        for _ in 0..<200 where capture.values.isEmpty {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(capture.values.first?.absoluteString == "whatsapp://app")
+        #expect(model.statusText != AppText.value("clarification_needed"))
     }
 
     @Test func appWordVariantsResolveOnlyVerifiedPublicDestinations() {

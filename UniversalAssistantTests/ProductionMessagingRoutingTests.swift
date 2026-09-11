@@ -43,6 +43,55 @@ struct ProductionMessagingRoutingTests {
         #expect(result.destination.absoluteString == "https://wa.me/380671112233")
     }
 
+    @Test func explicitEmailResolvesTheSameContactDomainAndPopulatesRecipient() async throws {
+        let contact = ContactCandidate(
+            identifier: "unseen-email",
+            displayName: "Катерина Бойко",
+            phoneNumbers: ["+380 67 111 22 33"],
+            emailAddresses: ["kateryna.b@example.org"]
+        )
+        let executor = ProductionCanonicalCapabilityExecutor(
+            contacts: MessageContactResolverStub(.resolved(contact)),
+            personalSearchSources: []
+        )
+        let command = StructuredCommand(
+            originalText: "Надішли Катерині Бойко електронного листа",
+            normalizedText: "надішли катерині бойко електронного листа",
+            language: .uk,
+            intent: .messageCompose,
+            entities: ["message_service": "email", "recipient": "Катерині Бойко"]
+        )
+        guard case let .presentation(.email(recipients, _, _)) = try await executor.execute(command) else {
+            Issue.record("Expected Mail composer with resolved address")
+            return
+        }
+        #expect(recipients == ["kateryna.b@example.org"])
+    }
+
+    @Test func missingOrMultipleContactEmailsNeverOpenAnUnaddressedComposerSilently() async {
+        let command = StructuredCommand(
+            originalText: "Напиши електронного листа Романові Ковалю",
+            normalizedText: "напиши електронного листа романові ковалю",
+            language: .uk,
+            intent: .messageCompose,
+            entities: ["message_service": "email", "recipient": "Романові Ковалю"]
+        )
+        let noEmail = ContactCandidate(identifier: "no-email", displayName: "Роман Коваль", phoneNumbers: [])
+        let missingExecutor = ProductionCanonicalCapabilityExecutor(
+            contacts: MessageContactResolverStub(.resolved(noEmail)), personalSearchSources: []
+        )
+        await #expect(throws: CanonicalCapabilityExecutionError.unavailable("contact_has_no_email_address")) {
+            try await missingExecutor.execute(command)
+        }
+        let multiple = ContactCandidate(identifier: "multi-email", displayName: "Роман Коваль", phoneNumbers: [], emailAddresses: ["roman@example.org", "work@example.org"])
+        let ambiguousExecutor = ProductionCanonicalCapabilityExecutor(
+            contacts: MessageContactResolverStub(.resolved(multiple)), personalSearchSources: []
+        )
+        await #expect(throws: CanonicalCapabilityExecutionError.ambiguous(["roman@example.org", "work@example.org"])) {
+            try await ambiguousExecutor.execute(command)
+        }
+    }
+
     @Test func unresolvedAndAmbiguousRecipientsTerminateTruthfully() async {
         let missing = ProductionCanonicalCapabilityExecutor(
             contacts: MessageContactResolverStub(.notFound),

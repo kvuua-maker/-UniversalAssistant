@@ -114,6 +114,13 @@ struct LanguageUnderstandingBlockTests {
         #expect(recent.entities["query"] == "recent")
     }
 
+    @Test func ukrainianOrthographicLettersSurviveMorphologyEvidence() {
+        let forms = CanonicalMorphology.forms(for: "знайди")
+        #expect(forms.contains("знайди"))
+        #expect(!forms.contains("знаиди"))
+        #expect(LanguageUnderstandingBlock().parse("Знайди документ PDF").intent == .fileSearch)
+    }
+
     @Test func protectedUnknownTargetNeverBecomesGenericWeb() {
         let command = LanguageUnderstandingBlock().parse("Відкрий невідому панель керування пристроєм")
         #expect(command.intent == .open)

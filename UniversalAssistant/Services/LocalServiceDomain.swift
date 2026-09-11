@@ -2,12 +2,13 @@ import Foundation
 
 enum LocalServiceCategory: String, Codable, CaseIterable, Sendable {
     case towTruck, taxi, courier, plumber, electrician, cleaning, locksmith, mechanic
-    case carService, tireService, dentist, doctor, vet, delivery, repair, other
+    case carService, carRental, tireService, dentist, doctor, vet, delivery, repair, other
 
     var placeCategory: PlaceCategory {
         switch self {
         case .towTruck: .tow
         case .carService, .mechanic: .carService
+        case .carRental: .other
         case .tireService: .tireService
         case .dentist: .dentist
         case .doctor: .clinic
@@ -43,6 +44,7 @@ struct LocalServiceRequest: Equatable, Sendable {
         switch category {
         case .towTruck: "tow truck"
         case .carService: "car service"
+        case .carRental: "car rental"
         case .tireService: "tire service"
         default: category.rawValue
         }

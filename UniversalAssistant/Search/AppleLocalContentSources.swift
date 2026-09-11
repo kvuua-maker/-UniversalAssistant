@@ -1,5 +1,6 @@
 import Foundation
 import Photos
+import PhotosUI
 import CoreLocation
 import CoreSpotlight
 import UniformTypeIdentifiers
@@ -102,16 +103,57 @@ struct PhotoSemanticMatch: Equatable, Sendable {
 protocol PhotoAssetImageLoading: Sendable { func imageData(localIdentifier: String) async throws -> Data }
 protocol PhotoSemanticLabeling: Sendable { func labels(imageData: Data) async throws -> [PhotoSemanticLabel] }
 
+enum PhotoAssetImageLoadError: Error, Equatable { case timedOut, unavailable }
+
+private final class PhotoAssetImageLoadCompletion: @unchecked Sendable {
+    private let lock = NSLock()
+    private let manager: PHImageManager
+    private var continuation: CheckedContinuation<Data, Error>?
+    private var result: Result<Data, Error>?
+    private var requestID: PHImageRequestID?
+    private var cancellationRequested = false
+
+    init(manager: PHImageManager) { self.manager = manager }
+    func install(_ value: CheckedContinuation<Data, Error>) {
+        lock.lock()
+        if let result { lock.unlock(); value.resume(with: result) }
+        else { continuation = value; lock.unlock() }
+    }
+    func setRequestID(_ value: PHImageRequestID) {
+        lock.lock(); requestID = value; let cancel = cancellationRequested; lock.unlock()
+        if cancel { manager.cancelImageRequest(value) }
+    }
+    func finish(_ value: Result<Data, Error>, cancelRequest: Bool = false) {
+        lock.lock(); guard result == nil else { lock.unlock(); return }
+        result = value; cancellationRequested = cancelRequest
+        let continuation = continuation; self.continuation = nil; let id = requestID; lock.unlock()
+        if cancelRequest, let id { manager.cancelImageRequest(id) }
+        continuation?.resume(with: value)
+    }
+}
+
 struct PhotoKitAssetImageLoader: PhotoAssetImageLoading {
     func imageData(localIdentifier: String) async throws -> Data {
         guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject else { throw CocoaError(.fileNoSuchFile) }
-        return try await withCheckedThrowingContinuation { continuation in
-            let options = PHImageRequestOptions(); options.isNetworkAccessAllowed = true; options.deliveryMode = .highQualityFormat
-            PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, info in
-                if let error = info?[PHImageErrorKey] as? Error { continuation.resume(throwing: error) }
-                else if let data { continuation.resume(returning: data) }
-                else { continuation.resume(throwing: CocoaError(.fileReadUnknown)) }
+        let manager = PHImageManager.default()
+        let completion = PhotoAssetImageLoadCompletion(manager: manager)
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                completion.install(continuation)
+                let options = PHImageRequestOptions(); options.isNetworkAccessAllowed = true; options.deliveryMode = .highQualityFormat
+                let id = manager.requestImageDataAndOrientation(for: asset, options: options) { data, _, _, info in
+                    if let error = info?[PHImageErrorKey] as? Error { completion.finish(.failure(error)) }
+                    else if let data { completion.finish(.success(data)) }
+                    else { completion.finish(.failure(PhotoAssetImageLoadError.unavailable)) }
+                }
+                completion.setRequestID(id)
+                Task {
+                    try? await Task.sleep(for: .seconds(5))
+                    completion.finish(.failure(PhotoAssetImageLoadError.timedOut), cancelRequest: true)
+                }
             }
+        } onCancel: {
+            completion.finish(.failure(CancellationError()), cancelRequest: true)
         }
     }
 }
@@ -161,8 +203,8 @@ struct PhotoSemanticSearchEngine: Sendable {
                                 guard let data = try? await loader.imageData(localIdentifier: asset.localIdentifier),
                                       let labels = try? await labeler.labels(imageData: data) else { return nil }
                                 let evidence = labels.filter { label in
-                                          let normalized = Self.normalize(label.name)
-                                          return terms.contains { normalized.contains($0) || $0.contains(normalized) }
+                                          let labelTerms = Self.semanticTerms(label.name)
+                                          return !terms.isDisjoint(with: labelTerms)
                                       }.sorted { $0.confidence > $1.confidence }
                                 guard let confidence = evidence.first?.confidence,
                                       confidence >= Self.minimumReliableConfidence else { return nil }
@@ -196,19 +238,65 @@ struct PhotoSemanticSearchEngine: Sendable {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Maps productive multilingual word roots to stable visual concepts emitted
+    /// by Vision. This is a bounded taxonomy bridge, not a command/phrase table.
+    private static let visualConceptRoots: [(String, [String])] = [
+        ("dog", ["dog", "puppy", "canine", "собак", "пес", "щен", "собач"]),
+        ("cat", ["cat", "kitten", "feline", "кіш", "кот", "кош"]),
+        ("bird", ["bird", "avian", "птах", "птиц"]),
+        ("animal", ["animal", "mammal", "pet", "тварин", "животн"]),
+        ("vehicle", ["car", "automobile", "vehicle", "truck", "авто", "машин", "транспорт"]),
+        ("water", ["sea", "ocean", "water", "beach", "coast", "lake", "river", "мор", "океан", "вод", "пляж", "озер", "річ", "рек"]),
+        ("mountain", ["mountain", "hill", "peak", "гор", "вершин"]),
+        ("plant", ["plant", "flower", "tree", "forest", "рослин", "квіт", "дерев", "ліс", "лес"]),
+        ("person", ["person", "people", "human", "portrait", "людин", "особ", "портрет", "человек"]),
+        ("food", ["food", "meal", "dish", "fruit", "vegetable", "їж", "страв", "фрукт", "овоч", "еда"]),
+        ("building", ["building", "architecture", "house", "tower", "будів", "архітект", "дім", "веж", "дом"]),
+        ("document", ["document", "receipt", "invoice", "paper", "text", "документ", "квитанц", "рахунк", "чек", "папер", "текст"]),
+        ("sky", ["sky", "sunset", "sunrise", "cloud", "неб", "захід", "світан", "хмар", "облак"])
+    ]
+
     private static func semanticTerms(_ query: String) -> Set<String> {
         let ignored: Set<String> = ["знайди", "покажи", "моїх", "моих", "фото", "фотографії", "фотографии", "pictures", "photos", "with", "на", "у", "в", "з", "с"]
-        let aliases: [String: Set<String>] = [
-            "машиною": ["car", "automobile", "vehicle"], "машина": ["car", "automobile", "vehicle"], "авто": ["car", "automobile", "vehicle"],
-            "документом": ["document", "text", "receipt", "paper"], "документ": ["document", "text", "receipt", "paper"],
-            "квитанцією": ["receipt", "invoice", "document"], "чеком": ["receipt", "invoice", "document"]
-        ]
         var output = Set<String>()
         for token in normalize(query).split(separator: " ").map(String.init) where !ignored.contains(token) {
             output.insert(token)
-            output.formUnion(aliases[token] ?? [])
+            for (concept, roots) in visualConceptRoots where roots.contains(where: { token.hasPrefix($0) || $0.hasPrefix(token) && token.count >= 3 }) {
+                output.insert(concept)
+            }
         }
         return output
+    }
+}
+
+struct SystemPhotoLibraryPicker: UIViewControllerRepresentable {
+    let onSelection: @MainActor (String?) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onSelection: onSelection) }
+
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var configuration = PHPickerConfiguration(photoLibrary: .shared())
+        configuration.filter = .images
+        configuration.selectionLimit = 1
+        let picker = PHPickerViewController(configuration: configuration)
+        picker.delegate = context.coordinator
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre(
+            "PHOTOKIT", "operation=library_selection mechanism=PHPickerViewController"
+        )
+        return picker
+    }
+
+    func updateUIViewController(_ controller: PHPickerViewController, context: Context) {}
+
+    final class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        let onSelection: @MainActor (String?) -> Void
+        init(onSelection: @escaping @MainActor (String?) -> Void) { self.onSelection = onSelection }
+
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            let identifier = results.first?.assetIdentifier
+            picker.dismiss(animated: true)
+            Task { @MainActor in onSelection(identifier) }
+        }
     }
 }
 
@@ -218,6 +306,7 @@ struct PhotoAssetPresentationView: View {
     let onOCR: @MainActor (UIImage?) -> Void
     let automaticAction: AutomaticAction
     @State private var image: UIImage?
+    @State private var loadFailed = false
     @State private var showsShareSheet = false
     @State private var automaticActionPerformed = false
 
@@ -235,7 +324,11 @@ struct PhotoAssetPresentationView: View {
                     Button("Розпізнати текст") { onOCR(image) }
                     Button("Поділитися") { showsShareSheet = true }
                 }
-            } else { ProgressView() }
+            } else if loadFailed {
+                ContentUnavailableView("Фото недоступне", systemImage: "photo.badge.exclamationmark")
+            } else {
+                ProgressView()
+            }
         }
         .padding()
         .sheet(isPresented: $showsShareSheet) {
@@ -247,6 +340,7 @@ struct PhotoAssetPresentationView: View {
                   let data = try? await PhotoKitAssetImageLoader().imageData(localIdentifier: localIdentifier),
                   let loadedImage = UIImage(data: data) else {
                 LocalVoiceDiagnosticReport.shared.recordBoundaryPost("PHOTOKIT", "operation=load_asset status=error")
+                loadFailed = true
                 return
             }
             image = loadedImage

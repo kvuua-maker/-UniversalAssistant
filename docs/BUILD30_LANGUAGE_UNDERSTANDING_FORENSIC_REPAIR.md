@@ -622,3 +622,36 @@ changed for this infrastructure condition.
 This is **REPAIR IMPLEMENTED + AUTOMATED VERIFIED; PHYSICAL TESTFLIGHT
 VERIFICATION REQUIRED**. The six Build-32 fatal reports prove the old Unicode
 crash and do not prove physical behavior of the repaired binary.
+
+## Build-34 Speech and language continuation
+
+Two new physical Build-34 fatal events from `iPhone12,8` / iOS `26.6.2` are
+symbolicated to `AppleVoiceAudioCaptureBackend.installTap(_:)`, not to the
+semantic or Contacts layers. Crashlytics proves a 48 kHz active session followed
+by a stale explicit 44.1 kHz input tap. The same production engine was retained
+across route/session changes, and AVFAudio raised an Objective-C exception
+before recognition began. The repaired backend activates the route first,
+creates a fresh `AVAudioEngine`, validates the current input and installs with
+the platform-negotiated format. It then removes/reset/discards the graph on
+stop. Buffer-derived voice activity boundedly prevents a fixed partial-result
+timer from cutting off quieter continuing speech.
+
+The first semantic regression found during generalization was independent:
+diacritic folding changed Cyrillic letters, including Ukrainian `й`, before
+morphology/action detection. Cyrillic tokens now retain their spelling while
+Latin proper names retain diacritic-insensitive comparison. Typed and final
+voice text still enter the same authoritative `LanguageUnderstandingBlock`.
+
+App/service/contact recovery remains role-scoped and confidence-bearing.
+Contacts predicate results are no longer accepted as identity; the bounded
+privacy-authorized domain validates name, nickname, relation, organization and
+inflected aliases. No Baldinini, Telegram, WhatsApp, Viber, contact name or
+owner phrase substitution was added. Ambiguity resumes the same typed command
+only under the owning generation; stale selections cannot execute.
+
+Verification: full official iOS result `936/936 PASS`, including voice capture
+`16/16`, voice ownership `6/6`, voice/text quality `13/13`, language tests,
+Build-34 unseen semantics `10/10`, Contacts lifecycle `14/14`, Release-root
+inventory and Crashlytics side-car `5/5`; Production compile PASS. This is
+automated evidence, not physical Build-35 evidence. Full details are in
+`docs/BUILD34_PHYSICAL_SYSTEMIC_REPAIR.md`.

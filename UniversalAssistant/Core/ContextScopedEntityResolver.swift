@@ -147,7 +147,14 @@ struct ContextScopedEntityResolver<Value: Equatable & Sendable>: Sendable {
         }
     }
     private static func morphologicalStem(_ value: String) -> String {
-        let suffixes = ["iami", "amy", "ovi", "evi", "iem", "ogo", "omu", "ami", "ями", "ами", "ові", "еві", "ого", "ому", "ою", "ею", "у", "ю", "і", "и", "а", "я"]
+        // evidenceScore operates on the transliterated representation, so the
+        // inflection rules here must be transliterated too. These are reusable
+        // Ukrainian/Russian case endings, not named-entity substitutions.
+        let suffixes = [
+            "iamy", "iami", "amy", "ami", "ovi", "evi", "iem", "em",
+            "ogo", "omu", "oiu", "eiu", "akh", "iakh", "ykh", "ikh",
+            "u", "iu", "i", "y", "a", "ia", "o", "e"
+        ]
         guard let suffix = suffixes.first(where: { value.count - $0.count >= 3 && value.hasSuffix($0) }) else { return value }
         return String(value.dropLast(suffix.count))
     }

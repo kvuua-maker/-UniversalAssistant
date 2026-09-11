@@ -107,6 +107,10 @@ private enum CanonicalExternalProviderBoundaryAnalyzer {
               objectRoots: ["столик", "ресторан", "бронюван", "стол", "restaurant", "table", "reservation"],
               actionRoots: ["заброн", "резерв", "book", "reserve"],
               minimumObjectMatches: 1),
+        .init(domain: "product_catalog", intent: .productSearch,
+              objectRoots: ["товар", "продукт", "взут", "черев", "кросів", "одяг", "сумк", "рюкзак", "ноутбук", "телефон", "мебл", "product", "item", "shoe", "boot", "clothing", "bag", "backpack", "laptop", "phone", "furniture"],
+              actionRoots: ["знайд", "підбер", "покаж", "куп", "замов", "найд", "find", "search", "show", "select", "buy", "order"],
+              minimumObjectMatches: 1),
         .init(domain: "ride_service", intent: .taxiSearch,
               objectRoots: ["таксі", "такси", "taxi", "ride"],
               actionRoots: ["порівн", "знайд", "виклич", "замов", "сравн", "найд", "compare", "find", "request", "book"],
@@ -151,6 +155,20 @@ private enum CanonicalExternalProviderBoundaryAnalyzer {
             Set(roots.filter { root in forms.contains { $0.hasPrefix(root) } })
         }
 
+        // Rental and ride are different service contracts. Require evidence
+        // from both the vehicle and rental semantic roles; counting multiple
+        // spelling roots that match one token would incorrectly turn a bare
+        // “car” order into rental.
+        let hasVehicle = !matchedRoots(["авто", "автомоб", "машин", "car", "vehicle"]).isEmpty
+        let hasRental = !matchedRoots(["оренд", "прокат", "rent", "rental", "hire"]).isEmpty
+        let hasServiceGoal = !matchedRoots(["знайд", "підбер", "замов", "оренд", "найд", "find", "search", "book", "rent", "hire"]).isEmpty
+        if hasVehicle, hasRental, hasServiceGoal {
+            return .init(
+                intent: .serviceSearch, domain: "car_rental", confidence: 0.91,
+                evidence: matchedRoots(["авто", "автомоб", "машин", "car", "vehicle", "оренд", "прокат", "rent", "rental", "hire"])
+            )
+        }
+
         let candidates = rules.compactMap { rule -> CanonicalExternalProviderInference? in
             let objects = matchedRoots(rule.objectRoots)
             guard objects.count >= rule.minimumObjectMatches else { return nil }
@@ -164,6 +182,27 @@ private enum CanonicalExternalProviderBoundaryAnalyzer {
         let runnerUp = candidates.filter { $0.domain != best.domain }.map(\.confidence).max() ?? 0
         guard best.confidence >= 0.75, best.confidence - runnerUp >= 0.08 else { return nil }
         return best
+    }
+
+    static func hasAmbiguousVehicleServiceGoal(
+        document: LanguageUnderstandingDocument,
+        currentIntent: CommandIntent
+    ) -> Bool {
+        guard [.unknown, .webSearch, .show, .open, .productSearch, .fashionDiscovery].contains(currentIntent) else {
+            return false
+        }
+        let forms = document.tokens.reduce(into: Set<String>()) { result, token in
+            result.insert(token.normalized)
+            result.formUnion(token.morphologyForms)
+        }
+        func has(_ roots: [String]) -> Bool {
+            forms.contains { value in roots.contains { value.hasPrefix($0) } }
+        }
+        let vehicle = has(["авто", "автомоб", "машин", "car", "vehicle"])
+        let ordering = has(["замов", "закаж", "book", "order", "request"])
+        let explicitRide = has(["таксі", "такси", "taxi", "ride"])
+        let explicitRental = has(["оренд", "прокат", "rent", "rental", "hire"])
+        return vehicle && ordering && !explicitRide && !explicitRental
     }
 }
 
@@ -349,6 +388,23 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             entities.removeValue(forKey: "clarification_options")
             entities.removeValue(forKey: "clarification_role")
         }
+        if providerInference?.domain == "car_rental" {
+            entities["serviceCategory"] = LocalServiceCategory.carRental.rawValue
+        } else if providerInference == nil,
+                  CanonicalExternalProviderBoundaryAnalyzer.hasAmbiguousVehicleServiceGoal(
+                    document: document,
+                    currentIntent: intent
+                  ) {
+            // “Order a car” names the object and mutation but not whether the
+            // requested service is a ride or a rental. Preserve one typed
+            // ambiguity instead of silently converting the local service into
+            // a product/web query.
+            intent = .serviceSearch
+            entities["provider_domain"] = "vehicle_service"
+            entities["provider_boundary"] = "typed_service_ambiguity"
+            entities["clarification_options"] = "Таксі|Оренда автомобіля"
+            entities["clarification_role"] = "vehicle_service"
+        }
 
         var needsClarification = (proposition == nil && legacy.needsClarification) ||
             entities["clarification_options"] != nil
@@ -528,7 +584,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         return [
             .calendar, .reminder, .timer, .alarm, .contact, .settings,
             .file, .photo, .document, .place, .weather, .travelTime,
-            .note, .audio, .media
+            .note, .audio, .audioRoute, .media
         ].contains(object)
     }
 
@@ -601,9 +657,19 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             .split(whereSeparator: { !$0.isLetter && !$0.isNumber && $0 != "'" })
             .map { token in
                 let surface = String(token)
-                let folded = surface.precomposedStringWithCompatibilityMapping
-                    .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "uk_UA"))
-                    .lowercased()
+                let lowered = surface.precomposedStringWithCompatibilityMapping
+                    .lowercased(with: Locale(identifier: "uk_UA"))
+                // Diacritic folding is useful for Latin proper names, but in
+                // Cyrillic it destroys lexical letters (notably Ukrainian й)
+                // and breaks action/morphology roles: “знайди” became
+                // “знаиди”. Preserve Cyrillic orthography exactly.
+                let containsCyrillic = lowered.unicodeScalars.contains {
+                    (0x0400...0x052F).contains(Int($0.value))
+                }
+                let folded = containsCyrillic ? lowered : lowered.folding(
+                    options: .diacriticInsensitive,
+                    locale: Locale(identifier: "en_US_POSIX")
+                )
                 let forms = CanonicalMorphology.forms(for: folded)
                 return LanguageUnderstandingDocument.Token(
                     surface: surface,

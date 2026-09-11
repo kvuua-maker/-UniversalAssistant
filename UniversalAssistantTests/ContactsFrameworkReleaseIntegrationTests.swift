@@ -13,7 +13,7 @@ private final class ContactsFrameworkOpenCapture {
 @MainActor
 struct ContactsFrameworkReleaseIntegrationTests {
     private func wait(
-        timeout: Duration = .seconds(5),
+        timeout: Duration = .seconds(15),
         _ predicate: @escaping @MainActor () -> Bool
     ) async throws {
         let clock = ContinuousClock()

@@ -100,6 +100,10 @@ struct AssistantHomeView: View {
                 .padding()
             case let .translationTarget(text):
                 TranslationTargetPickerView(text: text, onSelect: model.startTranslation)
+            case .photoLibrary:
+                SystemPhotoLibraryPicker(onSelection: model.handleSelectedPhotoLibraryAsset)
+            case .audioRoutes:
+                AudioDevicesView(records: [])
             case let .photoAsset(identifier):
                 PhotoAssetPresentationView(localIdentifier: identifier, onOCR: model.handlePhotoOCRImage)
             case let .photoOCR(identifier):

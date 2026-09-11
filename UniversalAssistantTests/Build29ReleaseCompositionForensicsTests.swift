@@ -716,16 +716,17 @@ struct Build29ReleaseExternalProviderBoundaryTests {
         model.input = request
         model.submit()
         for _ in 0..<150 {
-            if case .webHandoff = model.resultState { break }
+            if case .failure = model.resultState { break }
             if case .clarification = model.resultState { break }
             try await Task.sleep(for: .milliseconds(10))
         }
 
-        guard case let .webHandoff(fallback) = model.resultState else {
+        guard case let .failure(failure) = model.resultState else {
             Issue.record("Verified catalog entity did not reach the finite provider boundary")
             return
         }
-        #expect(fallback.query == request)
+        #expect(failure.message.contains("провайдер"))
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
         #expect(model.statusText != AppText.value("clarification_needed"))
         #expect(model.statusText != AppText.value("processing"))
     }
@@ -773,30 +774,43 @@ struct Build29ReleaseExternalProviderBoundaryTests {
 
     @Test func absentCommercialProvidersPreserveRequestsInDeliberateBrowserFallback() async throws {
         let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
-        let requests = [
-            "Покажи свіжі економічні новини за сьогодні",
-            "Дізнайся поточне котирування акцій виробника напівпровідників",
-            "Збери кошик для овочевого супу з доставкою",
-            "Порівняй доступні поїздки таксі до музею",
-            "Підбери готель у Кракові на дві ночі",
-            "Знайди квитки на нічний потяг до Варшави",
-            "Відстеж міжнародне відправлення за номером",
-            "Знайди майстра для ремонту посудомийної машини",
-            "Покажи офіційний муніципальний сервіс для реєстрації",
-            "Знайди вакансії дизайнера з віддаленою роботою",
-            "Покажи доступні персональні знижки програми лояльності"
+        let requests: [(text: String, deliberateWeb: Bool)] = [
+            ("Покажи свіжі економічні новини за сьогодні", true),
+            ("Дізнайся поточне котирування акцій виробника напівпровідників", true),
+            ("Збери кошик для овочевого супу з доставкою", false),
+            ("Порівняй доступні поїздки таксі до музею", false),
+            ("Підбери готель у Кракові на дві ночі", false),
+            ("Знайди квитки на нічний потяг до Варшави", false),
+            ("Відстеж міжнародне відправлення за номером", true),
+            ("Знайди майстра для ремонту посудомийної машини", false),
+            ("Покажи офіційний муніципальний сервіс для реєстрації", false),
+            ("Знайди вакансії дизайнера з віддаленою роботою", true),
+            ("Покажи доступні персональні знижки програми лояльності", true)
         ]
-        for request in requests {
+        for (request, deliberateWeb) in requests {
             let parsed = LanguageUnderstandingBlock().parse(request)
             model.input = request
             model.submit()
-            for _ in 0..<100 { if case .webHandoff = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
-            guard case let .webHandoff(fallback) = model.resultState else {
-                Issue.record("External boundary did not terminate truthfully: \(request); intent=\(parsed.intent.rawValue); clarification=\(parsed.needsClarification); entities=\(parsed.entities); status=\(model.statusText); state=\(String(describing: model.resultState))")
-                continue
+            for _ in 0..<100 {
+                if case .webHandoff = model.resultState { break }
+                if case .failure = model.resultState { break }
+                try await Task.sleep(for: .milliseconds(10))
             }
-            #expect(fallback.query == request)
-            #expect(fallback.destination.host?.contains("google") == true)
+            if deliberateWeb {
+                guard case let .webHandoff(fallback) = model.resultState else {
+                    Issue.record("Allowed informational fallback did not terminate truthfully: \(request); intent=\(parsed.intent.rawValue); entities=\(parsed.entities); state=\(String(describing: model.resultState))")
+                    continue
+                }
+                #expect(fallback.query == request)
+                #expect(fallback.destination.host?.contains("google") == true)
+            } else {
+                guard case let .failure(failure) = model.resultState else {
+                    Issue.record("Typed provider request escaped its truthful boundary: \(request); intent=\(parsed.intent.rawValue); entities=\(parsed.entities); state=\(String(describing: model.resultState))")
+                    continue
+                }
+                #expect(failure.message.contains("провайдер"))
+                #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+            }
             #expect(model.statusText != AppText.value("processing"))
         }
     }

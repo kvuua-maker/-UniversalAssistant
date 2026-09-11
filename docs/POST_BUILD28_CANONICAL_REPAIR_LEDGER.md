@@ -260,3 +260,37 @@ MapKit/provider/handoff suite now proves the deeper truthful boundary.
 Status: **COMMUNICATION + RESTAURANT FAMILIES AUTOMATED GREEN — PHYSICAL IPHONE
 VERIFICATION REQUIRED**. Build 33 predates this checkpoint; no Build 34 was
 created because it remains outside the authorized release scope.
+
+## Build-34 physical systemic repair checkpoint (2026-09-11)
+
+Authoritative physical device: Build 34 on `iPhone12,8`, iOS `26.6.2`.
+Crashlytics fatal issue `62da7fe5f9324f7f559c6122e3baf7e1` proves the first
+failure boundary at `AppleVoiceAudioCaptureBackend.installTap(_:)`: the active
+audio session reported 48 kHz while a reused engine graph installed a stale
+explicit 44.1 kHz tap format. The repair creates the engine only after route
+activation and lets AVFAudio use the negotiated input format; bounded teardown
+discards the graph. Actual buffer activity now boundedly defers premature
+end-of-speech finalization. No physical phrase is embedded in production code.
+
+Additional shipped-root reproduction established and repaired general
+mechanisms: Cyrillic-safe normalization; typed APP/SERVICE recovery; one
+validated contact resolver across call/message/email/messenger using public
+name/nickname/relation/email fields; generation-owned clarification
+continuation; typed timer/alarm/calendar/reminder separation; all/metadata/
+semantic Photos execution with finite lifecycle; PDF find/open; public audio
+route picker; provider-required commerce/ride boundaries; typed car-rental
+versus ride ambiguity; complete restaurant slot and cancellation continuation.
+System/local/personal errors remain local and cannot use generic web as an error
+handler.
+
+Evidence: affected final targeted run `9/9 PASS`; full iOS official xcresult
+`936/936 PASS` with zero failures/skips; all shipped Release-root suites PASS;
+Crashlytics side-car `5/5 PASS`; Production main app + Share Extension compile
+PASS; `git diff --check` PASS. Exact evidence and root-cause table:
+`docs/BUILD34_PHYSICAL_SYSTEMIC_REPAIR.md`.
+
+Status: **BUILD-34 SYSTEMIC REPAIR AUTOMATED GREEN — PHYSICAL BUILD-35 IPHONE
+VERIFICATION REQUIRED**. Exact next material operation: create a coherent
+source checkpoint, verify it on `origin/main`, then increment only Build 34 →
+35 and run the signed archive/export/SHA/TestFlight workflow. Build 36 is
+forbidden.

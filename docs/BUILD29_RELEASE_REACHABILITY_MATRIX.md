@@ -122,3 +122,26 @@ for Team `9V5XXDXF3N`, then only the existing archive is uploaded.
 | 94 | CarPlay | OWNER_OR_APPLE_ACTION_REQUIRED | Policy-gated | No phone-UI reuse or unapproved runtime path | PlatformEligibilityPolicy is compiled in Production and fails closed without exact managed entitlement/category | Production policy suite proves unapproved CarPlay remains unavailable and category grants do not broaden scope; 3/3 PASS | OWNER_APPLE_BOUNDARY_VERIFIED | Owner must select an eligible category and Apple must grant its managed entitlement before templates/profile work |
 | 95 | App Attest | APPLE_NATIVE_CORRECT | DeviceCheck path | TestFlight diagnostic delivery bootstrap | PhysicalDiagnosticDelivery is created by the shipped app and uses DCAppAttestService | Production suite proves App Attest gating, bounded offline queue, privacy-safe payload and exact bootstrap failure stage; 11/11 PASS | RELEASE_RUNTIME_VERIFIED | Preserve production entitlement and server challenge/assertion verification |
 | 96 | App Store Connect automation | OWNER_OR_APPLE_ACTION_REQUIRED | Authenticated Xcode/Transporter or API JWT | Release operation, not an app Home capability | Repository commits no secret; existing authenticated Xcode workflow is documented | Build 29 verification records successful authorized upload; optional API key is not required for manual authorized workflow | OWNER_ACCOUNT_BOUNDARY_VERIFIED | Optional least-privilege ASC API key remains owner action; never commit p8/JWT |
+
+## Build-34 physical repair Release-root overlay (2026-09-11)
+
+This overlay supersedes the older physical-crash-open wording for the affected
+rows without rewriting historical evidence. Rows not listed retain their prior
+status and protected evidence.
+
+| Rows | Current Release mechanism evidence | Automated status | Remaining boundary |
+|---|---|---|---|
+| 1–4 | Fresh route-negotiated AVAudioEngine input, bounded activity-aware endpointing, Cyrillic-safe shared `LanguageUnderstandingBlock` | Voice capture 16/16; ownership 6/6; voice/text 13/13; shared Release root PASS | Physical `iPhone12,8` retest required |
+| 7–8, 18, 57, 59 | Role-scoped APP/SERVICE recovery retains verified application handoffs and media routes | App/service, Apple Music, Spotify and negative ambiguity coverage included in 936/936 | Installed-app and mixed-language physical retest required |
+| 11–18 | One canonical public-Contacts resolver validates the bounded authorized candidate domain; typed generation-owned selection resumes call/message/email/messenger | Contacts lifecycle 14/14; Contacts framework 1/1; Production messaging 5/5; no unsafe fuzzy winner | Physical authorization/contact-data/UI handoff retest required |
+| 19–24 | Date/time/duration roles remain typed; calendar, reminder, timer, alarm and public Clock limits are distinct | Build-34 temporal and protected EventKit/AlarmKit suites PASS | Real permission/persistence and AlarmKit physical retest required |
+| 26–31 | PDF find/open, all/latest/date/location/semantic Photos use the shipped UIDocumentPicker/PhotoKit/Vision presentation and bounded executor paths | Build-34 systemic semantics 10/10 plus Photos/Files Release-root suites PASS | Real picker, limited Photos and device indexing retest required |
+| 34, 64–70 | Audio-device intent reaches public `AVRoutePickerView`; other device actions preserve prior local/unsupported behavior | Universal device suite 6/6 and full gate PASS | iOS owns actual route selection; no private programmatic Bluetooth selector |
+| 79–86 | Commerce/grocery/ride/restaurant/service requests preserve typed constraints and provider boundaries; car rental has distinct MapKit service evidence | Provider and restaurant Release-root suites PASS; no generic-web error fallback | Live commercial results/transactions require legitimate provider credentials/contracts |
+| 73–74 | Clarification/confirmation continuation retains typed command, semantic role and request generation | Stale/supersede and multi-choice regressions PASS | Physical multi-number/contact/channel selection retest required |
+
+Complete final automated evidence: official full iOS xcresult `936/936 PASS`,
+zero failures/skips; every existing shipped Release-root suite PASS; Production
+main app and Share Extension compile PASS; Crashlytics side-car 5/5; `git diff
+--check` PASS. Status is **RELEASE PRODUCTION REACHABILITY AUTOMATED VERIFIED;
+PHYSICAL BUILD-35 VERIFICATION REQUIRED**.
