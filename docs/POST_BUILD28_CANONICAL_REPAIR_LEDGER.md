@@ -294,3 +294,22 @@ VERIFICATION REQUIRED**. Exact next material operation: create a coherent
 source checkpoint, verify it on `origin/main`, then increment only Build 34 →
 35 and run the signed archive/export/SHA/TestFlight workflow. Build 36 is
 forbidden.
+
+### Build-35 physical verification artifact
+
+Source repair checkpoint `30a4bfd0e0c2961697d59fdccca8fd2d6809f7fc` and
+release/archive checkpoint `11aff3fb116f05e25d3682537e8bce59caf6c670` are
+pushed. Production archive and IPA export PASS. IPA SHA-256 is
+`5a827375441d62847eeb086abf5f1ab03c9cd4e51f68cb0e8fafac3a18f9b99f`.
+Main app and Share Extension signatures/profiles/entitlements/nested
+verification PASS; both carry Build 35 and `get-task-allow=false`. Exact main
+and Share binary/dSYM UUIDs match, and Firebase accepted the main dSYM.
+
+Apple validation and upload through the existing Team API key both succeeded.
+Delivery UUID: `97b73260-fca9-4895-87be-22d313a69a6c`. Apple reports
+`processingState=VALID`, `import-status=VALID`, `build-status=VALID` and
+`is-on-app-store-connect=true`. Full evidence:
+`docs/BUILD35_RELEASE_VERIFICATION.md`.
+
+Status: **BUILD 35 UPLOADED AND APPLE PROCESSING VALID — PHYSICAL IPHONE
+VERIFICATION REQUIRED**. Build 36 was not created.
