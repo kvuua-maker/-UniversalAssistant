@@ -52,7 +52,7 @@ struct AssistantSettingsView: View {
                         LocalVoiceDiagnosticReport.shared.detailedDiagnosticsEnabled = value
                     }
                     .accessibilityIdentifier("settings.detailed-diagnostics")
-                Text("Зберігаються фінальний і нормалізований transcript. Raw microphone audio не зберігається.")
+                Text("Зберігаються partial/final/normalized transcript і bounded audio команди з того самого Speech stream. Audio поки залишається локально.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 Button("Оновити статус") { refreshDiagnostics() }

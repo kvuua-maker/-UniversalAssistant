@@ -28,8 +28,134 @@ private enum VoiceDiagnostic {
     static let logger = Logger(subsystem: "com.universalassistant.app", category: "VoicePipeline")
 }
 
+final class DiagnosticCommandAudioRecorder: @unchecked Sendable {
+    struct Completion: Sendable {
+        let relativePath: String?
+        let truncated: Bool
+        let byteCount: Int
+        let durationMilliseconds: Int
+    }
+
+    private let queue = DispatchQueue(label: "com.universalassistant.diagnostics.command-audio", qos: .utility)
+    private let localStore: PhysicalDiagnosticLocalStore
+    private let maximumDurationSeconds: Double
+    private var requestID: UUID?
+    private var destination: URL?
+    private var file: AVAudioFile?
+    private var writtenFrames: AVAudioFramePosition = 0
+    private var truncated = false
+    private var recordedDurationSeconds: Double = 0
+
+    init(localStore: PhysicalDiagnosticLocalStore, maximumDurationSeconds: Double = 45) {
+        self.localStore = localStore
+        self.maximumDurationSeconds = maximumDurationSeconds
+    }
+
+    func start(requestID: UUID) {
+        queue.sync {
+            file = nil
+            self.requestID = requestID
+            destination = localStore.diagnosticAudioURL(for: requestID)
+            writtenFrames = 0
+            truncated = false
+            recordedDurationSeconds = 0
+            if let destination { try? FileManager.default.removeItem(at: destination) }
+        }
+    }
+
+    func appendSameSpeechBuffer(_ buffer: AVAudioPCMBuffer) {
+        guard let copy = Self.copy(buffer) else { return }
+        queue.async { [weak self] in self?.write(copy) }
+    }
+
+    func finish() -> Completion {
+        queue.sync {
+            file = nil
+            let relativePath = requestID.map { localStore.diagnosticAudioRelativePath(for: $0) }
+            let byteCount = destination.flatMap {
+                (try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize)
+            } ?? 0
+            requestID = nil
+            destination = nil
+            writtenFrames = 0
+            let durationMilliseconds = max(0, Int((recordedDurationSeconds * 1_000).rounded()))
+            let result = Completion(
+                relativePath: byteCount > 0 ? relativePath : nil,
+                truncated: truncated,
+                byteCount: byteCount,
+                durationMilliseconds: durationMilliseconds
+            )
+            truncated = false
+            recordedDurationSeconds = 0
+            return result
+        }
+    }
+
+    private func write(_ buffer: AVAudioPCMBuffer) {
+        guard requestID != nil, let destination else { return }
+        let maximumFrames = AVAudioFramePosition(buffer.format.sampleRate * maximumDurationSeconds)
+        guard writtenFrames < maximumFrames else {
+            truncated = true
+            return
+        }
+        if file == nil {
+            do {
+                file = try AVAudioFile(forWriting: destination, settings: buffer.format.settings)
+                try? FileManager.default.setAttributes(
+                    [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+                    ofItemAtPath: destination.path
+                )
+            } catch {
+                file = nil
+                return
+            }
+        }
+        let remaining = maximumFrames - writtenFrames
+        if AVAudioFramePosition(buffer.frameLength) > remaining {
+            buffer.frameLength = AVAudioFrameCount(max(0, remaining))
+            truncated = true
+        }
+        guard buffer.frameLength > 0 else { return }
+        do {
+            try file?.write(from: buffer)
+            writtenFrames += AVAudioFramePosition(buffer.frameLength)
+            recordedDurationSeconds += Double(buffer.frameLength) / buffer.format.sampleRate
+        } catch {
+            file = nil
+        }
+    }
+
+    private static func copy(_ source: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
+        guard let destination = AVAudioPCMBuffer(
+            pcmFormat: source.format,
+            frameCapacity: source.frameLength
+        ) else { return nil }
+        destination.frameLength = source.frameLength
+        let sourceBuffers = UnsafeMutableAudioBufferListPointer(
+            UnsafeMutablePointer(mutating: source.audioBufferList)
+        )
+        let destinationBuffers = UnsafeMutableAudioBufferListPointer(destination.mutableAudioBufferList)
+        guard sourceBuffers.count == destinationBuffers.count else { return nil }
+        for index in sourceBuffers.indices {
+            let sourceBuffer = sourceBuffers[index]
+            guard let sourceData = sourceBuffer.mData,
+                  let destinationData = destinationBuffers[index].mData else { return nil }
+            let byteCount = min(Int(sourceBuffer.mDataByteSize), Int(destinationBuffers[index].mDataByteSize))
+            memcpy(destinationData, sourceData, byteCount)
+            destinationBuffers[index].mDataByteSize = UInt32(byteCount)
+        }
+        return destination
+    }
+}
+
+
 final class LocalVoiceDiagnosticReport: @unchecked Sendable {
-    struct Entry: Codable, Sendable { let timestamp: Date; let marker: String; let details: String }
+    struct Entry: Codable, Sendable {
+        let timestamp: Date
+        let marker: String
+        let details: String
+        var textPayload: String? = nil
+    }
     private struct LegacyPersisted: Codable { let sessionID: UUID; let startedAt: Date; let entries: [Entry] }
     static let shared = LocalVoiceDiagnosticReport()
     private let lock = NSLock()
@@ -46,6 +172,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
     private let persistenceKey: String
     private let localStore: PhysicalDiagnosticLocalStore
     private let crashlyticsRecorder: any CrashlyticsDiagnosticRecording
+    private let audioRecorder: DiagnosticCommandAudioRecorder
     private var legacyRecovered: LegacyPersisted?
     private static let maximumDeliveredEvents = 250
     private static let detailedConsentKey = "build32-detailed-diagnostics-consent"
@@ -73,6 +200,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         self.defaults = defaults
         self.persistenceKey = persistenceKey
         self.localStore = localStore
+        self.audioRecorder = DiagnosticCommandAudioRecorder(localStore: localStore)
         self.crashlyticsRecorder = crashlyticsRecorder
         if let data = defaults.data(forKey: persistenceKey),
            let value = try? JSONDecoder().decode(LegacyPersisted.self, from: data) {
@@ -86,6 +214,45 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         get { defaults.bool(forKey: Self.detailedConsentKey) }
         set { defaults.set(newValue, forKey: Self.detailedConsentKey) }
     }
+    var currentRequestIdentifier: UUID {
+        lock.withLock { requestID }
+    }
+
+    func beginCommandAudioRecording() {
+        let identity = lock.withLock { (requestID, detailedDiagnosticsEnabled) }
+        guard identity.1 else { return }
+        audioRecorder.start(requestID: identity.0)
+        let relativePath = localStore.diagnosticAudioRelativePath(for: identity.0)
+        localStore.updateActive(
+            sequence: lock.withLock { entries.count },
+            stage: "diagnostic_audio_started",
+            diagnosticAudioRelativePath: relativePath,
+            diagnosticAudioTruncated: false
+        )
+        record("diagnostic_audio_started", "status=recording")
+    }
+
+    func appendCommandAudioBuffer(_ buffer: AVAudioPCMBuffer) {
+        guard detailedDiagnosticsEnabled else { return }
+        audioRecorder.appendSameSpeechBuffer(buffer)
+    }
+
+    func finishCommandAudioRecording(reason: VoiceStopReason) {
+        let completion = audioRecorder.finish()
+        guard let relativePath = completion.relativePath else { return }
+        localStore.updateActive(
+            sequence: lock.withLock { entries.count },
+            stage: "diagnostic_audio_finished",
+            diagnosticAudioRelativePath: relativePath,
+            diagnosticAudioTruncated: completion.truncated,
+            diagnosticAudioDurationMilliseconds: completion.durationMilliseconds
+        )
+        record(
+            "diagnostic_audio_finished",
+            "status=saved reason=\(reason.rawValue) length=\(completion.byteCount) truncated=\(completion.truncated)"
+        )
+    }
+
 
     func reset() {
         lock.lock()
@@ -146,14 +313,46 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         record("\(boundary)_POST", details)
     }
 
+    private func recordPartialSpeechTranscript(_ transcript: String) {
+        lock.lock()
+        let detailed = detailedDiagnosticsEnabled
+        let safeTranscript = Self.privacySafeTranscript(transcript)
+        appendLocked(
+            "partial_transcript",
+            "length=\(transcript.count) detailed=\(detailed)",
+            durable: true,
+            textPayload: detailed ? safeTranscript : nil
+        )
+        crashlyticsRecorder.recordPartialTranscript(
+            transcript,
+            sequence: entries.count,
+            identity: crashlyticsIdentityLocked(),
+            detailedDiagnosticsEnabled: detailed
+        )
+        if detailed {
+            localStore.updateActive(
+                sequence: entries.count,
+                stage: "partial_transcript",
+                detailedDiagnosticsConsent: true,
+                latestPartialTranscript: safeTranscript
+            )
+        }
+        lock.unlock()
+    }
+
     func recordSpeechTranscript(_ transcript: String, isFinal: Bool) {
         guard isFinal else {
-            record("partial_transcript", "length=\(transcript.count)")
+            recordPartialSpeechTranscript(transcript)
             return
         }
         lock.lock()
         finalSpeechTranscript = Self.privacySafeTranscript(transcript)
-        appendLocked("final_transcript", "length=\(transcript.count) detailed=\(detailedDiagnosticsEnabled)", durable: true)
+        appendLocked(
+            "final_transcript",
+            "length=\(transcript.count) detailed=\(detailedDiagnosticsEnabled)",
+            durable: true,
+            textPayload: detailedDiagnosticsEnabled ? finalSpeechTranscript : nil
+        )
         crashlyticsRecorder.recordTranscript(
             transcript,
             normalized: false,
@@ -172,10 +371,46 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         lock.unlock()
     }
 
+    func recordSubmittedInputIfNeeded(_ transcript: String) {
+        lock.lock()
+        guard finalSpeechTranscript == nil else {
+            lock.unlock()
+            return
+        }
+        finalSpeechTranscript = Self.privacySafeTranscript(transcript)
+        appendLocked(
+            "input_transcript",
+            "length=\(transcript.count) detailed=\(detailedDiagnosticsEnabled)",
+            durable: true,
+            textPayload: detailedDiagnosticsEnabled ? finalSpeechTranscript : nil
+        )
+        crashlyticsRecorder.recordTranscript(
+            transcript,
+            normalized: false,
+            sequence: entries.count,
+            identity: crashlyticsIdentityLocked(),
+            detailedDiagnosticsEnabled: detailedDiagnosticsEnabled
+        )
+        if detailedDiagnosticsEnabled {
+            localStore.updateActive(
+                sequence: entries.count,
+                stage: "input_transcript",
+                detailedDiagnosticsConsent: true,
+                finalSpeechTranscript: finalSpeechTranscript
+            )
+        }
+        lock.unlock()
+    }
+
     func recordNormalizedTranscript(_ transcript: String) {
         lock.lock()
         normalizedTranscript = Self.privacySafeTranscript(transcript)
-        appendLocked("normalization", "length=\(transcript.count)", durable: false)
+        appendLocked(
+            "normalization",
+            "length=\(transcript.count) detailed=\(detailedDiagnosticsEnabled)",
+            durable: true,
+            textPayload: detailedDiagnosticsEnabled ? normalizedTranscript : nil
+        )
         crashlyticsRecorder.recordTranscript(
             transcript,
             normalized: true,
@@ -196,6 +431,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
 
     func recordTerminal(_ state: DiagnosticTerminalState, details: String = "") {
         lock.lock()
+        guard explicitTerminalState == nil else { lock.unlock(); return }
         explicitTerminalState = state
         appendLocked("terminal_request_state", "state=\(state.rawValue) \(details)", durable: true)
         localStore.updateActive(sequence: entries.count, stage: "terminal_request_state", terminal: state)
@@ -228,7 +464,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
     @discardableResult
     func finishInteractiveContinuation(_ state: DiagnosticTerminalState, details: String = "") -> Bool {
         lock.lock()
-        guard interactiveContinuationPending else { lock.unlock(); return false }
+        guard interactiveContinuationPending, explicitTerminalState == nil else { lock.unlock(); return false }
         interactiveContinuationPending = false
         explicitTerminalState = state
         appendLocked("interactive_continuation_finished", "state=\(state.rawValue) \(details)", durable: true)
@@ -241,7 +477,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
     func snapshot() -> String {
         lock.lock(); defer { lock.unlock() }
         let lines = entries.enumerated().map { "\($0.offset + 1). \($0.element.marker)\($0.element.details.isEmpty ? "" : " | \($0.element.details)")" }
-        return (["UniversalAssistant Local Diagnostic Black Box", "Raw microphone audio is never recorded."] + lines).joined(separator: "\n")
+        return (["UniversalAssistant Local Diagnostic Black Box", "Command audio is local-only until Firebase Storage is configured."] + lines).joined(separator: "\n")
     }
 
     @MainActor func recoveredIncompleteSession() -> PhysicalDiagnosticSession? {
@@ -274,19 +510,36 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
             uncleanEvent.build = active.build
             let prior = localStore.events(for: active.requestID)
             let preserved = (prior + [uncleanEvent]).suffix(Self.maximumDeliveredEvents)
-            let events = preserved.enumerated().map { index, source in
-                var event = PhysicalDiagnosticEvent(
+            var events = preserved.enumerated().map { index, source in
+                PhysicalDiagnosticEvent(
                     sequence: index + 1,
                     timestamp: source.timestamp,
                     marker: source.marker,
-                    attributes: source.attributes
+                    attributes: source.attributes,
+                    diagnosticSessionID: active.diagnosticSessionID,
+                    requestID: active.requestID,
+                    requestGeneration: active.requestGeneration,
+                    build: active.build,
+                    textPayload: source.textPayload
                 )
-                event.diagnosticSessionID = active.diagnosticSessionID
-                event.requestID = active.requestID
-                event.requestGeneration = active.requestGeneration
-                event.build = active.build
-                return event
             }
+            let terminalEvent = PhysicalDiagnosticEvent(
+                sequence: events.count + 1, timestamp: now, marker: "terminal_request_state",
+                attributes: ["state": DiagnosticTerminalState.error.rawValue],
+                diagnosticSessionID: active.diagnosticSessionID, requestID: active.requestID,
+                requestGeneration: active.requestGeneration, build: active.build
+            )
+            let requestEndEvent = PhysicalDiagnosticEvent(
+                sequence: events.count + 2, timestamp: now, marker: "request_end",
+                attributes: ["terminal": DiagnosticTerminalState.error.rawValue],
+                diagnosticSessionID: active.diagnosticSessionID, requestID: active.requestID,
+                requestGeneration: active.requestGeneration, build: active.build
+            )
+            events.append(terminalEvent)
+            events.append(requestEndEvent)
+            localStore.append(uncleanEvent, durable: true)
+            localStore.append(terminalEvent, durable: true)
+            localStore.append(requestEndEvent, durable: true)
             let recoveredStart = events.first?.timestamp ?? active.updatedAt
             var session = PhysicalDiagnosticSession(
                 schema: 2, sessionID: active.requestID, liveTestID: "BUILD32-PRODUCTION-BLACK-BOX", feature: "request",
@@ -304,9 +557,13 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
             session.detailedDiagnosticsConsent = active.detailedDiagnosticsConsent
             session.finalSpeechTranscript = active.detailedDiagnosticsConsent ? active.finalSpeechTranscript : nil
             session.normalizedTranscript = active.detailedDiagnosticsConsent ? active.normalizedTranscript : nil
+            session.diagnosticAudioRelativePath = active.diagnosticAudioRelativePath
+            session.diagnosticAudioTruncated = active.diagnosticAudioTruncated
             session.anomaly = anomaly
+            session.diagnosticAudioDurationMilliseconds = active.diagnosticAudioDurationMilliseconds
             localStore.addPending(Self.queued(session))
             crashlyticsRecorder.recordRecoveredUncleanSession(session)
+            crashlyticsRecorder.recordTerminal(session)
             return session
         }
         guard let value = legacyRecovered, !value.entries.isEmpty else { return nil }
@@ -330,18 +587,21 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         guard !interactiveContinuationPending,
               entries.contains(where: { ["start_listening_invoked", "home_request_started"].contains($0.marker) }),
+              !entries.contains(where: { $0.marker == "request_end" }),
               let terminalState = explicitTerminalState ?? inferredTerminalStateLocked() else { return nil }
         if !entries.contains(where: { $0.marker == "terminal_request_state" }) {
             appendLocked("terminal_request_state", "state=\(terminalState.rawValue)", durable: true)
             localStore.updateActive(sequence: entries.count, stage: "terminal_request_state", terminal: terminalState)
         }
+        appendLocked("request_end", "terminal=\(terminalState.rawValue)", durable: true)
         let bounded = Self.boundedForDelivery(entries)
         let events = bounded.enumerated().map { index, entry in
             PhysicalDiagnosticEvent(
                 sequence: index + 1,
                 timestamp: entry.timestamp,
                 marker: entry.marker,
-                attributes: Self.privacySafeAttributes(entry.details)
+                attributes: Self.privacySafeAttributes(entry.details),
+                textPayload: entry.textPayload
             )
         }
         let error = events.reversed().first {
@@ -359,7 +619,10 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
             build: Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0") ?? 0,
             environment: "internal-testflight", osVersion: UIDevice.current.systemVersion, deviceClass: UIDevice.current.model,
             startedAt: startedAt, endedAt: ended, durationMilliseconds: max(0, Int(ended.timeIntervalSince(startedAt) * 1_000)),
-            result: result, failureStage: terminalState == .success ? nil : (error?.marker ?? events.reversed().first(where: { $0.marker != "terminal_request_state" })?.marker),
+            result: result,
+            failureStage: terminalState == .success ? nil : (error?.marker ?? events.reversed().first(where: {
+                !["terminal_request_state", "request_end"].contains($0.marker)
+            })?.marker),
             errorDomain: error?.attributes["error_domain"], errorCode: error?.attributes["error_code"].flatMap(Int.init), events: events
         )
         session.diagnosticSessionID = diagnosticSessionID
@@ -369,23 +632,28 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         session.detailedDiagnosticsConsent = consent
         session.finalSpeechTranscript = consent ? finalSpeechTranscript : nil
         session.normalizedTranscript = consent ? normalizedTranscript : nil
+        let active = localStore.activeSnapshot()
+        session.diagnosticAudioRelativePath = active?.diagnosticAudioRelativePath
+        session.diagnosticAudioTruncated = active?.diagnosticAudioTruncated
         session.anomaly = DiagnosticAnomalyAnalyzer.analyze(events: events)
         if let anomaly = session.anomaly { localStore.setLastAnomaly(anomaly) }
+        session.diagnosticAudioDurationMilliseconds = active?.diagnosticAudioDurationMilliseconds
         localStore.addPending(Self.queued(session))
-        localStore.updateActive(sequence: entries.count, stage: "terminal_request_state", terminal: terminalState)
+        localStore.updateActive(sequence: entries.count, stage: "request_end", terminal: terminalState)
         localStore.clearTerminalActiveRequest()
         defaults.removeObject(forKey: persistenceKey)
         crashlyticsRecorder.recordTerminal(session)
         return session
     }
 
-    private func appendLocked(_ marker: String, _ details: String, durable: Bool) {
+    private func appendLocked(_ marker: String, _ details: String, durable: Bool, textPayload: String? = nil) {
         let safeDetails = Self.privacySafeDetails(details)
-        let entry = Entry(timestamp: .now, marker: marker, details: safeDetails)
+        let entry = Entry(timestamp: .now, marker: marker, details: safeDetails, textPayload: textPayload)
         entries.append(entry)
         if entries.count > 1_000 { entries.removeFirst(entries.count - 1_000) }
         let attributes = Self.privacySafeAttributes(safeDetails)
         var event = PhysicalDiagnosticEvent(sequence: entries.count, timestamp: entry.timestamp, marker: marker, attributes: attributes)
+        event.textPayload = textPayload
         event.diagnosticSessionID = diagnosticSessionID
         event.requestID = requestID
         event.requestGeneration = requestGeneration
@@ -406,14 +674,20 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
     }
 
     private func beginDurableRequestLocked() {
+        let existing = localStore.activeSnapshot().flatMap { snapshot in
+            snapshot.requestID == requestID ? snapshot : nil
+        }
         let snapshot = DiagnosticActiveRequestSnapshot(
             diagnosticSessionID: diagnosticSessionID, requestID: requestID, requestGeneration: requestGeneration,
             build: Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0") ?? 0,
             eventSequence: entries.count, lastStage: entries.last?.marker ?? "REQUEST_CREATED", lastPRE: nil, lastPOST: nil,
             selectedCapability: nil, terminal: false, terminalState: nil,
             detailedDiagnosticsConsent: detailedDiagnosticsEnabled,
+            latestPartialTranscript: existing?.latestPartialTranscript,
             finalSpeechTranscript: detailedDiagnosticsEnabled ? finalSpeechTranscript : nil,
             normalizedTranscript: detailedDiagnosticsEnabled ? normalizedTranscript : nil,
+            diagnosticAudioRelativePath: existing?.diagnosticAudioRelativePath,
+            diagnosticAudioTruncated: existing?.diagnosticAudioTruncated,
             updatedAt: .now
         )
         localStore.begin(snapshot)
@@ -469,7 +743,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
     }
 
     private static func privacySafeTranscript(_ value: String) -> String {
-        var result = String(value.prefix(512))
+        var result = value.precomposedStringWithCanonicalMapping
         let patterns = [
             #"(?i)https?://\S+"#,
             #"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}"#,
@@ -749,7 +1023,7 @@ struct VoiceAudioCaptureLifecycle {
     func stop() { backend.stop() }
 }
 
-private final class VoiceRecognitionRequestSink: @unchecked Sendable {
+final class VoiceRecognitionRequestSink: @unchecked Sendable {
     private let request: SFSpeechAudioBufferRecognitionRequest
     private let lock = NSLock()
     private var appendedCount = 0
@@ -915,10 +1189,12 @@ final class VoiceInputController {
         do {
             task = recognizer.recognitionTask(with: request, resultHandler: Self.makeRecognitionHandler(owner: self, sessionID: sessionID))
             LocalVoiceDiagnosticReport.shared.record("recognition_task_created")
+            LocalVoiceDiagnosticReport.shared.beginCommandAudioRecording()
             let speechActivity = speechActivity
             try capture.start { buffer in
                 speechActivity.record(buffer)
                 requestSink.append(buffer)
+                LocalVoiceDiagnosticReport.shared.appendCommandAudioBuffer(buffer)
             }
             guard owns(sessionID) else {
                 stop(reason: .sessionRestart, ownedBy: sessionID)
@@ -968,6 +1244,7 @@ final class VoiceInputController {
         LocalVoiceDiagnosticReport.shared.record("recognition_task_cancelled", "reason=\(reason.rawValue) had_task=\(hadTask)")
         LocalVoiceDiagnosticReport.shared.record("end_audio_called", "reason=\(reason.rawValue) had_request=\(hadRequest)")
         capture.stop()
+        LocalVoiceDiagnosticReport.shared.finishCommandAudioRecording(reason: reason)
         if state == .listening || state == .requestingPermission { setState(.idle) }
     }
 
@@ -1037,6 +1314,7 @@ final class VoiceInputController {
         LocalVoiceDiagnosticReport.shared.record("recognition_task_finished", "reason=endOfSpeech")
         task.finish()
         capture.stop()
+        LocalVoiceDiagnosticReport.shared.finishCommandAudioRecording(reason: .recognitionFinal)
     }
 
     func handleAudioInterruptionBegan() {

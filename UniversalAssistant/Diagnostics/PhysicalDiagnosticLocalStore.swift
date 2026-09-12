@@ -69,8 +69,12 @@ struct DiagnosticActiveRequestSnapshot: Codable, Equatable, Sendable {
     var terminal: Bool
     var terminalState: DiagnosticTerminalState?
     var detailedDiagnosticsConsent: Bool = false
+    var latestPartialTranscript: String? = nil
     var finalSpeechTranscript: String? = nil
     var normalizedTranscript: String? = nil
+    var diagnosticAudioRelativePath: String? = nil
+    var diagnosticAudioTruncated: Bool? = nil
+    var diagnosticAudioDurationMilliseconds: Int? = nil
     var updatedAt: Date
 }
 
@@ -89,6 +93,43 @@ struct DiagnosticDeliveryReceipt: Codable, Equatable, Sendable {
     let sessionID: UUID
     let uploadedAt: Date
     let eventCount: Int
+}
+
+enum CloudKitDiagnosticAudioUploadState: String, Codable, Sendable {
+    case pending = "PENDING_UPLOAD"
+    case retrying = "RETRYING"
+    case uploadedAwaitingVerification = "UPLOADED_AWAITING_VERIFICATION"
+}
+
+struct CloudKitDiagnosticAudioMetadata: Codable, Equatable, Sendable {
+    let recordName: String
+    let requestID: UUID
+    let diagnosticSessionID: UUID
+    let physicalBuild: Int
+    let appVersion: String
+    let deviceModel: String
+    let systemVersion: String
+    let capturedAt: Date
+    let durationMilliseconds: Int
+    let audioByteCount: Int
+    let audioSHA256: String
+    let audioTruncated: Bool
+    var pinned: Bool
+}
+
+struct CloudKitDiagnosticAudioUpload: Codable, Equatable, Sendable {
+    var metadata: CloudKitDiagnosticAudioMetadata
+    let audioRelativePath: String
+    var attempts: Int
+    var nextAttemptAt: Date
+    var state: CloudKitDiagnosticAudioUploadState
+    var lastErrorCategory: String?
+    var idempotencyKey: String { metadata.recordName }
+}
+
+struct CloudKitDiagnosticAudioReceipt: Codable, Equatable, Sendable {
+    let metadata: CloudKitDiagnosticAudioMetadata
+    let verifiedAt: Date
 }
 
 struct DiagnosticBlackBoxStatus: Codable, Equatable, Sendable {
@@ -145,8 +186,11 @@ final class PhysicalDiagnosticLocalStore: @unchecked Sendable {
     let rootDirectory: URL
     private let activeFile: URL
     private let eventDirectory: URL
+    private let audioDirectory: URL
     private let pendingFile: URL
     private let receiptFile: URL
+    private let cloudKitAudioQueueFile: URL
+    private let cloudKitAudioReceiptFile: URL
     private let anomalyFile: URL
     private let statusFile: URL
     private let lastUncleanFile: URL
@@ -154,6 +198,7 @@ final class PhysicalDiagnosticLocalStore: @unchecked Sendable {
     private let maxEventFiles: Int
     private let maxPending: Int
     private let maxReceipts: Int
+    private let maxAudioFiles = 30
 
     init(
         rootDirectory: URL? = nil,
@@ -170,8 +215,11 @@ final class PhysicalDiagnosticLocalStore: @unchecked Sendable {
         self.rootDirectory = base
         activeFile = base.appendingPathComponent("active-request.json")
         eventDirectory = base.appendingPathComponent("events", isDirectory: true)
+        audioDirectory = base.appendingPathComponent("audio", isDirectory: true)
         pendingFile = base.appendingPathComponent("pending-uploads.json")
         receiptFile = base.appendingPathComponent("uploaded-receipts.json")
+        cloudKitAudioQueueFile = base.appendingPathComponent("cloudkit-audio-queue.json")
+        cloudKitAudioReceiptFile = base.appendingPathComponent("cloudkit-audio-receipts.json")
         anomalyFile = base.appendingPathComponent("last-anomaly.json")
         statusFile = base.appendingPathComponent("delivery-status.json")
         lastUncleanFile = base.appendingPathComponent("last-unclean-request.json")
@@ -199,8 +247,12 @@ final class PhysicalDiagnosticLocalStore: @unchecked Sendable {
         generation: UInt64? = nil,
         terminal: DiagnosticTerminalState? = nil,
         detailedDiagnosticsConsent: Bool? = nil,
+        latestPartialTranscript: String? = nil,
         finalSpeechTranscript: String? = nil,
-        normalizedTranscript: String? = nil
+        normalizedTranscript: String? = nil,
+        diagnosticAudioRelativePath: String? = nil,
+        diagnosticAudioTruncated: Bool? = nil,
+        diagnosticAudioDurationMilliseconds: Int? = nil
     ) {
         lock.withLock {
             guard var value: DiagnosticActiveRequestSnapshot = decode(activeFile) else { return }
@@ -224,8 +276,14 @@ final class PhysicalDiagnosticLocalStore: @unchecked Sendable {
             if let generation { value.requestGeneration = generation }
             if let terminal { value.terminal = true; value.terminalState = terminal }
             if let detailedDiagnosticsConsent { value.detailedDiagnosticsConsent = detailedDiagnosticsConsent }
+            if let latestPartialTranscript { value.latestPartialTranscript = latestPartialTranscript }
             if let finalSpeechTranscript { value.finalSpeechTranscript = finalSpeechTranscript }
             if let normalizedTranscript { value.normalizedTranscript = normalizedTranscript }
+            if let diagnosticAudioRelativePath { value.diagnosticAudioRelativePath = diagnosticAudioRelativePath }
+            if let diagnosticAudioTruncated { value.diagnosticAudioTruncated = diagnosticAudioTruncated }
+            if let diagnosticAudioDurationMilliseconds {
+                value.diagnosticAudioDurationMilliseconds = max(0, diagnosticAudioDurationMilliseconds)
+            }
             value.updatedAt = .now
             writeAtomic(value, to: activeFile)
         }
@@ -273,6 +331,96 @@ final class PhysicalDiagnosticLocalStore: @unchecked Sendable {
         return Array(matching.suffix(max(0, limit)))
     }
 
+    /// Stable private on-device destination for audio copied from the existing
+    /// Speech tap. This method never starts capture or performs network I/O.
+    func diagnosticAudioURL(for requestID: UUID) -> URL {
+        lock.withLock {
+            ensureDirectoriesLocked()
+            pruneAudioLocked()
+            return audioDirectory.appendingPathComponent("\(requestID.uuidString.lowercased()).caf")
+        }
+    }
+
+    func diagnosticAudioRelativePath(for requestID: UUID) -> String {
+        "audio/\(requestID.uuidString.lowercased()).caf"
+    }
+    func diagnosticAudioURL(relativePath: String) -> URL? {
+        lock.withLock { validatedAudioURLLocked(relativePath: relativePath) }
+    }
+
+    @discardableResult
+    func addCloudKitAudioPending(_ value: CloudKitDiagnosticAudioUpload) -> Bool {
+        lock.withLock {
+            var values: [CloudKitDiagnosticAudioUpload] = decode(cloudKitAudioQueueFile) ?? []
+            let receipts: [CloudKitDiagnosticAudioReceipt] = decode(cloudKitAudioReceiptFile) ?? []
+            if receipts.contains(where: { $0.metadata.recordName == value.metadata.recordName }) { return true }
+            if values.contains(where: { $0.idempotencyKey == value.idempotencyKey }) { return true }
+            guard values.count < maxPending,
+                  validatedAudioURLLocked(relativePath: value.audioRelativePath) != nil else { return false }
+            values.append(value)
+            writeAtomic(values, to: cloudKitAudioQueueFile)
+            return true
+        }
+    }
+
+    func loadCloudKitAudioPending() -> [CloudKitDiagnosticAudioUpload] {
+        lock.withLock { decode(cloudKitAudioQueueFile) ?? [] }
+    }
+
+    func saveCloudKitAudioPending(_ values: [CloudKitDiagnosticAudioUpload]) {
+        lock.withLock { writeAtomic(Array(values.prefix(maxPending)), to: cloudKitAudioQueueFile) }
+    }
+
+    func markCloudKitAudioVerified(_ value: CloudKitDiagnosticAudioUpload, verifiedAt: Date) {
+        lock.withLock {
+            var pending: [CloudKitDiagnosticAudioUpload] = decode(cloudKitAudioQueueFile) ?? []
+            pending.removeAll { $0.idempotencyKey == value.idempotencyKey }
+            writeAtomic(pending, to: cloudKitAudioQueueFile)
+            var receipts: [CloudKitDiagnosticAudioReceipt] = decode(cloudKitAudioReceiptFile) ?? []
+            if !receipts.contains(where: { $0.metadata.recordName == value.metadata.recordName }) {
+                receipts.append(.init(metadata: value.metadata, verifiedAt: verifiedAt))
+            }
+            writeAtomic(Array(receipts.suffix(maxReceipts)), to: cloudKitAudioReceiptFile)
+            if let audioURL = validatedAudioURLLocked(relativePath: value.audioRelativePath) {
+                try? fileManager.removeItem(at: audioURL)
+            }
+        }
+    }
+
+    func cloudKitAudioReceipts() -> [CloudKitDiagnosticAudioReceipt] {
+        lock.withLock { decode(cloudKitAudioReceiptFile) ?? [] }
+    }
+
+    func removeCloudKitAudioReceipts(recordNames: Set<String>) {
+        guard !recordNames.isEmpty else { return }
+        lock.withLock {
+            let receipts: [CloudKitDiagnosticAudioReceipt] = decode(cloudKitAudioReceiptFile) ?? []
+            writeAtomic(
+                receipts.filter { !recordNames.contains($0.metadata.recordName) },
+                to: cloudKitAudioReceiptFile
+            )
+        }
+    }
+
+    func setCloudKitAudioPinned(requestID: UUID, pinned: Bool) {
+        lock.withLock {
+            var pending: [CloudKitDiagnosticAudioUpload] = decode(cloudKitAudioQueueFile) ?? []
+            for index in pending.indices where pending[index].metadata.requestID == requestID {
+                pending[index].metadata.pinned = pinned
+            }
+            writeAtomic(pending, to: cloudKitAudioQueueFile)
+
+            var receipts: [CloudKitDiagnosticAudioReceipt] = decode(cloudKitAudioReceiptFile) ?? []
+            receipts = receipts.map { receipt in
+                guard receipt.metadata.requestID == requestID else { return receipt }
+                var metadata = receipt.metadata
+                metadata.pinned = pinned
+                return .init(metadata: metadata, verifiedAt: receipt.verifiedAt)
+            }
+            writeAtomic(receipts, to: cloudKitAudioReceiptFile)
+        }
+
+    }
     func activeSnapshot() -> DiagnosticActiveRequestSnapshot? { lock.withLock { decode(activeFile) } }
 
     func clearTerminalActiveRequest() {
@@ -422,9 +570,10 @@ final class PhysicalDiagnosticLocalStore: @unchecked Sendable {
 
     func allFilesForExport() -> [URL] {
         lock.withLock {
-            var values = [activeFile, pendingFile, receiptFile, anomalyFile, statusFile,
-                          lastUncleanFile]
+            var values = [activeFile, pendingFile, receiptFile, cloudKitAudioQueueFile,
+                          cloudKitAudioReceiptFile, anomalyFile, statusFile, lastUncleanFile]
             values += (0..<maxEventFiles).map { eventDirectory.appendingPathComponent("requests-\($0).jsonl") }
+            values += (try? fileManager.contentsOfDirectory(at: audioDirectory, includingPropertiesForKeys: nil)) ?? []
             let appleDirectory = rootDirectory.appendingPathComponent("apple_diagnostics", isDirectory: true)
             values += (try? fileManager.contentsOfDirectory(at: appleDirectory, includingPropertiesForKeys: nil)) ?? []
             return values.filter { fileManager.fileExists(atPath: $0.path) }
@@ -434,8 +583,42 @@ final class PhysicalDiagnosticLocalStore: @unchecked Sendable {
     private func ensureDirectoriesLocked() {
         try? fileManager.createDirectory(at: rootDirectory, withIntermediateDirectories: true)
         try? fileManager.createDirectory(at: eventDirectory, withIntermediateDirectories: true)
+        try? fileManager.createDirectory(at: audioDirectory, withIntermediateDirectories: true)
         var values = URLResourceValues(); values.isExcludedFromBackup = true
         var root = rootDirectory; try? root.setResourceValues(values)
+    }
+
+    private func pruneAudioLocked() {
+        let files = (try? fileManager.contentsOfDirectory(
+            at: audioDirectory,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+        let ordered = files.sorted {
+            let lhs = (try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+            let rhs = (try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+            return lhs > rhs
+        }
+        let pending: [CloudKitDiagnosticAudioUpload] = decode(cloudKitAudioQueueFile) ?? []
+        var protected = Set(pending.map(\.audioRelativePath))
+        if let active: DiagnosticActiveRequestSnapshot = decode(activeFile),
+           let path = active.diagnosticAudioRelativePath {
+            protected.insert(path)
+        }
+        for stale in ordered.dropFirst(maxAudioFiles) {
+            let relative = "audio/\(stale.lastPathComponent)"
+            if !protected.contains(relative) { try? fileManager.removeItem(at: stale) }
+        }
+    }
+
+    private func validatedAudioURLLocked(relativePath: String) -> URL? {
+        guard relativePath.hasPrefix("audio/"),
+              !relativePath.contains(".."),
+              relativePath.split(separator: "/").count == 2 else { return nil }
+        let candidate = rootDirectory.appendingPathComponent(relativePath).standardizedFileURL
+        guard candidate.deletingLastPathComponent() == audioDirectory.standardizedFileURL,
+              fileManager.fileExists(atPath: candidate.path) else { return nil }
+        return candidate
     }
 
     private func rotateIfNeededLocked(additionalBytes: Int) {
@@ -599,8 +782,8 @@ enum DiagnosticExportBuilder {
             "schema": "2",
             "build": String(build),
             "createdAt": ISO8601DateFormatter().string(from: now),
-            "rawAudioStored": "false",
-            "primaryDelivery": "existing_vps_diagnostics"
+            "commandAudioStored": "locally_when_detailed_diagnostics_enabled",
+            "primaryDelivery": "firebase_crashlytics_text"
         ]
         entries.append(("manifest.json", try JSONSerialization.data(withJSONObject: manifest, options: [.sortedKeys])))
 
@@ -633,6 +816,10 @@ enum DiagnosticExportBuilder {
             }
         }
 
+        let audioFiles = localFiles.filter { $0.deletingLastPathComponent().lastPathComponent == "audio" }
+        for file in audioFiles.prefix(30) {
+            entries.append(("audio/\(file.lastPathComponent)", try Data(contentsOf: file)))
+        }
         let summary = """
         Діагностика UniversalAssistant
         Build: \(build)
@@ -642,7 +829,7 @@ enum DiagnosticExportBuilder {
         Останній етап: \(status.lastStage ?? "немає")
         Остання аномалія: \(status.lastAnomaly?.anomalyClass.rawValue ?? "немає")
         Apple diagnostics: \(status.appleDiagnosticCount)
-        Raw microphone audio: не зберігається
+        Command audio: локально, якщо детальна діагностика ввімкнена
         """
         entries.append(("human_summary_uk.txt", Data(summary.utf8)))
 

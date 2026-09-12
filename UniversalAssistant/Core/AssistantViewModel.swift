@@ -228,6 +228,7 @@ final class AssistantViewModel {
         eventKitExecutionInFlight = false
         capabilityExecutionInFlight = false
         let submittedInput = input
+        LocalVoiceDiagnosticReport.shared.recordSubmittedInputIfNeeded(submittedInput)
         if let target = translationFollowUpTarget(submittedInput), let translation = currentContext.freshTranslation() {
             input = ""
             startTranslation(translation.sourceText, target)

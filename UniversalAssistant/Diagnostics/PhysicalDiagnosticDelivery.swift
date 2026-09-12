@@ -21,6 +21,9 @@ struct PhysicalDiagnosticEvent: Codable, Equatable, Sendable {
     var requestID: UUID? = nil
     var requestGeneration: UInt64? = nil
     var build: Int? = nil
+    /// Detailed transcript evidence is separate from tokenized attributes so
+    /// whitespace and punctuation survive persistence intact.
+    var textPayload: String? = nil
 }
 
 struct PhysicalDiagnosticSession: Codable, Equatable, Sendable, Identifiable {
@@ -50,6 +53,9 @@ struct PhysicalDiagnosticSession: Codable, Equatable, Sendable, Identifiable {
     var detailedDiagnosticsConsent: Bool? = nil
     var finalSpeechTranscript: String? = nil
     var normalizedTranscript: String? = nil
+    var diagnosticAudioRelativePath: String? = nil
+    var diagnosticAudioTruncated: Bool? = nil
+    var diagnosticAudioDurationMilliseconds: Int? = nil
     var anomaly: DiagnosticAnomaly? = nil
     var appleDiagnosticJSON: String? = nil
     var id: UUID { sessionID }
@@ -194,6 +200,7 @@ actor PhysicalDiagnosticDelivery {
     }
 
     func enqueue(_ session: PhysicalDiagnosticSession, now: Date = .now) async {
+        await CloudKitDiagnosticAudioDelivery.shared.enqueue(session, now: now)
         localStore.addPending(.init(session: session, attempts: 0, expiresAt: now.addingTimeInterval(7 * 86_400),
                                     nextAttemptAt: now, status: .pendingUpload,
                                     lastHTTPStatus: nil, errorCategory: nil))
@@ -204,6 +211,7 @@ actor PhysicalDiagnosticDelivery {
     }
 
     func flush(now: Date = .now) async {
+        await CloudKitDiagnosticAudioDelivery.shared.flush(now: now)
         guard await enabled(), !flushing else { return }
         flushing = true; defer { flushing = false }
         var queue = localStore.loadPending(now: now)

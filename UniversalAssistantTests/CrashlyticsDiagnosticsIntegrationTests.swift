@@ -1,3 +1,8 @@
+import AVFoundation
+import CryptoKit
+import Speech
+import FirebaseCore
+import FirebaseCrashlytics
 import Foundation
 import Testing
 @testable import UniversalAssistant
@@ -134,7 +139,7 @@ struct CrashlyticsDiagnosticsIntegrationTests {
         #expect(hasRequestBegin)
         #expect(hasDetailedDisabledMarker)
         #expect(leakedDetailedText == false)
-        #expect(client.value(for: "ua_transcript") == nil)
+        #expect(client.value(for: "ua_transcript") == "")
         #expect(client.errors.isEmpty)
     }
 
@@ -207,7 +212,7 @@ struct CrashlyticsDiagnosticsIntegrationTests {
         let hasSelectedCapability = eventMarkers.contains("selected_capability")
         let hasMapKitPre = eventMarkers.contains("MAPKIT_SEARCH_PRE")
         let hasMapKitPost = eventMarkers.contains("MAPKIT_SEARCH_POST")
-        let terminalEventIsLast = eventMarkers.last == "terminal_request_state"
+        let terminalThenRequestEnd = Array(eventMarkers.suffix(2)) == ["terminal_request_state", "request_end"]
         let allEventsOwned = recorder.events.allSatisfy { $0.identity.requestID == session.requestID }
         let terminalRequestIDsMatch = recorder.terminals.map(\.requestID) == [session.requestID]
         #expect(transcriptsAreDetailed)
@@ -215,7 +220,7 @@ struct CrashlyticsDiagnosticsIntegrationTests {
         #expect(hasSelectedCapability)
         #expect(hasMapKitPre)
         #expect(hasMapKitPost)
-        #expect(terminalEventIsLast)
+        #expect(terminalThenRequestEnd)
         #expect(allEventsOwned)
         #expect(terminalRequestIDsMatch)
     }
@@ -271,6 +276,207 @@ struct CrashlyticsDiagnosticsIntegrationTests {
         #expect(client.errors.map(\.domain) == ["UA_METRICKIT_PAYLOAD"])
     }
 
+
+    @Test @MainActor func oneVoiceRequestIsLocallyDurableAndReconstructableFromCrashlyticsAndCloudKit() async throws {
+        let client = RecordingCrashlyticsClient()
+        let bridge = CrashlyticsDiagnosticBridge(client: client, readiness: { true })
+        let defaults = UserDefaults(suiteName: "ua-diagnostics-e2e-\(UUID().uuidString)")!
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ua-diagnostics-e2e-\(UUID().uuidString)", isDirectory: true)
+        let store = PhysicalDiagnosticLocalStore(rootDirectory: root)
+        let report = LocalVoiceDiagnosticReport(
+            defaults: defaults,
+            persistenceKey: "targeted-e2e",
+            localStore: store,
+            crashlyticsRecorder: bridge
+        )
+        report.detailedDiagnosticsEnabled = true
+        report.reset()
+        let requestID = report.currentRequestIdentifier
+
+        report.record("mic_tap", "source=targeted_e2e")
+        report.record("start_listening_invoked")
+        report.beginCommandAudioRecording()
+
+        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 16_000, channels: 1))
+        let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 640))
+        buffer.frameLength = 640
+        if let channel = buffer.floatChannelData?[0] {
+            for index in 0..<Int(buffer.frameLength) {
+                channel[index] = sin(Float(index) * 0.07) * 0.05
+            }
+        }
+        let speechRequest = SFSpeechAudioBufferRecognitionRequest()
+        let speechSink = VoiceRecognitionRequestSink(speechRequest)
+        let oneExistingTap = AppleVoiceAudioCaptureBackend.makeTapHandler { sameBuffer in
+            speechSink.append(sameBuffer)
+            report.appendCommandAudioBuffer(sameBuffer)
+        }
+        oneExistingTap(buffer, AVAudioTime())
+
+        report.recordSpeechTranscript("Знайди", isFinal: false)
+        report.recordSpeechTranscript("Знайди кав’ярню біля вокзалу", isFinal: false)
+        report.recordSpeechTranscript("Знайди кав’ярню біля вокзалу", isFinal: true)
+        report.finishCommandAudioRecording(reason: .recognitionFinal)
+        report.record("transcript_delivered_to_router", "length=29")
+        report.beginHomeRequest(generation: 91)
+        report.recordSubmittedInputIfNeeded("Знайди кав’ярню біля вокзалу")
+        report.recordNormalizedTranscript("знайти кав’ярню біля вокзалу")
+        report.record(
+            "canonical_semantic_frame",
+            "action=place_search object=cafe location=station constraint_count=1"
+        )
+        report.record("selected_capability", "capability=placeSearch route=MapKit provider=MapKit")
+        report.record("router_accepted", "capability=placeSearch route=MapKit")
+        report.recordBoundaryPre("MAPKIT_SEARCH", "mechanism=MKLocalSearch capability=placeSearch")
+        report.record("execution_started", "mechanism=MKLocalSearch capability=placeSearch")
+        report.recordBoundaryPost("MAPKIT_SEARCH", "mechanism=MKLocalSearch result=success")
+        report.record("visible_result", "kind=place_list result=success")
+        report.recordTerminal(.success)
+        let session = try #require(report.completedSession())
+
+        #expect(session.requestID == requestID)
+        #expect(session.events.last?.marker == "request_end")
+        #expect(session.events.filter { $0.marker == "terminal_request_state" }.count == 1)
+        #expect(session.finalSpeechTranscript == "Знайди кав’ярню біля вокзалу")
+        #expect(session.normalizedTranscript == "знайти кав’ярню біля вокзалу")
+        let localAudioPath = try #require(session.diagnosticAudioRelativePath)
+        let localAudio = root.appendingPathComponent(localAudioPath)
+        #expect(FileManager.default.fileExists(atPath: localAudio.path))
+        #expect((try localAudio.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) > 0)
+
+        let relaunchedStore = PhysicalDiagnosticLocalStore(rootDirectory: root)
+        let durableEvents = relaunchedStore.events(for: requestID, limit: 1_000)
+        #expect(!durableEvents.isEmpty)
+        #expect(durableEvents.allSatisfy { $0.requestID == requestID })
+        #expect(durableEvents.contains { $0.marker == "partial_transcript" && $0.textPayload == "Знайди" })
+        #expect(durableEvents.contains {
+            $0.marker == "final_transcript" && $0.textPayload == "Знайди кав’ярню біля вокзалу"
+        })
+        #expect(durableEvents.contains {
+            $0.marker == "normalization" && $0.textPayload == "знайти кав’ярню біля вокзалу"
+        })
+        #expect(durableEvents.last?.marker == "request_end")
+        #expect(FileManager.default.fileExists(atPath: localAudio.path))
+
+        let chunkCount = try #require(Int(client.value(for: "ua_trace_chunk_count") ?? ""))
+        let encodedTrace = (0..<chunkCount).compactMap {
+            client.value(for: String(format: "ua_trace_%02d", $0))
+        }.joined()
+        let traceData = try #require(Data(base64Encoded: encodedTrace))
+        let snapshot = try JSONDecoder().decode(CrashlyticsRequestTraceSnapshot.self, from: traceData)
+        let markers = snapshot.events.map(\.marker)
+
+        #expect(snapshot.requestID == requestID)
+        #expect(snapshot.generation == 91)
+        #expect(snapshot.partialTranscripts == ["Знайди", "Знайди кав’ярню біля вокзалу"])
+        #expect(snapshot.finalTranscript == "Знайди кав’ярню біля вокзалу")
+        #expect(snapshot.normalizedTranscript == "знайти кав’ярню біля вокзалу")
+        #expect(snapshot.audioRelativePath == localAudioPath)
+        #expect(markers.contains("canonical_semantic_frame"))
+        #expect(markers.contains("selected_capability"))
+        #expect(markers.contains("router_accepted"))
+        #expect(markers.contains("MAPKIT_SEARCH_PRE"))
+        #expect(markers.contains("MAPKIT_SEARCH_POST"))
+        #expect(markers.contains("execution_started"))
+        #expect(markers.contains("visible_result"))
+        #expect(markers.contains("terminal_request_state"))
+        #expect(markers.last == "request_end")
+        #expect(snapshot.terminalState == DiagnosticTerminalState.success.rawValue)
+        #expect(snapshot.result == PhysicalDiagnosticResult.success.rawValue)
+        #expect(client.errors.map(\.domain) == ["UA_DIAGNOSTIC_COMMAND_TRACE"])
+
+        var liveAudioExportURL: URL?
+        if ProcessInfo.processInfo.environment["UA_FIREBASE_LIVE_E2E"] == "1" {
+            let exportURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("ua-firebase-live-\(requestID.uuidString.lowercased()).caf")
+            try FileManager.default.copyItem(at: localAudio, to: exportURL)
+            liveAudioExportURL = exportURL
+        }
+        let cloudKit = CloudKitDiagnosticAudioTestDatabase(failSaves: true)
+        let audioDelivery = CloudKitDiagnosticAudioDelivery(
+            database: cloudKit,
+            localStore: relaunchedStore,
+            enabled: { true }
+        )
+        let firstAttempt = Date(timeIntervalSince1970: 2_000)
+        await audioDelivery.enqueue(session, now: firstAttempt)
+
+        let firstPendingCount = await audioDelivery.pendingUploads().count
+        let firstSavedRecordCount = await cloudKit.savedRecordCount()
+        #expect(FileManager.default.fileExists(atPath: localAudio.path))
+        #expect(firstPendingCount == 1)
+        #expect(firstSavedRecordCount == 0)
+
+        await cloudKit.setFailSaves(false)
+        await audioDelivery.flush(now: firstAttempt.addingTimeInterval(3))
+        let recordName = "ua-audio-\(requestID.uuidString.lowercased())"
+        let audioReadback = try await cloudKit.readBack(recordName: recordName)
+        let pendingAfterReadback = await audioDelivery.pendingUploads()
+        let receiptRequestIDs = await audioDelivery.verifiedReceipts().map(\.metadata.requestID)
+        let saveAttempts = await cloudKit.saveAttempts()
+        let savedRecordCount = await cloudKit.savedRecordCount()
+
+        #expect(audioReadback.metadata.requestID == snapshot.requestID)
+        #expect(audioReadback.metadata.diagnosticSessionID == session.diagnosticSessionID)
+        #expect(audioReadback.downloadedByteCount == audioReadback.metadata.audioByteCount)
+        #expect(audioReadback.downloadedSHA256 == audioReadback.metadata.audioSHA256)
+        #expect(pendingAfterReadback.isEmpty)
+        #expect(receiptRequestIDs == [requestID])
+        #expect(!FileManager.default.fileExists(atPath: localAudio.path))
+        #expect(saveAttempts == 2)
+        #expect(savedRecordCount == 1)
+
+        let pinnedRequestID = UUID()
+        let pinnedMetadata = await cloudKit.seed(build: session.build - 4, requestID: pinnedRequestID)
+        let obsoleteMetadata = await cloudKit.seed(build: session.build - 3, requestID: UUID())
+        let previousTwoMetadata = await cloudKit.seed(build: session.build - 2, requestID: UUID())
+        let previousMetadata = await cloudKit.seed(build: session.build - 1, requestID: UUID())
+        for metadata in [pinnedMetadata, obsoleteMetadata, previousTwoMetadata, previousMetadata] {
+            relaunchedStore.markCloudKitAudioVerified(
+                .init(
+                    metadata: metadata,
+                    audioRelativePath: "audio/\(metadata.requestID.uuidString.lowercased()).caf",
+                    attempts: 0,
+                    nextAttemptAt: firstAttempt,
+                    state: .uploadedAwaitingVerification,
+                    lastErrorCategory: nil
+                ),
+                verifiedAt: firstAttempt
+            )
+        }
+        try await audioDelivery.setPinned(requestID: pinnedRequestID, pinned: true)
+        await cloudKit.setFailMetadataReads(true)
+        await audioDelivery.flush(now: firstAttempt.addingTimeInterval(4))
+        await cloudKit.setFailMetadataReads(false)
+
+        let retained = try await cloudKit.allMetadata()
+        let retainedReceipts = relaunchedStore.cloudKitAudioReceipts()
+        let retainedBuilds = Set([session.build - 4, session.build - 2, session.build - 1, session.build])
+        #expect(Set(retained.map(\.physicalBuild)) == retainedBuilds)
+        #expect(Set(retainedReceipts.map { $0.metadata.physicalBuild }) == retainedBuilds)
+        #expect(retained.first(where: { $0.requestID == pinnedRequestID })?.pinned == true)
+        #expect(retainedReceipts.first(where: { $0.metadata.requestID == pinnedRequestID })?.metadata.pinned == true)
+
+        if ProcessInfo.processInfo.environment["UA_FIREBASE_LIVE_E2E"] == "1" {
+            if FirebaseApp.app() == nil { FirebaseApp.configure() }
+            CrashlyticsDiagnosticBridge.configureTargetedValidationCollection()
+            let liveBridge = CrashlyticsDiagnosticBridge()
+            let liveIdentity = CrashlyticsDiagnosticRequestIdentity(
+                diagnosticSessionID: session.diagnosticSessionID ?? session.sessionID,
+                requestID: requestID,
+                generation: session.requestGeneration ?? 0,
+                appVersion: session.appVersion,
+                build: session.build
+            )
+            liveBridge.beginRequest(liveIdentity, inputMode: "voice")
+            liveBridge.recordTerminal(session)
+            Crashlytics.crashlytics().sendUnsentReports()
+            print("UA_FIREBASE_E2E_REQUEST_ID=\(requestID.uuidString)")
+            print("UA_FIREBASE_E2E_AUDIO_PATH=\(liveAudioExportURL?.path ?? "missing")")
+            try await Task.sleep(for: .seconds(8))
+        }
+    }
 
     private func makeSession(
         diagnosticSessionID: UUID,
@@ -359,6 +565,16 @@ private final class RecordingDiagnosticRecorder: CrashlyticsDiagnosticRecording,
         identity: CrashlyticsDiagnosticRequestIdentity
     ) {
         lock.withLock { storedEvents.append(.init(marker: marker, sequence: sequence, identity: identity)) }
+    }
+    func recordPartialTranscript(
+        _ transcript: String,
+        sequence: Int,
+        identity: CrashlyticsDiagnosticRequestIdentity,
+        detailedDiagnosticsEnabled: Bool
+    ) {
+        lock.withLock {
+            storedTranscripts.append(.init(text: transcript, normalized: false, detailed: detailedDiagnosticsEnabled))
+        }
     }
 
     func recordTranscript(
