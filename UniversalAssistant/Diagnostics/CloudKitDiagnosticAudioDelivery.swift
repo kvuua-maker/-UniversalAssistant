@@ -16,6 +16,9 @@ struct CloudKitDiagnosticAudioReadback: Equatable, Sendable {
     let metadata: CloudKitDiagnosticAudioMetadata
     let downloadedByteCount: Int
     let downloadedSHA256: String
+    var requestTrace: PhysicalDiagnosticSession? = nil
+    var downloadedTraceByteCount: Int? = nil
+    var downloadedTraceSHA256: String? = nil
 }
 
 protocol CloudKitDiagnosticAudioDatabase: Sendable {
@@ -29,7 +32,11 @@ protocol CloudKitDiagnosticAudioDatabase: Sendable {
 enum DiagnosticAudioSHA256 {
     static func hex(of url: URL) throws -> String {
         let data = try Data(contentsOf: url, options: [.mappedIfSafe])
-        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        return hex(of: data)
+    }
+
+    static func hex(of data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 }
 
@@ -61,12 +68,27 @@ actor SystemCloudKitDiagnosticAudioDatabase: CloudKitDiagnosticAudioDatabase {
         guard FileManager.default.fileExists(atPath: audioURL.path) else {
             throw CloudKitDiagnosticAudioError.missingLocalAudio
         }
+        let traceData = upload.requestTrace.flatMap { try? JSONEncoder.diagnostic.encode($0) }
 
         let recordID = CKRecord.ID(recordName: upload.metadata.recordName)
         do {
             let existing = try await database.record(for: recordID)
             guard existing["audioSHA256"] as? String == upload.metadata.audioSHA256 else {
                 throw CloudKitDiagnosticAudioError.idempotencyConflict
+            }
+            if let traceData {
+                let traceSHA256 = DiagnosticAudioSHA256.hex(of: traceData)
+                if let existingSHA256 = existing["requestTraceSHA256"] as? String,
+                   existingSHA256 != traceSHA256 {
+                    throw CloudKitDiagnosticAudioError.idempotencyConflict
+                }
+                if existing["requestTrace"] == nil {
+                    existing["schemaVersion"] = NSNumber(value: 2)
+                    existing["requestTrace"] = traceData as NSData
+                    existing["requestTraceByteCount"] = NSNumber(value: traceData.count)
+                    existing["requestTraceSHA256"] = traceSHA256 as NSString
+                    _ = try await database.save(existing)
+                }
             }
             return
         } catch let error as CKError where error.code == .unknownItem {
@@ -75,7 +97,7 @@ actor SystemCloudKitDiagnosticAudioDatabase: CloudKitDiagnosticAudioDatabase {
 
         let metadata = upload.metadata
         let record = CKRecord(recordType: Self.recordType, recordID: recordID)
-        record["schemaVersion"] = NSNumber(value: 1)
+        record["schemaVersion"] = NSNumber(value: traceData == nil ? 1 : 2)
         record["requestID"] = metadata.requestID.uuidString.lowercased() as NSString
         record["diagnosticSessionID"] = metadata.diagnosticSessionID.uuidString.lowercased() as NSString
         record["physicalBuild"] = NSNumber(value: metadata.physicalBuild)
@@ -89,6 +111,11 @@ actor SystemCloudKitDiagnosticAudioDatabase: CloudKitDiagnosticAudioDatabase {
         record["audioTruncated"] = NSNumber(value: metadata.audioTruncated)
         record["pinned"] = NSNumber(value: metadata.pinned)
         record["audio"] = CKAsset(fileURL: audioURL)
+        if let traceData {
+            record["requestTrace"] = traceData as NSData
+            record["requestTraceByteCount"] = NSNumber(value: traceData.count)
+            record["requestTraceSHA256"] = DiagnosticAudioSHA256.hex(of: traceData) as NSString
+        }
         _ = try await database.save(record)
     }
 
@@ -102,10 +129,18 @@ actor SystemCloudKitDiagnosticAudioDatabase: CloudKitDiagnosticAudioDatabase {
         }
         let byteCount = (try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
         let checksum = try DiagnosticAudioSHA256.hex(of: fileURL)
+        let traceData = record["requestTrace"] as? Data
+        let trace = traceData.flatMap { try? JSONDecoder.diagnostic.decode(PhysicalDiagnosticSession.self, from: $0) }
+        if let trace, trace.requestID != metadata.requestID {
+            throw CloudKitDiagnosticAudioError.idempotencyConflict
+        }
         return .init(
             metadata: metadata,
             downloadedByteCount: byteCount,
-            downloadedSHA256: checksum
+            downloadedSHA256: checksum,
+            requestTrace: trace,
+            downloadedTraceByteCount: traceData?.count,
+            downloadedTraceSHA256: traceData.map { DiagnosticAudioSHA256.hex(of: $0) }
         )
     }
 
@@ -114,7 +149,8 @@ actor SystemCloudKitDiagnosticAudioDatabase: CloudKitDiagnosticAudioDatabase {
         let keys = [
             "requestID", "diagnosticSessionID", "physicalBuild", "appVersion",
             "deviceModel", "systemVersion", "capturedAt", "durationMilliseconds",
-            "audioByteCount", "audioSHA256", "audioTruncated", "pinned"
+            "audioByteCount", "audioSHA256", "audioTruncated", "pinned",
+            "requestTraceByteCount", "requestTraceSHA256"
         ]
         let query = CKQuery(recordType: Self.recordType, predicate: NSPredicate(value: true))
         var records: [CKRecord] = []
@@ -192,7 +228,9 @@ actor SystemCloudKitDiagnosticAudioDatabase: CloudKitDiagnosticAudioDatabase {
             audioByteCount: audioByteCount,
             audioSHA256: audioSHA256,
             audioTruncated: audioTruncated,
-            pinned: (record["pinned"] as? NSNumber)?.boolValue ?? false
+            pinned: (record["pinned"] as? NSNumber)?.boolValue ?? false,
+            requestTraceByteCount: (record["requestTraceByteCount"] as? NSNumber)?.intValue,
+            requestTraceSHA256: record["requestTraceSHA256"] as? String
         )
     }
 }
@@ -237,6 +275,7 @@ actor CloudKitDiagnosticAudioDelivery {
               let fileSize = (try? audioURL.resourceValues(forKeys: [.fileSizeKey]).fileSize),
               fileSize > 0,
               let checksum = try? DiagnosticAudioSHA256.hex(of: audioURL) else { return false }
+        guard let traceData = try? JSONEncoder.diagnostic.encode(session) else { return false }
 
         let metadata = CloudKitDiagnosticAudioMetadata(
             recordName: "ua-audio-\(requestID.uuidString.lowercased())",
@@ -251,7 +290,9 @@ actor CloudKitDiagnosticAudioDelivery {
             audioByteCount: fileSize,
             audioSHA256: checksum,
             audioTruncated: session.diagnosticAudioTruncated ?? false,
-            pinned: false
+            pinned: false,
+            requestTraceByteCount: traceData.count,
+            requestTraceSHA256: DiagnosticAudioSHA256.hex(of: traceData)
         )
         return localStore.addCloudKitAudioPending(.init(
             metadata: metadata,
@@ -259,7 +300,8 @@ actor CloudKitDiagnosticAudioDelivery {
             attempts: 0,
             nextAttemptAt: now,
             state: .pending,
-            lastErrorCategory: nil
+            lastErrorCategory: nil,
+            requestTrace: session
         ))
     }
 
@@ -291,10 +333,19 @@ actor CloudKitDiagnosticAudioDelivery {
                 localStore.saveCloudKitAudioPending(queue)
 
                 let readback = try await database.readBack(recordName: upload.metadata.recordName)
+                let traceMatches: Bool
+                if let expectedTraceSHA256 = upload.metadata.requestTraceSHA256 {
+                    traceMatches = readback.requestTrace?.requestID == upload.metadata.requestID
+                        && readback.downloadedTraceByteCount == upload.metadata.requestTraceByteCount
+                        && readback.downloadedTraceSHA256 == expectedTraceSHA256
+                } else {
+                    traceMatches = true
+                }
                 guard readback.metadata.requestID == upload.metadata.requestID,
                       readback.metadata.diagnosticSessionID == upload.metadata.diagnosticSessionID,
                       readback.downloadedByteCount == upload.metadata.audioByteCount,
-                      readback.downloadedSHA256 == upload.metadata.audioSHA256 else {
+                      readback.downloadedSHA256 == upload.metadata.audioSHA256,
+                      traceMatches else {
                     throw CloudKitDiagnosticAudioError.checksumMismatch
                 }
                 localStore.markCloudKitAudioVerified(upload, verifiedAt: now)

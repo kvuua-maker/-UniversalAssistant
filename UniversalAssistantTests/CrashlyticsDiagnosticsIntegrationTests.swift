@@ -399,7 +399,7 @@ struct CrashlyticsDiagnosticsIntegrationTests {
             localStore: relaunchedStore,
             enabled: { true }
         )
-        let firstAttempt = Date(timeIntervalSince1970: 2_000)
+        let firstAttempt = Date.now
         await audioDelivery.enqueue(session, now: firstAttempt)
 
         let firstPendingCount = await audioDelivery.pendingUploads().count
@@ -420,6 +420,14 @@ struct CrashlyticsDiagnosticsIntegrationTests {
         #expect(audioReadback.metadata.requestID == snapshot.requestID)
         #expect(audioReadback.metadata.diagnosticSessionID == session.diagnosticSessionID)
         #expect(audioReadback.downloadedByteCount == audioReadback.metadata.audioByteCount)
+        #expect(audioReadback.requestTrace?.requestID == requestID)
+        #expect(audioReadback.requestTrace?.finalSpeechTranscript == "Знайди кав’ярню біля вокзалу")
+        #expect(audioReadback.requestTrace?.normalizedTranscript == "знайти кав’ярню біля вокзалу")
+        #expect(audioReadback.requestTrace?.events.contains { $0.marker == "selected_capability" } == true)
+        #expect(audioReadback.requestTrace?.events.contains { $0.marker == "execution_started" } == true)
+        #expect(audioReadback.requestTrace?.events.last?.marker == "request_end")
+        #expect(audioReadback.downloadedTraceByteCount == audioReadback.metadata.requestTraceByteCount)
+        #expect(audioReadback.downloadedTraceSHA256 == audioReadback.metadata.requestTraceSHA256)
         #expect(audioReadback.downloadedSHA256 == audioReadback.metadata.audioSHA256)
         #expect(pendingAfterReadback.isEmpty)
         #expect(receiptRequestIDs == [requestID])

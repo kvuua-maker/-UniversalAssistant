@@ -4,7 +4,7 @@ DEFINE SCHEMA
 
     RECORD TYPE UADiagnosticAudio (
         "___createTime"       TIMESTAMP QUERYABLE SORTABLE,
-        "___createdBy"        REFERENCE,
+        "___createdBy"        REFERENCE QUERYABLE,
         "___etag"             STRING,
         "___modTime"          TIMESTAMP,
         "___modifiedBy"       REFERENCE,
@@ -22,6 +22,9 @@ DEFINE SCHEMA
         pinned                 INT64 QUERYABLE,
         requestID              STRING QUERYABLE,
         schemaVersion          INT64,
+        requestTrace           BYTES,
+        requestTraceByteCount  INT64,
+        requestTraceSHA256     STRING,
         systemVersion          STRING,
         GRANT READ, WRITE TO "_creator",
         GRANT CREATE TO "_icloud",

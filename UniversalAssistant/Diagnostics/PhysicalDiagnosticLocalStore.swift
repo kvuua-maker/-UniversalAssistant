@@ -115,6 +115,8 @@ struct CloudKitDiagnosticAudioMetadata: Codable, Equatable, Sendable {
     let audioSHA256: String
     let audioTruncated: Bool
     var pinned: Bool
+    var requestTraceByteCount: Int? = nil
+    var requestTraceSHA256: String? = nil
 }
 
 struct CloudKitDiagnosticAudioUpload: Codable, Equatable, Sendable {
@@ -124,6 +126,7 @@ struct CloudKitDiagnosticAudioUpload: Codable, Equatable, Sendable {
     var nextAttemptAt: Date
     var state: CloudKitDiagnosticAudioUploadState
     var lastErrorCategory: String?
+    var requestTrace: PhysicalDiagnosticSession? = nil
     var idempotencyKey: String { metadata.recordName }
 }
 

@@ -6,6 +6,7 @@ actor CloudKitDiagnosticAudioTestDatabase: CloudKitDiagnosticAudioDatabase {
     private struct Stored: Sendable {
         var metadata: CloudKitDiagnosticAudioMetadata
         let data: Data
+        let traceData: Data?
     }
 
     private var records: [String: Stored] = [:]
@@ -42,7 +43,8 @@ actor CloudKitDiagnosticAudioTestDatabase: CloudKitDiagnosticAudioDatabase {
             }
             return
         }
-        records[upload.metadata.recordName] = .init(metadata: upload.metadata, data: data)
+        let traceData = try upload.requestTrace.map { try JSONEncoder.diagnostic.encode($0) }
+        records[upload.metadata.recordName] = .init(metadata: upload.metadata, data: data, traceData: traceData)
     }
 
     func readBack(recordName: String) async throws -> CloudKitDiagnosticAudioReadback {
@@ -50,10 +52,14 @@ actor CloudKitDiagnosticAudioTestDatabase: CloudKitDiagnosticAudioDatabase {
             throw CloudKitDiagnosticAudioError.malformedRemoteRecord
         }
         let checksum = SHA256.hash(data: stored.data).map { String(format: "%02x", $0) }.joined()
+        let trace = stored.traceData.flatMap { try? JSONDecoder.diagnostic.decode(PhysicalDiagnosticSession.self, from: $0) }
         return .init(
             metadata: stored.metadata,
             downloadedByteCount: stored.data.count,
-            downloadedSHA256: checksum
+            downloadedSHA256: checksum,
+            requestTrace: trace,
+            downloadedTraceByteCount: stored.traceData?.count,
+            downloadedTraceSHA256: stored.traceData.map { DiagnosticAudioSHA256.hex(of: $0) }
         )
     }
 
@@ -92,7 +98,7 @@ actor CloudKitDiagnosticAudioTestDatabase: CloudKitDiagnosticAudioDatabase {
             audioTruncated: false,
             pinned: false
         )
-        records[metadata.recordName] = .init(metadata: metadata, data: data)
+        records[metadata.recordName] = .init(metadata: metadata, data: data, traceData: nil)
         return metadata
     }
 }
