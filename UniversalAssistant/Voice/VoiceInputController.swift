@@ -541,8 +541,11 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
             localStore.append(terminalEvent, durable: true)
             localStore.append(requestEndEvent, durable: true)
             let recoveredStart = events.first?.timestamp ?? active.updatedAt
+            let recoveredFeature = events.contains {
+                ["start_listening_invoked", "diagnostic_audio_started", "diagnostic_audio_finished"].contains($0.marker)
+            } ? "voice" : "request"
             var session = PhysicalDiagnosticSession(
-                schema: 2, sessionID: active.requestID, liveTestID: "BUILD32-PRODUCTION-BLACK-BOX", feature: "request",
+                schema: 2, sessionID: active.requestID, liveTestID: "BUILD32-PRODUCTION-BLACK-BOX", feature: recoveredFeature,
                 appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
                 build: active.build, environment: "internal-testflight", osVersion: UIDevice.current.systemVersion,
                 deviceClass: UIDevice.current.model, startedAt: recoveredStart, endedAt: now,
@@ -638,6 +641,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         session.anomaly = DiagnosticAnomalyAnalyzer.analyze(events: events)
         if let anomaly = session.anomaly { localStore.setLastAnomaly(anomaly) }
         session.diagnosticAudioDurationMilliseconds = active?.diagnosticAudioDurationMilliseconds
+        CloudKitDiagnosticAudioDelivery.persistPending(session, localStore: localStore)
         localStore.addPending(Self.queued(session))
         localStore.updateActive(sequence: entries.count, stage: "request_end", terminal: terminalState)
         localStore.clearTerminalActiveRequest()

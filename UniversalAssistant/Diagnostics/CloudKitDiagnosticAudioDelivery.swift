@@ -223,7 +223,12 @@ actor CloudKitDiagnosticAudioDelivery {
         self.enabled = enabled
     }
 
-    func enqueue(_ session: PhysicalDiagnosticSession, now: Date = .now) async {
+    @discardableResult
+    static func persistPending(
+        _ session: PhysicalDiagnosticSession,
+        localStore: PhysicalDiagnosticLocalStore,
+        now: Date = .now
+    ) -> Bool {
         guard session.feature == "voice",
               session.detailedDiagnosticsConsent == true,
               let requestID = session.requestID,
@@ -231,7 +236,7 @@ actor CloudKitDiagnosticAudioDelivery {
               let audioURL = localStore.diagnosticAudioURL(relativePath: relativePath),
               let fileSize = (try? audioURL.resourceValues(forKeys: [.fileSizeKey]).fileSize),
               fileSize > 0,
-              let checksum = try? DiagnosticAudioSHA256.hex(of: audioURL) else { return }
+              let checksum = try? DiagnosticAudioSHA256.hex(of: audioURL) else { return false }
 
         let metadata = CloudKitDiagnosticAudioMetadata(
             recordName: "ua-audio-\(requestID.uuidString.lowercased())",
@@ -248,15 +253,18 @@ actor CloudKitDiagnosticAudioDelivery {
             audioTruncated: session.diagnosticAudioTruncated ?? false,
             pinned: false
         )
-        let upload = CloudKitDiagnosticAudioUpload(
+        return localStore.addCloudKitAudioPending(.init(
             metadata: metadata,
             audioRelativePath: relativePath,
             attempts: 0,
             nextAttemptAt: now,
             state: .pending,
             lastErrorCategory: nil
-        )
-        guard localStore.addCloudKitAudioPending(upload) else { return }
+        ))
+    }
+
+    func enqueue(_ session: PhysicalDiagnosticSession, now: Date = .now) async {
+        guard Self.persistPending(session, localStore: localStore, now: now) else { return }
         await flush(now: now)
     }
 

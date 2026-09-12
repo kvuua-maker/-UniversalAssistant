@@ -211,6 +211,7 @@ actor PhysicalDiagnosticDelivery {
     }
 
     func flush(now: Date = .now) async {
+        restoreMissingCloudKitAudioPending(now: now)
         await CloudKitDiagnosticAudioDelivery.shared.flush(now: now)
         guard await enabled(), !flushing else { return }
         flushing = true; defer { flushing = false }
@@ -261,6 +262,12 @@ actor PhysicalDiagnosticDelivery {
             }
             localStore.savePending(queue)
             scheduleRetry(for: queue, now: now)
+        }
+    }
+
+    func restoreMissingCloudKitAudioPending(now: Date = .now) {
+        for item in localStore.loadPending(now: now) {
+            CloudKitDiagnosticAudioDelivery.persistPending(item.session, localStore: localStore, now: now)
         }
     }
 

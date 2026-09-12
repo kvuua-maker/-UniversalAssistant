@@ -517,6 +517,97 @@ struct PhysicalDiagnosticDeliveryTests {
         #expect(!store.addAppleDiagnostic(json: safe, fingerprint: fingerprint))
     }
 
+
+    @Test @MainActor func savedVoiceSessionPersistsCloudKitPendingBeforeActiveSnapshotClears() throws {
+        let store = makeStore()
+        let report = LocalVoiceDiagnosticReport(
+            defaults: UserDefaults(suiteName: UUID().uuidString)!,
+            persistenceKey: "saved-voice-cloudkit-pending",
+            localStore: store
+        )
+        report.detailedDiagnosticsEnabled = true
+        report.reset()
+        report.record("start_listening_invoked")
+        let requestID = try #require(store.activeSnapshot()?.requestID)
+        try writeDiagnosticAudio(requestID: requestID, store: store)
+        store.updateActive(
+            sequence: 2,
+            stage: "diagnostic_audio_finished",
+            diagnosticAudioRelativePath: store.diagnosticAudioRelativePath(for: requestID),
+            diagnosticAudioTruncated: false,
+            diagnosticAudioDurationMilliseconds: 100
+        )
+        report.record("diagnostic_audio_finished", "status=saved")
+        report.recordTerminal(.success)
+
+        let session = try #require(report.completedSession())
+        let pending = store.loadCloudKitAudioPending()
+        #expect(session.requestID == requestID)
+        #expect(pending.count == 1)
+        #expect(pending.first?.metadata.requestID == requestID)
+        #expect(store.activeSnapshot() == nil)
+    }
+
+    @Test func relaunchRecoveryRestoresMissingCloudKitPendingFromPersistedSession() async throws {
+        let store = makeStore()
+        let now = Date(timeIntervalSinceReferenceDate: 40_000)
+        let session = try persistedVoiceAudioSession(store: store, now: now)
+        store.addPending(queued(session, now: now))
+        let delivery = PhysicalDiagnosticDelivery(
+            attest: UnsupportedAttest(), transport: FailingTransport(),
+            defaults: UserDefaults(suiteName: UUID().uuidString)!, localStore: store,
+            enabled: { false }
+        )
+
+        #expect(store.loadCloudKitAudioPending().isEmpty)
+        await delivery.restoreMissingCloudKitAudioPending(now: now)
+        let pending = store.loadCloudKitAudioPending()
+        #expect(pending.count == 1)
+        #expect(pending.first?.metadata.requestID == session.requestID)
+    }
+
+    @Test func duplicateRecoveryDoesNotCreateSecondCloudKitPendingItem() async throws {
+        let store = makeStore()
+        let now = Date(timeIntervalSinceReferenceDate: 50_000)
+        let session = try persistedVoiceAudioSession(store: store, now: now)
+        store.addPending(queued(session, now: now))
+        let delivery = PhysicalDiagnosticDelivery(
+            attest: UnsupportedAttest(), transport: FailingTransport(),
+            defaults: UserDefaults(suiteName: UUID().uuidString)!, localStore: store,
+            enabled: { false }
+        )
+
+        await delivery.restoreMissingCloudKitAudioPending(now: now)
+        await delivery.restoreMissingCloudKitAudioPending(now: now)
+        #expect(store.loadCloudKitAudioPending().count == 1)
+    }
+
+    @Test @MainActor func recoveredAudioSessionPreservesVoiceFeature() throws {
+        let store = makeStore()
+        let report = LocalVoiceDiagnosticReport(
+            defaults: UserDefaults(suiteName: UUID().uuidString)!,
+            persistenceKey: "recovered-voice-feature",
+            localStore: store
+        )
+        report.detailedDiagnosticsEnabled = true
+        report.reset()
+        report.record("start_listening_invoked")
+        let requestID = try #require(store.activeSnapshot()?.requestID)
+        try writeDiagnosticAudio(requestID: requestID, store: store)
+        store.updateActive(
+            sequence: 2,
+            stage: "diagnostic_audio_finished",
+            diagnosticAudioRelativePath: store.diagnosticAudioRelativePath(for: requestID),
+            diagnosticAudioTruncated: false,
+            diagnosticAudioDurationMilliseconds: 100
+        )
+        report.record("diagnostic_audio_finished", "status=saved")
+
+        let recovered = try #require(report.recoveredIncompleteSession())
+        #expect(recovered.requestID == requestID)
+        #expect(recovered.feature == "voice")
+    }
+
     @Test func emergencyExportIsAValidBoundedZipWithRequiredFiles() throws {
         let store = makeStore()
         store.append(.init(sequence: 1, timestamp: .now, marker: "request_created", attributes: ["source": "home"]), durable: true)
@@ -536,6 +627,42 @@ struct PhysicalDiagnosticDeliveryTests {
               environment: "internal-testflight", osVersion: "26.6.1", deviceClass: "iPhone", startedAt: .now, endedAt: .now,
               durationMilliseconds: 1, result: .failure, failureStage: "recognition_callback", errorDomain: "test", errorCode: 1,
               events: [.init(sequence: 1, timestamp: .now, marker: "recognition_callback", attributes: ["error_code": "1"])])
+    }
+
+
+    private func persistedVoiceAudioSession(
+        store: PhysicalDiagnosticLocalStore,
+        now: Date
+    ) throws -> PhysicalDiagnosticSession {
+        let requestID = UUID()
+        try writeDiagnosticAudio(requestID: requestID, store: store)
+        var session = PhysicalDiagnosticSession(
+            schema: 2, sessionID: requestID, liveTestID: "BUILD37-CLOUDKIT-RECOVERY", feature: "voice",
+            appVersion: "0.1.0", build: 37, environment: "internal-testflight",
+            osVersion: "26.6.2", deviceClass: "iPhone12,8", startedAt: now, endedAt: now,
+            durationMilliseconds: 100, result: .success, failureStage: nil, errorDomain: nil, errorCode: nil,
+            events: [.init(sequence: 1, timestamp: now, marker: "diagnostic_audio_finished", attributes: ["status": "saved"])]
+        )
+        session.diagnosticSessionID = requestID
+        session.requestID = requestID
+        session.requestGeneration = 1
+        session.terminalState = .success
+        session.detailedDiagnosticsConsent = true
+        session.diagnosticAudioRelativePath = store.diagnosticAudioRelativePath(for: requestID)
+        session.diagnosticAudioTruncated = false
+        session.diagnosticAudioDurationMilliseconds = 100
+        return session
+    }
+
+    private func queued(_ session: PhysicalDiagnosticSession, now: Date) -> DiagnosticQueuedUpload {
+        .init(
+            session: session, attempts: 0, expiresAt: now.addingTimeInterval(86_400),
+            nextAttemptAt: now, status: .pendingUpload, lastHTTPStatus: nil, errorCategory: nil
+        )
+    }
+
+    private func writeDiagnosticAudio(requestID: UUID, store: PhysicalDiagnosticLocalStore) throws {
+        try Data(repeating: 0x41, count: 128).write(to: store.diagnosticAudioURL(for: requestID), options: .atomic)
     }
 
     private func makeStore() -> PhysicalDiagnosticLocalStore {
