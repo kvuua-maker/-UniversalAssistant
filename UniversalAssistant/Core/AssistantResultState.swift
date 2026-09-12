@@ -17,7 +17,7 @@ enum AssistantResultState: Equatable, Sendable {
     case expanded(ResultSummary)
 }
 
-enum HandoffKind: Equatable, Sendable { case webSearch, navigation, system }
+enum HandoffKind: Equatable, Sendable { case webSearch, provider, navigation, system }
 
 struct WebHandoffResult: Equatable, Sendable {
     let query: String

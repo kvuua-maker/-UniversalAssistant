@@ -217,7 +217,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         recorder: AudioRecorderController = AudioRecorderController(),
         publicDeviceExecute: @escaping @MainActor (SystemQuickAction) throws -> String = { try ProductionPublicDeviceExecutor().execute($0) },
         clipboardRead: @escaping @MainActor () throws -> SharedContent = { try SystemUserInitiatedClipboardReader().readAfterUserAction() },
-        fx: any CurrentFXProviding = ECBCurrentFXProvider(),
+        fx: any CurrentFXProviding = RegionalCurrentFXProvider(),
         restaurantProviders: [any ReservationProvider] = [],
         alarmExecute: (  (SystemQuickAction) async throws -> String)? = nil,
         photoSearchTimeout: Duration = .seconds(3),
@@ -411,10 +411,29 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .reservation:
             return try await restaurantReservation(command)
         case .serviceSearch:
+            if command.entities["provider_domain"] == "car_rental",
+               hasExplicitOfficialPublicProvider(in: command) {
+                return try officialPublicProviderHandoff(command)
+            }
             return try await localServices(command)
-        case .productSearch, .fashionDiscovery, .groceryBasket, .restaurantSearch,
-             .taxiSearch, .taxiCompare, .publicTransport,
-             .ticketSearch, .ticketPurchaseHandoff, .hotelSearch, .travelPlan, .parcelTrack:
+        case .restaurantSearch:
+            return try await places(command)
+        case .publicTransport:
+            var entities = command.entities
+            if entities["destination"] == nil { entities["destination"] = entities["location"] }
+            if entities["destination"] != nil {
+                let routed = StructuredCommand(
+                    id: command.id, originalText: command.originalText, normalizedText: command.normalizedText,
+                    language: command.language, intent: command.intent, entities: entities,
+                    constraints: command.constraints, risk: command.risk, needsClarification: false
+                )
+                return try await route(routed, mode: .transit)
+            }
+            return try officialPublicProviderHandoff(command)
+        case .productSearch, .fashionDiscovery, .groceryBasket, .ticketSearch,
+             .ticketPurchaseHandoff, .hotelSearch, .travelPlan, .parcelTrack:
+            return try officialPublicProviderHandoff(command)
+        case .taxiSearch, .taxiCompare:
             throw CanonicalCapabilityExecutionError.externalProviderRequired(command.intent.rawValue)
         case .placeSearch:
             return try await places(command)

@@ -25,7 +25,7 @@ enum ProductionAssistantComposition {
         ],
         compactResultDuration: Duration = .seconds(2),
         weather: any WeatherCommandExecuting = ProductionWeatherCommandExecutor(),
-        fx: any CurrentFXProviding = ECBCurrentFXProvider(),
+        fx: any CurrentFXProviding = RegionalCurrentFXProvider(),
         restaurantProviders: [any ReservationProvider] = [],
         alarmExecute: (  (SystemQuickAction) async throws -> String)? = nil,
         genericDiscovery: GenericUnknownRequestCoordinator? = nil,

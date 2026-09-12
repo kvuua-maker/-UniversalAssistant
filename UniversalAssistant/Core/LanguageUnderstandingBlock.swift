@@ -66,7 +66,19 @@ enum CanonicalCatalogEntityRegistry {
                 aliases: [record.displayName, record.id]
             )
         }
-        return brands + retailers
+        let marketplaces = OfficialPublicProviderHandoffRegistry.records(in: .marketplace).map { record in
+            let entity = CanonicalCatalogEntity(
+                id: record.id,
+                displayName: record.displayName,
+                kind: .provider
+            )
+            return ScopedEntityCandidate(
+                value: entity,
+                displayName: record.displayName,
+                aliases: record.aliases
+            )
+        }
+        return brands + retailers + marketplaces
     }()
 }
 
@@ -99,6 +111,10 @@ private enum CanonicalExternalProviderBoundaryAnalyzer {
               objectRoots: ["лояльн", "знижк", "винагород", "бонус", "персональн", "лояльност", "скидк", "вознагражден", "loyalty", "discount", "reward", "benefit", "membership"],
               actionRoots: ["покаж", "перевір", "знайд", "переліч", "доступ", "провер", "найд", "show", "check", "find", "list", "available"],
               minimumObjectMatches: 2),
+        .init(domain: "jobs", intent: .productSearch,
+              objectRoots: ["робот", "ваканс", "працевлаштуван", "работ", "ваканс", "job", "vacanc", "employment"],
+              actionRoots: ["знайд", "покаж", "підбер", "шукай", "найд", "покаж", "find", "show", "search", "list"],
+              minimumObjectMatches: 1),
         .init(domain: "grocery_delivery", intent: .groceryBasket,
               objectRoots: ["кошик", "продукт", "доставк", "корзин", "grocery", "basket", "groceries", "delivery"],
               actionRoots: ["збер", "куп", "замов", "підбер", "собер", "закаж", "assemble", "buy", "order", "build"],
@@ -119,9 +135,13 @@ private enum CanonicalExternalProviderBoundaryAnalyzer {
               objectRoots: ["готел", "хостел", "житл", "отел", "hotel", "hostel", "lodging", "accommodation"],
               actionRoots: ["підбер", "знайд", "заброн", "найд", "find", "search", "book"],
               minimumObjectMatches: 1),
+        .init(domain: "transport_tickets", intent: .ticketSearch,
+              objectRoots: ["поїзд", "потяг", "залізниц", "вокзал", "розклад", "поезд", "железнодорож", "вокзал", "расписан", "train", "rail", "timetable", "schedule"],
+              actionRoots: ["знайд", "покаж", "куп", "перевір", "найд", "find", "show", "buy", "check"],
+              minimumObjectMatches: 2),
         .init(domain: "tickets", intent: .ticketSearch,
-              objectRoots: ["квит", "білет", "ticket", "fare", "поді", "событ", "event", "концерт", "вистав", "матч", "турнір", "concert", "match", "tournament"],
-              actionRoots: ["знайд", "підбер", "покаж", "найд", "find", "search", "show"],
+              objectRoots: ["квит", "білет", "ticket", "fare", "поді", "событ", "event", "концерт", "вистав", "театр", "стендап", "шоу", "мюзикл", "дитяч", "фестивал", "цирк", "спорт", "матч", "турнір", "кіно", "сеанс", "concert", "theatre", "show", "festival", "circus", "sport", "cinema", "movie", "match", "tournament"],
+              actionRoots: ["знайд", "підбер", "покаж", "куп", "найд", "find", "search", "show", "buy"],
               minimumObjectMatches: 1),
         .init(domain: "commercial_service", intent: .serviceSearch,
               objectRoots: ["майстр", "ремонт", "сервіс", "услуг", "мастер", "service", "repair", "contractor"],
@@ -983,9 +1003,42 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         constraints: CommandConstraints
     ) -> ScopedEntityResolutionEvidence<CanonicalCatalogEntity>? {
         let catalogFamily = [.productSearch, .fashionDiscovery, .groceryBasket].contains(intent)
-        let constrainedUnresolvedRequest = (intent == .unknown || intent == .webSearch) &&
-            !constraints.hardConstraintKeys.isEmpty
-        guard (catalogFamily || constrainedUnresolvedRequest), !catalogCandidates.isEmpty else { return nil }
+        let unresolvedProviderRequest = intent == .unknown || intent == .webSearch
+        let providerCandidates = catalogCandidates.filter {
+            $0.value.kind == .provider || $0.value.kind == .retailer
+        }
+        guard catalogFamily || unresolvedProviderRequest else { return nil }
+        let comparable: (String) -> String = { value in
+            value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+                .lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).joined(separator: " ")
+        }
+        let normalizedText = " \(comparable(document.originalText)) "
+        let exactProviders = providerCandidates.filter { candidate in
+            candidate.aliases.union([candidate.displayName]).contains { alias in
+                let value = comparable(alias)
+                return !value.isEmpty && normalizedText.contains(" \(value) ")
+            }
+        }
+        if !exactProviders.isEmpty {
+            return bestScopedResolution(in: document.tokens, candidates: exactProviders)
+        }
+        let providerMarkers: Set<String> = [
+            "на", "у", "в", "через", "маркетплейс", "магазин", "сайт",
+            "on", "at", "from", "via", "marketplace", "store", "site"
+        ]
+        if let marker = document.tokens.indices.last(where: { providerMarkers.contains(document.tokens[$0].normalized) }),
+           marker + 1 < document.tokens.count, !providerCandidates.isEmpty {
+            let evidence = bestScopedResolution(in: Array(document.tokens[(marker + 1)...]), candidates: providerCandidates)
+            switch evidence.resolution {
+            case .resolved, .ambiguous: return evidence
+            case .unresolved: break
+            }
+        }
+        guard catalogFamily else { return nil }
+        let candidates = catalogCandidates.filter {
+            $0.value.kind != .provider && $0.value.kind != .retailer
+        }
+        guard !candidates.isEmpty else { return nil }
         let ignoredMorphology: Set<String> = [
             "знайд", "пошук", "покаж", "підбер", "куп", "найд", "поищ", "покаж",
             "find", "search", "show", "buy", "brand", "бренд", "product", "товар",
@@ -996,7 +1049,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 !token.normalized.allSatisfy(\.isNumber)
         }
         guard !subjects.isEmpty else { return nil }
-        return bestScopedResolution(in: subjects, candidates: catalogCandidates)
+        return bestScopedResolution(in: subjects, candidates: candidates)
     }
 
     private func bestScopedResolution<Value: Equatable & Sendable>(

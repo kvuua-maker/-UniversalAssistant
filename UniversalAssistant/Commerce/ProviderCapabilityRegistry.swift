@@ -58,6 +58,99 @@ actor ProviderCapabilityRegistry {
     }
 }
 
+enum OfficialPublicProviderDomain: String, Sendable {
+    case marketplace, grocery, lodging, carRental, events, cinema, jobs, transport, parcel
+}
+
+enum OfficialPublicProviderRoute: Equatable, Sendable {
+    case query(base: URL, parameter: String)
+    case aliExpressWholesale
+    case fixed(URL)
+
+    func destination(query: String) -> URL? {
+        switch self {
+        case let .query(base, parameter):
+            guard var components = URLComponents(url: base, resolvingAgainstBaseURL: false) else { return nil }
+            components.queryItems = (components.queryItems ?? []) + [.init(name: parameter, value: query)]
+            return components.url
+        case .aliExpressWholesale:
+            let slug = query.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+                .lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).joined(separator: "-")
+            guard !slug.isEmpty,
+                  let encoded = slug.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else { return nil }
+            return URL(string: "https://www.aliexpress.com/w/wholesale-\(encoded).html")
+        case let .fixed(url): return url
+        }
+    }
+
+    var preservesQuery: Bool {
+        switch self {
+        case .query, .aliExpressWholesale: true
+        case .fixed: false
+        }
+    }
+}
+
+/// Credential-free official consumer destinations. A handoff preserves the
+/// request but never claims live inventory, price, availability, or completion.
+struct OfficialPublicProviderHandoff: Equatable, Sendable {
+    let id: String
+    let displayName: String
+    let aliases: Set<String>
+    let domain: OfficialPublicProviderDomain
+    let route: OfficialPublicProviderRoute
+    let mechanism: String
+    let officialEvidence: URL
+    func destination(query: String) -> URL? { route.destination(query: query) }
+    var preservesQuery: Bool { route.preservesQuery }
+}
+
+/// In-place extension of the canonical provider registry, not a parallel
+/// discovery/execution system.
+enum OfficialPublicProviderHandoffRegistry {
+    static let lastVerified = Date(timeIntervalSince1970: 1_789_171_200) // 2026-09-12 UTC
+    static let records: [OfficialPublicProviderHandoff] = [
+        r("market.amazon", "Amazon", ["amazon"], .marketplace, .query(base: u("https://www.amazon.com/s"), parameter: "k"), "official_exact_search", "https://www.amazon.com/"),
+        r("market.ebay", "eBay", ["ebay", "e bay", "ебей"], .marketplace, .query(base: u("https://www.ebay.com/sch/i.html"), parameter: "_nkw"), "official_exact_search", "https://www.ebay.com/"),
+        r("market.aliexpress", "AliExpress", ["aliexpress", "ali express", "аліекспрес"], .marketplace, .aliExpressWholesale, "official_exact_search", "https://www.aliexpress.com/"),
+        r("market.temu", "Temu", ["temu", "тему"], .marketplace, .query(base: u("https://www.temu.com/search_result.html"), parameter: "search_key"), "official_exact_search", "https://www.temu.com/"),
+        r("market.prom", "Prom.ua", ["prom", "prom ua", "prom.ua", "пром"], .marketplace, .query(base: u("https://prom.ua/ua/search"), parameter: "search_term"), "official_exact_search", "https://support.prom.ua/hc/uk/articles/360004988457"),
+        r("retail.silpo", "Сільпо", ["сільпо", "silpo"], .grocery, .query(base: u("https://silpo.ua/search"), parameter: "find"), "official_exact_search", "https://silpo.ua/"),
+        r("retail.atb", "АТБ", ["атб", "atb"], .grocery, .query(base: u("https://www.atbmarket.com/catalog/search"), parameter: "text"), "official_exact_search", "https://www.atbmarket.com/"),
+        r("retail.fora", "Фора", ["фора", "fora"], .grocery, .query(base: u("https://fora.ua/search"), parameter: "q"), "official_exact_search", "https://fora.ua/"),
+        r("retail.fozzy", "Fozzy", ["fozzy", "фоззі", "фоззи"], .grocery, .query(base: u("https://fozzyshop.ua/search"), parameter: "q"), "official_exact_search", "https://fozzyshop.ua/"),
+        r("lodging.booking", "Booking.com", ["booking", "booking.com", "букінг"], .lodging, .query(base: u("https://www.booking.com/searchresults.html"), parameter: "ss"), "official_destination_search", "https://www.booking.com/"),
+        r("lodging.dobovo", "Dobovo", ["dobovo", "добово"], .lodging, .fixed(u("https://www.dobovo.com/ukraine.html")), "official_filtered_catalog", "https://www.dobovo.com/ukraine.html"),
+        r("rental.getmancar", "Getmancar", ["getmancar", "get man car", "гетманкар"], .carRental, .fixed(u("https://getmancar.com/uk")), "official_rental_search", "https://getmancar.com/uk"),
+        r("events.karabas", "KARABAS", ["karabas", "карабас"], .events, .fixed(u("https://kyiv.karabas.com/")), "official_event_catalog", "https://kyiv.karabas.com/"),
+        r("cinema.multiplex", "Multiplex", ["multiplex", "мультиплекс"], .cinema, .fixed(u("https://multiplex.ua/movies")), "official_movie_schedule", "https://multiplex.ua/movies"),
+        r("cinema.planetakino", "Планета Кіно", ["планета кіно", "planeta kino", "planetakino"], .cinema, .fixed(u("https://planetakino.ua/")), "official_movie_schedule", "https://planetakino.ua/"),
+        r("jobs.workua", "Work.ua", ["work ua", "work.ua"], .jobs, .query(base: u("https://www.work.ua/jobs/"), parameter: "search"), "official_job_search", "https://www.work.ua/jobs/"),
+        r("jobs.robotaua", "robota.ua", ["robota ua", "robota.ua"], .jobs, .query(base: u("https://robota.ua/zapros/"), parameter: "query"), "official_job_search", "https://robota.ua/zapros/"),
+        r("jobs.jobsua", "Jobs.ua", ["jobs ua", "jobs.ua"], .jobs, .query(base: u("https://jobs.ua/vacancy"), parameter: "search"), "official_job_search", "https://jobs.ua/vacancy"),
+        r("jobs.dcz", "Державна служба зайнятості", ["служба зайнятості", "dcz"], .jobs, .fixed(u("https://dcz.gov.ua/userSearch/vacancy")), "official_job_catalog", "https://dcz.gov.ua/userSearch/vacancy"),
+        r("jobs.djinni", "Djinni", ["djinni", "джині"], .jobs, .query(base: u("https://djinni.co/jobs/"), parameter: "keywords"), "official_job_search", "https://djinni.co/jobs/"),
+        r("jobs.dou", "DOU Jobs", ["dou", "dou jobs"], .jobs, .query(base: u("https://jobs.dou.ua/vacancies/"), parameter: "search"), "official_job_search", "https://jobs.dou.ua/vacancies/"),
+        r("jobs.happymonday", "Happy Monday", ["happy monday", "happymonday"], .jobs, .query(base: u("https://happymonday.ua/jobs-search"), parameter: "query"), "official_job_search", "https://happymonday.ua/jobs-search"),
+        r("transport.uz", "Укрзалізниця", ["укрзалізниця", "uz", "ukrzaliznytsia"], .transport, .fixed(u("https://booking.uz.gov.ua/")), "official_ticket_search", "https://booking.uz.gov.ua/"),
+        r("parcel.novaposhta", "Нова пошта", ["нова пошта", "nova poshta"], .parcel, .fixed(u("https://tracking.novaposhta.ua/")), "official_tracking_form", "https://tracking.novaposhta.ua/"),
+        r("parcel.ukrposhta", "Укрпошта", ["укрпошта", "ukrposhta"], .parcel, .fixed(u("https://track.ukrposhta.ua/tracking_UA.html")), "official_tracking_form", "https://track.ukrposhta.ua/tracking_UA.html"),
+        r("parcel.meest", "Meest", ["meest", "meest пошта"], .parcel, .fixed(u("https://ua.meest.com/parcel-track")), "official_tracking_form", "https://ua.meest.com/parcel-track")
+    ]
+
+    static func records(in domain: OfficialPublicProviderDomain) -> [OfficialPublicProviderHandoff] {
+        records.filter { $0.domain == domain }
+    }
+
+    private static func u(_ value: String) -> URL { URL(string: value)! }
+    private static func r(_ id: String, _ name: String, _ aliases: Set<String>,
+                          _ domain: OfficialPublicProviderDomain, _ route: OfficialPublicProviderRoute,
+                          _ mechanism: String, _ evidence: String) -> OfficialPublicProviderHandoff {
+        .init(id: id, displayName: name, aliases: aliases, domain: domain, route: route,
+              mechanism: mechanism, officialEvidence: u(evidence))
+    }
+}
+
 protocol RetailProvider: Sendable {
     var providerID: String { get }
     func search(_ request: RetailSearchRequest) async throws -> [NormalizedOffer]

@@ -62,7 +62,7 @@ struct CompactResultCard: View {
                         if let source = fact.source, !source.hasPrefix("apple-"), !["UniversalAssistant", "NaturalDateTimeResolver"].contains(source) { Text(source).font(.caption).foregroundStyle(.secondary) }
                     }
                 }
-                ForEach(result.actions.prefix(3)) { action in
+                ForEach(result.actions.prefix(8)) { action in
                     if action.kind == .showPhoto { Button(action.title) { onResultAction(action) }.buttonStyle(.bordered) }
                     else if let destination = action.destination { Link(action.title, destination: destination).buttonStyle(.bordered) }
                 }
@@ -112,6 +112,7 @@ struct CompactResultCard: View {
     private func handoffAction(_ kind: HandoffKind) -> LocalizedStringKey {
         switch kind {
         case .webSearch: "web_search_open"
+        case .provider: "Відкрити офіційний сервіс"
         case .navigation: "navigation_open"
         case .system: "system_handoff_open"
         }

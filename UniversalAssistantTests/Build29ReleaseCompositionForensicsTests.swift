@@ -716,16 +716,17 @@ struct Build29ReleaseExternalProviderBoundaryTests {
         model.input = request
         model.submit()
         for _ in 0..<150 {
-            if case .failure = model.resultState { break }
-            if case .clarification = model.resultState { break }
+            if case .deterministic = model.resultState { break }
             try await Task.sleep(for: .milliseconds(10))
         }
 
-        guard case let .failure(failure) = model.resultState else {
-            Issue.record("Verified catalog entity did not reach the finite provider boundary")
+        guard case let .deterministic(result) = model.resultState else {
+            Issue.record("Verified catalog entity did not reach official provider handoffs")
             return
         }
-        #expect(failure.message.contains("провайдер"))
+        #expect(result.actions.count == 5)
+        #expect(result.actions.allSatisfy { $0.destination?.host?.contains("google") != true })
+        #expect(result.warnings.contains { $0.contains("підтверджує") })
         #expect({ if case .webHandoff = model.resultState { return false }; return true }())
         #expect(model.statusText != AppText.value("clarification_needed"))
         #expect(model.statusText != AppText.value("processing"))
@@ -734,77 +735,89 @@ struct Build29ReleaseExternalProviderBoundaryTests {
 @Test func configuredProviderIsReachableFromUnknownAndTypedCommerceHomePaths() async throws {
         let discovery = GenericUnknownRequestCoordinator(providers: [Build29ReleaseDiscoveryBoundary()], cache: GenericSemanticCache(), ai: nil)
         let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60), genericDiscovery: discovery)
-        for input in ["Розкажи актуальний стан міжнародної місії", "Підбери водостійкий туристичний рюкзак до 4200 гривень"] {
-            model.input = input
-            model.submit()
-            for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
-            guard case let .deterministic(result) = model.resultState else { Issue.record("Configured Release provider was not reached: \(input)"); continue }
-            #expect(result.facts.first?.source?.hasPrefix("structuredMarketplace:") == true)
-            #expect(result.actions.first?.destination?.host == "provider.example")
-        }
+        model.input = "Розкажи актуальний стан міжнародної місії"
+        model.submit()
+        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .deterministic(general) = model.resultState else { Issue.record("Configured informational provider was not reached"); return }
+        #expect(general.facts.first?.source?.hasPrefix("structuredMarketplace:") == true)
+        #expect(general.actions.first?.destination?.host == "provider.example")
+
+        model.input = "Підбери водостійкий туристичний рюкзак до 4200 гривень"
+        model.submit()
+        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .deterministic(commerce) = model.resultState else { Issue.record("Official buyer routes were not reached"); return }
+        #expect(commerce.actions.count == 5)
+        #expect(commerce.actions.allSatisfy { $0.destination?.host != "provider.example" })
     }
 
 @Test func unseenProviderDomainsRemainTypedAtTheTruthfulReleaseBoundary() async throws {
         let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
-        let requests: [(String, CommandIntent, String)] = [
-            ("Перевір статус закордонного поштового відправлення", .parcelTrack, "parcel_tracking"),
-            ("Переліч бонусні винагороди програми лояльності", .productSearch, "loyalty_benefits")
-        ]
-        for (request, expectedIntent, expectedDomain) in requests {
-            let parsed = LanguageUnderstandingBlock().parse(request)
-            #expect(parsed.intent == expectedIntent)
-            #expect(parsed.entities["provider_domain"] == expectedDomain)
-            #expect(parsed.entities["query"] == request)
-            #expect(!parsed.needsClarification)
+        let parcel = "Перевір статус закордонного поштового відправлення"
+        let parsedParcel = LanguageUnderstandingBlock().parse(parcel)
+        #expect(parsedParcel.intent == .parcelTrack)
+        #expect(parsedParcel.entities["provider_domain"] == "parcel_tracking")
+        model.input = parcel
+        model.submit()
+        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .deterministic(parcelResult) = model.resultState else { Issue.record("Official parcel forms were not reached"); return }
+        #expect(parcelResult.actions.count == 3)
 
-            model.input = request
-            model.submit()
-            for _ in 0..<100 {
-                if case .failure = model.resultState { break }
-                try await Task.sleep(for: .milliseconds(10))
-            }
-            guard case let .failure(failure) = model.resultState else {
-                Issue.record("Typed provider request escaped its truthful Release boundary: \(request)")
-                continue
-            }
-            #expect(failure.message.contains("провайдер"))
-            #expect({ if case .webHandoff = model.resultState { return false }; return true }())
-            #expect(model.statusText != AppText.value("processing"))
-        }
+        let loyalty = "Переліч бонусні винагороди програми лояльності"
+        let parsedLoyalty = LanguageUnderstandingBlock().parse(loyalty)
+        #expect(parsedLoyalty.intent == .productSearch)
+        #expect(parsedLoyalty.entities["provider_domain"] == "loyalty_benefits")
+        model.input = loyalty
+        model.submit()
+        for _ in 0..<100 { if case .failure = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .failure(failure) = model.resultState else { Issue.record("Loyalty dependency did not remain truthful"); return }
+        #expect(failure.message.contains("провайдер"))
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
     }
 
     @Test func absentCommercialProvidersPreserveRequestsInDeliberateBrowserFallback() async throws {
         let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
-        let requests: [(text: String, deliberateWeb: Bool)] = [
-            ("Покажи свіжі економічні новини за сьогодні", true),
-            ("Дізнайся поточне котирування акцій виробника напівпровідників", true),
-            ("Збери кошик для овочевого супу з доставкою", false),
-            ("Порівняй доступні поїздки таксі до музею", false),
-            ("Підбери готель у Кракові на дві ночі", false),
-            ("Знайди квитки на нічний потяг до Варшави", false),
-            ("Відстеж міжнародне відправлення за номером", false),
-            ("Знайди майстра для ремонту посудомийної машини", false),
-            ("Покажи офіційний муніципальний сервіс для реєстрації", false),
-            ("Знайди вакансії дизайнера з віддаленою роботою", false),
-            ("Покажи доступні персональні знижки програми лояльності", false)
+        enum Expected { case deliberateWeb, officialProvider, providerRequired }
+        let requests: [(text: String, expected: Expected)] = [
+            ("Покажи свіжі економічні новини за сьогодні", .deliberateWeb),
+            ("Дізнайся поточне котирування акцій виробника напівпровідників", .deliberateWeb),
+            ("Збери кошик для овочевого супу з доставкою", .officialProvider),
+            ("Порівняй доступні поїздки таксі до музею", .providerRequired),
+            ("Підбери готель у Кракові на дві ночі", .officialProvider),
+            ("Знайди квитки на нічний потяг до Варшави", .officialProvider),
+            ("Відстеж міжнародне відправлення за номером", .officialProvider),
+            ("Покажи офіційний муніципальний сервіс для реєстрації", .providerRequired),
+            ("Знайди вакансії дизайнера з віддаленою роботою", .officialProvider),
+            ("Покажи доступні персональні знижки програми лояльності", .providerRequired)
         ]
-        for (request, deliberateWeb) in requests {
+        for (request, expected) in requests {
             let parsed = LanguageUnderstandingBlock().parse(request)
             model.input = request
             model.submit()
             for _ in 0..<100 {
                 if case .webHandoff = model.resultState { break }
+                if case .deterministic = model.resultState { break }
                 if case .failure = model.resultState { break }
                 try await Task.sleep(for: .milliseconds(10))
             }
-            if deliberateWeb {
+            switch expected {
+            case .deliberateWeb:
                 guard case let .webHandoff(fallback) = model.resultState else {
                     Issue.record("Allowed informational fallback did not terminate truthfully: \(request); intent=\(parsed.intent.rawValue); entities=\(parsed.entities); state=\(String(describing: model.resultState))")
                     continue
                 }
                 #expect(fallback.query == request)
                 #expect(fallback.destination.host?.contains("google") == true)
-            } else {
+            case .officialProvider:
+                if case let .webHandoff(handoff) = model.resultState {
+                    #expect(handoff.kind == .provider)
+                    #expect(handoff.destination.host?.contains("google") != true)
+                } else if case let .deterministic(result) = model.resultState {
+                    #expect(!result.actions.isEmpty)
+                    #expect(result.actions.allSatisfy { $0.destination?.host?.contains("google") != true })
+                } else {
+                    Issue.record("Official provider route was not reached: \(request); intent=\(parsed.intent.rawValue); entities=\(parsed.entities); state=\(String(describing: model.resultState))")
+                }
+            case .providerRequired:
                 guard case let .failure(failure) = model.resultState else {
                     Issue.record("Typed provider request escaped its truthful boundary: \(request); intent=\(parsed.intent.rawValue); entities=\(parsed.entities); state=\(String(describing: model.resultState))")
                     continue

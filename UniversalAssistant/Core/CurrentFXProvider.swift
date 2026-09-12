@@ -62,6 +62,84 @@ struct FXConversionRequestParser: Sendable {
     }
 }
 
+
+/// Official credential-free NBU reference rates for conversions involving UAH.
+/// Values are UAH per one unit of the reported currency; no commercial quote or
+/// executable exchange price is implied.
+struct NBUCurrentFXProvider: CurrentFXProviding {
+    typealias DataLoader = @Sendable (URLRequest) async throws -> (Data, URLResponse)
+    private let load: DataLoader
+    private let now: @Sendable () -> Date
+
+    init(load: @escaping DataLoader = { try await URLSession.shared.data(for: $0) },
+         now: @escaping @Sendable () -> Date = Date.init) {
+        self.load = load
+        self.now = now
+    }
+
+    func convert(_ request: FXConversionRequest) async throws -> CurrentFXConversion {
+        guard request.source == "UAH" || request.destination == "UAH" else {
+            throw CurrentFXError.unsupportedCurrency("NBU requires a UAH side")
+        }
+        if request.source == request.destination {
+            return .init(request: request, convertedAmount: request.amount,
+                         observedAt: now(), provider: "National Bank of Ukraine")
+        }
+        let url = URL(string: "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json")!
+        var urlRequest = URLRequest(url: url)
+        urlRequest.timeoutInterval = 8
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await load(urlRequest)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw CurrentFXError.invalidResponse
+        }
+        let rows: [RateRow]
+        do { rows = try JSONDecoder().decode([RateRow].self, from: data) }
+        catch { throw CurrentFXError.invalidResponse }
+        let sourceRate = try rate(for: request.source, rows: rows)
+        let destinationRate = try rate(for: request.destination, rows: rows)
+        let converted = request.amount * sourceRate / destinationRate
+        let observedAt = rows.first(where: { $0.cc == (request.source == "UAH" ? request.destination : request.source) })
+            .flatMap { Self.date($0.exchangedate) } ?? now()
+        return .init(request: request, convertedAmount: converted,
+                     observedAt: observedAt, provider: "National Bank of Ukraine")
+    }
+
+    private func rate(for code: String, rows: [RateRow]) throws -> Decimal {
+        if code == "UAH" { return 1 }
+        guard let rate = rows.first(where: { $0.cc == code })?.rate, rate > 0 else {
+            throw CurrentFXError.unsupportedCurrency(code)
+        }
+        return rate
+    }
+
+    private static func date(_ value: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "dd.MM.yyyy"
+        return formatter.date(from: value)
+    }
+
+    private struct RateRow: Decodable { let rate: Decimal; let cc: String; let exchangedate: String }
+}
+
+struct RegionalCurrentFXProvider: CurrentFXProviding {
+    let ecb: ECBCurrentFXProvider
+    let nbu: NBUCurrentFXProvider
+
+    init(ecb: ECBCurrentFXProvider = .init(), nbu: NBUCurrentFXProvider = .init()) {
+        self.ecb = ecb
+        self.nbu = nbu
+    }
+
+    func convert(_ request: FXConversionRequest) async throws -> CurrentFXConversion {
+        if request.source == "UAH" || request.destination == "UAH" {
+            return try await nbu.convert(request)
+        }
+        return try await ecb.convert(request)
+    }
+}
 struct ECBCurrentFXProvider: CurrentFXProviding {
     typealias DataLoader = @Sendable (URLRequest) async throws -> (Data, URLResponse)
     private let load: DataLoader

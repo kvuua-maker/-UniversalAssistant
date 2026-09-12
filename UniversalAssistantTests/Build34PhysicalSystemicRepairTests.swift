@@ -218,12 +218,12 @@ struct Build34PhysicalSystemicSemanticTests {
     }
 
     @Test @MainActor func typedCommerceAndRideBoundariesNeverBecomeGenericGoogleErrors() async throws {
-        let requests: [(String, Set<CommandIntent>)] = [
-            ("Підбери жіночі туристичні черевики 39 розміру до 4800 гривень", [.productSearch, .fashionDiscovery]),
-            ("Збери кошик для овочевого рагу з доставкою", [.groceryBasket]),
-            ("Порівняй доступні таксі до художнього музею", [.taxiSearch, .taxiCompare])
+        let requests: [(String, Set<CommandIntent>, Bool)] = [
+            ("Підбери жіночі туристичні черевики 39 розміру до 4800 гривень", [.productSearch, .fashionDiscovery], true),
+            ("Збери кошик для овочевого рагу з доставкою", [.groceryBasket], true),
+            ("Порівняй доступні таксі до художнього музею", [.taxiSearch, .taxiCompare], false)
         ]
-        for (request, expected) in requests {
+        for (request, expected, hasOfficialPublicRoute) in requests {
             let command = parser.parse(request)
             #expect(expected.contains(command.intent), "Wrong typed provider family for \(request): \(command.intent)")
             if request.contains("39") { #expect(command.constraints.size == "39") }
@@ -234,12 +234,22 @@ struct Build34PhysicalSystemicSemanticTests {
             model.input = request
             model.submit()
             for _ in 0..<100 {
+                if case .deterministic = model.resultState { break }
                 if case .failure = model.resultState { break }
                 try await Task.sleep(for: .milliseconds(10))
             }
-            #expect({ if case .failure = model.resultState { return true }; return false }())
             #expect({ if case .webHandoff = model.resultState { return false }; return true }())
-            #expect(model.statusText.contains("провайдер"))
+            if hasOfficialPublicRoute {
+                guard case let .deterministic(result) = model.resultState else {
+                    Issue.record("Official provider chooser was not reached for \(request)")
+                    continue
+                }
+                #expect(!result.actions.isEmpty)
+                #expect(result.actions.allSatisfy { $0.destination?.host?.contains("google") != true })
+            } else {
+                #expect({ if case .failure = model.resultState { return true }; return false }())
+                #expect(model.statusText.contains("провайдер"))
+            }
         }
     }
 
