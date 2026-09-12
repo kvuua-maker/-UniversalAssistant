@@ -351,7 +351,7 @@ struct LanguageUnderstandingBlockTests {
         let command = block.parse(evidence.primaryTranscript, speechEvidence: evidence)
         #expect(command.intent == .open)
         #expect(command.entities["app"] == "cloud-link")
-        #expect(command.entities["speech_selected_alternative"] == "true")
+        #expect(command.entities["entity_match_resolution"] == "resolved")
         #expect(command.intent != .deviceAction)
     }
 

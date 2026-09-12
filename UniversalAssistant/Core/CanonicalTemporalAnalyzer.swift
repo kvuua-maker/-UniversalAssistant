@@ -258,14 +258,21 @@ struct CanonicalTemporalAnalyzer: Sendable {
             return .init(hour: hour, minute: minute, confidence: 0.99, evidence: "explicit_clock", ambiguous: false)
         }
 
-        // A separated hour/minute pair is accepted only in an alarm frame and
-        // only after a temporal preposition. This avoids treating arbitrary
-        // quantities as a clock.
-        if object == .alarm {
-            let pair = #"\b(?:о|об|на|at)\s+([01]?\d|2[0-3])\s+([0-5]\d)\b"#
+        // A separated hour/minute pair is accepted only in a temporal object
+        // and after a temporal preposition. Speech may emit "00" as two
+        // single zero digit groups; reconstruct that clock role without
+        // applying telephone-style arithmetic.
+        if let object,
+           [.alarm, .calendar, .reminder, .reservation, .restaurant].contains(object) {
+            let pair = #"\b(?:о|об|на|at)\s+([01]?\d|2[0-3])\s+(?:([0-5]\d)|([0-5])\s+(\d))\b"#
             if let match = firstMatch(pair, in: text),
-               let hour = integerCapture(1, match, text),
-               let minute = integerCapture(2, match, text) {
+               let hour = integerCapture(1, match, text) {
+                let minute = integerCapture(2, match, text) ?? {
+                    guard let tens = integerCapture(3, match, text),
+                          let ones = integerCapture(4, match, text) else { return nil }
+                    return tens * 10 + ones
+                }()
+                guard let minute else { return nil }
                 return .init(hour: hour, minute: minute, confidence: 0.94, evidence: "scoped_clock_pair", ambiguous: false)
             }
         }

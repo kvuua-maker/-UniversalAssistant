@@ -286,6 +286,30 @@ struct ContactsRequestLifecycleTests {
         #expect(try await resolver.resolve(name: "Надії Левченко") == .notFound)
     }
 
+    @Test func selectedCommunicationTargetIsDiagnosedOnlyByStableFingerprint() async throws {
+        let privateNumber = "+380991234567"
+        let executor = ProductionCanonicalCapabilityExecutor(personalSearchSources: [])
+        LocalVoiceDiagnosticReport.shared.reset()
+
+        let command = StructuredCommand(
+            originalText: "Зателефонуй за вказаним номером",
+            normalizedText: "зателефонуй за вказаним номером",
+            language: .uk,
+            intent: .contactCall,
+            entities: ["phone_number": privateNumber]
+        )
+        guard case .handoff = try await executor.execute(command) else {
+            Issue.record("Expected legitimate telephone handoff")
+            return
+        }
+
+        let diagnostics = LocalVoiceDiagnosticReport.shared.snapshot()
+        #expect(diagnostics.contains("contact_target_selected"))
+        #expect(diagnostics.contains("contact_identifier_hash="))
+        #expect(diagnostics.contains("service=telephone"))
+        #expect(!diagnostics.contains(privateNumber))
+    }
+
     @Test @MainActor func telephoneNumberSelectionResumesOwnedReleaseRequestAndStaleChoiceIsIgnored() async throws {
         let contact = ContactCandidate(
             identifier: "multi-phone",

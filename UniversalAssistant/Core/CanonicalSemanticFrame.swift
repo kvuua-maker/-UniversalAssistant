@@ -78,9 +78,36 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             frame.action = action(in: tokens)
             frame.object = object(in: tokens)
         }
+        let hasConversationObject = tokens.contains { token in
+            ["чат", "переписк", "розмов", "диалог", "conversation", "chat", "thread"].contains {
+                token.hasPrefix($0)
+            }
+        }
+        if hasConversationObject, frame.action == .open || frame.action == .show {
+            frame.action = .message
+        }
+        if frame.object == nil, isContactDetailRequest(tokens: tokens, action: frame.action) {
+            frame.object = .contact
+        }
         if frame.object == nil, isReservationMutation(in: tokens) {
             frame.object = .reservation
             if frame.action == nil { frame.action = .create }
+        }
+        let hasEventNoun = tokens.contains(where: { token in
+               ["поді", "событ", "event", "appointment"].contains { token.hasPrefix($0) }
+           })
+        let mutatesCalendarEvent = frame.action.map({ [.create, .record, .set, .update, .delete].contains($0) }) == true
+        let queriesPersonalCalendar = frame.action.map({ [.open, .show, .search, .query].contains($0) }) == true &&
+            tokens.contains(where: { token in
+                ["мо", "мій", "моя", "заплан", "календар", "my", "scheduled", "calendar"].contains {
+                    token.hasPrefix($0)
+                }
+            })
+        if hasEventNoun, mutatesCalendarEvent || (frame.object == nil && queriesPersonalCalendar) {
+            // An event noun becomes personal Calendar state only together with
+            // a mutation or explicit personal-calendar evidence. Public event
+            // discovery remains a provider domain instead of being stolen by EventKit.
+            frame.object = .calendar
         }
         if isApplicationSettingsRequest(tokens: tokens, normalized: normalized) {
             frame.object = .settings
@@ -131,11 +158,12 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             let contactSubject = trailingEntity(
                 original,
                 afterActionFamilies: [
-                    ["контакт", "contact"], ["подзвон", "зателефон", "набер", "позвон", "call", "dial"]
+                    ["контакт", "contact"], ["подзвон", "зателефон", "набер", "позвон", "call", "dial"],
+                    ["покаж", "знайд", "відобраз", "show", "find", "display"]
                 ],
                 stoppingAt: [" через ", " via ", " using "]
             )
-            frame.person = communicationPerson(contactSubject, excludingService: frame.service)
+            frame.person = contactDetailPerson(contactSubject, excludingService: frame.service)
         }
         frame.location = locationPhrase(in: original)
         if frame.action == .navigate, frame.location == nil {
@@ -285,7 +313,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             return (.photoSearch, entities)
         }
 
-        if frame.object == .contact && frame.action.map({ [.search, .show, .query].contains($0) }) == true {
+        if frame.object == .contact && frame.action.map({ [.open, .search, .show, .query].contains($0) }) == true {
             guard let person = frame.person, !person.isEmpty else {
                 return (.deviceAction, ["system_action": "unsupported_system_control"])
             }
@@ -423,8 +451,16 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         if frame.action == .navigate {
             if let location = frame.location { entities["destination"] = location }
             let transitMode = ["громадськ", "транспорт", "автобус", "метро", "трамва", "тролейбус", "обществен", "transit", "public transport"].contains(where: normalized.contains)
+            let asksForRoute = ["як", "как", "how"].contains(where: lexicalTokens(normalized).contains)
             if transitMode { entities["travel_mode"] = "transit" }
-            return (transitMode ? .transportRoute : (frame.location == nil ? .routeSearch : .navigation), entities)
+            return (transitMode || asksForRoute ? .transportRoute : (frame.location == nil ? .routeSearch : .navigation), entities)
+        }
+        let routeEvidence = ["маршрут", "дорог", "шлях", "путь", "directions", "route", "path"]
+            .contains(where: normalized.contains)
+        if routeEvidence, frame.location != nil,
+           frame.action.map({ [.search, .show, .query].contains($0) }) == true {
+            entities["destination"] = frame.location
+            return (.navigation, entities)
         }
 
         // Proximity is a structural location constraint. Once it is present,
@@ -466,6 +502,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         }
         if messageObject && sendVerb { return .message }
         let families: [(CanonicalSemanticFrame.Action, [String])] = [
+            (.query, ["перевір", "дізнай", "розкаж", "уточн", "check", "tell", "explain", "query"]),
             (.disable, ["вимк", "выключ", "disable", "turnoff"]),
             (.enable, ["увімк", "включ", "enable", "turnon"]),
             (.delete, ["видал", "скас", "удал", "отмен", "delete", "remove", "cancel"]),
@@ -489,11 +526,18 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
            let explicit = families.first(where: { _, roots in roots.contains { actionToken(leading, matches: $0) } }) {
             return explicit.0
         }
+        let howInterrogatives: Set<String> = ["як", "как", "how"]
+        let movementRoots = ["діст", "добрат", "доїхат", "доехать", "reach", "navigat", "route"]
+        if !howInterrogatives.isDisjoint(with: tokens),
+           tokens.contains(where: { token in movementRoots.contains { actionToken(token, matches: $0) } }) {
+            return .navigate
+        }
         // A leading imperative owns the ACTION role. Interrogatives in its
         // payload must not turn the command into a query for another family.
         let interrogatives: Set<String> = [
             "чи", "що", "який", "яка", "яке", "які", "котрий", "котра",
-            "есть", "какой", "какая", "какие", "which", "what"
+            "чому", "як", "есть", "какой", "какая", "какие", "почему", "как",
+            "which", "what", "why", "how"
         ]
         if !interrogatives.isDisjoint(with: tokens) { return .query }
         return families.first { _, roots in tokens.contains { token in roots.contains { actionToken(token, matches: $0) } } }?.0
@@ -577,7 +621,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.restaurant, ["ресторан", "restaurant", "столик", "table"]),
             (.audio, ["аудіозап", "аудиозап", "голосов", "звуков", "звукозап", "voice", "recording"]),
             (.reminder, ["нагадув", "напомин", "reminder"]),
-            (.calendar, ["календар", "поді", "зустр", "событ", "event", "appointment"]),
+            (.calendar, ["календар", "зустр"]),
             (.timer, ["таймер", "timer"]),
             (.alarm, ["будильник", "розбуд", "alarm", "wake"]),
             (.settings, ["налаштуван", "настрой", "параметр", "settings", "preferences", "einstellungen", "réglages"]),
@@ -595,7 +639,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.text, ["текст", "text"]),
             (.weather, ["погод", "температур", "дощ", "дожд", "холод", "спек", "жарк", "weather", "rain", "cold", "hot"]),
             (.photo, ["фото", "світлин", "знім", "сним", "photo", "image", "picture"]),
-            (.file, ["файл", "file"]),
+            (.file, ["файл", "папк", "тека", "folder", "directory", "downloads"]),
             (.document, ["документ", "document", "pdf"]),
             (.note, ["нотат", "замет", "notiz", "note"]),
             (.url, ["url", "посилан", "ссылк", "link", "вебадрес", "webaddress"]),
@@ -609,6 +653,27 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         tokens.contains { token in
             ["заброн", "резерв", "book", "reserve"].contains { actionToken(token, matches: $0) }
         }
+    }
+
+    private func isContactDetailRequest(tokens: [String], action: CanonicalSemanticFrame.Action?) -> Bool {
+        guard action.map({ [.open, .search, .show, .query].contains($0) }) == true else { return false }
+        let explicitContact = tokens.contains { token in
+            ["контакт", "contact"].contains { token.hasPrefix($0) }
+        }
+        let directContactDatum = tokens.contains { token in
+            ["телефон", "номер", "email", "mail", "address", "phone", "number"].contains {
+                token.hasPrefix($0)
+            }
+        }
+        let electronicMailDatum = tokens.contains { token in
+            ["електрон", "электрон", "electronic"].contains { token.hasPrefix($0) }
+        } && tokens.contains { token in
+            ["пошт", "почт", "mail"].contains { token.hasPrefix($0) }
+        }
+        let isMailApplicationRequest = action == .open && tokens.contains { token in
+            ["email", "mail", "пошт"].contains { token.hasPrefix($0) }
+        }
+        return (explicitContact || directContactDatum || electronicMailDatum) && !isMailApplicationRequest
     }
 
     private func partySize(in text: String) -> Int? {
@@ -856,6 +921,27 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         return result.isEmpty ? nil : result
     }
 
+    private func contactDetailPerson(_ value: String?, excludingService service: String?) -> String? {
+        guard let value = communicationPerson(value, excludingService: service) else { return nil }
+        let structuralRoots = [
+            "контакт", "телефон", "номер", "email", "mail", "пошт", "електрон", "адрес",
+            "contact", "phone", "number", "address"
+        ]
+        let tokens = value.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        let person = tokens.filter { token in
+            let normalized = CanonicalMorphology.comparableText(token)
+            return !structuralRoots.contains { normalized.hasPrefix($0) }
+        }.joined(separator: " ")
+        let nonPersonDescriptors: Set<String> = [
+            "мій", "моя", "моє", "мої", "мои", "мой", "моя", "my",
+            "всі", "усі", "все", "all"
+        ]
+        let personTokens = person.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map {
+            CanonicalMorphology.comparableText(String($0))
+        }
+        return personTokens.isEmpty || personTokens.allSatisfy(nonPersonDescriptors.contains) ? nil : person
+    }
+
 
     private func locationPhrase(in original: String) -> String? {
         let markers = [" до ", " у ", " в ", " біля ", " поруч із ", " near ", " to "]
@@ -875,7 +961,8 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     private func navigationDestination(in original: String) -> String? {
         let patterns = [
             #"^\s*(?:веди|проведи|navigate|take me|приведи)\s+(?:мене\s+|меня\s+)?(.+?)\s*$"#,
-            #"^\s*(?:їхати|ехать|go)\s+(.+?)\s*$"#
+            #"^\s*(?:їхати|ехать|go)\s+(.+?)\s*$"#,
+            #"(?:маршрут|дорог\p{L}*|шлях\p{L}*|путь\p{L}*|route|directions|path)\s+(?:до|на|у|в|to)\s+(.+?)\s*$"#
         ]
         for pattern in patterns {
             guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),

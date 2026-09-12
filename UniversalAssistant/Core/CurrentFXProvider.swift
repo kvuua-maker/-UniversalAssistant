@@ -39,14 +39,14 @@ struct FXConversionRequestParser: Sendable {
 
     private func currencyMentions(_ text: String) -> [(offset: String.Index, code: String)] {
         let aliases: [(String, String)] = [
-            ("долар", "USD"), ("доллар", "USD"), ("usd", "USD"),
-            ("євро", "EUR"), ("евро", "EUR"), ("eur", "EUR"),
+            ("долар", "USD"), ("доллар", "USD"), ("usd", "USD"), ("$", "USD"),
+            ("євро", "EUR"), ("евро", "EUR"), ("eur", "EUR"), ("€", "EUR"),
             ("злот", "PLN"), ("pln", "PLN"),
-            ("фунт", "GBP"), ("gbp", "GBP"),
-            ("гривн", "UAH"), ("uah", "UAH"),
+            ("фунт", "GBP"), ("gbp", "GBP"), ("£", "GBP"),
+            ("гривн", "UAH"), ("uah", "UAH"), ("₴", "UAH"),
             ("франк", "CHF"), ("chf", "CHF"),
             ("крон", "CZK"), ("czk", "CZK"),
-            ("ієн", "JPY"), ("иен", "JPY"), ("jpy", "JPY")
+            ("ієн", "JPY"), ("иен", "JPY"), ("jpy", "JPY"), ("¥", "JPY")
         ]
         var matches: [(offset: String.Index, code: String)] = []
         for (alias, code) in aliases {

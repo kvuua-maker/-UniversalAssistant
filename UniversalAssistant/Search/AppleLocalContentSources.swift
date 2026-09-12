@@ -59,38 +59,40 @@ struct PhotoKitLibrarySearch: PhotoLibrarySearching {
 
     func search(_ criteria: PhotoSearchCriteria, limit: Int) async -> [PhotoAssetReference] {
         guard [.permitted, .limited].contains(authorization()) else { return [] }
-        return await Task.detached(priority: .userInitiated) {
-            let options = PHFetchOptions()
-            if let range = criteria.dateRange {
-                options.predicate = NSPredicate(format: "creationDate >= %@ AND creationDate < %@", range.lowerBound as NSDate, range.upperBound as NSDate)
-            }
-            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            options.fetchLimit = max(1, min(limit * 8, 200))
-            var allowedIDs: Set<String>?
-            if let albumName = criteria.albumName {
-                let collections = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
-                var ids = Set<String>()
-                collections.enumerateObjects { collection, _, _ in
-                    guard collection.localizedTitle?.localizedCaseInsensitiveCompare(albumName) == .orderedSame else { return }
-                    PHAsset.fetchAssets(in: collection, options: nil).enumerateObjects { asset, _, _ in
-                        ids.insert(asset.localIdentifier)
-                    }
+        guard !Task.isCancelled else { return [] }
+        let options = PHFetchOptions()
+        if let range = criteria.dateRange {
+            options.predicate = NSPredicate(format: "creationDate >= %@ AND creationDate < %@", range.lowerBound as NSDate, range.upperBound as NSDate)
+        }
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        options.fetchLimit = max(1, min(limit * 8, 200))
+        var allowedIDs: Set<String>?
+        if let albumName = criteria.albumName {
+            let collections = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
+            var ids = Set<String>()
+            collections.enumerateObjects { collection, _, stop in
+                guard !Task.isCancelled else { stop.pointee = true; return }
+                guard collection.localizedTitle?.localizedCaseInsensitiveCompare(albumName) == .orderedSame else { return }
+                PHAsset.fetchAssets(in: collection, options: nil).enumerateObjects { asset, _, assetStop in
+                    guard !Task.isCancelled else { assetStop.pointee = true; return }
+                    ids.insert(asset.localIdentifier)
                 }
-                allowedIDs = ids
             }
-            let center = criteria.coordinate.map { CLLocation(latitude: $0.latitude, longitude: $0.longitude) }
-            var output: [PhotoAssetReference] = []
-            PHAsset.fetchAssets(with: .image, options: options).enumerateObjects { asset, _, stop in
-                guard allowedIDs?.contains(asset.localIdentifier) ?? true else { return }
-                if let center {
-                    guard let location = asset.location, location.distance(from: center) <= criteria.radiusMeters else { return }
-                }
-                output.append(.init(localIdentifier: asset.localIdentifier, creationDate: asset.creationDate,
-                                    coordinate: asset.location?.coordinate, album: criteria.albumName))
-                if output.count >= max(1, min(limit, 20)) { stop.pointee = true }
+            allowedIDs = ids
+        }
+        let center = criteria.coordinate.map { CLLocation(latitude: $0.latitude, longitude: $0.longitude) }
+        var output: [PhotoAssetReference] = []
+        PHAsset.fetchAssets(with: .image, options: options).enumerateObjects { asset, _, stop in
+            guard !Task.isCancelled else { stop.pointee = true; return }
+            guard allowedIDs?.contains(asset.localIdentifier) ?? true else { return }
+            if let center {
+                guard let location = asset.location, location.distance(from: center) <= criteria.radiusMeters else { return }
             }
-            return output
-        }.value
+            output.append(.init(localIdentifier: asset.localIdentifier, creationDate: asset.creationDate,
+                                coordinate: asset.location?.coordinate, album: criteria.albumName))
+            if output.count >= max(1, min(limit, 20)) { stop.pointee = true }
+        }
+        return output
     }
 }
 

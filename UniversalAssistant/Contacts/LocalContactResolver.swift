@@ -290,19 +290,40 @@ actor LocalContactResolver: ContactResolving {
         query name: String
     ) -> (resolution: ContactResolution, mechanism: ScopedEntityMatchMechanism, candidateCount: Int) {
         guard !contacts.isEmpty else { return (.notFound, .unresolved, 0) }
-        let domain = contacts.map {
+        let comparableQuery = CanonicalMorphology.comparableText(name)
+        let domain = contacts.filter { contact in
+            let identityValues = [contact.displayName] + contact.aliases
+            return identityValues.contains { value in
+                let comparable = CanonicalMorphology.comparableText(value)
+                return comparable == comparableQuery || comparable.count >= 3
+            }
+        }.map {
             ScopedEntityCandidate(
                 value: $0,
                 displayName: $0.displayName,
                 aliases: Set([$0.displayName] + $0.aliases)
             )
         }
-        let evidence = ContextScopedEntityResolver(
+        guard !domain.isEmpty else { return (.notFound, .unresolved, contacts.count) }
+        let resolver = ContextScopedEntityResolver(
             candidates: domain,
-            directThreshold: 0.82,
-            ambiguityThreshold: 0.55,
-            requiredMargin: 0.16
-        ).resolveWithEvidence(name)
+            directThreshold: 0.90,
+            ambiguityThreshold: 0.60,
+            requiredMargin: 0.18
+        )
+        let tokens = name.split { !$0.isLetter && !$0.isNumber }.map(String.init)
+        var subjects = [name]
+        if !tokens.isEmpty {
+            for length in 1...min(4, tokens.count) {
+                for start in 0...(tokens.count - length) {
+                    subjects.append(tokens[start..<(start + length)].joined(separator: " "))
+                }
+            }
+        }
+        let evidence = subjects.map(resolver.resolveWithEvidence).max {
+            if $0.bestScore == $1.bestScore { return $0.confidenceMargin < $1.confidenceMargin }
+            return $0.bestScore < $1.bestScore
+        } ?? resolver.resolveWithEvidence(name)
         switch evidence.resolution {
         case let .resolved(contact):
             return (.resolved(contact), evidence.mechanism, contacts.count)

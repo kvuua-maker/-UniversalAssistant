@@ -163,7 +163,8 @@ struct PhysicalDiagnosticDeliveryTests {
         let session = report.completedSession()
         #expect(session?.events.count == 250)
         #expect(session?.events.first?.marker == "request_created")
-        #expect(session?.events.last?.marker == "terminal_request_state")
+        #expect(session?.events.last?.marker == "request_end")
+        #expect(session?.events.contains(where: { $0.marker == "terminal_request_state" }) == true)
         #expect(session?.events.enumerated().allSatisfy { $0.offset + 1 == $0.element.sequence } == true)
     }
 
@@ -244,7 +245,8 @@ struct PhysicalDiagnosticDeliveryTests {
         #expect(markers.contains("normalization"))
         #expect(markers.contains("selected_capability"))
         #expect(markers.contains("CONTACT_FETCH_PRE"))
-        #expect(markers.last == "unclean_termination_detected")
+        #expect(markers.last == "request_end")
+        #expect(markers.contains("unclean_termination_detected"))
         #expect(recovered?.events.enumerated().allSatisfy { $0.offset + 1 == $0.element.sequence } == true)
         #expect(recovered?.anomaly?.reason == "missing_expected_post:CONTACT_FETCH_POST")
     }
@@ -355,7 +357,7 @@ struct PhysicalDiagnosticDeliveryTests {
         #expect(markers.contains("EXECUTOR_POST"))
         #expect(markers.contains("RENDERER_ACTION_PRE"))
         #expect(markers.contains("RENDERER_ACTION_POST"))
-        #expect(markers.last == "terminal_request_state")
+        #expect(markers.last == "request_end")
         #expect(markers.filter { $0 == "terminal_request_state" }.count == 1)
         #expect(session?.terminalState == .success)
     }

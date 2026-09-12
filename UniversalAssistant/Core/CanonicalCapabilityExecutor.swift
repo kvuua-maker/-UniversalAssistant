@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import MessageUI
 import SwiftUI
 import UIKit
@@ -296,7 +297,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .contactLookup:
             return try await contact(command, preparesCall: false)
         case .contactCall:
-            if command.entities["contact"] == nil { return try await contextual(command, opensSelection: true) }
+            if command.entities["contact"] == nil, command.entities["phone_number"] == nil {
+                return try await contextual(command, opensSelection: true)
+            }
             return try await contact(command, preparesCall: true)
         case .messageCompose:
             return try await message(command)
@@ -1001,18 +1004,18 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     }
 
     private func boundedPhotoSearch(_ criteria: PhotoSearchCriteria, limit: Int) async throws -> [PhotoAssetReference] {
-        let completion = PhotoSearchDeadlineCompletion()
-        let result = await withTaskCancellationHandler {
-            await withCheckedContinuation { continuation in
-                completion.install(continuation)
-                Task { [photos] in completion.finish(.values(await photos.search(criteria, limit: limit))) }
-                Task { [photoSearchTimeout] in
-                    try? await Task.sleep(for: photoSearchTimeout)
-                    completion.finish(.timedOut)
-                }
+        let result = await withTaskGroup(of: PhotoSearchDeadlineResult.self) { group in
+            group.addTask(priority: .userInitiated) { [photos] in
+                .values(await photos.search(criteria, limit: limit))
             }
-        } onCancel: {
-            completion.finish(.cancelled)
+            group.addTask(priority: .background) { [photoSearchTimeout] in
+                do { try await Task.sleep(for: photoSearchTimeout) }
+                catch { return .cancelled }
+                return .timedOut
+            }
+            let first = await group.next() ?? .cancelled
+            group.cancelAll()
+            return first
         }
         switch result {
         case let .values(values): return values
@@ -1165,6 +1168,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private func contact(_ command: StructuredCommand, preparesCall: Bool) async throws -> CapabilityExecutionOutcome {
         let requestedService = command.entities["call_service"]
         if preparesCall, let rawNumber = command.entities["phone_number"] {
+            recordSelectedTarget(identifier: "telephone:" + rawNumber.filter(\.isNumber), service: requestedService ?? "telephone", phoneCount: 1, emailCount: 0)
             LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CONTACT_ACTION", "kind=typed_phone")
             defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CONTACT_ACTION", "kind=typed_phone status=returned") }
             return .handoff(.init(query: rawNumber, destination: try callDestination(number: rawNumber, service: requestedService), kind: .system))
@@ -1185,6 +1189,12 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             throw CanonicalCapabilityExecutionError.unavailable("contact_not_found")
         case let .ambiguous(values): throw CanonicalCapabilityExecutionError.ambiguous(values.map(\.displayName))
         case let .resolved(value):
+            recordSelectedTarget(
+                identifier: "contact:" + value.identifier,
+                service: preparesCall ? (requestedService ?? "telephone") : "contact_lookup",
+                phoneCount: value.phoneNumbers.count,
+                emailCount: value.emailAddresses.count
+            )
             if preparesCall {
                 guard !value.phoneNumbers.isEmpty else {
                     throw CanonicalCapabilityExecutionError.unavailable("contact_has_no_phone_number")
@@ -1217,6 +1227,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 return .presentation(.email(recipients: [], subject: command.entities["message_subject"], body: body))
             }
             if rawRecipient.contains("@") {
+                recordSelectedTarget(identifier: "email:" + rawRecipient.lowercased(), service: "email", phoneCount: 0, emailCount: 1)
                 return .presentation(.email(recipients: [rawRecipient], subject: command.entities["message_subject"], body: body))
             }
             try await contacts.requestAccessIfNeeded()
@@ -1226,6 +1237,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             case let .ambiguous(values):
                 throw CanonicalCapabilityExecutionError.ambiguous(values.map(\.displayName))
             case let .resolved(value):
+                recordSelectedTarget(identifier: "contact:" + value.identifier, service: "email", phoneCount: value.phoneNumbers.count, emailCount: value.emailAddresses.count)
                 guard !value.emailAddresses.isEmpty else {
                     throw CanonicalCapabilityExecutionError.unavailable("contact_has_no_email_address")
                 }
@@ -1245,6 +1257,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
 
         if service == MessengerKind.telegram.rawValue {
             let username = rawRecipient.flatMap(Self.explicitMessengerUsername)
+            if let username {
+                recordSelectedTarget(identifier: "messenger:telegram:" + username.lowercased(), service: service, phoneCount: 0, emailCount: 0)
+            }
             switch try MessengerHandoffPlanner().plan(messenger: .telegram, recipient: username, body: body) {
             case let .verifiedHandoff(url): return .handoff(.init(query: command.originalText, destination: url, kind: .system))
             case let .unavailable(reason): throw CanonicalCapabilityExecutionError.unavailable(reason)
@@ -1271,6 +1286,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let phoneNumber: String
         if directDigits.count >= 7 {
             phoneNumber = rawRecipient
+            recordSelectedTarget(identifier: "telephone:" + directDigits, service: service, phoneCount: 1, emailCount: 0)
         } else {
             try await contacts.requestAccessIfNeeded()
             switch try await contacts.resolve(name: rawRecipient) {
@@ -1279,6 +1295,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             case let .ambiguous(values):
                 throw CanonicalCapabilityExecutionError.ambiguous(values.map(\.displayName))
             case let .resolved(value):
+                recordSelectedTarget(identifier: "contact:" + value.identifier, service: service, phoneCount: value.phoneNumbers.count, emailCount: value.emailAddresses.count)
                 guard value.phoneNumbers.count == 1, let number = value.phoneNumbers.first else {
                     throw CanonicalCapabilityExecutionError.ambiguous(value.phoneNumbers)
                 }
@@ -1308,6 +1325,21 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let username = value.dropFirst()
         guard !username.isEmpty, username.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" }) else { return nil }
         return String(username)
+    }
+
+    private func recordSelectedTarget(
+        identifier: String,
+        service: String,
+        phoneCount: Int,
+        emailCount: Int
+    ) {
+        let digest = SHA256.hash(data: Data(identifier.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined(separator: ":")
+        LocalVoiceDiagnosticReport.shared.record(
+            "contact_target_selected",
+            "kind=privacy_safe_fingerprint contact_identifier_hash=\(digest) service=\(service) count=\(phoneCount + emailCount)"
+        )
     }
 
     private func callDestination(number: String, service: String?) throws -> URL {

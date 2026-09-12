@@ -47,6 +47,62 @@ struct StructuredCommand: Equatable, Codable, Sendable {
 
 protocol CommandParsing: Sendable { func parse(_ text: String) -> StructuredCommand }
 
+/// Extracts typed translation roles before capability selection. Language
+/// names are a bounded semantic resource; source payload words cannot select a
+/// competing capability once ACTION and TARGET_LANGUAGE are both complete.
+struct CanonicalTranslationRoles: Equatable, Sendable {
+    let sourceText: String
+    let targetLanguage: String
+
+    private static let languages: [(roots: [String], code: String)] = [
+        (["англій", "англий", "english"], "en"),
+        (["україн", "украин", "ukrainian"], "uk"),
+        (["росій", "русск", "russian"], "ru"),
+        (["німець", "немец", "german"], "de"),
+        (["француз", "french"], "fr"),
+        (["польськ", "польск", "polish"], "pl"),
+        (["іспанськ", "испанск", "spanish"], "es"),
+        (["італійськ", "итальянск", "italian"], "it"),
+        (["португальськ", "португальск", "portuguese"], "pt"),
+        (["чеськ", "чешск", "czech"], "cs"),
+        (["японськ", "японск", "japanese"], "ja")
+    ]
+
+    static func analyze(_ text: String) -> Self? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = trimmed.lowercased(with: Locale(identifier: "uk_UA"))
+        let actionPattern = #"(?:перекла\p{L}*|переве\p{L}*|translate\p{L}*|übersetz\p{L}*|tradui\p{L}*)"#
+        guard let action = trimmed.range(of: actionPattern, options: [.regularExpression, .caseInsensitive]),
+              let targetCode = targetLanguage(in: normalized) else { return nil }
+
+        let languagePattern = languages.flatMap(\.roots)
+            .map(NSRegularExpression.escapedPattern)
+            .joined(separator: "|")
+        var source = String(trimmed[action.upperBound...])
+        let leading = #"^\s*(?:мені|мне|please|будь ласка)?\s*(?:(?:на|into|to)\s+)?(?:"# + languagePattern + #")\p{L}*(?:\s+(?:мовою|мову|языком|язык|language))?\s*(?:(?:переклад|перевод|translation)\p{L}*\s*)?[:,-]?\s*(?:(?:текст|фраз|реченн|предложен|sentence|phrase|text)\p{L}*\s*[:,-]?\s*)?"#
+        source = source.replacingOccurrences(of: leading, with: "", options: [.regularExpression, .caseInsensitive])
+        source = source.replacingOccurrences(
+            of: #"^\s*(?:(?:текст|фраз|реченн|предложен|sentence|phrase|text)\p{L}*\s*[:,-]?\s*)"#,
+            with: "", options: [.regularExpression, .caseInsensitive]
+        )
+        let trailing = #"\s*[,;:-]?\s*(?:на|into|to)\s+(?:"# + languagePattern + #")\p{L}*(?:\s+(?:мову|мовою|язык|языком|language))?\s*$"#
+        source = source.replacingOccurrences(of: trailing, with: "", options: [.regularExpression, .caseInsensitive])
+        let cleaned = source.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        guard !cleaned.isEmpty else { return nil }
+        return .init(sourceText: cleaned, targetLanguage: targetCode)
+    }
+
+    /// TARGET_LANGUAGE is independent from SOURCE_TEXT so a compound step can
+    /// receive its source from a preceding OCR result without losing the
+    /// explicitly spoken destination language.
+    static func targetLanguage(in text: String) -> String? {
+        let normalized = text.lowercased(with: Locale(identifier: "uk_UA"))
+        return languages.first(where: { value in
+            value.roots.contains(where: normalized.contains)
+        })?.code
+    }
+}
+
 enum CompoundCommandClauses {
     static func split(_ text: String) -> [String] {
         let boundary = "\u{001F}"
@@ -396,15 +452,7 @@ struct LocalCommandEngine: CommandParsing {
     }
 
     private func translationSource(in text: String) -> String? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let actionPattern = #"(?:перекла\p{L}*|переве\p{L}*|translate\p{L}*|übersetz\p{L}*|tradui\p{L}*)"#
-        guard let action = trimmed.range(of: actionPattern, options: [.regularExpression, .caseInsensitive]) else { return nil }
-        var value = String(trimmed[action.upperBound...])
-        value = value.replacingOccurrences(of: #"^\s*(?:мені|мне|please|будь ласка)?\s*(?:(?:англій|англий|english|німець|немец|german|француз|french|україн|украин|ukrainian|росій|русск|russian)\p{L}*|(?:на|into|to)\s+(?:англій|англий|english|німець|немец|german|француз|french|україн|украин|ukrainian|росій|русск|russian)\p{L}*)(?:\s+(?:мовою|мову|языком|язык|language))?\s*(?:(?:переклад|перевод|translation)\p{L}*\s*)?[:,-]?\s*(?:(?:текст|фраз|реченн|предложен|sentence|phrase|text)\p{L}*\s*[:,-]?\s*)?"#, with: "", options: [.regularExpression, .caseInsensitive])
-        value = value.replacingOccurrences(of: #"^\s*(?:(?:текст|фраз|реченн|предложен|sentence|phrase|text)\p{L}*\s*[:,-]?\s*)"#, with: "", options: [.regularExpression, .caseInsensitive])
-        value = value.replacingOccurrences(of: #"\s*[,;:-]?\s*(?:на|into|to)\s+(?:англій|англий|english|німець|немец|german|француз|french|україн|украин|ukrainian|росій|русск|russian)\p{L}*(?:\s+(?:мову|мовою|язык|языком|language))?\s*$"#, with: "", options: [.regularExpression, .caseInsensitive])
-        let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
-        return cleaned.isEmpty ? nil : cleaned
+        CanonicalTranslationRoles.analyze(text)?.sourceText
     }
 
     private func recorderAction(in text: String) -> String {
@@ -442,10 +490,7 @@ struct LocalCommandEngine: CommandParsing {
     }
 
     private func translationTarget(in text: String) -> String? {
-        let values = [("англій", "en"), ("англий", "en"), ("english", "en"), ("україн", "uk"), ("украин", "uk"), ("ukrainian", "uk"),
-                      ("росій", "ru"), ("русск", "ru"), ("russian", "ru"), ("німець", "de"), ("немец", "de"), ("german", "de"),
-                      ("француз", "fr"), ("french", "fr")]
-        return values.first { text.contains($0.0) }?.1
+        CanonicalTranslationRoles.targetLanguage(in: text)
     }
 
     private func querySubject(for intent: CommandIntent, in text: String) -> String {

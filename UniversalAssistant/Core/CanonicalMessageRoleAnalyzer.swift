@@ -96,12 +96,13 @@ enum CanonicalMessageRoleAnalyzer {
     private static func isMessageAction(_ token: Token) -> Bool {
         matches(token, roots: [
             "напиш", "надішл", "відправ", "повідом", "отправ", "сообщ",
+            "відкр", "откр", "покаж", "open", "show",
             "message", "send", "text", "write"
         ])
     }
 
     private static func isMessageObject(_ token: Token) -> Bool {
-        matches(token, roots: ["повідомлен", "сообщен", "message", "sms", "текст"])
+        matches(token, roots: ["повідомлен", "сообщен", "message", "sms", "текст", "чат", "переписк", "розмов", "conversation", "thread"])
     }
 
     private static func isServiceBoundary(_ token: Token) -> Bool {
@@ -134,7 +135,7 @@ enum CanonicalMessageRoleAnalyzer {
     }
 
     private static func trimLeadingRecipientMarker(_ tokens: inout [Token]) {
-        while tokens.first.map({ ["для", "to", "for"].contains($0.normalized) }) == true {
+        while tokens.first.map({ ["для", "до", "з", "із", "зі", "с", "to", "for"].contains($0.normalized) }) == true {
             tokens.removeFirst()
         }
     }

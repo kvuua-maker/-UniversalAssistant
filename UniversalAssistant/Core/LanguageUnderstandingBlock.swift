@@ -120,7 +120,7 @@ private enum CanonicalExternalProviderBoundaryAnalyzer {
               actionRoots: ["підбер", "знайд", "заброн", "найд", "find", "search", "book"],
               minimumObjectMatches: 1),
         .init(domain: "tickets", intent: .ticketSearch,
-              objectRoots: ["квит", "білет", "ticket", "fare"],
+              objectRoots: ["квит", "білет", "ticket", "fare", "поді", "событ", "event", "концерт", "вистав", "матч", "турнір", "concert", "match", "tournament"],
               actionRoots: ["знайд", "підбер", "покаж", "найд", "find", "search", "show"],
               minimumObjectMatches: 1),
         .init(domain: "commercial_service", intent: .serviceSearch,
@@ -141,7 +141,8 @@ private enum CanonicalExternalProviderBoundaryAnalyzer {
             .hotelSearch, .travelPlan, .parcelTrack
         ]
         let unresolvedIntents: Set<CommandIntent> = [.unknown, .webSearch, .show, .open]
-        guard externalIntents.contains(currentIntent) || unresolvedIntents.contains(currentIntent) else {
+        let providerNounCollision = currentIntent == .messageCompose && frame.action == .query
+        guard externalIntents.contains(currentIntent) || unresolvedIntents.contains(currentIntent) || providerNounCollision else {
             return nil
         }
         guard frame.source == nil, frame.contextReference == nil else { return nil }
@@ -318,6 +319,8 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         entities["semantic_confidence"] = String(format: "%.3f", frameResult.frame.confidence)
 
         let arithmetic = CanonicalArithmeticExpressionAnalyzer.analyze(document.normalizedText)
+        let currency = FXConversionRequestParser().parse(document.normalizedText)
+        let translation = CanonicalTranslationRoles.analyze(text)
         if let arithmetic {
             entities["arithmetic_confidence"] = String(format: "%.3f", arithmetic.confidence)
             entities["arithmetic_evidence"] = arithmetic.evidence.sorted().joined(separator: "|")
@@ -327,8 +330,13 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         if LocalUtilityEngine.canExecute(document.normalizedText),
            arithmetic != nil || !hasIncompatibleStructuredUtilityObject(frameResult.frame) {
             intent = .localUtility
-        } else if LocalUtilityEngine.recognizesCurrency(document.normalizedText) {
+        } else if currency != nil || LocalUtilityEngine.recognizesCurrency(document.normalizedText) {
             intent = .currencyConversion
+        } else if let translation {
+            intent = .translation
+            entities["source_text"] = translation.sourceText
+            entities["target_language"] = translation.targetLanguage
+            entities["semantic_evidence"] = "typed_translation_roles"
         } else if legacy.intent == .multiStep, frameResult.frame.compound != nil {
             // LocalCommandEngine has already required every separated clause to
             // resolve to a concrete canonical command. Preserve that validated
@@ -412,9 +420,9 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             entities["clarification_role"] = "vehicle_service"
         }
 
-        var needsClarification = (proposition == nil && legacy.needsClarification) ||
+        var needsClarification = (proposition == nil && frameResult.intent == nil && legacy.needsClarification) ||
             entities["clarification_options"] != nil
-        if emergencyTarget != nil || providerInference != nil { needsClarification = false }
+        if emergencyTarget != nil || providerInference != nil || translation != nil { needsClarification = false }
         if let recovered = recoverApplication(
             frame: frameResult.frame,
             document: document,
@@ -442,6 +450,44 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                     intent = .open
                     needsClarification = true
                 }
+            }
+        }
+
+        // A verified channel inside an explicit communication proposition is
+        // stronger typed evidence than an object token that happens to look
+        // like a device setting. Resolve the bounded SERVICE domain before the
+        // selected capability can keep such a lexical collision.
+        let structuralCommunicationIntent: CommandIntent? = switch frameResult.frame.action {
+        case .call: .contactCall
+        case .message, .share: .messageCompose
+        default: nil
+        }
+        if emergencyTarget == nil,
+           let structuralCommunicationIntent,
+           intent != structuralCommunicationIntent,
+           let serviceKey = serviceKey(for: structuralCommunicationIntent),
+           entities[serviceKey] == nil,
+           let recovered = recoverService(
+               frame: frameResult.frame,
+               document: document,
+               intent: structuralCommunicationIntent
+           ),
+           case let .resolved(identifier) = recovered.resolution {
+            intent = structuralCommunicationIntent
+            recordResolutionEvidence(recovered, prefix: "service_match", entities: &entities)
+            entities[serviceKey] = identifier
+            entities["service_match_mechanism"] = recovered.mechanism.rawValue
+            entities["service_match_confidence"] = String(format: "%.3f", recovered.bestScore)
+            if structuralCommunicationIntent == .messageCompose {
+                entities["recipient"] = communicationRecipient(
+                    in: document,
+                    excludingResolvedService: identifier
+                ) ?? entities["recipient"].flatMap {
+                    communicationRecipient($0, excludingResolvedService: identifier)
+                }
+            }
+            if entities[structuralCommunicationIntent == .contactCall ? "contact" : "recipient"] != nil {
+                needsClarification = false
             }
         }
 
@@ -553,6 +599,14 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             entities["reservation_operation"] = "book"
         }
 
+        if intent == .unknown,
+           isGeneralInformationRequest(document: document, frame: frameResult.frame) {
+            intent = .webSearch
+            entities["query"] = text
+            entities["semantic_evidence"] = "typed_general_information"
+            needsClarification = false
+        }
+
         if shouldFailClosed(frame: frameResult.frame, selectedIntent: intent) {
             intent = failClosedIntent(for: frameResult.frame)
             needsClarification = true
@@ -597,8 +651,27 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
     /// Apple alternatives may complete a role only inside the same structural
     /// intent family. They cannot manufacture a different privileged action.
     private func shouldAdopt(_ candidate: StructuredCommand, over primary: StructuredCommand) -> Bool {
-        guard candidate.intent == primary.intent, candidate.intent != .unknown,
-              candidate.intent != .webSearch else { return false }
+        guard candidate.intent != .unknown, candidate.intent != .webSearch else { return false }
+        if candidate.intent != primary.intent {
+            // A complete typed utility/translation structure is stronger than
+            // a noun collision in the recognizer's primary hypothesis. Other
+            // cross-family alternatives remain fail-closed.
+            let structurallyComplete = switch candidate.intent {
+            case .localUtility:
+                CanonicalArithmeticExpressionAnalyzer.analyze(candidate.normalizedText) != nil
+            case .currencyConversion:
+                FXConversionRequestParser().parse(candidate.normalizedText) != nil
+            case .translation:
+                candidate.entities["source_text"] != nil && candidate.entities["target_language"] != nil
+            default:
+                false
+            }
+            guard structurallyComplete else {
+                return primary.needsClarification && candidate.intent == .open &&
+                    candidate.entities["app"] != nil
+            }
+            return true
+        }
         if primary.needsClarification && !candidate.needsClarification { return true }
         let roleKeys: Set<String> = [
             "app", "contact", "recipient", "call_service", "message_service",
@@ -742,16 +815,14 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             "відкр", "откр", "запуст", "перейд", "програм", "застос", "прилож"
         ]
         let exactActionTokens: Set<String> = ["open", "launch", "app"]
-        let subject = document.tokens
+        let subjectTokens = document.tokens
             .filter { token in
                 token.morphologyForms.allSatisfy { form in
                     !exactActionTokens.contains(form) &&
                         !actionMorphologyRoots.contains(where: form.hasPrefix)
                 }
             }
-            .map(\.surface)
-            .joined(separator: " ")
-        guard !subject.isEmpty else {
+        guard !subjectTokens.isEmpty else {
             return .init(
                 resolution: .unresolved,
                 bestScore: 0,
@@ -759,8 +830,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 mechanism: .unresolved
             )
         }
-        return ContextScopedEntityResolver(candidates: applicationCandidates)
-            .resolveWithEvidence(subject)
+        return bestScopedResolution(in: subjectTokens, candidates: applicationCandidates)
     }
 
     private func serviceKey(for intent: CommandIntent) -> String? {
@@ -794,11 +864,45 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             if strongScope || evidence.isResolved { return evidence }
         }
 
-        // A communication action establishes the family, but it does not turn
-        // every person token into a channel candidate. Fuzzy recovery is safe
-        // only inside a structural SERVICE/CHANNEL scope. Exact canonical
-        // service names are already represented by frame.service upstream.
+        // Without an explicit channel marker, arbitrary PERSON or message-body
+        // tokens are not SERVICE evidence. Exact canonical channel names were
+        // already resolved by CanonicalSemanticFrameAnalyzer; fuzzy recovery is
+        // restricted to the marked span above.
         return nil
+    }
+
+    private func isGeneralInformationRequest(
+        document: LanguageUnderstandingDocument,
+        frame: CanonicalSemanticFrame
+    ) -> Bool {
+        guard frame.object == nil,
+              frame.person == nil,
+              frame.service == nil,
+              frame.app == nil,
+              frame.source == nil,
+              frame.contextReference == nil else { return false }
+        let forms = document.tokens.reduce(into: Set<String>()) { result, token in
+            result.insert(token.normalized)
+            result.formUnion(token.morphologyForms)
+        }
+        let informationActions = [
+            "розкаж", "дізнай", "поясн", "перевір", "уточн",
+            "tell", "explain", "describe", "check", "query"
+        ]
+        let informationObjects = [
+            "новин", "котирув", "акці", "факт", "відомост", "інформац", "стан",
+            "news", "quote", "stock", "fact", "information", "status"
+        ]
+        let actionEvidence = frame.action == .query || forms.contains { value in
+            informationActions.contains { value.hasPrefix($0) }
+        }
+        let objectEvidence = forms.contains { value in
+            informationObjects.contains { value.hasPrefix($0) }
+        }
+        let informationObjectAction = objectEvidence && frame.action.map {
+            [.show, .search, .query].contains($0)
+        } == true
+        return informationObjectAction || (actionEvidence && (objectEvidence || document.tokens.count >= 4))
     }
 
     private func communicationRecipient(_ value: String, excludingResolvedService service: String) -> String? {
@@ -828,6 +932,35 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         }
         let output = tokens.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
         return output.isEmpty ? nil : output
+    }
+
+    private func communicationRecipient(
+        in document: LanguageUnderstandingDocument,
+        excludingResolvedService service: String
+    ) -> String? {
+        guard let candidate = serviceCandidates.first(where: { $0.value == service }) else { return nil }
+        let resolver = ContextScopedEntityResolver(candidates: [candidate])
+        var bestSpan: Range<Int>?
+        var bestScore = 0.0
+        for length in 1...min(3, document.tokens.count) {
+            for start in 0...(document.tokens.count - length) {
+                let subject = document.tokens[start..<(start + length)].map(\.surface).joined(separator: " ")
+                let evidence = resolver.resolveWithEvidence(subject)
+                guard case .resolved = evidence.resolution, evidence.bestScore > bestScore else { continue }
+                bestSpan = start..<(start + length)
+                bestScore = evidence.bestScore
+            }
+        }
+        guard let bestSpan else { return nil }
+        var surfaces = document.tokens.map(\.surface)
+        surfaces.removeSubrange(bestSpan)
+        let markers: Set<String> = ["через", "via", "using", "у", "в", "по", "канал", "каналом"]
+        if bestSpan.lowerBound > 0, surfaces.indices.contains(bestSpan.lowerBound - 1),
+           markers.contains(CanonicalMorphology.comparableText(surfaces[bestSpan.lowerBound - 1])) {
+            surfaces.remove(at: bestSpan.lowerBound - 1)
+        }
+        let command = surfaces.joined(separator: " ")
+        return CanonicalMessageRoleAnalyzer.analyze(command)?.recipient
     }
 
     private static func emailAddress(in text: String) -> String? {
@@ -893,7 +1026,9 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
     /// identified. This keeps capability selection role-driven rather than
     /// depending on one spelling of an application command.
     private func isApplicationLaunch(_ frame: CanonicalSemanticFrame) -> Bool {
-        frame.action == .open || frame.object == .app ||
+        frame.object == .app ||
+            (frame.action == .open && (frame.object == nil || frame.object == .media)) ||
+            (frame.action == .show && frame.app != nil) ||
             (frame.action == .set && frame.object == nil)
     }
 

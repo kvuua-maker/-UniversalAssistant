@@ -216,6 +216,109 @@ struct Build35ConsolidatedSystemicRepairTests {
         #expect(leading.entities["source_text"] == "Потяг прибуває вранці")
     }
 
+    @Test func typedRolesPreemptKeywordCollisionsAcrossUtilityCurrencyTranslationAndEvents() {
+        let division = language.parse("Поділи 18432 на 48")
+        #expect(division.intent == .localUtility)
+        #expect(division.intent != .calendarQuery)
+
+        let currency = language.parse("Переведи €275 у польські злоті")
+        #expect(currency.intent == .currencyConversion)
+        #expect(currency.intent != .navigation)
+
+        let translated = language.parse("Переклади польською: Резервація столика підтверджена")
+        #expect(translated.intent == .translation)
+        #expect(translated.entities["target_language"] == "pl")
+        #expect(translated.entities["source_text"] == "Резервація столика підтверджена")
+        #expect(translated.intent != .reservation)
+
+        let publicEvent = language.parse("Знайди квитки на театральну подію")
+        #expect(publicEvent.intent == .ticketSearch)
+        #expect(publicEvent.intent != .calendarQuery)
+    }
+
+    @Test func speechAlternativesMayRepairCompleteTypedRolesButCannotInventPrivilegedIntent() {
+        let utilityEvidence = VoiceRecognitionEvidence(
+            primaryTranscript: "Поділи тисячу на сорок",
+            alternativeTranscripts: ["Поділи 1000 на 40", "Видали подію на сорок"],
+            segmentAlternativeCount: 3,
+            averageSegmentConfidence: 0.41
+        )
+        let utility = language.parse(utilityEvidence.primaryTranscript, speechEvidence: utilityEvidence)
+        #expect(utility.intent == .localUtility)
+        #expect(utility.intent != .calendarDelete)
+
+        let appBlock = LanguageUnderstandingBlock(applicationCandidates: [
+            .init(value: "team-radio", displayName: "Team Radio", aliases: ["TeamRadio"])
+        ])
+        let appEvidence = VoiceRecognitionEvidence(
+            primaryTranscript: "Відкрий Team Rad",
+            alternativeTranscripts: ["Відкрий Team Radio", "Вимкни Bluetooth"],
+            segmentAlternativeCount: 3,
+            averageSegmentConfidence: 0.38
+        )
+        let app = appBlock.parse(appEvidence.primaryTranscript, speechEvidence: appEvidence)
+        #expect(app.intent == .open)
+        #expect(app.entities["app"] == "team-radio")
+        #expect(app.intent != .deviceAction)
+    }
+
+    @Test func scopedEntityRecoveryUsesBoundedSpansAndFailsClosedOutsideItsDomain() {
+        let block = LanguageUnderstandingBlock(
+            applicationCandidates: [
+                .init(value: "field-notes", displayName: "Field Notes", aliases: ["FieldNotes"]),
+                .init(value: "city-radio", displayName: "City Radio", aliases: ["CityRadio"])
+            ],
+            serviceCandidates: [
+                .init(value: "secure-wire", displayName: "Secure Wire", aliases: ["SecureWire"]),
+                .init(value: "team-chat", displayName: "Team Chat", aliases: ["TeamChat"])
+            ]
+        )
+        let application = block.parse("Запусти Field No")
+        #expect(application.intent == .open)
+        #expect(application.entities["app"] == "field-notes")
+        #expect(!application.needsClarification)
+
+        let message = block.parse("Надішли Олені у Secure Wi")
+        #expect(message.intent == .messageCompose)
+        #expect(message.entities["message_service"] == "secure-wire")
+        #expect(message.entities["recipient"] == "Олені")
+
+        let unrelated = block.parse("Покажи погоду у місті")
+        #expect(unrelated.entities["app"] == nil)
+        #expect(unrelated.entities["message_service"] == nil)
+    }
+
+    @Test func contactDataFilesAndNavigationUseTheirTypedSystemDomains() {
+        let contact = language.parse("Покажи номер телефону Дарини Левченко")
+        #expect(contact.intent == .contactLookup)
+        #expect(contact.entities["contact"] == "Дарини Левченко")
+        #expect(contact.intent != .webSearch)
+
+        let files = language.parse("Відкрий папку завантажень")
+        #expect(files.intent == .fileSearch)
+        #expect(files.intent != .open)
+        #expect(!files.needsClarification)
+
+        let route = language.parse("Побудуй маршрут до площі Ринок")
+        #expect(route.intent == .navigation)
+        #expect(route.entities["destination"] == "площі Ринок")
+        #expect(route.intent != .webSearch)
+    }
+
+    @Test func scopedClockReconstructionCoversCalendarAndReservationWithoutGlobalThresholdChanges() {
+        let calendar = language.parse("Створи зустріч завтра о дев'ятнадцятій 0 0")
+        #expect(calendar.intent == .calendarCreate)
+        #expect(calendar.entities["hour"] == "19")
+        #expect(calendar.entities["minute"] == "00")
+        #expect(!calendar.needsClarification)
+
+        let reservation = language.parse("Зарезервуй столик для чотирьох гостей післязавтра о двадцятій 30")
+        #expect(reservation.intent == .reservation)
+        #expect(reservation.entities["hour"] == "20")
+        #expect(reservation.entities["minute"] == "30")
+        #expect(!reservation.needsClarification)
+    }
+
     @Test func localDeviceStorageUsesCompositionalSystemFirstSemantics() {
         for input in [
             "Покажи доступний простір цього пристрою",

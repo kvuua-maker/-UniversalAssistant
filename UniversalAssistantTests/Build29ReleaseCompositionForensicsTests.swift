@@ -744,7 +744,7 @@ struct Build29ReleaseExternalProviderBoundaryTests {
         }
     }
 
-@Test func unseenProviderDomainsRemainTypedUntilTheDeliberateReleaseFallback() async throws {
+@Test func unseenProviderDomainsRemainTypedAtTheTruthfulReleaseBoundary() async throws {
         let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
         let requests: [(String, CommandIntent, String)] = [
             ("Перевір статус закордонного поштового відправлення", .parcelTrack, "parcel_tracking"),
@@ -760,14 +760,15 @@ struct Build29ReleaseExternalProviderBoundaryTests {
             model.input = request
             model.submit()
             for _ in 0..<100 {
-                if case .webHandoff = model.resultState { break }
+                if case .failure = model.resultState { break }
                 try await Task.sleep(for: .milliseconds(10))
             }
-            guard case let .webHandoff(fallback) = model.resultState else {
-                Issue.record("Typed provider request did not reach the deliberate Release fallback: \(request)")
+            guard case let .failure(failure) = model.resultState else {
+                Issue.record("Typed provider request escaped its truthful Release boundary: \(request)")
                 continue
             }
-            #expect(fallback.query == request)
+            #expect(failure.message.contains("провайдер"))
+            #expect({ if case .webHandoff = model.resultState { return false }; return true }())
             #expect(model.statusText != AppText.value("processing"))
         }
     }
@@ -781,11 +782,11 @@ struct Build29ReleaseExternalProviderBoundaryTests {
             ("Порівняй доступні поїздки таксі до музею", false),
             ("Підбери готель у Кракові на дві ночі", false),
             ("Знайди квитки на нічний потяг до Варшави", false),
-            ("Відстеж міжнародне відправлення за номером", true),
+            ("Відстеж міжнародне відправлення за номером", false),
             ("Знайди майстра для ремонту посудомийної машини", false),
             ("Покажи офіційний муніципальний сервіс для реєстрації", false),
-            ("Знайди вакансії дизайнера з віддаленою роботою", true),
-            ("Покажи доступні персональні знижки програми лояльності", true)
+            ("Знайди вакансії дизайнера з віддаленою роботою", false),
+            ("Покажи доступні персональні знижки програми лояльності", false)
         ]
         for (request, deliberateWeb) in requests {
             let parsed = LanguageUnderstandingBlock().parse(request)

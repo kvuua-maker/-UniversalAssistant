@@ -43,7 +43,7 @@ enum SpokenCardinalNormalizer {
 
     private static func numericValue(for word: String) -> Int? {
         if let exact = values[word] { return exact }
-        let suffixes: Set<String> = ["и", "і", "ох", "ьох", "ех", "ом", "ьом", "ем", "ма", "ьма", "тьох", "тьом", "тьма"]
+        let suffixes: Set<String> = ["и", "і", "ій", "ой", "ої", "ою", "ох", "ьох", "ех", "ом", "ьом", "ем", "ма", "ьма", "тьох", "тьом", "тьма"]
         for (stem, value) in inflectedStems where word.hasPrefix(stem) {
             let suffix = String(word.dropFirst(stem.count))
             if suffixes.contains(suffix) { return value }

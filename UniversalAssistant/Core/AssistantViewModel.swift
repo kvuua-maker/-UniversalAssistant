@@ -289,7 +289,7 @@ final class AssistantViewModel {
         )
         LocalVoiceDiagnosticReport.shared.record("candidate_capabilities", "count=1 capability=\(command.intent.rawValue)")
         LocalVoiceDiagnosticReport.shared.record("selected_capability", "capability=\(command.intent.rawValue)")
-        let genericWeb = command.intent == .webSearch || command.intent == .unknown
+        let genericWeb = command.intent == .webSearch
         LocalVoiceDiagnosticReport.shared.record("system_first_decision", "selected=\(!genericWeb) capability=\(command.intent.rawValue)")
         LocalVoiceDiagnosticReport.shared.record("generic_web_selected", "selected=\(genericWeb) reason=\(genericWeb ? "structured_general_or_web_intent" : "canonical_non_web_intent")")
         LocalVoiceDiagnosticReport.shared.record(
@@ -303,10 +303,6 @@ final class AssistantViewModel {
         let summary = ResultSummary(request: command.originalText, intent: command.intent, risk: command.risk)
         interactionDecision = interactionEngine.decide(for: command)
         input = ""
-        if command.needsClarification, command.intent == .unknown {
-            presentGeneralInformation(command, summary: summary, requestGeneration: requestGeneration)
-            return
-        }
         if command.needsClarification {
             LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=clarification")
             if let raw = command.entities["clarification_options"] {
@@ -428,7 +424,7 @@ final class AssistantViewModel {
                 }
                 return
             }
-            if command.intent == .webSearch || command.intent == .unknown {
+            if command.intent == .webSearch {
                 presentGeneralInformation(command, summary: summary, requestGeneration: requestGeneration)
                 return
             }
@@ -514,14 +510,8 @@ final class AssistantViewModel {
     /// commerce, ride, booking and service requests at a truthful provider
     /// boundary when no structured provider is configured.
     private func externalProviderBrowserFallbackAllowed(for command: StructuredCommand) -> Bool {
-        if ["parcel_tracking", "loyalty_benefits"].contains(command.entities["provider_domain"]) {
-            return true
-        }
-        // A broad compatibility “find” candidate cannot erase a genuinely
-        // informational provider domain. Keep this exception structural and
-        // bounded so commerce/services still cannot escape to generic web.
-        guard let generic = try? GenericIntentParser().parse(command.originalText) else { return false }
-        return ["jobs", "events"].contains(generic.domain)
+        _ = command
+        return false
     }
 
     private func presentExternalProviderRequirement(_ command: StructuredCommand) {
@@ -766,7 +756,7 @@ final class AssistantViewModel {
         case let .vCard(data) where result.route.action == .importContact: capabilityPresentation = .contactImport(data)
         case let .retailBarcode(value):
             let command = StructuredCommand(originalText: "GTIN \(value)", normalizedText: "gtin \(value)", language: .automatic, intent: .productSearch, entities: ["query": "GTIN \(value)"])
-            presentGeneralWebFallback(command)
+            presentExternalProviderRequirement(command)
         default: presentFailure(message: AppText.value("request_unavailable"))
         }
     }
