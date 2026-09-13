@@ -113,7 +113,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             frame.object = .settings
         }
         let hasVisualObject = tokens.contains { token in
-            ["фото", "світлин", "знім", "сним", "photo", "image", "picture"].contains { token.hasPrefix($0) }
+            ["фото", "світлин", "знім", "сним", "відео", "скріншот", "photo", "image", "picture", "video", "screenshot"].contains { token.hasPrefix($0) }
         }
         // In a command such as “read text on the image”, text is the requested
         // output while the visual asset is the source/target. OBJECT ordering
@@ -251,6 +251,10 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
                 entities["input_source"] = "document_camera"
                 if lexicalTokens(normalized).contains("pdf") { entities["output_format"] = "pdf" }
             }
+            return (.cameraCapture, entities)
+        }
+        if frame.source == .camera, frame.action.map({ [.open, .create, .set, .record].contains($0) }) == true {
+            entities["capture_mode"] = "visible_camera"
             return (.cameraCapture, entities)
         }
         if frame.source == .documents, frame.action == .recognize {
@@ -488,7 +492,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
 
     private func action(in tokens: [String]) -> CanonicalSemanticFrame.Action? {
         let visualObject = tokens.contains { token in
-            ["фото", "світлин", "знім", "сним", "photo", "image", "picture"].contains { token.hasPrefix($0) }
+            ["фото", "світлин", "знім", "сним", "відео", "скріншот", "photo", "image", "picture", "video", "screenshot"].contains { token.hasPrefix($0) }
         }
         let textualContent = tokens.contains { token in
             ["напис", "текст", "слов", "надпис", "written", "text", "word", "read"].contains { token.hasPrefix($0) }
@@ -589,7 +593,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
 
     private func object(in tokens: [String]) -> CanonicalSemanticFrame.Object? {
         let hasAvailableCapacityModifier = tokens.contains { token in
-            ["вільн", "свободн", "доступн", "залиш", "остат", "free", "available", "remaining"].contains {
+            ["вільн", "свободн", "доступн", "залиш", "остат", "зайнят", "використ", "free", "available", "remaining", "occupied", "used", "total"].contains {
                 token.hasPrefix($0)
             }
         }
@@ -599,6 +603,12 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             }
         }
         if hasAvailableCapacityModifier && hasStorageMeasure { return .storage }
+        let hasBatteryNoun = tokens.contains { token in
+            token.hasPrefix("батаре") || token == "battery" ||
+                ((token.hasPrefix("акумулятор") || token.hasPrefix("аккумулятор")) &&
+                 !token.hasPrefix("акумуляторн") && !token.hasPrefix("аккумуляторн"))
+        }
+        if hasBatteryNoun { return .battery }
         let audioQualifiers = ["аудіо", "аудио", "звук", "sound", "audio"]
         let routeTargets = [
             "аудіових", "аудиовых", "soundoutput", "audiooutput", "airplay",
@@ -625,8 +635,6 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.timer, ["таймер", "timer"]),
             (.alarm, ["будильник", "розбуд", "alarm", "wake"]),
             (.settings, ["налаштуван", "настрой", "параметр", "settings", "preferences", "einstellungen", "réglages"]),
-            (.battery, ["батаре", "акумулятор", "battery"]),
-            (.storage, ["сховищ", "простір", "простор", "простран", "памят", "storage", "diskspace"]),
             (.flashlight, ["ліхтар", "фонар", "flashlight", "torch"]),
             (.brightness, ["яскрав", "яркост", "brightness"]),
             (.volume, ["гучніст", "громкост", "volume"]),
@@ -637,8 +645,8 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.travelTime, ["трив", "час-дорозі", "traveltime", "duration"]),
             (.code, ["qr", "barcode", "штрихкод", "код"]),
             (.text, ["текст", "text"]),
-            (.weather, ["погод", "температур", "дощ", "дожд", "холод", "спек", "жарк", "weather", "rain", "cold", "hot"]),
-            (.photo, ["фото", "світлин", "знім", "сним", "photo", "image", "picture"]),
+            (.weather, ["погод", "температур", "дощ", "дожд", "холод", "спек", "жарк", "вітр", "ветер", "прогноз", "weather", "rain", "cold", "hot", "wind", "forecast"]),
+            (.photo, ["фото", "світлин", "знім", "сним", "відео", "скріншот", "photo", "image", "picture", "video", "screenshot"]),
             (.file, ["файл", "папк", "тека", "folder", "directory", "downloads"]),
             (.document, ["документ", "document", "pdf"]),
             (.note, ["нотат", "замет", "notiz", "note"]),
@@ -661,7 +669,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             ["контакт", "contact"].contains { token.hasPrefix($0) }
         }
         let directContactDatum = tokens.contains { token in
-            ["телефон", "номер", "email", "mail", "address", "phone", "number"].contains {
+            ["телефон", "email", "mail", "address", "phone"].contains {
                 token.hasPrefix($0)
             }
         }
@@ -726,7 +734,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     }
 
     private func source(in tokens: [String]) -> CanonicalSemanticFrame.Source? {
-        if tokens.contains(where: { ["photos", "photolibrary"].contains($0) }) { return .photos }
+        if tokens.contains(where: { token in ["photos", "photolibrary", "галер"].contains(where: token.hasPrefix) }) { return .photos }
         if tokens.contains(where: { token in token.hasPrefix("файл") || ["files", "icloud", "drive"].contains(token) }) { return .files }
         if tokens.contains(where: { token in ["буфер", "clipboard"].contains(where: token.hasPrefix) }) { return .clipboard }
         if tokens.contains(where: { token in ["камер", "camera"].contains(where: token.hasPrefix) }) { return .camera }
@@ -837,7 +845,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     private func contextReference(in normalized: String) -> CanonicalSemanticFrame.ContextReference? {
         let tokens = lexicalTokens(normalized)
         let hasPhoto = tokens.contains { token in
-            ["фото", "світлин", "знім", "сним", "photo", "image", "picture"].contains { token.hasPrefix($0) }
+            ["фото", "світлин", "знім", "сним", "відео", "скріншот", "photo", "image", "picture", "video", "screenshot"].contains { token.hasPrefix($0) }
         }
         let hasDemonstrative = tokens.contains { token in
             ["цій", "цьому", "цього", "цією", "этой", "этом", "this", "that"].contains(token)
@@ -976,7 +984,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     }
 
     private func weatherQuestion(_ text: String) -> Bool {
-        ["температур", "холодн", "спекотн", "жарк", "чи буде дощ", "будет дождь", "weather", "rain", "cold", "hot"].contains(where: text.contains)
+        ["температур", "холодн", "спекотн", "жарк", "чи буде дощ", "будет дождь", "вітр", "ветер", "прогноз", "weather", "rain", "cold", "hot", "wind", "forecast"].contains(where: text.contains)
     }
 
     private func photoQueryEntities(frame: CanonicalSemanticFrame, original: String) -> [String: String] {

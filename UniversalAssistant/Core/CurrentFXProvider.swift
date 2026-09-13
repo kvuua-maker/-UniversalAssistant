@@ -26,10 +26,35 @@ protocol CurrentFXProviding: Sendable {
 struct FXConversionRequestParser: Sendable {
     func parse(_ text: String) -> FXConversionRequest? {
         let normalized = text.lowercased().replacingOccurrences(of: ",", with: ".")
-        guard let amount = firstDecimal(normalized) else { return nil }
-        let ordered = currencyMentions(normalized)
+        let rateQuery = ["курс", "rate", "exchange rate"].contains(where: normalized.contains)
+        let amount = firstDecimal(normalized) ?? (rateQuery ? 1 : nil)
+        guard let amount else { return nil }
+        var ordered = currencyMentions(normalized)
+        if rateQuery, ordered.count == 1, ordered[0].code != "UAH" {
+            ordered.append((normalized.endIndex, "UAH"))
+        }
         guard ordered.count >= 2, ordered[0].code != ordered[1].code else { return nil }
+        // In “how many <target> for <amount> <source>” constructions the
+        // target is spoken first, unlike the usual “<source> to <target>” order.
+        if isTargetFirstQuestion(normalized, amount: amount, currencies: ordered) {
+            ordered.swapAt(0, 1)
+        }
         return .init(amount: amount, source: ordered[0].code, destination: ordered[1].code)
+    }
+
+    private func isTargetFirstQuestion(
+        _ text: String,
+        amount: Decimal,
+        currencies: [(offset: String.Index, code: String)]
+    ) -> Bool {
+        guard currencies.count >= 2,
+              ["скільки", "сколько", "how many", "how much"].contains(where: text.contains),
+              let amountRange = text.range(
+                of: NSRegularExpression.escapedPattern(for: NSDecimalNumber(decimal: amount).stringValue),
+                options: .regularExpression
+              )
+        else { return false }
+        return currencies[0].offset < amountRange.lowerBound && currencies[1].offset > amountRange.lowerBound
     }
 
     private func firstDecimal(_ text: String) -> Decimal? {
@@ -43,7 +68,7 @@ struct FXConversionRequestParser: Sendable {
             ("євро", "EUR"), ("евро", "EUR"), ("eur", "EUR"), ("€", "EUR"),
             ("злот", "PLN"), ("pln", "PLN"),
             ("фунт", "GBP"), ("gbp", "GBP"), ("£", "GBP"),
-            ("гривн", "UAH"), ("uah", "UAH"), ("₴", "UAH"),
+            ("грив", "UAH"), ("uah", "UAH"), ("₴", "UAH"),
             ("франк", "CHF"), ("chf", "CHF"),
             ("крон", "CZK"), ("czk", "CZK"),
             ("ієн", "JPY"), ("иен", "JPY"), ("jpy", "JPY"), ("¥", "JPY")

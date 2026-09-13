@@ -71,7 +71,7 @@ struct CanonicalTranslationRoles: Equatable, Sendable {
     static func analyze(_ text: String) -> Self? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalized = trimmed.lowercased(with: Locale(identifier: "uk_UA"))
-        let actionPattern = #"(?:перекла\p{L}*|переве\p{L}*|translate\p{L}*|übersetz\p{L}*|tradui\p{L}*)"#
+        let actionPattern = #"(?:перекла\p{L}*|переве\p{L}*|ска(?:жи|зати|зать)\p{L}*|say\p{L}*|translate\p{L}*|übersetz\p{L}*|tradui\p{L}*)"#
         guard let action = trimmed.range(of: actionPattern, options: [.regularExpression, .caseInsensitive]),
               let targetCode = targetLanguage(in: normalized) else { return nil }
 

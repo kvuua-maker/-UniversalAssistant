@@ -14,7 +14,6 @@ struct VoiceTextInputQualityTests {
         #expect(request.taskHint == .dictation)
         #expect(request.contextualStrings == configuration.contextualVocabulary)
         #expect(request.contextualStrings.count <= 100)
-        #expect(request.contextualStrings.allSatisfy { $0.split(separator: " ").count <= 2 })
         let folded = Set(request.contextualStrings.map {
             $0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "uk_UA"))
         })
@@ -22,9 +21,9 @@ struct VoiceTextInputQualityTests {
             folded.contains($0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "uk_UA")))
         })
         #expect(request.contextualStrings.first == "Test Entity")
-        #expect(!request.contextualStrings.contains("Baldinini"))
+        #expect(request.contextualStrings.contains("Baldinini"))
         #expect(request.contextualStrings.filter { $0 == "Test Entity" }.count == 1)
-        #expect(!request.contextualStrings.contains("Three word entity"))
+        #expect(request.contextualStrings.contains("Three word entity"))
         #expect(!request.requiresOnDeviceRecognition)
     }
 

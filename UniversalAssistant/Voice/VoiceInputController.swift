@@ -870,11 +870,12 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
     }
 
     static var canonicalEntityVocabulary: [String] {
+        let providers = OfficialPublicProviderHandoffRegistry.records.map(\.displayName)
         let applications = LaunchDeviceApplications.verified.flatMap {
             [$0.id] + Array($0.aliases)
         }
         let services = MessengerKind.allCases.map(\.rawValue)
-        return applications + services
+        return providers + CanonicalCatalogEntityRegistry.brandNames + applications + services
     }
 
     static var canonicalFunctionVocabulary: [String] {
@@ -901,8 +902,7 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
         func append<S: Sequence>(_ source: S) where S.Element == String {
             for phrase in source where output.count < 100 {
                 let trimmed = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty,
-                      trimmed.split(whereSeparator: \.isWhitespace).count <= 2 else { continue }
+                guard !trimmed.isEmpty else { continue }
                 let key = trimmed.folding(
                     options: [.caseInsensitive, .diacriticInsensitive],
                     locale: Locale(identifier: "uk_UA")
@@ -912,11 +912,13 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
             }
         }
         if includeCanonical {
-            // Apple accepts at most 100 contextual phrases. Bound request-
-            // scoped Contacts/catalog evidence so verified app/service names
-            // and core command vocabulary always retain capacity.
-            append(additional.prefix(40))
-            append(canonicalEntityVocabulary)
+            // Preserve request-scoped contacts first while reserving enough of
+            // Apple's bounded capacity for every provider/app/proper noun.
+            // Function hints fill only remaining capacity; no entity candidate
+            // can be evicted by a large dynamic contact list.
+            let entities = boundedVocabulary(additional: canonicalEntityVocabulary, includeCanonical: false)
+            append(additional.prefix(max(0, 100 - entities.count)))
+            append(entities)
             append(canonicalFunctionVocabulary)
         } else {
             append(additional)

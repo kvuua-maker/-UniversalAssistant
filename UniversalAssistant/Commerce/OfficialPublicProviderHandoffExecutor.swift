@@ -20,34 +20,48 @@ extension ProductionCanonicalCapabilityExecutor {
         let explicit = candidates.filter { officialProviderIsExplicit($0, command: command) }
         let selected = explicit.isEmpty ? candidates : explicit
         let query = officialProviderQuery(command)
-        let destinations = selected.compactMap { provider -> (OfficialPublicProviderHandoff, URL)? in
-            provider.destination(query: query).map { (provider, $0) }
+        let destinations = try selected.compactMap { provider -> (OfficialPublicProviderHandoff, PurchaseHandoff)? in
+            guard let exact = provider.destination(query: query) else { return nil }
+            let routed = try AffiliatePurchaseRouter().route(
+                providerID: provider.id,
+                exactDestination: exact,
+                configuration: affiliateConfigurations[provider.id],
+                requestID: command.id
+            )
+            return (provider, routed)
         }
         guard !destinations.isEmpty else {
             throw CanonicalCapabilityExecutionError.externalProviderRequired(command.intent.rawValue)
         }
 
         if destinations.count == 1, let selected = destinations.first {
+            let monetization = CanonicalPartnerPolicyRegistry.policy(for: selected.0.id)?.decision.rawValue ?? "UNKNOWN"
             LocalVoiceDiagnosticReport.shared.record(
                 "provider_handoff_selected",
                 "provider=\(selected.0.id) mechanism=\(selected.0.mechanism) " +
-                    "query_preserved=\(selected.0.preservesQuery)"
+                    "query_preserved=\(selected.0.preservesQuery) attribution=\(selected.1.attribution.rawValue) " +
+                    "monetization=\(monetization)"
             )
-            return .handoff(.init(query: query, destination: selected.1, kind: .provider))
+            return .handoff(.init(
+                query: query,
+                destination: selected.1.destination,
+                kind: .provider,
+                requiresExplicitUserActivation: selected.1.requiresExplicitUserActivation
+            ))
         }
 
-        let actions = destinations.map { provider, destination in
+        let actions = destinations.map { provider, handoff in
             ResultAction(
                 id: provider.id,
                 title: provider.displayName,
                 kind: officialProviderActionKind(provider.domain),
-                destination: destination
+                destination: handoff.destination
             )
         }
         LocalVoiceDiagnosticReport.shared.record(
             "provider_handoff_selected",
             "provider_count=\(actions.count) mechanism=official_public_handoff " +
-                "query_preserved=\(destinations.allSatisfy { $0.0.preservesQuery })"
+                "query_preserved=\(destinations.allSatisfy { $0.0.preservesQuery }) attribution=mixed_or_not_configured"
         )
         let result = try DeterministicResultComposer().compose(
             primaryAnswer: "Оберіть офіційний сервіс для продовження",

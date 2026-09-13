@@ -16,7 +16,7 @@ struct LocalUtilityEngine: Sendable {
     static func recognizes(_ raw: String) -> Bool {
         let text = normalized(raw)
         if CanonicalArithmeticExpressionAnalyzer.analyze(text) != nil { return true }
-        let signals = ["обчисл", "порах", "розрах", "вычисл", "посчитай", "calculate", "різниц", "разниц", "difference", "сума", "сумм", "sum", "добут", "произвед", "product", "частк", "частн", "quotient", "скільки буде", "сколько будет", "помнож", "умнож", "поділити", "разделить", "kilometer", "кілометр", "километр", "miles", "мил", "кілограм", "килограмм", "pounds", "фунт", "celsius", "fahrenheit", "цельсі", "цельси", "який сьогодні день", "какой сегодня день", "яка сьогодні дата", "какая сегодня дата", "яке сьогодні число", "какое сегодня число", "котра година", "который час", "скільки зараз часу", "сколько сейчас времени", "який зараз час", "local time"]
+        let signals = ["конверт", "переведи", "convert", "обчисл", "порах", "розрах", "вычисл", "посчитай", "calculate", "різниц", "разниц", "difference", "сума", "сумм", "sum", "добут", "произвед", "product", "частк", "частн", "quotient", "скільки буде", "сколько будет", "помнож", "умнож", "поділити", "разделить", "kilometer", "кілометр", "километр", "miles", "мил", "кілограм", "килограмм", "pounds", "фунт", "celsius", "fahrenheit", "цельсі", "цельси", "який сьогодні день", "какой сегодня день", "яка сьогодні дата", "какая сегодня дата", "яке сьогодні число", "какое сегодня число", "котра година", "который час", "скільки зараз часу", "сколько сейчас времени", "який зараз час", "local time"]
         let lexicalTokens = text.split(whereSeparator: { !$0.isLetter }).map(String.init)
         let hasSignal = signals.contains { signal in
             if signal.contains(" ") { return text.contains(signal) }
@@ -51,6 +51,7 @@ struct LocalUtilityEngine: Sendable {
             return format(now, template: "HH:mm", locale: locale, timeZone: timeZone)
         }
         if let value = try percentage(text) { return format(value, locale: locale) }
+        if let value = durationConversion(text) { return format(value.value, locale: locale) + " " + value.unit }
         if let value = try conversion(text) { return format(value.value, locale: locale) + " " + value.unit }
         if let value = try arithmetic(text) { return format(value, locale: locale) }
         throw LocalUtilityError.unsupported
@@ -124,6 +125,48 @@ struct LocalUtilityEngine: Sendable {
             return values[0] * (1 + (decrease ? -1 : 1) * values[1] / 100)
         }
         return nil
+    }
+
+    private func durationConversion(_ text: String) -> (value: Double, unit: String)? {
+        let targetPattern = #"(?:\b(?:у|в|to|into)\s+)(секунд\p{L}*|хвилин\p{L}*|минут\p{L}*|годин\p{L}*|час\p{L}*|seconds?|minutes?|hours?)\b"#
+        guard let targetRegex = try? NSRegularExpression(pattern: targetPattern, options: [.caseInsensitive]),
+              let targetMatch = targetRegex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              let targetRange = Range(targetMatch.range(at: 1), in: text),
+              let fullTargetRange = Range(targetMatch.range, in: text) else { return nil }
+
+        let targetUnit = String(text[targetRange]).lowercased()
+        let sourceText = String(text[..<fullTargetRange.lowerBound])
+        let componentPattern = #"([-+]?\d+(?:[.,]\d+)?)\s*(секунд\p{L}*|хвилин\p{L}*|минут\p{L}*|годин\p{L}*|час\p{L}*|seconds?|minutes?|hours?)\b"#
+        guard let componentRegex = try? NSRegularExpression(pattern: componentPattern, options: [.caseInsensitive]) else { return nil }
+        let matches = componentRegex.matches(in: sourceText, range: NSRange(sourceText.startIndex..., in: sourceText))
+        guard !matches.isEmpty else { return nil }
+
+        var seconds = 0.0
+        for match in matches {
+            guard let valueRange = Range(match.range(at: 1), in: sourceText),
+                  let unitRange = Range(match.range(at: 2), in: sourceText),
+                  let value = Double(sourceText[valueRange].replacingOccurrences(of: ",", with: ".")) else { continue }
+            seconds += value * durationUnitSeconds(String(sourceText[unitRange]))
+        }
+        guard seconds != 0 else { return nil }
+        let divisor = durationUnitSeconds(targetUnit)
+        guard divisor > 0 else { return nil }
+        return (seconds / divisor, durationUnitLabel(targetUnit))
+    }
+
+    private func durationUnitSeconds(_ unit: String) -> Double {
+        let normalized = unit.lowercased()
+        if normalized.hasPrefix("год") || normalized.hasPrefix("час") || normalized.hasPrefix("hour") { return 3_600 }
+        if normalized.hasPrefix("хв") || normalized.hasPrefix("мин") || normalized.hasPrefix("minute") { return 60 }
+        if normalized.hasPrefix("сек") || normalized.hasPrefix("second") { return 1 }
+        return 0
+    }
+
+    private func durationUnitLabel(_ unit: String) -> String {
+        let normalized = unit.lowercased()
+        if normalized.hasPrefix("год") || normalized.hasPrefix("час") || normalized.hasPrefix("hour") { return "h" }
+        if normalized.hasPrefix("хв") || normalized.hasPrefix("мин") || normalized.hasPrefix("minute") { return "min" }
+        return "s"
     }
 
     private func conversion(_ text: String) throws -> (value: Double, unit: String)? {

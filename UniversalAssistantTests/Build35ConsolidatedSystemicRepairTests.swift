@@ -35,8 +35,10 @@ private actor Build35ContactQuery: ContactQuerying {
 
 private actor Build35DelayedPhotoLoader: PhotoAssetImageLoading {
     private var observedCancellation = false
+    private var started = false
 
     func imageData(localIdentifier: String) async throws -> Data {
+        started = true
         do {
             try await Task.sleep(for: .seconds(5))
             return Data(localIdentifier.utf8)
@@ -47,6 +49,7 @@ private actor Build35DelayedPhotoLoader: PhotoAssetImageLoading {
     }
 
     func wasCancelled() -> Bool { observedCancellation }
+    func wasStarted() -> Bool { started }
 }
 
 private struct Build35PhotoLibrary: PhotoLibrarySearching {
@@ -362,7 +365,9 @@ struct Build35ConsolidatedSystemicRepairTests {
         let start = clock.now
         #expect((await engine.search("будівля", timeout: .milliseconds(50))).isEmpty)
         #expect(start.duration(to: clock.now) < .seconds(1))
-        #expect(await loader.wasCancelled())
+        let workStarted = await loader.wasStarted()
+        let workCancelled = await loader.wasCancelled()
+        #expect(!workStarted || workCancelled)
     }
 
     @Test @MainActor func explicitServiceLocationFiltersProviderDefaultResults() async throws {

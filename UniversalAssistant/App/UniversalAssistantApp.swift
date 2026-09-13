@@ -27,6 +27,7 @@ enum ProductionAssistantComposition {
         weather: any WeatherCommandExecuting = ProductionWeatherCommandExecutor(),
         fx: any CurrentFXProviding = RegionalCurrentFXProvider(),
         restaurantProviders: [any ReservationProvider] = [],
+        affiliateConfigurations: [String: AffiliateRoutingConfiguration] = [:],
         alarmExecute: (  (SystemQuickAction) async throws -> String)? = nil,
         genericDiscovery: GenericUnknownRequestCoordinator? = nil,
         eventKit: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
@@ -48,7 +49,7 @@ enum ProductionAssistantComposition {
             eventKit: eventKit, recorder: recorder,
             publicDeviceExecute: publicDeviceExecute, clipboardRead: clipboardRead, fx: fx,
             restaurantProviders: restaurantProviders, alarmExecute: alarmExecute,
-            personalSearchSources: personalSearchSources, commandParser: languageUnderstanding
+            personalSearchSources: personalSearchSources, commandParser: languageUnderstanding, affiliateConfigurations: affiliateConfigurations
         )
         return AssistantViewModel(
             commandEngine: languageUnderstanding, weatherExecutor: weather,

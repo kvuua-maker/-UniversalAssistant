@@ -54,31 +54,19 @@ enum CanonicalCatalogEntityRegistry {
                 aliases: [name]
             )
         }
-        let retailers = UkrainianRetailerRegistry.records.map { record in
+        let providers = OfficialPublicProviderHandoffRegistry.records.map { record in
             let entity = CanonicalCatalogEntity(
                 id: record.id,
                 displayName: record.displayName,
-                kind: .retailer
+                kind: record.domain == .grocery ? .retailer : .provider
             )
             return ScopedEntityCandidate(
                 value: entity,
                 displayName: record.displayName,
-                aliases: [record.displayName, record.id]
+                aliases: record.aliases.union([record.displayName, record.id])
             )
         }
-        let marketplaces = OfficialPublicProviderHandoffRegistry.records(in: .marketplace).map { record in
-            let entity = CanonicalCatalogEntity(
-                id: record.id,
-                displayName: record.displayName,
-                kind: .provider
-            )
-            return ScopedEntityCandidate(
-                value: entity,
-                displayName: record.displayName,
-                aliases: record.aliases
-            )
-        }
-        return brands + retailers + marketplaces
+        return brands + providers
     }()
 }
 
@@ -162,10 +150,17 @@ private enum CanonicalExternalProviderBoundaryAnalyzer {
         ]
         let unresolvedIntents: Set<CommandIntent> = [.unknown, .webSearch, .show, .open]
         let providerNounCollision = currentIntent == .messageCompose && frame.action == .query
-        guard externalIntents.contains(currentIntent) || unresolvedIntents.contains(currentIntent) || providerNounCollision else {
+        let publicEventCollision = currentIntent == .calendarQuery && document.tokens.contains { token in
+            token.morphologyForms.contains { form in
+                ["квит", "білет", "ticket", "fare", "концерт", "театр", "стендап", "шоу", "фестивал", "цирк", "матч", "турнір", "cinema", "movie"].contains {
+                    form.hasPrefix($0)
+                }
+            }
+        }
+        guard externalIntents.contains(currentIntent) || unresolvedIntents.contains(currentIntent) || providerNounCollision || publicEventCollision else {
             return nil
         }
-        guard frame.source == nil, frame.contextReference == nil else { return nil }
+        guard frame.person == nil, frame.contextReference == nil else { return nil }
         if frame.action == .open, frame.object == .app { return nil }
 
         let forms = document.tokens.reduce(into: Set<String>()) { result, token in
@@ -187,6 +182,20 @@ private enum CanonicalExternalProviderBoundaryAnalyzer {
             return .init(
                 intent: .serviceSearch, domain: "car_rental", confidence: 0.91,
                 evidence: matchedRoots(["авто", "автомоб", "машин", "car", "vehicle", "оренд", "прокат", "rent", "rental", "hire"])
+            )
+        }
+
+        // A room is a lodging object only when accompanied by an occupancy
+        // role and a discovery/booking action. This keeps bare phone/room
+        // numbers out of lodging while recovering structurally complete hotel
+        // requests that do not literally say "hotel".
+        let hasRoom = !matchedRoots(["номер", "кімнат", "комнат", "room"]).isEmpty
+        let hasOccupancy = !matchedRoots(["гост", "люд", "особ", "чоловік", "человек", "guest", "people", "person"]).isEmpty
+        let hasLodgingGoal = !matchedRoots(["знайд", "підбер", "покаж", "заброн", "найд", "find", "search", "show", "book"]).isEmpty
+        if hasRoom, hasOccupancy, hasLodgingGoal {
+            return .init(
+                intent: .hotelSearch, domain: "lodging", confidence: 0.90,
+                evidence: matchedRoots(["номер", "кімнат", "комнат", "room", "гост", "люд", "особ", "guest", "people"])
             )
         }
 
@@ -568,7 +577,8 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         if let recovered = recoverCatalog(
             document: document,
             intent: intent,
-            constraints: constraints
+            constraints: constraints,
+            frame: frameResult.frame,
         ) {
             recordResolutionEvidence(recovered, prefix: "catalog_match", entities: &entities)
             switch recovered.resolution {
@@ -588,20 +598,31 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 case .retailer:
                     entities["retailer"] = candidate.displayName
                 }
-                // A verified entity from a catalog-only candidate domain plus
-                // typed commerce constraints is structural evidence for a
-                // provider-neutral product request. This is a two-pass role
-                // decision: the entity never promotes an already recognized
-                // system/personal intent and a weak/unresolved name never
-                // manufactures commerce semantics.
-                if intent == .unknown || intent == .webSearch {
+                if let provider = OfficialPublicProviderHandoffRegistry.records.first(where: { $0.id == candidate.id }),
+                   isProviderScopedCommerceRequest(document: document, frame: frameResult.frame) {
+                    intent = providerIntent(provider.domain)
+                    entities["provider_domain"] = providerDomain(provider.domain)
+                    if let query = providerScopedQuery(document: document, provider: provider), !query.isEmpty {
+                        entities["query"] = query
+                        if provider.domain == .marketplace || provider.domain == .grocery {
+                            entities["product"] = query
+                        }
+                    }
+                    entities["provider_boundary"] = "explicit_official_provider"
+                    entities.removeValue(forKey: "clarification_options")
+                    entities.removeValue(forKey: "clarification_role")
+                    needsClarification = false
+                } else if (candidate.kind == .brand || candidate.kind == .product),
+                          intent == .unknown || intent == .webSearch {
                     intent = .productSearch
                     needsClarification = false
                 }
             case let .ambiguous(options):
-                entities["clarification_options"] = options.joined(separator: "|")
-                entities["clarification_role"] = "catalog"
-                needsClarification = true
+                if providerInference == nil || isProviderScopedCommerceRequest(document: document, frame: frameResult.frame) {
+                    entities["clarification_options"] = options.joined(separator: "|")
+                    entities["clarification_role"] = "catalog"
+                    needsClarification = true
+                }
             case .unresolved:
                 break
             }
@@ -687,6 +708,13 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 false
             }
             guard structurallyComplete else {
+                if primary.needsClarification,
+                   primary.entities["clarification_role"] == "catalog",
+                   candidate.entities["catalog_entity_id"] != nil,
+                   candidate.entities["catalog_match_mechanism"] == "exact",
+                   candidate.entities["provider_boundary"] == "explicit_official_provider" {
+                    return true
+                }
                 return primary.needsClarification && candidate.intent == .open &&
                     candidate.entities["app"] != nil
             }
@@ -1000,14 +1028,22 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
     private func recoverCatalog(
         document: LanguageUnderstandingDocument,
         intent: CommandIntent,
-        constraints: CommandConstraints
+        constraints: CommandConstraints,
+        frame: CanonicalSemanticFrame,
     ) -> ScopedEntityResolutionEvidence<CanonicalCatalogEntity>? {
         let catalogFamily = [.productSearch, .fashionDiscovery, .groceryBasket].contains(intent)
+        let providerBackedFamily: Set<CommandIntent> = [
+            .productSearch, .fashionDiscovery, .groceryBasket, .serviceSearch,
+            .restaurantSearch, .reservation, .taxiSearch, .taxiCompare,
+            .publicTransport, .ticketSearch, .ticketPurchaseHandoff,
+            .hotelSearch, .travelPlan, .parcelTrack
+        ]
         let unresolvedProviderRequest = intent == .unknown || intent == .webSearch
+        let explicitProviderScope = isProviderScopedCommerceRequest(document: document, frame: frame)
         let providerCandidates = catalogCandidates.filter {
             $0.value.kind == .provider || $0.value.kind == .retailer
         }
-        guard catalogFamily || unresolvedProviderRequest else { return nil }
+        guard providerBackedFamily.contains(intent) || unresolvedProviderRequest || explicitProviderScope else { return nil }
         let comparable: (String) -> String = { value in
             value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
                 .lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).joined(separator: " ")
@@ -1026,12 +1062,39 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             "на", "у", "в", "через", "маркетплейс", "магазин", "сайт",
             "on", "at", "from", "via", "marketplace", "store", "site"
         ]
-        if let marker = document.tokens.indices.last(where: { providerMarkers.contains(document.tokens[$0].normalized) }),
-           marker + 1 < document.tokens.count, !providerCandidates.isEmpty {
-            let evidence = bestScopedResolution(in: Array(document.tokens[(marker + 1)...]), candidates: providerCandidates)
+        if (providerBackedFamily.contains(intent) || unresolvedProviderRequest),
+           let marker = document.tokens.indices.last(where: { providerMarkers.contains(document.tokens[$0].normalized) }),
+           marker + 1 < document.tokens.count, !providerCandidates.isEmpty,
+           !(Set(["у", "в", "на", "at"]).contains(document.tokens[marker].normalized) &&
+             frame.location != nil &&
+             providerCandidates.allSatisfy { candidate in
+                 OfficialPublicProviderHandoffRegistry.records.contains { $0.id == candidate.value.id }
+             }) {
+            let markerCandidates = providerBackedFamily.contains(intent)
+                ? providerCandidates.filter { candidate in
+                    guard let provider = OfficialPublicProviderHandoffRegistry.records.first(where: { $0.id == candidate.value.id }) else { return true }
+                    return providerIntent(provider.domain) == intent
+                }
+                : providerCandidates
+            let evidence = bestScopedResolution(in: Array(document.tokens[(marker + 1)...]), candidates: markerCandidates)
             switch evidence.resolution {
             case .resolved, .ambiguous: return evidence
             case .unresolved: break
+            }
+        }
+        if providerBackedFamily.contains(intent), !catalogFamily {
+            let compatibleProviders = providerCandidates.filter { candidate in
+                guard let provider = OfficialPublicProviderHandoffRegistry.records.first(where: { $0.id == candidate.value.id }) else { return true }
+                return providerIntent(provider.domain) == intent
+            }
+            if !compatibleProviders.isEmpty {
+                let evidence = bestScopedResolution(in: document.tokens, candidates: compatibleProviders)
+                if evidence.mechanism == .exact || evidence.mechanism == .morphology {
+                    switch evidence.resolution {
+                    case .resolved, .ambiguous: return evidence
+                    case .unresolved: break
+                    }
+                }
             }
         }
         guard catalogFamily else { return nil }
@@ -1061,7 +1124,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         }
         let resolver = ContextScopedEntityResolver(candidates: candidates)
         var subjects = [tokens.map(\.surface).joined(separator: " ")]
-        for length in 1...min(3, tokens.count) {
+        for length in 1...min(4, tokens.count) {
             for start in 0...(tokens.count - length) {
                 subjects.append(tokens[start..<(start + length)].map(\.surface).joined(separator: " "))
             }
@@ -1072,6 +1135,95 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 if $0.bestScore == $1.bestScore { return $0.confidenceMargin < $1.confidenceMargin }
                 return $0.bestScore < $1.bestScore
             } ?? .init(resolution: .unresolved, bestScore: 0, confidenceMargin: 0, mechanism: .unresolved)
+    }
+
+    private func isProviderScopedCommerceRequest(
+        document: LanguageUnderstandingDocument,
+        frame: CanonicalSemanticFrame
+    ) -> Bool {
+        let scopeMarkers: Set<String> = [
+            "на", "у", "в", "через", "від", "from", "on", "at", "via",
+            "маркетплейс", "магазин", "сайт", "marketplace", "store", "site"
+        ]
+        let actionRoots = [
+            "знайд", "покаж", "пошук", "шукай", "порівн", "куп", "замов", "брон",
+            "find", "show", "search", "compare", "buy", "order", "book", "track", "відстеж"
+        ]
+        let hasScope = document.tokens.contains { scopeMarkers.contains($0.normalized) }
+        let hasAction = document.tokens.contains { token in
+            token.morphologyForms.contains { form in actionRoots.contains(where: form.hasPrefix) }
+        }
+        guard hasScope && hasAction else { return false }
+        guard frame.person == nil, frame.contextReference == nil else { return false }
+        return ![.call, .message, .share, .navigate].contains(frame.action)
+    }
+
+    private func providerIntent(_ domain: OfficialPublicProviderDomain) -> CommandIntent {
+        switch domain {
+        case .marketplace: .productSearch
+        case .grocery: .groceryBasket
+        case .lodging: .hotelSearch
+        case .carRental: .serviceSearch
+        case .events, .cinema, .transport: .ticketSearch
+        case .jobs: .productSearch
+        case .parcel: .parcelTrack
+        }
+    }
+
+    private func providerDomain(_ domain: OfficialPublicProviderDomain) -> String {
+        switch domain {
+        case .marketplace: "product_catalog"
+        case .grocery: "grocery_delivery"
+        case .lodging: "lodging"
+        case .carRental: "car_rental"
+        case .events, .cinema: "tickets"
+        case .transport: "transport_tickets"
+        case .jobs: "jobs"
+        case .parcel: "parcel_tracking"
+        }
+    }
+
+    private func providerScopedQuery(
+        document: LanguageUnderstandingDocument,
+        provider: OfficialPublicProviderHandoff
+    ) -> String? {
+        let providerForms = provider.aliases.union([provider.displayName]).map {
+            CanonicalMorphology.comparableText($0)
+        }
+        let ignoredRoots = [
+            "знайд", "покаж", "пошук", "шукай", "порівн", "куп", "замов", "брон",
+            "find", "show", "search", "compare", "buy", "order", "book", "track", "відстеж"
+        ]
+        let ignoredTokens: Set<String> = [
+            "на", "у", "в", "через", "від", "from", "on", "at", "via",
+            "маркетплейс", "магазин", "сайт", "marketplace", "store", "site"
+        ]
+        var surfaces: [String] = []
+        var index = 0
+        while index < document.tokens.count {
+            var matched = false
+            for length in stride(from: min(4, document.tokens.count - index), through: 1, by: -1) {
+                let value = CanonicalMorphology.comparableText(
+                    document.tokens[index..<(index + length)].map(\.surface).joined(separator: " ")
+                )
+                if providerForms.contains(value) {
+                    index += length
+                    matched = true
+                    break
+                }
+            }
+            if matched { continue }
+            let token = document.tokens[index]
+            let isAction = token.morphologyForms.contains { form in
+                ignoredRoots.contains(where: form.hasPrefix)
+            }
+            if !isAction && !ignoredTokens.contains(token.normalized) {
+                surfaces.append(token.surface)
+            }
+            index += 1
+        }
+        let value = surfaces.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
     }
 
     /// “Start/launch” is structurally a set action for timers and alarms, but

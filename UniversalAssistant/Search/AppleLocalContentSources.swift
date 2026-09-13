@@ -176,6 +176,43 @@ struct VisionPhotoSemanticLabeler: PhotoSemanticLabeling {
     }
 }
 
+private final class PhotoSemanticDeadlineCompletion: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<[PhotoSemanticMatch], Never>?
+    private var result: [PhotoSemanticMatch]?
+    private var work: Task<Void, Never>?
+
+    func install(_ continuation: CheckedContinuation<[PhotoSemanticMatch], Never>) {
+        lock.lock()
+        if let result {
+            lock.unlock()
+            continuation.resume(returning: result)
+        } else {
+            self.continuation = continuation
+            lock.unlock()
+        }
+    }
+
+    func setWork(_ work: Task<Void, Never>) {
+        lock.lock()
+        if result == nil { self.work = work; lock.unlock() }
+        else { lock.unlock(); work.cancel() }
+    }
+
+    func finish(_ result: [PhotoSemanticMatch], cancelWork: Bool = false) {
+        lock.lock()
+        guard self.result == nil else { lock.unlock(); return }
+        self.result = result
+        let continuation = continuation
+        let work = cancelWork ? work : nil
+        self.continuation = nil
+        self.work = nil
+        lock.unlock()
+        work?.cancel()
+        continuation?.resume(returning: result)
+    }
+}
+
 struct PhotoSemanticSearchEngine: Sendable {
     let library: any PhotoLibrarySearching; let loader: any PhotoAssetImageLoading; let labeler: any PhotoSemanticLabeling
 
@@ -188,55 +225,65 @@ struct PhotoSemanticSearchEngine: Sendable {
         let terms = Self.semanticTerms(query)
         guard !terms.isEmpty else { return [] }
         let candidates = await library.search(criteria, limit: min(max(limit * 2, 4), 8))
-        return await withTaskGroup(of: [PhotoSemanticMatch].self) { race in
-            race.addTask(priority: .userInitiated) {
-                await withTaskGroup(of: (Int, PhotoSemanticMatch)?.self) { group in
-                    for (index, asset) in candidates.enumerated() {
-                        group.addTask(priority: .userInitiated) {
-                            guard !Task.isCancelled,
-                                  let data = try? await loader.imageData(localIdentifier: asset.localIdentifier),
-                                  !Task.isCancelled,
-                                  let labels = try? await labeler.labels(imageData: data),
-                                  !Task.isCancelled else { return nil }
-                            let evidence = labels.filter { label in
-                                let labelTerms = Self.semanticTerms(label.name)
-                                return !terms.isDisjoint(with: labelTerms)
-                            }.sorted { $0.confidence > $1.confidence }
-                            guard let confidence = evidence.first?.confidence,
-                                  confidence >= Self.minimumReliableConfidence else { return nil }
-                            return (
-                                index,
-                                .init(
-                                    asset: asset,
-                                    confidence: confidence,
-                                    matchedLabels: evidence.map(\.name)
-                                )
-                            )
-                        }
-                    }
-                    var values: [(Int, PhotoSemanticMatch)] = []
-                    for await value in group {
-                        guard !Task.isCancelled else {
-                            group.cancelAll()
-                            return []
-                        }
-                        if let value { values.append(value) }
-                    }
-                    return values.sorted {
-                        if $0.1.confidence != $1.1.confidence {
-                            return $0.1.confidence > $1.1.confidence
-                        }
-                        return $0.0 < $1.0
-                    }.prefix(max(1, min(limit, 10))).map { $0.1 }
+        let completion = PhotoSemanticDeadlineCompletion()
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                completion.install(continuation)
+                let work = Task(priority: .userInitiated) {
+                    completion.finish(await evaluate(candidates: candidates, terms: terms, limit: limit))
+                }
+                completion.setWork(work)
+                Task(priority: .background) {
+                    do { try await Task.sleep(for: timeout) }
+                    catch { completion.finish([], cancelWork: true); return }
+                    work.cancel()
+                    try? await Task.sleep(for: .milliseconds(20))
+                    completion.finish([])
                 }
             }
-            race.addTask(priority: .background) {
-                do { try await Task.sleep(for: timeout) } catch { return [] }
-                return []
+        } onCancel: {
+            completion.finish([], cancelWork: true)
+        }
+    }
+
+    private func evaluate(
+        candidates: [PhotoAssetReference],
+        terms: Set<String>,
+        limit: Int
+    ) async -> [PhotoSemanticMatch] {
+        await withTaskGroup(of: (Int, PhotoSemanticMatch)?.self) { group in
+            for (index, asset) in candidates.enumerated() {
+                group.addTask(priority: .userInitiated) {
+                    guard !Task.isCancelled,
+                          let data = try? await loader.imageData(localIdentifier: asset.localIdentifier),
+                          !Task.isCancelled,
+                          let labels = try? await labeler.labels(imageData: data),
+                          !Task.isCancelled else { return nil }
+                    let evidence = labels.filter { label in
+                        !terms.isDisjoint(with: Self.semanticTerms(label.name))
+                    }.sorted { $0.confidence > $1.confidence }
+                    guard let confidence = evidence.first?.confidence,
+                          confidence >= Self.minimumReliableConfidence else { return nil }
+                    return (
+                        index,
+                        .init(asset: asset, confidence: confidence, matchedLabels: evidence.map(\.name))
+                    )
+                }
             }
-            let first = await race.next() ?? []
-            race.cancelAll()
-            return first
+            var values: [(Int, PhotoSemanticMatch)] = []
+            for await value in group {
+                guard !Task.isCancelled else {
+                    group.cancelAll()
+                    return []
+                }
+                if let value { values.append(value) }
+            }
+            return values.sorted {
+                if $0.1.confidence != $1.1.confidence {
+                    return $0.1.confidence > $1.1.confidence
+                }
+                return $0.0 < $1.0
+            }.prefix(max(1, min(limit, 10))).map { $0.1 }
         }
     }
 

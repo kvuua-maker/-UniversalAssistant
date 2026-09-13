@@ -133,6 +133,7 @@ private final class PhotoSearchDeadlineCompletion: @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<PhotoSearchDeadlineResult, Never>?
     private var result: PhotoSearchDeadlineResult?
+    private var work: Task<Void, Never>?
 
     func install(_ continuation: CheckedContinuation<PhotoSearchDeadlineResult, Never>) {
         lock.lock()
@@ -140,13 +141,22 @@ private final class PhotoSearchDeadlineCompletion: @unchecked Sendable {
         else { self.continuation = continuation; lock.unlock() }
     }
 
-    func finish(_ result: PhotoSearchDeadlineResult) {
+    func setWork(_ work: Task<Void, Never>) {
+        lock.lock()
+        if result == nil { self.work = work; lock.unlock() }
+        else { lock.unlock(); work.cancel() }
+    }
+
+    func finish(_ result: PhotoSearchDeadlineResult, cancelWork: Bool = false) {
         lock.lock()
         guard self.result == nil else { lock.unlock(); return }
         self.result = result
         let continuation = continuation
+        let work = cancelWork ? work : nil
         self.continuation = nil
+        self.work = nil
         lock.unlock()
+        work?.cancel()
         continuation?.resume(returning: result)
     }
 }
@@ -192,6 +202,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let photoSearchTimeout: Duration
     private let alarmExecute: ( (SystemQuickAction) async throws -> String)?
     private let commandParser: any CommandParsing
+    let affiliateConfigurations: [String: AffiliateRoutingConfiguration]
     private var restaurantOffersByID: [String: RestaurantOffer] = [:]
     private var restaurantSlotsByID: [String: RestaurantReservationSlot] = [:]
     private var restaurantSlotOrder: [String] = []
@@ -222,7 +233,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         alarmExecute: (  (SystemQuickAction) async throws -> String)? = nil,
         photoSearchTimeout: Duration = .seconds(3),
         personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())],
-        commandParser: any CommandParsing = LanguageUnderstandingBlock()
+        commandParser: any CommandParsing = LanguageUnderstandingBlock(),
+        affiliateConfigurations: [String: AffiliateRoutingConfiguration] = [:]
     ) {
         self.deviceRouter = deviceRouter
         self.contacts = contacts
@@ -247,6 +259,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.alarmExecute = alarmExecute
         self.photoSearchTimeout = photoSearchTimeout
         self.commandParser = commandParser
+        self.affiliateConfigurations = affiliateConfigurations
         self.multiStepOperationFactory = multiStepOperationFactory
         if let multiStepOperationFactory {
             self.multiStep = ProductionMultiStepCoordinator(parser: commandParser, operationFactory: multiStepOperationFactory)
@@ -1023,18 +1036,22 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     }
 
     private func boundedPhotoSearch(_ criteria: PhotoSearchCriteria, limit: Int) async throws -> [PhotoAssetReference] {
-        let result = await withTaskGroup(of: PhotoSearchDeadlineResult.self) { group in
-            group.addTask(priority: .userInitiated) { [photos] in
-                .values(await photos.search(criteria, limit: limit))
+        let completion = PhotoSearchDeadlineCompletion()
+        let result = await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                completion.install(continuation)
+                let work = Task(priority: .userInitiated) { [photos] in
+                    completion.finish(.values(await photos.search(criteria, limit: limit)))
+                }
+                completion.setWork(work)
+                Task(priority: .background) { [photoSearchTimeout] in
+                    do { try await Task.sleep(for: photoSearchTimeout) }
+                    catch { completion.finish(.cancelled, cancelWork: true); return }
+                    completion.finish(.timedOut, cancelWork: true)
+                }
             }
-            group.addTask(priority: .background) { [photoSearchTimeout] in
-                do { try await Task.sleep(for: photoSearchTimeout) }
-                catch { return .cancelled }
-                return .timedOut
-            }
-            let first = await group.next() ?? .cancelled
-            group.cancelAll()
-            return first
+        } onCancel: {
+            completion.finish(.cancelled, cancelWork: true)
         }
         switch result {
         case let .values(values): return values

@@ -629,7 +629,8 @@ final class AssistantViewModel {
                     resultState = .deterministic(result)
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=deterministic capability=\(command.intent.rawValue)")
                 case let .handoff(result):
-                    if result.kind == .system {
+                    if result.kind == .system ||
+                        (result.kind == .provider && !result.requiresExplicitUserActivation) {
                         openSystemHandoffObserved(result.destination)
                         resultState = .idle
                     } else {
@@ -959,7 +960,8 @@ final class AssistantViewModel {
                     resultState = .deterministic(value)
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=compound_result")
                 case let .handoff(value):
-                    if value.kind == .system || value.kind == .navigation {
+                    if value.kind == .system || value.kind == .navigation ||
+                        (value.kind == .provider && !value.requiresExplicitUserActivation) {
                         openSystemHandoffObserved(value.destination)
                         resultState = .idle
                     } else {

@@ -23,6 +23,7 @@ struct WebHandoffResult: Equatable, Sendable {
     let query: String
     let destination: URL
     var kind: HandoffKind = .webSearch
+    var requiresExplicitUserActivation = false
 }
 
 struct ActionRequiredSummary: Equatable, Sendable {

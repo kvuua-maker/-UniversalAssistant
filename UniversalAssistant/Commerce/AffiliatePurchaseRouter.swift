@@ -17,6 +17,14 @@ struct AffiliateRoutingConfiguration: Equatable, Sendable {
     var allowedAppSchemes: Set<String> = []
     let officiallyVerifiedAt: Date
     var enabled = true
+    var requestSubIDParameterName: String? = nil
+    var redirect: AffiliateRedirectConfiguration? = nil
+    var requiresExplicitUserActivation = false
+}
+
+struct AffiliateRedirectConfiguration: Equatable, Sendable {
+    let baseURL: URL
+    let destinationParameterName: String
 }
 
 struct PurchaseHandoff: Equatable, Sendable {
@@ -24,10 +32,12 @@ struct PurchaseHandoff: Equatable, Sendable {
     let destination: URL
     let attribution: AffiliateAttributionState
     let state: PurchaseHandoffState
+    var requiresExplicitUserActivation = false
 }
 
 enum AffiliateRoutingError: Error, Equatable, Sendable {
     case invalidExactDestination, providerMismatch, hostNotAllowed, parameterNotAllowed, appSchemeNotAllowed
+    case invalidRedirect
 }
 
 struct AffiliatePurchaseRouter: Sendable {
@@ -62,6 +72,55 @@ struct AffiliatePurchaseRouter: Sendable {
                      state: .destinationPrepared)
     }
 
+    func route(
+        providerID: String,
+        exactDestination: URL,
+        configuration: AffiliateRoutingConfiguration?,
+        requestID: UUID
+    ) throws -> PurchaseHandoff {
+        try validateOfficialProviderURL(exactDestination)
+        guard let configuration, configuration.enabled else {
+            return .init(offerID: requestID.uuidString, destination: exactDestination,
+                         attribution: .notConfigured, state: .destinationPrepared)
+        }
+        guard configuration.providerID == providerID else { throw AffiliateRoutingError.providerMismatch }
+        guard let host = exactDestination.host?.lowercased(),
+              configuration.allowedHosts.map({ $0.lowercased() }).contains(host) else {
+            throw AffiliateRoutingError.hostNotAllowed
+        }
+        var parameters = configuration.parameterValues
+        if let subID = configuration.requestSubIDParameterName {
+            guard configuration.allowedParameterNames.contains(subID) else {
+                throw AffiliateRoutingError.parameterNotAllowed
+            }
+            parameters[subID] = requestID.uuidString.lowercased()
+        }
+        guard Set(parameters.keys).isSubset(of: configuration.allowedParameterNames) else {
+            throw AffiliateRoutingError.parameterNotAllowed
+        }
+        let destination: URL
+        if let redirect = configuration.redirect {
+            guard redirect.baseURL.scheme?.lowercased() == "https",
+                  redirect.baseURL.host != nil,
+                  !redirect.destinationParameterName.isEmpty,
+                  configuration.allowedParameterNames.contains(redirect.destinationParameterName) else {
+                throw AffiliateRoutingError.invalidRedirect
+            }
+            var wrapped = parameters
+            wrapped[redirect.destinationParameterName] = exactDestination.absoluteString
+            destination = try applying(wrapped, to: redirect.baseURL)
+        } else {
+            destination = try applying(parameters, to: exactDestination)
+        }
+        return .init(
+            offerID: requestID.uuidString,
+            destination: destination,
+            attribution: parameters.isEmpty ? .notConfigured : .outboundParametersApplied,
+            state: .destinationPrepared,
+            requiresExplicitUserActivation: configuration.requiresExplicitUserActivation
+        )
+    }
+
     private func applying(_ values: [String: String], to url: URL) throws -> URL {
         guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             throw AffiliateRoutingError.invalidExactDestination
@@ -74,6 +133,12 @@ struct AffiliatePurchaseRouter: Sendable {
         components.queryItems = query.isEmpty ? nil : query
         guard let destination = components.url else { throw AffiliateRoutingError.invalidExactDestination }
         return destination
+    }
+
+    private func validateOfficialProviderURL(_ url: URL) throws {
+        guard url.scheme?.lowercased() == "https", url.host != nil else {
+            throw AffiliateRoutingError.invalidExactDestination
+        }
     }
 
     private func validateExactWebURL(_ url: URL) throws {
