@@ -27,6 +27,68 @@ struct VoiceTextInputQualityTests {
         #expect(!request.requiresOnDeviceRecognition)
     }
 
+    @Test func liveVocabularyKeepsDynamicAndCanonicalSpokenEntitiesWithinAppleBound() {
+        let dynamic = (0..<80).map { "Локальна сутність \($0)" }
+        let configuration = VoiceRecognitionRequestConfiguration(additionalVocabulary: dynamic)
+        #expect(configuration.contextualVocabulary.count <= VoiceRecognitionRequestConfiguration.maximumContextualStringCount)
+        #expect(configuration.contextualVocabulary.first == dynamic.first)
+        for provider in OfficialPublicProviderHandoffRegistry.records {
+            #expect(configuration.contextualVocabulary.contains(provider.displayName))
+        }
+        #expect(configuration.contextualVocabulary.contains("Балдинини"))
+    }
+
+    @Test func stabilizedFinalUsesOnlyMoreCompleteAppleEvidence() {
+        let evidence = VoiceRecognitionEvidence(
+            primaryTranscript: "Покажи пристрій",
+            alternativeTranscripts: ["Покажи пристрій Northwind Audio"],
+            segmentAlternativeTranscripts: [],
+            partialTranscriptHistory: ["Покажи", "Покажи пристрій"],
+            segmentAlternativeCount: 0,
+            averageSegmentConfidence: 0.4
+        )
+        let output = VoiceTranscriptStabilizer.stabilize(
+            evidence,
+            contextualVocabulary: ["Northwind Audio"]
+        )
+        #expect(output.text == "Покажи пристрій Northwind Audio")
+        #expect(output.source == .wholeAlternative)
+    }
+
+    @Test func stabilizedFinalCanRecoverACompleteEarlierApplePartial() {
+        let evidence = VoiceRecognitionEvidence(
+            primaryTranscript: "Побудуй маршрут до Львова",
+            alternativeTranscripts: [],
+            partialTranscriptHistory: [
+                "Побудуй маршрут",
+                "Побудуй маршрут до Львова через Луцьк"
+            ],
+            segmentAlternativeCount: 0,
+            averageSegmentConfidence: 0.5
+        )
+        let output = VoiceTranscriptStabilizer.stabilize(evidence, contextualVocabulary: [])
+        #expect(output.text == "Побудуй маршрут до Львова через Луцьк")
+        #expect(output.source == .partialHistory)
+    }
+
+    @Test func stabilizedFinalRejectsContradictoryAppleAlternativeWithoutEvidence() {
+        let evidence = VoiceRecognitionEvidence(
+            primaryTranscript: "Постав таймер на тридцять секунд",
+            alternativeTranscripts: ["Постав будильник на сьому годину"],
+            partialTranscriptHistory: [],
+            segmentAlternativeCount: 0,
+            averageSegmentConfidence: 0.8
+        )
+        let output = VoiceTranscriptStabilizer.stabilize(evidence, contextualVocabulary: [])
+        #expect(output.text == evidence.primaryTranscript)
+        #expect(output.source == .primary)
+    }
+
+    @Test func visibleTranscriptNormalizationPreservesEverySpokenToken() {
+        let value = VoiceTranscriptStabilizer.normalizedForDisplay("  Знайди\n  товар   Northwind  ")
+        #expect(value == "Знайди товар Northwind")
+    }
+
     @Test func genericQueryDoesNotAddInternalFindOperator() throws {
         let intent = try GenericIntentParser().parse("Хто зараз президент Аргентини?")
         let query = try GenericQuerySanitizer().query(for: intent)

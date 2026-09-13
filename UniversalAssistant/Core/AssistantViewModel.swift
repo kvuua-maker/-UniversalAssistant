@@ -11,6 +11,7 @@ final class AssistantViewModel {
     var input = ""
     var isListening = false
     var voiceInputEnabled = true
+    private(set) var visibleVoiceTranscript = ""
     private(set) var statusText = AppText.value("ready")
     private(set) var resultState: AssistantResultState = .idle
     private(set) var shouldOfferSettings = false
@@ -140,6 +141,7 @@ final class AssistantViewModel {
         switch event {
         case let .state(state):
             LocalVoiceDiagnosticReport.shared.record("state_delivered_to_view_model", "state=\(String(describing: state))")
+            if state == .requestingPermission { visibleVoiceTranscript = "" }
             applyVoiceState(state)
             if state == .idle, !weatherExecutionInFlight, !eventKitExecutionInFlight, !capabilityExecutionInFlight, let session = LocalVoiceDiagnosticReport.shared.completedSession() {
                 Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
@@ -147,10 +149,12 @@ final class AssistantViewModel {
         case let .recognitionEvidence(evidence):
             pendingVoiceRecognitionEvidence = evidence
         case let .transcript(transcript, isFinal):
-            input = transcript
+            let visibleTranscript = VoiceTranscriptStabilizer.normalizedForDisplay(transcript)
+            input = visibleTranscript
+            visibleVoiceTranscript = visibleTranscript
             LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_view_model", "length=\(transcript.count) final=\(isFinal)")
             Self.voiceLogger.notice("transcript_delivered_to_view_model length=\(transcript.count, privacy: .public) final=\(isFinal, privacy: .public)")
-            if isFinal, !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if isFinal, !visibleTranscript.isEmpty {
                 Self.voiceLogger.notice("transcript_delivered_to_router")
                 LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_router", "length=\(transcript.count)")
                 submit()

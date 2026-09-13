@@ -13,16 +13,21 @@ struct AccessibilityAudioPermissionTests {
         model.handleVoiceEvent(.state(.listening))
         model.handleVoiceEvent(.transcript("відкрий календар", isFinal: false))
         #expect(model.input == "відкрий календар")
+        #expect(model.visibleVoiceTranscript == "відкрий календар")
         #expect(model.isListening)
 
         model.handleVoiceEvent(.state(.idle))
         model.handleVoiceEvent(.transcript("відкрий календар", isFinal: true))
         #expect(model.input.isEmpty)
+        #expect(model.visibleVoiceTranscript == "відкрий календар")
         #expect(model.resultState != .idle)
         let report = model.voiceDiagnosticReport()
         #expect(report.contains("transcript_delivered_to_view_model"))
         #expect(report.contains("transcript_delivered_to_router"))
         #expect(!report.contains("відкрий календар"))
+
+        model.handleVoiceEvent(.state(.requestingPermission))
+        #expect(model.visibleVoiceTranscript.isEmpty)
     }
 
     @Test func voicePrivacyModeKeepsTypedInteractionWorking() {

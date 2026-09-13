@@ -116,6 +116,144 @@ enum VoiceRecognitionCandidateBuilder {
     }
 }
 
+enum VoiceTranscriptEvidenceSource: String, Equatable, Sendable {
+    case primary, wholeAlternative, segmentAlternative, partialHistory
+}
+
+struct StabilizedVoiceTranscript: Equatable, Sendable {
+    let text: String
+    let source: VoiceTranscriptEvidenceSource
+}
+
+/// Selects a complete command only from text Apple Speech actually returned.
+/// It never inserts a registry value into the transcript. A non-primary
+/// hypothesis may win only when it conservatively extends the primary command,
+/// or when Apple's candidate contains stronger exact request vocabulary while
+/// retaining the rest of the utterance.
+enum VoiceTranscriptStabilizer {
+    private struct Candidate {
+        let text: String
+        let source: VoiceTranscriptEvidenceSource
+    }
+
+    static func stabilize(
+        _ evidence: VoiceRecognitionEvidence,
+        contextualVocabulary: [String]
+    ) -> StabilizedVoiceTranscript {
+        let primary = normalizedForDisplay(evidence.primaryTranscript)
+        guard !primary.isEmpty else {
+            return .init(text: "", source: .primary)
+        }
+        let candidates = uniqueCandidates(evidence, excluding: primary)
+        let primaryTokens = tokens(primary)
+        let vocabulary = contextualVocabulary
+            .map(normalizedForComparison)
+            .filter { !$0.isEmpty }
+        let primaryMatches = vocabularyMatchCount(primary, vocabulary: vocabulary)
+
+        var selected = Candidate(text: primary, source: .primary)
+        var selectedMatches = primaryMatches
+        var selectedTokenCount = primaryTokens.count
+
+        for candidate in candidates {
+            let candidateTokens = tokens(candidate.text)
+            guard !candidateTokens.isEmpty else { continue }
+            let matches = vocabularyMatchCount(candidate.text, vocabulary: vocabulary)
+            let primaryIsSubsequence = isOrderedSubsequence(primaryTokens, of: candidateTokens)
+            let conservativelyExtendsPrimary = primaryIsSubsequence && candidateTokens.count > primaryTokens.count
+            let overlap = tokenOverlap(primaryTokens, candidateTokens)
+            let hasStrongerVocabularyEvidence = matches > primaryMatches && overlap >= 0.5
+            guard conservativelyExtendsPrimary || hasStrongerVocabularyEvidence else { continue }
+
+            let shouldSelect = matches > selectedMatches ||
+                (matches == selectedMatches && candidateTokens.count > selectedTokenCount) ||
+                (matches == selectedMatches && candidateTokens.count == selectedTokenCount &&
+                    sourcePriority(candidate.source) > sourcePriority(selected.source))
+            if shouldSelect {
+                selected = candidate
+                selectedMatches = matches
+                selectedTokenCount = candidateTokens.count
+            }
+        }
+        return .init(text: selected.text, source: selected.source)
+    }
+
+    static func normalizedForDisplay(_ value: String) -> String {
+        value.precomposedStringWithCanonicalMapping
+            .split(whereSeparator: \.isWhitespace)
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func uniqueCandidates(
+        _ evidence: VoiceRecognitionEvidence,
+        excluding primary: String
+    ) -> [Candidate] {
+        var seen = Set([normalizedForComparison(primary)])
+        var output: [Candidate] = []
+        func append(_ values: [String], source: VoiceTranscriptEvidenceSource) {
+            for raw in values {
+                let value = normalizedForDisplay(raw)
+                let key = normalizedForComparison(value)
+                guard !key.isEmpty, seen.insert(key).inserted else { continue }
+                output.append(.init(text: value, source: source))
+            }
+        }
+        append(evidence.alternativeTranscripts, source: .wholeAlternative)
+        append(evidence.segmentAlternativeTranscripts, source: .segmentAlternative)
+        append(Array(evidence.partialTranscriptHistory.suffix(4).reversed()), source: .partialHistory)
+        return output
+    }
+
+    private static func normalizedForComparison(_ value: String) -> String {
+        value.folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: Locale(identifier: "uk_UA")
+        ).split { !$0.isLetter && !$0.isNumber }.joined(separator: " ")
+    }
+
+    private static func tokens(_ value: String) -> [String] {
+        normalizedForComparison(value).split(separator: " ").map(String.init)
+    }
+
+    private static func vocabularyMatchCount(_ value: String, vocabulary: [String]) -> Int {
+        let comparable = normalizedForComparison(value)
+        let joined = comparable.replacingOccurrences(of: " ", with: "")
+        return vocabulary.reduce(into: 0) { count, phrase in
+            let bounded = " \(comparable) ".contains(" \(phrase) ")
+            let compact = phrase.count >= 4 && joined.contains(phrase.replacingOccurrences(of: " ", with: ""))
+            if bounded || compact { count += 1 }
+        }
+    }
+
+    private static func isOrderedSubsequence(_ smaller: [String], of larger: [String]) -> Bool {
+        guard !smaller.isEmpty, smaller.count <= larger.count else { return false }
+        var index = larger.startIndex
+        for token in smaller {
+            guard let match = larger[index...].firstIndex(of: token) else { return false }
+            index = larger.index(after: match)
+        }
+        return true
+    }
+
+    private static func tokenOverlap(_ lhs: [String], _ rhs: [String]) -> Double {
+        guard !lhs.isEmpty, !rhs.isEmpty else { return 0 }
+        let left = lhs.reduce(into: [String: Int]()) { $0[$1, default: 0] += 1 }
+        let right = rhs.reduce(into: [String: Int]()) { $0[$1, default: 0] += 1 }
+        let common = left.reduce(0) { $0 + min($1.value, right[$1.key, default: 0]) }
+        return Double(common) / Double(max(lhs.count, rhs.count))
+    }
+
+    private static func sourcePriority(_ value: VoiceTranscriptEvidenceSource) -> Int {
+        switch value {
+        case .primary: 4
+        case .wholeAlternative: 3
+        case .segmentAlternative: 2
+        case .partialHistory: 1
+        }
+    }
+}
+
 enum VoiceStopReason: String, Sendable {
     case sessionRestart, externalRequest, userPressedStop, voiceDisabled, sceneInactive
     case recognitionFinal, recognitionError, audioInterruption, routeChange, startFailure
@@ -958,6 +1096,7 @@ enum VoiceInputTapFormatPolicy {
 }
 
 struct VoiceRecognitionRequestConfiguration: Sendable {
+    static let maximumContextualStringCount = 100
     let contextualVocabulary: [String]
     let requireOnDeviceRecognition: Bool
 
@@ -967,12 +1106,17 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
     }
 
     static var canonicalEntityVocabulary: [String] {
-        let providers = OfficialPublicProviderHandoffRegistry.records.map(\.displayName)
-        let applications = LaunchDeviceApplications.verified.flatMap {
-            [$0.id] + Array($0.aliases)
+        let providers = OfficialPublicProviderHandoffRegistry.records.flatMap { provider in
+            [provider.displayName] + preferredSpokenAlias(from: provider.aliases, excluding: provider.displayName)
+        }
+        let brands = CanonicalCatalogEntityRegistry.brandNames.flatMap { name in
+            [name] + speechTransliterationVariants(for: name)
+        }
+        let applications = LaunchDeviceApplications.verified.flatMap { application in
+            [application.id] + preferredSpokenAlias(from: application.aliases, excluding: application.id)
         }
         let services = MessengerKind.allCases.map(\.rawValue)
-        return providers + CanonicalCatalogEntityRegistry.brandNames + applications + services
+        return unique(providers + brands + applications + services)
     }
 
     static var canonicalFunctionVocabulary: [String] {
@@ -997,7 +1141,7 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
         var seen: Set<String> = []
         var output: [String] = []
         func append<S: Sequence>(_ source: S) where S.Element == String {
-            for phrase in source where output.count < 100 {
+            for phrase in source where output.count < maximumContextualStringCount {
                 let trimmed = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else { continue }
                 let key = trimmed.folding(
@@ -1009,18 +1153,51 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
             }
         }
         if includeCanonical {
-            // Preserve request-scoped contacts first while reserving enough of
-            // Apple's bounded capacity for every provider/app/proper noun.
-            // Function hints fill only remaining capacity; no entity candidate
-            // can be evicted by a large dynamic contact list.
             let entities = boundedVocabulary(additional: canonicalEntityVocabulary, includeCanonical: false)
-            append(additional.prefix(max(0, 100 - entities.count)))
+            let essentialFunctions = ["QR-код", "OCR", "відскануй", "розпізнай", "відкрий", "знайди"]
+            let dynamicLimit = max(0, maximumContextualStringCount - entities.count - essentialFunctions.count)
+            // Fresh request-scoped values remain first, while every canonical
+            // provider/app/brand keeps one display and one general spoken form.
+            append(additional.prefix(dynamicLimit))
             append(entities)
+            append(essentialFunctions)
             append(canonicalFunctionVocabulary)
         } else {
             append(additional)
         }
         return output
+    }
+
+    private static func preferredSpokenAlias(from aliases: Set<String>, excluding primary: String) -> [String] {
+        let primaryKey = comparisonKey(primary)
+        let values = aliases.filter { comparisonKey($0) != primaryKey }
+        guard !values.isEmpty else { return [] }
+        let preferred = values.sorted { lhs, rhs in
+            let lhsCyrillic = lhs.unicodeScalars.contains { (0x0400...0x052F).contains(Int($0.value)) }
+            let rhsCyrillic = rhs.unicodeScalars.contains { (0x0400...0x052F).contains(Int($0.value)) }
+            if lhsCyrillic != rhsCyrillic { return lhsCyrillic }
+            if lhs.count != rhs.count { return lhs.count > rhs.count }
+            return lhs < rhs
+        }.first
+        return preferred.map { [$0] } ?? []
+    }
+
+    private static func speechTransliterationVariants(for value: String) -> [String] {
+        guard value.unicodeScalars.contains(where: { $0.isASCII && CharacterSet.letters.contains($0) }),
+              let transformed = value.applyingTransform(StringTransform("Latin-Cyrillic"), reverse: false) else { return [] }
+        let trimmed = transformed.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, comparisonKey(trimmed) != comparisonKey(value) else { return [] }
+        return [trimmed]
+    }
+
+    private static func unique(_ values: [String]) -> [String] {
+        var seen: Set<String> = []
+        return values.filter { seen.insert(comparisonKey($0)).inserted }
+    }
+
+    private static func comparisonKey(_ value: String) -> String {
+        value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "uk_UA"))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     func apply(to request: SFSpeechAudioBufferRecognitionRequest, recognizer: SFSpeechRecognizer? = nil) {
@@ -1226,6 +1403,7 @@ final class VoiceInputController {
     @ObservationIgnored private var cachedContextualVocabulary: [String] = []
     @ObservationIgnored private var vocabularyRefresh: Task<Void, Never>?
     @ObservationIgnored private var finalResultCount = 0
+    @ObservationIgnored private var activeContextualVocabulary: [String] = []
 
     init(
         captureBackend: (any VoiceAudioCaptureBackend)? = nil,
@@ -1244,7 +1422,6 @@ final class VoiceInputController {
     }
 
     func start(locale: Locale = .current) async {
-        prewarmContextualVocabulary()
         stop(reason: .sessionRestart)
         let sessionID = UUID()
         activeSessionID = sessionID
@@ -1275,17 +1452,20 @@ final class VoiceInputController {
         }
         LocalVoiceDiagnosticReport.shared.record("recognizer_ready", "locale=\(locale.identifier) available=\(recognizer.isAvailable)")
         self.recognizer = recognizer
-        let requestVocabulary = cachedContextualVocabulary
+        let refreshedVocabulary = await contextualVocabulary()
         guard owns(sessionID) else {
-            LocalVoiceDiagnosticReport.shared.record("stale_start_suppressed", "reason=recognizer_completed")
+            LocalVoiceDiagnosticReport.shared.record("stale_start_suppressed", "reason=context_vocabulary_completed")
             return
         }
+        if !refreshedVocabulary.isEmpty { cachedContextualVocabulary = refreshedVocabulary }
+        let requestVocabulary = refreshedVocabulary.isEmpty ? cachedContextualVocabulary : refreshedVocabulary
         let request = SFSpeechAudioBufferRecognitionRequest()
         let configuration = VoiceRecognitionRequestConfiguration(additionalVocabulary: requestVocabulary)
         configuration.apply(to: request, recognizer: recognizer)
+        activeContextualVocabulary = configuration.contextualVocabulary
         LocalVoiceDiagnosticReport.shared.record(
             "recognition_request_created",
-            "api=sfspeechrecognizer partial_results=true punctuation=true task_hint=dictation context_count=\(configuration.contextualVocabulary.count) on_device_supported=\(recognizer.supportsOnDeviceRecognition) on_device_required=\(request.requiresOnDeviceRecognition)"
+            "api=sfspeechrecognizer partial_results=true punctuation=true task_hint=dictation input_count=\(requestVocabulary.count) context_count=\(configuration.contextualVocabulary.count) on_device_supported=\(recognizer.supportsOnDeviceRecognition) on_device_required=\(request.requiresOnDeviceRecognition)"
         )
         self.request = request
         let requestSink = VoiceRecognitionRequestSink(request)
@@ -1374,6 +1554,7 @@ final class VoiceInputController {
         }
         LocalVoiceDiagnosticReport.shared.record("recognition_callback", "count=\(recognitionCallbackCount) has_text=\(transcript != nil) final=\(isFinal) error_domain=\(errorDomain) error_code=\(errorCode) partial_count=\(partialResultCount) final_count=\(finalResultCount)")
         if let transcript {
+            var accumulatedEvidence: VoiceRecognitionEvidence?
             if !isFinal {
                 VoiceRecognitionCandidateBuilder.appendingPartial(
                     transcript,
@@ -1381,23 +1562,34 @@ final class VoiceInputController {
                 )
             }
             if let evidence {
-                let accumulatedEvidence = evidence.withPartialTranscriptHistory(partialTranscriptHistory)
-                eventHandler?(.recognitionEvidence(accumulatedEvidence))
-                let bucket = accumulatedEvidence.averageSegmentConfidence.map {
+                let value = evidence.withPartialTranscriptHistory(partialTranscriptHistory)
+                accumulatedEvidence = value
+                eventHandler?(.recognitionEvidence(value))
+                let bucket = value.averageSegmentConfidence.map {
                     $0 >= 0.8 ? "high" : ($0 >= 0.5 ? "medium" : "low")
                 } ?? "unavailable"
                 LocalVoiceDiagnosticReport.shared.record(
                     "recognition_evidence",
-                    "alternatives=\(accumulatedEvidence.alternativeTranscripts.count) segment_alternatives=\(accumulatedEvidence.segmentAlternativeCount) confidence_bucket=\(bucket)"
+                    "alternatives=\(value.alternativeTranscripts.count) segment_alternatives=\(value.segmentAlternativeCount) confidence_bucket=\(bucket)"
                 )
             }
-            self.transcript = transcript
+            let stabilized = isFinal
+                ? accumulatedEvidence.map { VoiceTranscriptStabilizer.stabilize($0, contextualVocabulary: activeContextualVocabulary) }
+                : nil
+            let deliveredTranscript = stabilized?.text ?? VoiceTranscriptStabilizer.normalizedForDisplay(transcript)
+            self.transcript = deliveredTranscript
             // Persist the recognizer's final evidence before handing it to the
             // semantic pipeline. If downstream parsing terminates the process,
             // Crashlytics must still contain the exact Speech boundary input.
             LocalVoiceDiagnosticReport.shared.recordSpeechTranscript(transcript, isFinal: isFinal)
-            eventHandler?(.transcript(transcript, isFinal: isFinal))
-            LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_ui", "length=\(transcript.count) final=\(isFinal)")
+            if let stabilized {
+                LocalVoiceDiagnosticReport.shared.record(
+                    "stabilized_transcript",
+                    "length=\(stabilized.text.count) source=\(stabilized.source.rawValue)"
+                )
+            }
+            eventHandler?(.transcript(deliveredTranscript, isFinal: isFinal))
+            LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_ui", "length=\(deliveredTranscript.count) final=\(isFinal)")
             if !isFinal, !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 let speechActivity = speechActivity
                 endOfSpeechFinalizer.receivedPartial(
