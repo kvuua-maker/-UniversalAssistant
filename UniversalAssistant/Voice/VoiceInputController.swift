@@ -15,8 +15,105 @@ enum VoiceInputEvent: Equatable, Sendable {
 struct VoiceRecognitionEvidence: Equatable, Sendable {
     let primaryTranscript: String
     let alternativeTranscripts: [String]
+    let segmentAlternativeTranscripts: [String]
+    let partialTranscriptHistory: [String]
     let segmentAlternativeCount: Int
     let averageSegmentConfidence: Double?
+
+    init(
+        primaryTranscript: String,
+        alternativeTranscripts: [String],
+        segmentAlternativeTranscripts: [String] = [],
+        partialTranscriptHistory: [String] = [],
+        segmentAlternativeCount: Int,
+        averageSegmentConfidence: Double?
+    ) {
+        self.primaryTranscript = primaryTranscript
+        self.alternativeTranscripts = alternativeTranscripts
+        self.segmentAlternativeTranscripts = segmentAlternativeTranscripts
+        self.partialTranscriptHistory = partialTranscriptHistory
+        self.segmentAlternativeCount = segmentAlternativeCount
+        self.averageSegmentConfidence = averageSegmentConfidence
+    }
+
+    func withPartialTranscriptHistory(_ history: [String]) -> Self {
+        .init(
+            primaryTranscript: primaryTranscript,
+            alternativeTranscripts: alternativeTranscripts,
+            segmentAlternativeTranscripts: segmentAlternativeTranscripts,
+            partialTranscriptHistory: history,
+            segmentAlternativeCount: segmentAlternativeCount,
+            averageSegmentConfidence: averageSegmentConfidence
+        )
+    }
+}
+
+/// Converts Apple's segment-scoped alternatives into bounded whole-command
+/// hypotheses. It only substitutes text returned by Speech at Apple's exact
+/// UTF-16 range; it never invents a word or an entity mapping.
+enum VoiceRecognitionCandidateBuilder {
+    static let maximumWholeTranscriptions = 8
+    static let maximumSegmentTranscriptions = 16
+    static let maximumPartialHistory = 16
+
+    static func segmentAlternativeTranscripts(
+        primaryTranscript: String,
+        segments: [SFTranscriptionSegment],
+        limit: Int = maximumSegmentTranscriptions
+    ) -> [String] {
+        replacingSegmentAlternatives(
+            in: primaryTranscript,
+            alternatives: segments.map { ($0.substringRange, $0.alternativeSubstrings) },
+            limit: limit
+        )
+    }
+
+    static func replacingSegmentAlternatives(
+        in primaryTranscript: String,
+        alternatives: [(range: NSRange, values: [String])],
+        limit: Int = maximumSegmentTranscriptions
+    ) -> [String] {
+        guard limit > 0 else { return [] }
+        let source = primaryTranscript as NSString
+        var seen = Set([comparisonKey(primaryTranscript)])
+        var output: [String] = []
+        for item in alternatives {
+            guard item.range.location != NSNotFound,
+                  item.range.location >= 0,
+                  item.range.length >= 0,
+                  item.range.location + item.range.length <= source.length else { continue }
+            for value in item.values {
+                let replacement = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !replacement.isEmpty else { continue }
+                let candidate = source.replacingCharacters(in: item.range, with: replacement)
+                let key = comparisonKey(candidate)
+                guard !key.isEmpty, seen.insert(key).inserted else { continue }
+                output.append(candidate)
+                if output.count == limit { return output }
+            }
+        }
+        return output
+    }
+
+    static func appendingPartial(
+        _ transcript: String,
+        to history: inout [String],
+        limit: Int = maximumPartialHistory
+    ) {
+        let value = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard limit > 0, !value.isEmpty else { return }
+        let key = comparisonKey(value)
+        guard history.last.map(comparisonKey) != key else { return }
+        history.append(value)
+        if history.count > limit { history.removeFirst(history.count - limit) }
+    }
+
+    private static func comparisonKey(_ value: String) -> String {
+        value.folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: Locale(identifier: "uk_UA")
+        ).split(whereSeparator: \.isWhitespace).joined(separator: " ")
+    }
 }
 
 enum VoiceStopReason: String, Sendable {
@@ -1125,6 +1222,7 @@ final class VoiceInputController {
     @ObservationIgnored private var eventHandler: (@MainActor @Sendable (VoiceInputEvent) -> Void)?
     @ObservationIgnored private var recognitionCallbackCount = 0
     @ObservationIgnored private var partialResultCount = 0
+    @ObservationIgnored private var partialTranscriptHistory: [String] = []
     @ObservationIgnored private var cachedContextualVocabulary: [String] = []
     @ObservationIgnored private var vocabularyRefresh: Task<Void, Never>?
     @ObservationIgnored private var finalResultCount = 0
@@ -1153,6 +1251,7 @@ final class VoiceInputController {
         LocalVoiceDiagnosticReport.shared.reset()
         recognitionCallbackCount = 0
         partialResultCount = 0
+        partialTranscriptHistory = []
         finalResultCount = 0
         isFinalizingRecognition = false
         speechActivity.reset()
@@ -1275,14 +1374,21 @@ final class VoiceInputController {
         }
         LocalVoiceDiagnosticReport.shared.record("recognition_callback", "count=\(recognitionCallbackCount) has_text=\(transcript != nil) final=\(isFinal) error_domain=\(errorDomain) error_code=\(errorCode) partial_count=\(partialResultCount) final_count=\(finalResultCount)")
         if let transcript {
+            if !isFinal {
+                VoiceRecognitionCandidateBuilder.appendingPartial(
+                    transcript,
+                    to: &partialTranscriptHistory
+                )
+            }
             if let evidence {
-                eventHandler?(.recognitionEvidence(evidence))
-                let bucket = evidence.averageSegmentConfidence.map {
+                let accumulatedEvidence = evidence.withPartialTranscriptHistory(partialTranscriptHistory)
+                eventHandler?(.recognitionEvidence(accumulatedEvidence))
+                let bucket = accumulatedEvidence.averageSegmentConfidence.map {
                     $0 >= 0.8 ? "high" : ($0 >= 0.5 ? "medium" : "low")
                 } ?? "unavailable"
                 LocalVoiceDiagnosticReport.shared.record(
                     "recognition_evidence",
-                    "alternatives=\(evidence.alternativeTranscripts.count) segment_alternatives=\(evidence.segmentAlternativeCount) confidence_bucket=\(bucket)"
+                    "alternatives=\(accumulatedEvidence.alternativeTranscripts.count) segment_alternatives=\(accumulatedEvidence.segmentAlternativeCount) confidence_bucket=\(bucket)"
                 )
             }
             self.transcript = transcript
@@ -1374,7 +1480,13 @@ final class VoiceInputController {
                     confidenceValues.reduce(0, +) / Double(confidenceValues.count)
                 return VoiceRecognitionEvidence(
                     primaryTranscript: result.bestTranscription.formattedString,
-                    alternativeTranscripts: Array(result.transcriptions.dropFirst().prefix(4).map(\.formattedString)),
+                    alternativeTranscripts: Array(result.transcriptions.dropFirst()
+                        .prefix(VoiceRecognitionCandidateBuilder.maximumWholeTranscriptions)
+                        .map(\.formattedString)),
+                    segmentAlternativeTranscripts: VoiceRecognitionCandidateBuilder.segmentAlternativeTranscripts(
+                        primaryTranscript: result.bestTranscription.formattedString,
+                        segments: segments
+                    ),
                     segmentAlternativeCount: segments.reduce(0) { $0 + $1.alternativeSubstrings.count },
                     averageSegmentConfidence: average
                 )

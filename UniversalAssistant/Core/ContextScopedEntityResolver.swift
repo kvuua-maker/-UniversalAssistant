@@ -105,6 +105,10 @@ struct ContextScopedEntityResolver<Value: Equatable & Sendable>: Sendable {
             let value = evidenceScore(query, CanonicalMorphology.comparableText(alias))
             if value.value > output.value { output = value }
         }
+        if let initialism = spokenInitialismScore(query: query, displayName: candidate.displayName),
+           initialism > output.value {
+            output = (initialism, .phonetic)
+        }
         return output
     }
     private static func names(_ values: [ScopedEntityCandidate<Value>]) -> [String] {
@@ -115,7 +119,12 @@ struct ContextScopedEntityResolver<Value: Equatable & Sendable>: Sendable {
         let right = tokenForms(rhs)
         guard !left.isEmpty, left.count == right.count else { return false }
         return zip(left, right).allSatisfy { lhsForms, rhsForms in
-            !lhsForms.filter({ $0.count >= 3 }).isDisjoint(with: rhsForms.filter({ $0.count >= 3 }))
+            let leftComparable = lhsForms.map(CanonicalMorphology.comparableText)
+            let rightComparable = rhsForms.map(CanonicalMorphology.comparableText)
+            let exactToken = !Set(leftComparable).isDisjoint(with: Set(rightComparable))
+            let productiveStem = !lhsForms.filter({ $0.count >= 3 })
+                .isDisjoint(with: rhsForms.filter({ $0.count >= 3 }))
+            return exactToken || productiveStem
         }
     }
 
@@ -133,9 +142,66 @@ struct ContextScopedEntityResolver<Value: Equatable & Sendable>: Sendable {
         if transliterated > best.0 { best = (transliterated, .transliteration) }
         let morphology = similarity(morphologicalStem(leftTransliteration), morphologicalStem(rightTransliteration)) * 0.94
         if morphology > best.0 { best = (morphology, .morphology) }
-        let phonetic = phoneticSimilarity(phoneticKey(leftTransliteration), phoneticKey(rightTransliteration)) * 0.92
+        var phonetic = phoneticSimilarity(phoneticKey(leftTransliteration), phoneticKey(rightTransliteration)) * 0.92
+        let leftKey = phoneticKey(leftTransliteration)
+        let rightKey = phoneticKey(rightTransliteration)
+        if let leftInitial = leftKey.first, let rightInitial = rightKey.first, leftInitial != rightInitial {
+            phonetic *= 0.84
+        }
+        if let leftFinal = leftKey.last, let rightFinal = rightKey.last,
+           leftFinal != rightFinal, !rightKey.hasPrefix(leftKey) {
+            phonetic *= 0.84
+        }
+        // A shared two-character spoken ending is useful supporting evidence
+        // for a clipped proper noun, but never sufficient without the existing
+        // phonetic threshold and runner-up margin.
+        if leftTransliteration != rightTransliteration,
+           transliterated < 0.90, morphology < 0.72,
+           leftTransliteration.count >= 3, rightTransliteration.count >= 3,
+           leftTransliteration.suffix(2) == rightTransliteration.suffix(2) {
+            phonetic = min(1, phonetic + 0.10)
+        }
+        // Very short consonant skeletons collide frequently in ordinary words
+        // (for example after vowels are removed). They cannot independently
+        // identify an entity without spelling/transliteration support.
+        if leftTransliteration.count <= 4, rightTransliteration.count <= 4,
+           transliterated < 0.72, morphology < 0.72 {
+            phonetic = min(phonetic, 0.70)
+        }
         if phonetic > best.0 { best = (phonetic, .phonetic) }
         return best
+    }
+
+    /// Produces pronunciation evidence for any short uppercase Ukrainian
+    /// initialism from its letters. A single omitted spoken letter is accepted
+    /// only inside the resolver's bounded registry and still requires its
+    /// normal confidence margin; no provider-specific spelling is encoded.
+    private static func spokenInitialismScore(query: String, displayName: String) -> Double? {
+        let letters = displayName.filter(\.isLetter)
+        guard (2...5).contains(letters.count), letters == letters.uppercased() else { return nil }
+        let names: [String] = letters.compactMap { ukrainianLetterNames[$0] }
+        guard names.count == letters.count else { return nil }
+        let compactQuery = CanonicalMorphology.comparableText(query)
+            .filter { $0.isLetter || $0.isNumber }
+        guard !compactQuery.isEmpty else { return nil }
+        let full = names.joined()
+        if compactQuery == full { return 0.96 }
+        guard names.count >= 3 else { return nil }
+        for omitted in names.indices {
+            let form = names.enumerated().compactMap { $0.offset == omitted ? nil : $0.element }.joined()
+            if compactQuery == form { return 0.86 }
+        }
+        return nil
+    }
+
+    private static var ukrainianLetterNames: [Character: String] {
+        [
+            "А":"а", "Б":"бе", "В":"ве", "Г":"ге", "Ґ":"ґе", "Д":"де", "Е":"е",
+            "Є":"є", "Ж":"же", "З":"зе", "И":"и", "І":"і", "Ї":"ї", "Й":"йот",
+            "К":"ка", "Л":"ел", "М":"ем", "Н":"ен", "О":"о", "П":"пе", "Р":"ер",
+            "С":"ес", "Т":"те", "У":"у", "Ф":"еф", "Х":"ха", "Ц":"це", "Ч":"че",
+            "Ш":"ша", "Щ":"ща"
+        ]
     }
     /// Character-based Ukrainian/Russian-to-Latin folding for comparison only.
     /// It contains no entity substitutions.

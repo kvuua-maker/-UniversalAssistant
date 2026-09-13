@@ -294,9 +294,12 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
     func parse(_ text: String, speechEvidence: VoiceRecognitionEvidence?) -> StructuredCommand {
         let primary = parseAuthoritative(text)
         guard let speechEvidence else { return primary }
-        let alternatives = speechEvidence.alternativeTranscripts
-            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-            .filter { $0.caseInsensitiveCompare(text) != .orderedSame }
+        let alternatives = uniqueSpeechHypotheses(
+            speechEvidence.alternativeTranscripts + speechEvidence.segmentAlternativeTranscripts,
+            excluding: text,
+            limit: VoiceRecognitionCandidateBuilder.maximumWholeTranscriptions +
+                VoiceRecognitionCandidateBuilder.maximumSegmentTranscriptions
+        )
         var selected = primary
         var selectedAlternative = false
         for alternative in alternatives {
@@ -306,8 +309,14 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 selectedAlternative = true
             }
         }
+        selected = applyingCanonicalSpeechEntityEvidence(
+            authoritativeHypotheses: [text] + alternatives,
+            partialHypotheses: speechEvidence.partialTranscriptHistory,
+            to: selected
+        )
         var entities = selected.entities
         entities["speech_alternative_count"] = String(alternatives.count)
+        entities["speech_partial_history_count"] = String(speechEvidence.partialTranscriptHistory.count)
         if let confidence = speechEvidence.averageSegmentConfidence {
             entities["speech_mean_confidence"] = String(format: "%.3f", confidence)
         }
@@ -323,6 +332,408 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             risk: selected.risk,
             needsClarification: selected.needsClarification
         )
+    }
+
+    private func uniqueSpeechHypotheses(
+        _ values: [String],
+        excluding primary: String,
+        limit: Int
+    ) -> [String] {
+        guard limit > 0 else { return [] }
+        var seen = Set([CanonicalMorphology.comparableText(primary)])
+        return values.compactMap { value -> String? in
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            let key = CanonicalMorphology.comparableText(trimmed)
+            guard !trimmed.isEmpty, !key.isEmpty, seen.insert(key).inserted else { return nil }
+            return trimmed
+        }.prefix(limit).map { $0 }
+    }
+
+    /// Partial Speech hypotheses are not authoritative command text. They may
+    /// contribute only one unambiguous canonical entity already present in a
+    /// legitimate registry, while action, free-form query and all other roles
+    /// remain owned by the final transcript.
+    private func applyingCanonicalSpeechEntityEvidence(
+        authoritativeHypotheses: [String],
+        partialHypotheses: [String],
+        to command: StructuredCommand
+    ) -> StructuredCommand {
+        let hypotheses = uniqueSpeechHypotheses(
+            authoritativeHypotheses + partialHypotheses,
+            excluding: "",
+            limit: VoiceRecognitionCandidateBuilder.maximumWholeTranscriptions +
+                VoiceRecognitionCandidateBuilder.maximumSegmentTranscriptions +
+                VoiceRecognitionCandidateBuilder.maximumPartialHistory + 1
+        )
+        let candidates = hypotheses.map(parseAuthoritative)
+        var entities = command.entities
+        var constraints = command.constraints
+        var intent = command.intent
+        var needsClarification = command.needsClarification
+        var applied = false
+
+        if let service = canonicalSpeechServiceHit(
+            authoritativeHypotheses: authoritativeHypotheses,
+            partialHypotheses: partialHypotheses,
+            intent: intent
+        ),
+           let key = serviceKey(for: intent),
+           entities[key] == nil || entities["service_resolution"] == "canonical_default" || entities[key] == service.value {
+            entities[key] = service.value
+            entities["service_match_resolution"] = "resolved"
+            entities["service_match_mechanism"] = service.evidence.mechanism.rawValue
+            entities["service_match_confidence"] = String(format: "%.3f", service.evidence.bestScore)
+            entities["service_match_margin"] = String(format: "%.3f", service.evidence.confidenceMargin)
+            entities["service_resolution"] = "speech_canonical_registry"
+            entities["speech_entity_evidence"] = "canonical_service"
+            entities.removeValue(forKey: "clarification_options")
+            entities.removeValue(forKey: "clarification_role")
+            needsClarification = false
+            applied = true
+        }
+
+        let catalogCandidates = candidates.filter { $0.entities["catalog_entity_id"] != nil }
+        let catalogIDs = Set(catalogCandidates.compactMap { $0.entities["catalog_entity_id"] })
+        if catalogIDs.count == 1,
+           let catalogID = catalogIDs.first,
+           command.entities["catalog_entity_id"].map({ $0 == catalogID }) != false,
+           let evidence = catalogCandidates.max(by: {
+               speechEntityEvidenceScore($0, prefix: "catalog_match") <
+                   speechEntityEvidenceScore($1, prefix: "catalog_match")
+           }),
+           speechEntityEvidenceScore(evidence, prefix: "catalog_match") >= 0.72,
+           let canonical = catalogCandidatesForSpeechEvidence.first(where: { $0.value.id == catalogID })?.value {
+            for key in evidence.entities.keys where key.hasPrefix("catalog_match_") {
+                entities[key] = evidence.entities[key]
+            }
+            entities["catalog_entity_id"] = catalogID
+            entities[canonical.kind.rawValue] = canonical.displayName
+            entities["speech_entity_evidence"] = "canonical_catalog"
+            switch canonical.kind {
+            case .brand:
+                constraints.brand = canonical.displayName
+                constraints.hardConstraintKeys.insert("brand")
+            case .product:
+                break
+            case .provider, .retailer:
+                entities["provider_domain"] = evidence.entities["provider_domain"] ?? entities["provider_domain"]
+                entities["provider_boundary"] = evidence.entities["provider_boundary"] ?? entities["provider_boundary"]
+            }
+            if (intent == .unknown || intent == .webSearch || needsClarification),
+               evidence.intent != .unknown, evidence.intent != .webSearch {
+                intent = evidence.intent
+                needsClarification = evidence.needsClarification
+                entities.removeValue(forKey: "clarification_options")
+                entities.removeValue(forKey: "clarification_role")
+            }
+            if entities["query"] == nil { entities["query"] = evidence.entities["query"] }
+            applied = true
+        }
+
+        // A final/alternative Apple transcription can preserve the acoustic
+        // shape of a proper noun without preserving its spelling (and a partial
+        // can preserve a name later omitted from the final). Resolve that text
+        // directly against the same bounded canonical registry used by the
+        // ordinary parser. This is registry- and intent-scoped: it cannot
+        // manufacture an entity, cannot cross into personal/system actions,
+        // and conflicting Apple hypotheses remain unresolved.
+        if let hit = canonicalSpeechCatalogHit(
+            authoritativeHypotheses: uniqueSpeechHypotheses(
+                authoritativeHypotheses,
+                excluding: "",
+                limit: VoiceRecognitionCandidateBuilder.maximumWholeTranscriptions +
+                    VoiceRecognitionCandidateBuilder.maximumSegmentTranscriptions + 1
+            ),
+            partialHypotheses: uniqueSpeechHypotheses(
+                partialHypotheses,
+                excluding: "",
+                limit: VoiceRecognitionCandidateBuilder.maximumPartialHistory
+            ),
+            intent: intent
+        ) {
+            let currentScore = Double(entities["catalog_match_confidence"] ?? "") ?? 0
+            let currentID = entities["catalog_entity_id"]
+            let mayReplaceCurrent = currentID == nil || currentID == hit.canonical.id ||
+                hit.evidence.bestScore - currentScore >= 0.08 ||
+                (hit.roleScoped && hit.evidence.bestScore >= currentScore - 0.02)
+            if mayReplaceCurrent {
+                entities["catalog_entity_id"] = hit.canonical.id
+                entities[hit.canonical.kind.rawValue] = hit.canonical.displayName
+                entities["catalog_match_resolution"] = "resolved"
+                entities["catalog_match_mechanism"] = hit.evidence.mechanism.rawValue
+                entities["catalog_match_confidence"] = String(format: "%.3f", hit.evidence.bestScore)
+                entities["catalog_match_margin"] = String(format: "%.3f", hit.evidence.confidenceMargin)
+                entities["speech_entity_evidence"] = "canonical_catalog"
+                switch hit.canonical.kind {
+                case .brand:
+                    constraints.brand = hit.canonical.displayName
+                    constraints.hardConstraintKeys.insert("brand")
+                    if intent == .unknown || intent == .webSearch {
+                        intent = .productSearch
+                        needsClarification = false
+                    }
+                case .product:
+                    entities["product"] = hit.canonical.displayName
+                case .provider, .retailer:
+                    if let provider = OfficialPublicProviderHandoffRegistry.records.first(where: {
+                        $0.id == hit.canonical.id
+                    }) {
+                        entities["provider_domain"] = providerDomain(provider.domain)
+                        entities["provider_boundary"] = "explicit_official_provider"
+                        if intent == .unknown || intent == .webSearch || needsClarification {
+                            intent = providerIntent(provider.domain)
+                            needsClarification = false
+                            entities.removeValue(forKey: "clarification_options")
+                            entities.removeValue(forKey: "clarification_role")
+                        }
+                    }
+                }
+                applied = true
+            }
+        }
+
+        let applicationCandidates = candidates.filter {
+            $0.intent == .open && $0.entities["app"] != nil
+        }
+        let applicationIDs = Set(applicationCandidates.compactMap { $0.entities["app"] })
+        if applicationIDs.count == 1,
+           let applicationID = applicationIDs.first,
+           command.entities["app"].map({ $0 == applicationID }) != false,
+           (intent == .open || intent == .unknown),
+           let evidence = applicationCandidates.max(by: {
+               speechEntityEvidenceScore($0, prefix: "entity_match") <
+                   speechEntityEvidenceScore($1, prefix: "entity_match")
+           }),
+           speechEntityEvidenceScore(evidence, prefix: "entity_match") >= 0.72 {
+            entities["app"] = applicationID
+            for key in evidence.entities.keys where key.hasPrefix("entity_match_") {
+                entities[key] = evidence.entities[key]
+            }
+            entities["speech_entity_evidence"] = "canonical_application"
+            entities.removeValue(forKey: "clarification_options")
+            entities.removeValue(forKey: "clarification_role")
+            intent = .open
+            needsClarification = false
+            applied = true
+        }
+
+        if !applied { return command }
+        return .init(
+            id: command.id,
+            originalText: command.originalText,
+            normalizedText: command.normalizedText,
+            language: command.language,
+            intent: intent,
+            entities: entities,
+            constraints: constraints,
+            risk: command.risk,
+            needsClarification: needsClarification
+        )
+    }
+
+    private func speechEntityEvidenceScore(_ command: StructuredCommand, prefix: String) -> Double {
+        Double(command.entities["\(prefix)_confidence"] ?? "") ?? 0
+    }
+
+    private struct CanonicalSpeechCatalogHit {
+        let canonical: CanonicalCatalogEntity
+        let evidence: ScopedEntityResolutionEvidence<CanonicalCatalogEntity>
+        let roleScoped: Bool
+    }
+
+    private struct CanonicalSpeechServiceHit {
+        let value: String
+        let evidence: ScopedEntityResolutionEvidence<String>
+    }
+
+    /// Recovers only a channel/service occupying an explicit typed service
+    /// span. Candidates remain bounded to the canonical service registry and
+    /// final/Apple alternatives take precedence over partial history.
+    private func canonicalSpeechServiceHit(
+        authoritativeHypotheses: [String],
+        partialHypotheses: [String],
+        intent: CommandIntent
+    ) -> CanonicalSpeechServiceHit? {
+        guard serviceKey(for: intent) != nil else { return nil }
+        let markers: Set<String> = [
+            "через", "via", "using", "канал", "channel", "сервіс", "сервис",
+            "service", "месенджер", "мессенджер", "messenger", "у", "в", "по"
+        ]
+
+        func bestHit(in hypotheses: [String]) -> CanonicalSpeechServiceHit? {
+            var hits: [CanonicalSpeechServiceHit] = []
+            for hypothesis in hypotheses {
+                let tokens = Self.document(hypothesis).tokens
+                for marker in tokens.indices where markers.contains(tokens[marker].normalized) {
+                    let start = marker + 1
+                    guard start < tokens.count else { continue }
+                    for length in 1...min(3, tokens.count - start) {
+                        let subject = tokens[start..<(start + length)].map(\.surface).joined(separator: " ")
+                        let evidence = ContextScopedEntityResolver(candidates: serviceCandidates)
+                            .resolveWithEvidence(subject)
+                        guard case let .resolved(value) = evidence.resolution else { continue }
+                        hits.append(.init(value: value, evidence: evidence))
+                    }
+                }
+            }
+            let ranked = hits.sorted {
+                if $0.evidence.bestScore == $1.evidence.bestScore {
+                    return $0.evidence.confidenceMargin > $1.evidence.confidenceMargin
+                }
+                return $0.evidence.bestScore > $1.evidence.bestScore
+            }
+            guard let best = ranked.first else { return nil }
+            let competing = ranked.first { $0.value != best.value }
+            guard best.evidence.bestScore - (competing?.evidence.bestScore ?? 0) >= 0.12 else { return nil }
+            return best
+        }
+
+        return bestHit(in: authoritativeHypotheses) ?? bestHit(in: partialHypotheses)
+    }
+
+    private func canonicalSpeechCatalogHit(
+        authoritativeHypotheses: [String],
+        partialHypotheses: [String],
+        intent: CommandIntent
+    ) -> CanonicalSpeechCatalogHit? {
+        let permittedIntents: Set<CommandIntent> = [
+            .unknown, .webSearch, .productSearch, .fashionDiscovery, .groceryBasket,
+            .serviceSearch, .restaurantSearch, .reservation, .taxiSearch, .taxiCompare,
+            .publicTransport, .ticketSearch, .ticketPurchaseHandoff, .hotelSearch,
+            .travelPlan, .parcelTrack, .multiStep
+        ]
+        guard permittedIntents.contains(intent) else { return nil }
+
+        func bestHit(in hypotheses: [String]) -> CanonicalSpeechCatalogHit? {
+            var bestByID: [String: CanonicalSpeechCatalogHit] = [:]
+            for hypothesis in hypotheses {
+                let document = Self.document(hypothesis)
+                let scoped = speechCatalogCandidates(for: intent, hypothesis: hypothesis)
+                guard !scoped.isEmpty else { continue }
+                let roleEvidence = providerRoleEvidence(in: document.tokens, candidates: scoped)
+                let evidence = roleEvidence ?? bestScopedResolution(in: document.tokens, candidates: scoped)
+                guard case let .resolved(canonical) = evidence.resolution,
+                      evidence.bestScore >= 0.72 else { continue }
+                let hit = CanonicalSpeechCatalogHit(
+                    canonical: canonical,
+                    evidence: evidence,
+                    roleScoped: roleEvidence != nil
+                )
+                let previous = bestByID[canonical.id]
+                if evidence.bestScore > (previous?.evidence.bestScore ?? 0) ||
+                    (evidence.bestScore == previous?.evidence.bestScore &&
+                     hit.roleScoped && previous?.roleScoped == false) {
+                    bestByID[canonical.id] = hit
+                }
+            }
+            let ranked = bestByID.values.sorted {
+                if $0.evidence.bestScore == $1.evidence.bestScore {
+                    return $0.canonical.id < $1.canonical.id
+                }
+                return $0.evidence.bestScore > $1.evidence.bestScore
+            }
+            guard let best = ranked.first else { return nil }
+            let competingScore = ranked.dropFirst().first?.evidence.bestScore ?? 0
+            guard best.evidence.bestScore - competingScore >= 0.12 else { return nil }
+            return best
+        }
+        // Final and Apple alternative transcriptions are authoritative.
+        // Partial history is recovery evidence only when that tier contains no
+        // safe canonical entity, so an early unstable partial cannot veto a
+        // complete final provider/service role.
+        return bestHit(in: authoritativeHypotheses) ?? bestHit(in: partialHypotheses)
+    }
+
+    private func speechCatalogCandidates(
+        for intent: CommandIntent,
+        hypothesis: String
+    ) -> [ScopedEntityCandidate<CanonicalCatalogEntity>] {
+        let document = Self.document(hypothesis)
+        let frameResult = analyzer.analyze(
+            original: hypothesis,
+            normalized: document.normalizedText,
+            morphologyForms: document.tokens.map(\.morphologyForms)
+        )
+        let inferenceIntent: CommandIntent = intent == .multiStep ? .unknown : intent
+        let inferred = CanonicalExternalProviderBoundaryAnalyzer.infer(
+            document: document,
+            frame: frameResult.frame,
+            currentIntent: inferenceIntent
+        )
+        let inferredDomain: OfficialPublicProviderDomain? = switch inferred?.domain {
+        case "grocery_delivery": .grocery
+        case "lodging": .lodging
+        case "car_rental": .carRental
+        case "transport_tickets": .transport
+        case "tickets": .events
+        case "jobs": .jobs
+        case "parcel_tracking": .parcel
+        default: nil
+        }
+        let intentDomain: OfficialPublicProviderDomain? = switch intent {
+        case .groceryBasket: .grocery
+        case .hotelSearch: .lodging
+        case .taxiSearch, .taxiCompare: .carRental
+        case .publicTransport: .transport
+        case .ticketSearch, .ticketPurchaseHandoff: nil
+        case .parcelTrack: .parcel
+        default: nil
+        }
+        let domain = inferredDomain ?? intentDomain
+        if let domain {
+            let domains: Set<OfficialPublicProviderDomain> = inferred?.domain == "tickets"
+                ? [.events, .cinema]
+                : [domain]
+            return catalogCandidates.filter { candidate in
+                guard candidate.value.kind == .provider || candidate.value.kind == .retailer else {
+                    return false
+                }
+                return OfficialPublicProviderHandoffRegistry.records.contains {
+                    $0.id == candidate.value.id && domains.contains($0.domain)
+                }
+            }
+        }
+        if intent == .ticketSearch || intent == .ticketPurchaseHandoff {
+            let domains: Set<OfficialPublicProviderDomain> = [.events, .cinema, .transport]
+            return catalogCandidates.filter { candidate in
+                OfficialPublicProviderHandoffRegistry.records.contains {
+                    $0.id == candidate.value.id && domains.contains($0.domain)
+                }
+            }
+        }
+        return catalogCandidates
+    }
+
+    /// Resolve only the typed provider/service slot immediately following a
+    /// scope preposition. This prevents a product word later in the sentence
+    /// from stealing provider identity while remaining language- and
+    /// registry-generic.
+    private func providerRoleEvidence(
+        in tokens: [LanguageUnderstandingDocument.Token],
+        candidates: [ScopedEntityCandidate<CanonicalCatalogEntity>]
+    ) -> ScopedEntityResolutionEvidence<CanonicalCatalogEntity>? {
+        let markers: Set<String> = [
+            "на", "у", "в", "через", "від", "from", "on", "at", "via",
+            "маркетплейс", "магазин", "сайт", "marketplace", "store", "site"
+        ]
+        var evidence: [ScopedEntityResolutionEvidence<CanonicalCatalogEntity>] = []
+        for marker in tokens.indices where markers.contains(tokens[marker].normalized) {
+            let start = marker + 1
+            guard start < tokens.count else { continue }
+            for length in 1...min(4, tokens.count - start) {
+                let surface = tokens[start..<(start + length)].map(\.surface).joined(separator: " ")
+                let candidate = ContextScopedEntityResolver(candidates: candidates).resolveWithEvidence(surface)
+                if candidate.isResolved { evidence.append(candidate) }
+            }
+        }
+        return evidence.max {
+            if $0.bestScore == $1.bestScore { return $0.confidenceMargin < $1.confidenceMargin }
+            return $0.bestScore < $1.bestScore
+        }
+    }
+
+    private var catalogCandidatesForSpeechEvidence: [ScopedEntityCandidate<CanonicalCatalogEntity>] {
+        catalogCandidates
     }
 
     private func parseAuthoritative(_ text: String) -> StructuredCommand {
@@ -1129,12 +1540,30 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 subjects.append(tokens[start..<(start + length)].map(\.surface).joined(separator: " "))
             }
         }
-        return subjects
-            .map { resolver.resolveWithEvidence($0) }
-            .max {
+        let evidence = subjects.map { resolver.resolveWithEvidence($0) }
+        let strongest = evidence.max {
                 if $0.bestScore == $1.bestScore { return $0.confidenceMargin < $1.confidenceMargin }
                 return $0.bestScore < $1.bestScore
-            } ?? .init(resolution: .unresolved, bestScore: 0, confidenceMargin: 0, mechanism: .unresolved)
+            }
+        let strongestResolved = evidence.filter(\.isResolved).max {
+            if $0.bestScore == $1.bestScore { return $0.confidenceMargin < $1.confidenceMargin }
+            return $0.bestScore < $1.bestScore
+        }
+        // A generic one-token span can be exactly shared by several candidates
+        // (for example a category word inside a multi-token proper noun). It
+        // must not hide a nearly-as-strong unambiguous multi-token resolution.
+        if let strongest, let strongestResolved,
+           !strongest.isResolved,
+           strongestResolved.bestScore >= 0.72,
+           strongest.bestScore - strongestResolved.bestScore <= 0.08 {
+            return strongestResolved
+        }
+        return strongest ?? .init(
+            resolution: .unresolved,
+            bestScore: 0,
+            confidenceMargin: 0,
+            mechanism: .unresolved
+        )
     }
 
     private func isProviderScopedCommerceRequest(
