@@ -1,6 +1,8 @@
 import AVFoundation
+import Darwin
 import Foundation
 import Observation
+import Synchronization
 import UIKit
 import whisper
 
@@ -106,6 +108,156 @@ struct WhisperRecordingArtifact: Sendable {
     let duration: TimeInterval
 }
 
+/// Owns one fixed allocation for a single recording. The pointer never escapes
+/// this object. AVAudioEngine's single producer writes only the unpublished
+/// suffix; readers inspect only the prefix published through `writtenFrames`.
+/// The narrow unchecked conformance is required because Swift does not mark an
+/// owned `UnsafeMutablePointer` as Sendable even with that SPSC contract.
+private final class WhisperAudioSampleStorage: @unchecked Sendable {
+    let samples: UnsafeMutablePointer<Float>
+    let capacity: Int
+
+    init(capacity: Int) {
+        self.capacity = capacity
+        samples = .allocate(capacity: capacity)
+        samples.initialize(repeating: 0, count: capacity)
+    }
+
+    deinit {
+        samples.deinitialize(count: capacity)
+        samples.deallocate()
+    }
+}
+
+final class WhisperNativeAudioSink: Sendable {
+    private let storage: WhisperAudioSampleStorage
+    private let writtenFrames = Atomic<Int>(0)
+    private let callbackCount = Atomic<Int>(0)
+    private let activeCallbacks = Atomic<Int>(0)
+    private let acceptingAudio = Atomic<Bool>(true)
+    private let captureFailed = Atomic<Bool>(false)
+    private let powerBits = Atomic<UInt32>(Float(-160).bitPattern)
+    let sampleRate: Double
+
+    init(sampleRate: Double, maximumDuration: TimeInterval = 46) {
+        self.sampleRate = sampleRate
+        let capacity = max(1, Int((sampleRate * maximumDuration).rounded(.up)))
+        storage = WhisperAudioSampleStorage(capacity: capacity)
+    }
+
+    /// Called only by AVAudioEngine's serial real-time tap. It performs a
+    /// bounded sample copy and arithmetic metering; it never retains the input
+    /// buffer, touches actor-isolated state, allocates, locks, logs, or writes.
+    nonisolated func append(_ buffer: AVAudioPCMBuffer) {
+        _ = activeCallbacks.wrappingAdd(1, ordering: .acquiringAndReleasing)
+        defer { _ = activeCallbacks.wrappingSubtract(1, ordering: .releasing) }
+        guard acceptingAudio.load(ordering: .acquiring),
+              buffer.frameLength > 0,
+              let channels = buffer.floatChannelData else { return }
+
+        let start = writtenFrames.load(ordering: .relaxed)
+        let requestedFrames = Int(buffer.frameLength)
+        let frameCount = min(requestedFrames, storage.capacity - start)
+        guard frameCount > 0 else {
+            captureFailed.store(true, ordering: .releasing)
+            return
+        }
+
+        let channelCount = Int(buffer.format.channelCount)
+        guard channelCount > 0 else {
+            captureFailed.store(true, ordering: .releasing)
+            return
+        }
+        let destination = storage.samples.advanced(by: start)
+        var sumSquares: Float = 0
+        if channelCount == 1 {
+            let source = channels[0]
+            for index in 0..<frameCount {
+                let sample = source[index]
+                destination[index] = sample
+                sumSquares += sample * sample
+            }
+        } else {
+            let divisor = Float(channelCount)
+            for frame in 0..<frameCount {
+                var mixed: Float = 0
+                for channel in 0..<channelCount {
+                    mixed += channels[channel][frame]
+                }
+                mixed /= divisor
+                destination[frame] = mixed
+                sumSquares += mixed * mixed
+            }
+        }
+
+        if frameCount < requestedFrames {
+            captureFailed.store(true, ordering: .releasing)
+        }
+        let rms = sqrt(sumSquares / Float(frameCount))
+        let power = rms > 0 ? max(-160, 20 * log10(rms)) : -160
+        powerBits.store(power.bitPattern, ordering: .relaxed)
+        writtenFrames.store(start + frameCount, ordering: .releasing)
+        _ = callbackCount.wrappingAdd(1, ordering: .relaxed)
+    }
+
+    var duration: TimeInterval {
+        let frames = writtenFrames.load(ordering: .acquiring)
+        return sampleRate > 0 ? Double(frames) / sampleRate : 0
+    }
+
+    var averagePower: Float {
+        Float(bitPattern: powerBits.load(ordering: .relaxed))
+    }
+
+    var receivedBufferCount: Int {
+        callbackCount.load(ordering: .acquiring)
+    }
+
+    var error: Error? {
+        captureFailed.load(ordering: .acquiring) ? WhisperOfflineVoiceError.recordingFailed : nil
+    }
+
+    func stopAcceptingAndWaitForCallback() -> Bool {
+        acceptingAudio.store(false, ordering: .releasing)
+        for _ in 0..<10_000 {
+            if activeCallbacks.load(ordering: .acquiring) == 0 { return true }
+            sched_yield()
+        }
+        captureFailed.store(true, ordering: .releasing)
+        return false
+    }
+
+    func makeNativeBuffer() -> AVAudioPCMBuffer? {
+        guard activeCallbacks.load(ordering: .acquiring) == 0,
+              !captureFailed.load(ordering: .acquiring) else { return nil }
+        let frames = writtenFrames.load(ordering: .acquiring)
+        guard frames > 0,
+              frames <= Int(AVAudioFrameCount.max),
+              let format = AVAudioFormat(
+                  commonFormat: .pcmFormatFloat32,
+                  sampleRate: sampleRate,
+                  channels: 1,
+                  interleaved: false
+              ),
+              let buffer = AVAudioPCMBuffer(
+                  pcmFormat: format,
+                  frameCapacity: AVAudioFrameCount(frames)
+              ),
+              let destination = buffer.floatChannelData?.pointee else { return nil }
+        destination.update(from: storage.samples, count: frames)
+        buffer.frameLength = AVAudioFrameCount(frames)
+        return buffer
+    }
+}
+
+typealias WhisperSendableAudioTap = @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void
+
+enum WhisperAudioTapTrampoline {
+    nonisolated static func make(sink: WhisperNativeAudioSink) -> WhisperSendableAudioTap {
+        { buffer, _ in sink.append(buffer) }
+    }
+}
+
 @MainActor
 protocol WhisperAudioRecording: AnyObject {
     var isRecording: Bool { get }
@@ -119,64 +271,13 @@ protocol WhisperAudioRecording: AnyObject {
 
 @MainActor
 final class AppleWhisperAudioRecorder: NSObject, WhisperAudioRecording {
-    private final class NativeAudioSink: @unchecked Sendable {
-        private let lock = NSLock()
-        private var file: AVAudioFile?
-        private var writtenFrames: AVAudioFramePosition = 0
-        private var storedError: Error?
-        private var power: Float = -160
-        let sampleRate: Double
-
-        init(file: AVAudioFile, sampleRate: Double) {
-            self.file = file
-            self.sampleRate = sampleRate
-        }
-
-        func append(_ buffer: AVAudioPCMBuffer) {
-            guard buffer.frameLength > 0 else { return }
-            lock.lock()
-            defer { lock.unlock() }
-            guard storedError == nil, let file else { return }
-            do {
-                try file.write(from: buffer)
-                writtenFrames += AVAudioFramePosition(buffer.frameLength)
-                power = Self.averagePower(buffer)
-            } catch {
-                storedError = error
-            }
-        }
-
-        var duration: TimeInterval {
-            lock.withLock { sampleRate > 0 ? Double(writtenFrames) / sampleRate : 0 }
-        }
-
-        var averagePower: Float { lock.withLock { power } }
-        var error: Error? { lock.withLock { storedError } }
-
-        func close() {
-            lock.withLock { file = nil }
-        }
-
-        private static func averagePower(_ buffer: AVAudioPCMBuffer) -> Float {
-            guard let channels = buffer.floatChannelData else { return -160 }
-            let frameCount = Int(buffer.frameLength)
-            let channelCount = Int(buffer.format.channelCount)
-            guard frameCount > 0, channelCount > 0 else { return -160 }
-            var sum: Float = 0
-            for channel in 0..<channelCount {
-                let samples = UnsafeBufferPointer(start: channels[channel], count: frameCount)
-                for sample in samples { sum += sample * sample }
-            }
-            let rms = sqrt(sum / Float(frameCount * channelCount))
-            return rms > 0 ? max(-160, 20 * log10(rms)) : -160
-        }
-    }
-
     private var audioEngine: AVAudioEngine?
-    private var audioSink: NativeAudioSink?
+    private var audioSink: WhisperNativeAudioSink?
+    private var nativeFile: AVAudioFile?
     private var destination: URL?
     private var nativeDestination: URL?
     private var tapInstalled = false
+    private var reportedFirstBuffer = false
 
     var isRecording: Bool {
         audioEngine?.isRunning == true && audioSink?.error == nil
@@ -289,11 +390,19 @@ final class AppleWhisperAudioRecorder: NSObject, WhisperAudioRecording {
 
         let nativeFile: AVAudioFile
         do {
+            guard let nativeFormat = AVAudioFormat(
+                commonFormat: .pcmFormatFloat32,
+                sampleRate: inputFormat.sampleRate,
+                channels: 1,
+                interleaved: false
+            ) else {
+                throw WhisperOfflineVoiceError.recordingFailed
+            }
             nativeFile = try AVAudioFile(
                 forWriting: nativeURL,
-                settings: inputFormat.settings,
-                commonFormat: inputFormat.commonFormat,
-                interleaved: inputFormat.isInterleaved
+                settings: nativeFormat.settings,
+                commonFormat: nativeFormat.commonFormat,
+                interleaved: nativeFormat.isInterleaved
             )
         } catch {
             try? session.setActive(false, options: .notifyOthersOnDeactivation)
@@ -308,11 +417,13 @@ final class AppleWhisperAudioRecorder: NSObject, WhisperAudioRecording {
             )
         }
 
-        let sink = NativeAudioSink(file: nativeFile, sampleRate: inputFormat.sampleRate)
+        let sink = WhisperNativeAudioSink(sampleRate: inputFormat.sampleRate)
         destination = url
         nativeDestination = nativeURL
         audioEngine = engine
         audioSink = sink
+        self.nativeFile = nativeFile
+        reportedFirstBuffer = false
         LocalVoiceDiagnosticReport.shared.record(
             "RECORDER_INIT",
             "component=AVAudioEngine status=success file_name=\(nativeURL.lastPathComponent)"
@@ -322,9 +433,8 @@ final class AppleWhisperAudioRecorder: NSObject, WhisperAudioRecording {
             "file_created=\(FileManager.default.fileExists(atPath: nativeURL.path)) file_name=\(nativeURL.lastPathComponent)"
         )
 
-        inputNode.installTap(onBus: 0, bufferSize: 1_024, format: nil) { buffer, _ in
-            sink.append(buffer)
-        }
+        let audioTap = WhisperAudioTapTrampoline.make(sink: sink)
+        inputNode.installTap(onBus: 0, bufferSize: 1_024, format: nil, block: audioTap)
         tapInstalled = true
         engine.prepare()
         LocalVoiceDiagnosticReport.shared.record(
@@ -365,26 +475,63 @@ final class AppleWhisperAudioRecorder: NSObject, WhisperAudioRecording {
         )
     }
 
-    func updateMeters() {}
+    func updateMeters() {
+        guard !reportedFirstBuffer,
+              let audioSink,
+              audioSink.receivedBufferCount > 0 else { return }
+        reportedFirstBuffer = true
+        LocalVoiceDiagnosticReport.shared.record(
+            "AUDIO_CALLBACK_FIRST_BUFFER",
+            "status=received buffer_count=\(audioSink.receivedBufferCount)"
+        )
+    }
 
     func finish() -> WhisperRecordingArtifact? {
         guard let engine = audioEngine,
               let sink = audioSink,
+              let nativeFile,
               let destination,
               let nativeDestination else { return nil }
+        LocalVoiceDiagnosticReport.shared.record("STOP", "status=begin")
+        _ = sink.stopAcceptingAndWaitForCallback()
         engine.stop()
         if tapInstalled {
             engine.inputNode.removeTap(onBus: 0)
             tapInstalled = false
         }
-        sink.close()
+        _ = sink.stopAcceptingAndWaitForCallback()
         let duration = sink.duration
-        let writeError = sink.error
+        let bufferCount = sink.receivedBufferCount
+        var writeError = sink.error
+        if writeError == nil {
+            guard let nativeBuffer = sink.makeNativeBuffer() else {
+                writeError = WhisperOfflineVoiceError.recordingFailed
+                return finishFailedNativeAudio(
+                    sink: sink,
+                    destination: destination,
+                    nativeDestination: nativeDestination,
+                    nativeFile: nativeFile,
+                    duration: duration,
+                    bufferCount: bufferCount,
+                    writeError: writeError
+                )
+            }
+            do {
+                try nativeFile.write(from: nativeBuffer)
+            } catch {
+                writeError = error
+            }
+        }
+        self.nativeFile = nil
         audioEngine = nil
         audioSink = nil
         self.destination = nil
         self.nativeDestination = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        LocalVoiceDiagnosticReport.shared.record(
+            "AUDIO_CALLBACK_BUFFER_COUNT",
+            "buffer_count=\(bufferCount) status=complete"
+        )
         let nativeSize = (try? nativeDestination.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
         LocalVoiceDiagnosticReport.shared.record(
             "FILE_SIZE",
@@ -433,19 +580,54 @@ final class AppleWhisperAudioRecorder: NSObject, WhisperAudioRecording {
     }
 
     func cancel() {
+        _ = audioSink?.stopAcceptingAndWaitForCallback()
         audioEngine?.stop()
         if tapInstalled {
             audioEngine?.inputNode.removeTap(onBus: 0)
             tapInstalled = false
         }
-        audioSink?.close()
+        _ = audioSink?.stopAcceptingAndWaitForCallback()
+        nativeFile = nil
         audioEngine = nil
         audioSink = nil
         if let destination { try? FileManager.default.removeItem(at: destination) }
         if let nativeDestination { try? FileManager.default.removeItem(at: nativeDestination) }
         destination = nil
         nativeDestination = nil
+        reportedFirstBuffer = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    private func finishFailedNativeAudio(
+        sink: WhisperNativeAudioSink,
+        destination: URL,
+        nativeDestination: URL,
+        nativeFile _: AVAudioFile,
+        duration: TimeInterval,
+        bufferCount: Int,
+        writeError: Error?
+    ) -> WhisperRecordingArtifact? {
+        self.nativeFile = nil
+        audioEngine = nil
+        audioSink = nil
+        self.destination = nil
+        self.nativeDestination = nil
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        LocalVoiceDiagnosticReport.shared.record(
+            "AUDIO_CALLBACK_BUFFER_COUNT",
+            "buffer_count=\(bufferCount) status=complete"
+        )
+        if let writeError {
+            let failure = WhisperVoiceStartFailure(stage: .audioFileWriteFailed, underlying: writeError)
+            LocalVoiceDiagnosticReport.shared.record("whisper_audio_write_failed", failure.diagnosticDetails)
+        }
+        LocalVoiceDiagnosticReport.shared.record(
+            "FILE_SIZE",
+            "file_created=\(FileManager.default.fileExists(atPath: nativeDestination.path)) file_size=0 duration=\(Int((duration * 1_000).rounded()))"
+        )
+        try? FileManager.default.removeItem(at: nativeDestination)
+        try? FileManager.default.removeItem(at: destination)
+        return nil
     }
 
     private static func routeName(_ session: AVAudioSession) -> String {

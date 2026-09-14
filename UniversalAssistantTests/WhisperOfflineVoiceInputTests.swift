@@ -226,6 +226,55 @@ struct WhisperOfflineVoiceInputTests {
         #expect(file.fileFormat.channelCount == 1)
     }
 
+    @Test func audioTapCallbackIsSendableNonisolatedAndCopiesOnBackgroundExecutor() async throws {
+        let sink = WhisperNativeAudioSink(sampleRate: 48_000, maximumDuration: 1)
+        let callback = WhisperAudioTapTrampoline.make(sink: sink)
+        let result = await Task.detached { () -> (Int, TimeInterval, Float) in
+            guard let format = AVAudioFormat(
+                commonFormat: .pcmFormatFloat32,
+                sampleRate: 48_000,
+                channels: 1,
+                interleaved: false
+            ),
+            let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1_024),
+            let samples = buffer.floatChannelData?.pointee else { return (0, 0, -160) }
+            buffer.frameLength = 1_024
+            for index in 0..<1_024 { samples[index] = 0.1 }
+            callback(buffer, AVAudioTime(sampleTime: 0, atRate: 48_000))
+            return (sink.receivedBufferCount, sink.duration, sink.averagePower)
+        }.value
+        #expect(result.0 == 1)
+        #expect(result.1 > 0)
+        #expect(result.2 > -30)
+        #expect(sink.stopAcceptingAndWaitForCallback())
+        let nativeBuffer = try #require(sink.makeNativeBuffer())
+        #expect(nativeBuffer.frameLength == 1_024)
+    }
+
+    @Test func twentyBackgroundAudioTapCyclesRemainBoundedAndRaceFree() async {
+        for _ in 0..<20 {
+            let sink = WhisperNativeAudioSink(sampleRate: 48_000, maximumDuration: 1)
+            let callback = WhisperAudioTapTrampoline.make(sink: sink)
+            let count = await Task.detached { () -> Int in
+                guard let format = AVAudioFormat(
+                    commonFormat: .pcmFormatFloat32,
+                    sampleRate: 48_000,
+                    channels: 1,
+                    interleaved: false
+                ),
+                let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 512),
+                let samples = buffer.floatChannelData?.pointee else { return 0 }
+                buffer.frameLength = 512
+                for index in 0..<512 { samples[index] = Float(index % 8) / 16 }
+                callback(buffer, AVAudioTime(sampleTime: 0, atRate: 48_000))
+                return sink.receivedBufferCount
+            }.value
+            #expect(count == 1)
+            #expect(sink.stopAcceptingAndWaitForCallback())
+            #expect(sink.makeNativeBuffer()?.frameLength == 512)
+        }
+    }
+
     @Test func languageIsUkrainian() {
         #expect(WhisperOfflineVoiceConfiguration.language == "uk")
     }
