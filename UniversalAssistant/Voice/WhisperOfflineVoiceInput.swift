@@ -55,6 +55,15 @@ enum WhisperVoiceLifecyclePhase: String, Equatable, Sendable {
     case converting = "CONVERTING"
     case transcribing = "TRANSCRIBING"
     case result = "RESULT"
+
+    var requiresActiveCaptureInput: Bool {
+        switch self {
+        case .preparing, .recording:
+            true
+        case .idle, .requestingPermission, .stopping, .converting, .transcribing, .result:
+            false
+        }
+    }
 }
 
 enum WhisperVoiceStartStage: String, Equatable, Sendable {
@@ -1272,6 +1281,13 @@ final class WhisperVoiceInputController: VoiceInputControlling {
 
     func handleInterruption() {
         LocalVoiceDiagnosticReport.shared.record("audio_interruption", "state=began provider=whisper")
+        guard lifecyclePhase.requiresActiveCaptureInput else {
+            LocalVoiceDiagnosticReport.shared.record(
+                "audio_interruption_ignored",
+                "state=\(lifecyclePhase.rawValue) reason=post_capture status=ignored"
+            )
+            return
+        }
         cancelCurrentSession(reason: .audioInterruption, publishIdle: false)
         setState(.failed)
         finishFailedDiagnosticRequest(
@@ -1279,8 +1295,15 @@ final class WhisperVoiceInputController: VoiceInputControlling {
         )
     }
 
-    private func handleRouteChange(_ evidence: AudioRouteChangeEvidence) {
+    func handleRouteChange(_ evidence: AudioRouteChangeEvidence) {
         LocalVoiceDiagnosticReport.shared.record("route_change", evidence.diagnosticDescription)
+        guard lifecyclePhase.requiresActiveCaptureInput else {
+            LocalVoiceDiagnosticReport.shared.record(
+                "route_change_ignored",
+                "state=\(lifecyclePhase.rawValue) reason=\(evidence.reasonName) status=ignored"
+            )
+            return
+        }
         if evidence.requiresVoiceCaptureStop {
             cancelCurrentSession(reason: .routeChange, publishIdle: false)
             setState(.failed)

@@ -958,6 +958,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
     }
 
     private func inferredTerminalStateLocked() -> DiagnosticTerminalState? {
+        if entries.contains(where: { $0.marker == "WHISPER_RESULT" && $0.details.contains("status=success") }) { return .success }
         if entries.contains(where: { $0.marker == "visible_result" }) { return .success }
         if entries.contains(where: { $0.marker == "router_rejected" && $0.details.contains("clarification") }) { return .clarification }
         if entries.contains(where: { $0.marker == "execution_failed" && $0.details.contains("external_provider_required") }) { return .providerRequired }

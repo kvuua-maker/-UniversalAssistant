@@ -477,6 +477,91 @@ struct WhisperOfflineVoiceInputTests {
         #expect(controller.transcript == "Після переривання")
     }
 
+    @Test func sessionDeactivationCategoryChangeDuringTranscriptionDoesNotCancelWhisper() async throws {
+        let expected = "Повна локальна транскрипція"
+        let recorder = StubWhisperRecorder()
+        let transcriber = StubWhisperTranscriber(outputs: [expected], delay: .milliseconds(100))
+        let controller = makeController(recorder: recorder, transcriber: transcriber)
+        await controller.start(locale: Locale(identifier: "uk-UA"))
+        controller.stop(reason: .userPressedStop)
+        #expect(controller.state == .transcribing)
+
+        controller.handleRouteChange(Self.categoryChangeAfterCapture)
+
+        #expect(controller.state == .transcribing)
+        await waitUntil { controller.state == .idle }
+        #expect(controller.transcript == expected)
+        #expect(await transcriber.calls == 1)
+        let session = try #require(LocalVoiceDiagnosticReport.shared.completedSession())
+        #expect(session.terminalState == .success)
+        #expect(session.events.contains { $0.attributes["internal_code"] == "AUDIO_ROUTE_CONFLICT" } == false)
+    }
+
+    @Test func routeLossDuringTranscriptionDoesNotCancelLocalAudioWork() async {
+        let expected = "Транскрипція не залежить від мікрофона"
+        let recorder = StubWhisperRecorder()
+        let transcriber = StubWhisperTranscriber(outputs: [expected], delay: .milliseconds(100))
+        let controller = makeController(recorder: recorder, transcriber: transcriber)
+        await controller.start(locale: Locale(identifier: "uk-UA"))
+        controller.stop(reason: .userPressedStop)
+        #expect(controller.state == .transcribing)
+
+        controller.handleRouteChange(Self.genuineRouteLoss)
+
+        #expect(controller.state == .transcribing)
+        await waitUntil { controller.state == .idle }
+        #expect(controller.transcript == expected)
+        #expect(await transcriber.calls == 1)
+    }
+
+    @Test func genuineRouteLossDuringRecordingStillFailsCapture() async {
+        let recorder = StubWhisperRecorder()
+        let transcriber = StubWhisperTranscriber(outputs: ["Не повинно виконатися"])
+        let controller = makeController(recorder: recorder, transcriber: transcriber)
+        await controller.start(locale: Locale(identifier: "uk-UA"))
+        #expect(controller.lifecyclePhase == .recording)
+
+        controller.handleRouteChange(Self.genuineRouteLoss)
+
+        #expect(controller.state == .failed)
+        #expect(controller.lifecyclePhase == .idle)
+        #expect(!recorder.isRecording)
+        #expect(await transcriber.calls == 0)
+    }
+
+    @Test func usableBluetoothRouteChangeDuringRecordingKeepsCaptureActive() async {
+        let recorder = StubWhisperRecorder()
+        let controller = makeController(
+            recorder: recorder,
+            transcriber: StubWhisperTranscriber(outputs: [])
+        )
+        await controller.start(locale: Locale(identifier: "uk-UA"))
+
+        controller.handleRouteChange(Self.usableBluetoothRouteChange)
+
+        #expect(controller.state == .listening)
+        #expect(controller.lifecyclePhase == .recording)
+        #expect(recorder.isRecording)
+        controller.stop(reason: .externalRequest)
+    }
+
+    @Test func interruptionDuringTranscriptionDoesNotCancelLocalAudioWork() async {
+        let expected = "Локальна обробка продовжується"
+        let recorder = StubWhisperRecorder()
+        let transcriber = StubWhisperTranscriber(outputs: [expected], delay: .milliseconds(100))
+        let controller = makeController(recorder: recorder, transcriber: transcriber)
+        await controller.start(locale: Locale(identifier: "uk-UA"))
+        controller.stop(reason: .userPressedStop)
+        #expect(controller.state == .transcribing)
+
+        controller.handleInterruption()
+
+        #expect(controller.state == .transcribing)
+        await waitUntil { controller.state == .idle }
+        #expect(controller.transcript == expected)
+        #expect(await transcriber.calls == 1)
+    }
+
     @Test func cancelledGenerationCannotPublishStaleTranscript() async {
         let recorder = StubWhisperRecorder()
         let transcriber = StubWhisperTranscriber(
@@ -617,6 +702,36 @@ struct WhisperOfflineVoiceInputTests {
             temporaryDirectory: temporaryDirectory
         )
     }
+
+    private static let categoryChangeAfterCapture = AudioRouteChangeEvidence(
+        reasonRawValue: AVAudioSession.RouteChangeReason.categoryChange.rawValue,
+        reasonName: "categoryChange",
+        previousInputs: ["BuiltInMic:iPhone Microphone"],
+        previousOutputs: [],
+        currentInputs: [],
+        currentOutputs: ["Speaker:iPhone Speaker"],
+        inputAvailable: true
+    )
+
+    private static let genuineRouteLoss = AudioRouteChangeEvidence(
+        reasonRawValue: AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue,
+        reasonName: "oldDeviceUnavailable",
+        previousInputs: ["BluetoothHFP:Headset"],
+        previousOutputs: [],
+        currentInputs: [],
+        currentOutputs: ["Speaker:iPhone Speaker"],
+        inputAvailable: false
+    )
+
+    private static let usableBluetoothRouteChange = AudioRouteChangeEvidence(
+        reasonRawValue: AVAudioSession.RouteChangeReason.newDeviceAvailable.rawValue,
+        reasonName: "newDeviceAvailable",
+        previousInputs: ["BuiltInMic:iPhone Microphone"],
+        previousOutputs: [],
+        currentInputs: ["BluetoothHFP:Headset"],
+        currentOutputs: ["BluetoothHFP:Headset"],
+        inputAvailable: true
+    )
 
     private func waitUntil(_ predicate: @escaping @MainActor () -> Bool) async {
         for _ in 0..<300 {
