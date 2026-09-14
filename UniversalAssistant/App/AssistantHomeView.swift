@@ -24,13 +24,6 @@ struct AssistantHomeView: View {
                     ))
                     .accessibilityIdentifier("assistant.voice-input-toggle")
                     Text(model.statusText).font(.headline).accessibilityIdentifier("assistant.status")
-                    if !model.visibleVoiceTranscript.isEmpty {
-                        Text(model.visibleVoiceTranscript)
-                            .font(.body)
-                            .multilineTextAlignment(.center)
-                            .textSelection(.enabled)
-                            .accessibilityIdentifier("assistant.voice-transcript")
-                    }
                     if model.shouldOfferSettings,
                        let settingsURL = URL(string: UIApplication.openSettingsURLString) {
                         Link("settings", destination: settingsURL)

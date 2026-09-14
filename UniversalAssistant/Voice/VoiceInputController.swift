@@ -4,12 +4,22 @@ import OSLog
 import Speech
 import UIKit
 
-enum VoiceInputState: Equatable, Sendable { case idle, requestingPermission, listening, denied, unavailable, failed }
+enum VoiceInputState: Equatable, Sendable { case idle, requestingPermission, listening, transcribing, denied, unavailable, failed }
 
 enum VoiceInputEvent: Equatable, Sendable {
     case state(VoiceInputState)
     case recognitionEvidence(VoiceRecognitionEvidence)
     case transcript(String, isFinal: Bool)
+}
+
+@MainActor
+protocol VoiceInputControlling: AnyObject {
+    var engineIdentifier: String { get }
+    var state: VoiceInputState { get }
+    var transcript: String { get }
+    func start(locale: Locale) async
+    func stop(reason: VoiceStopReason)
+    func setEventHandler(_ handler: @escaping @MainActor @Sendable (VoiceInputEvent) -> Void)
 }
 
 struct VoiceRecognitionEvidence: Equatable, Sendable {
@@ -1119,6 +1129,19 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
         return unique(providers + brands + applications + services)
     }
 
+    /// Compact display-name-first vocabulary for local decoders with a strict
+    /// prompt budget. This keeps every canonical provider, brand, app and
+    /// service represented before request-scoped values are appended.
+    static var canonicalWhisperVocabulary: [String] {
+        let providers = OfficialPublicProviderHandoffRegistry.records.map(\.displayName)
+        let brands = CanonicalCatalogEntityRegistry.brandNames
+        let applications = LaunchDeviceApplications.verified.flatMap { application in
+            [application.id] + preferredSpokenAlias(from: application.aliases, excluding: application.id)
+        }
+        let services = MessengerKind.allCases.map(\.rawValue)
+        return unique(providers + brands + applications + services)
+    }
+
     static var canonicalFunctionVocabulary: [String] {
         [
             "UniversalAssistant", "Apple Music", "подкаст", "календар",
@@ -1379,7 +1402,8 @@ final class VoiceEndOfSpeechFinalizer {
 
 @MainActor
 @Observable
-final class VoiceInputController {
+final class VoiceInputController: VoiceInputControlling {
+    let engineIdentifier = "apple-speech-rollback"
     private(set) var state: VoiceInputState = .idle
     private(set) var transcript = ""
     private let capture: VoiceAudioCaptureLifecycle

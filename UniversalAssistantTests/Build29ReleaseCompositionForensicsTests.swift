@@ -850,6 +850,7 @@ struct Build29ReleaseRemainingNativeTests {
 
         let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
         model.handleVoiceEvent(.transcript("Двох тисяч трьохсот сорока два плюс пʼятдесят вісім", isFinal: true))
+        model.submit()
         try await wait { if case .deterministic = model.resultState { return true }; return false }
         guard case let .deterministic(voiceResult) = model.resultState else { return }
         #expect(voiceResult.primaryAnswer.filter(\.isNumber) == "2400")

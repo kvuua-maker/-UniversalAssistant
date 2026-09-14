@@ -11,7 +11,6 @@ final class AssistantViewModel {
     var input = ""
     var isListening = false
     var voiceInputEnabled = true
-    private(set) var visibleVoiceTranscript = ""
     private(set) var statusText = AppText.value("ready")
     private(set) var resultState: AssistantResultState = .idle
     private(set) var shouldOfferSettings = false
@@ -30,7 +29,7 @@ final class AssistantViewModel {
     private let capabilityExecutor: any CanonicalCapabilityExecuting
     private let currentContext: CurrentContextStore
     private let ocrPipeline: OCRProductionPipeline
-    private let voiceInput: VoiceInputController
+    private let voiceInput: any VoiceInputControlling
     private let feedbackStore: UserFeedbackStore
     private let compactResultDuration: Duration
     private let presentationPreferenceStore: PresentationPreferenceStore
@@ -54,9 +53,11 @@ final class AssistantViewModel {
     // Controller generation guards suppress stale callbacks; this task ownership
     // also prevents abandoned starts surviving re-entry or scene transitions.
     private var voiceStartTask: Task<Void, Never>?
+    private var voiceDraftSourceText: String?
     private var pendingVoiceRecognitionEvidence: VoiceRecognitionEvidence?
     private var pendingConfirmation: (command: StructuredCommand, summary: ResultSummary, generation: UInt64)?
     private var pendingCanonicalSelection: (command: StructuredCommand, summary: ResultSummary, generation: UInt64, role: String, choices: [String])?
+    var voiceInputEngineIdentifier: String { voiceInput.engineIdentifier }
 
     init(
         commandEngine: any CommandParsing = LanguageUnderstandingBlock(),
@@ -72,7 +73,7 @@ final class AssistantViewModel {
         feedbackStore: UserFeedbackStore = .shared,
         compactResultDuration: Duration = .seconds(2),
         presentationPreferenceStore: PresentationPreferenceStore = PresentationPreferenceStore(),
-        voiceInput: VoiceInputController = VoiceInputController(),
+        voiceInput: any VoiceInputControlling = WhisperVoiceInputController(),
         notificationEnable: @escaping @MainActor () async -> ProactiveNotificationEnableResult = { await ProductionNotificationRegistration.enable() },
         quickLaunchStore: QuickLaunchRequestStore = QuickLaunchRequestStore(),
         systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
@@ -109,15 +110,16 @@ final class AssistantViewModel {
             voiceInput.stop(reason: .voiceDisabled); isListening = false; statusText = AppText.value("voice_disabled")
             return
         }
-        if isListening || voiceInput.state == .requestingPermission {
+        if isListening || voiceInput.state == .requestingPermission || voiceInput.state == .transcribing {
             voiceStartTask?.cancel()
             voiceStartTask = nil
-            voiceInput.stop(reason: .userPressedStop); isListening = false; input = voiceInput.transcript; statusText = AppText.value("ready")
+            voiceInput.stop(reason: voiceInput.state == .listening ? .userPressedStop : .externalRequest)
+            isListening = false
         } else {
             voiceStartTask?.cancel()
             voiceStartTask = Task { [weak self] in
                 guard let self else { return }
-                await voiceInput.start()
+                await voiceInput.start(locale: Locale(identifier: "uk-UA"))
                 guard !Task.isCancelled else { return }
                 applyVoiceState(voiceInput.state)
                 voiceStartTask = nil
@@ -130,6 +132,7 @@ final class AssistantViewModel {
         shouldOfferSettings = state == .denied
         statusText = switch state {
                 case .listening: AppText.value("listening")
+                case .transcribing: AppText.value("processing")
                 case .denied: AppText.value("microphone_denied")
                 case .unavailable: AppText.value("speech_unavailable")
                 case .failed: AppText.value("listening_failed")
@@ -141,7 +144,7 @@ final class AssistantViewModel {
         switch event {
         case let .state(state):
             LocalVoiceDiagnosticReport.shared.record("state_delivered_to_view_model", "state=\(String(describing: state))")
-            if state == .requestingPermission { visibleVoiceTranscript = "" }
+            if state == .requestingPermission { voiceDraftSourceText = nil }
             applyVoiceState(state)
             if state == .idle, !weatherExecutionInFlight, !eventKitExecutionInFlight, !capabilityExecutionInFlight, let session = LocalVoiceDiagnosticReport.shared.completedSession() {
                 Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
@@ -151,13 +154,12 @@ final class AssistantViewModel {
         case let .transcript(transcript, isFinal):
             let visibleTranscript = VoiceTranscriptStabilizer.normalizedForDisplay(transcript)
             input = visibleTranscript
-            visibleVoiceTranscript = visibleTranscript
             LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_view_model", "length=\(transcript.count) final=\(isFinal)")
             Self.voiceLogger.notice("transcript_delivered_to_view_model length=\(transcript.count, privacy: .public) final=\(isFinal, privacy: .public)")
             if isFinal, !visibleTranscript.isEmpty {
-                Self.voiceLogger.notice("transcript_delivered_to_router")
-                LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_router", "length=\(transcript.count)")
-                submit()
+                voiceDraftSourceText = visibleTranscript
+                Self.voiceLogger.notice("voice_transcript_ready_for_editing")
+                LocalVoiceDiagnosticReport.shared.record("voice_transcript_ready_for_editing", "length=\(transcript.count)")
             }
         }
     }
@@ -206,8 +208,12 @@ final class AssistantViewModel {
     }
 
     func submit() {
-        let voiceEvidence = pendingVoiceRecognitionEvidence
+        let voiceEvidence = voiceDraftSourceText == input ? pendingVoiceRecognitionEvidence : nil
         pendingVoiceRecognitionEvidence = nil
+        if voiceDraftSourceText != nil {
+            LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_router", "length=\(input.count)")
+            voiceDraftSourceText = nil
+        }
         resultDismissTask?.cancel()
         activeRequestGeneration &+= 1
         let requestGeneration = activeRequestGeneration

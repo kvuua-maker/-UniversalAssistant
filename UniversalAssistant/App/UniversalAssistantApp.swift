@@ -34,12 +34,12 @@ enum ProductionAssistantComposition {
         publicDeviceExecute: @escaping @MainActor (SystemQuickAction) throws -> String = { try ProductionPublicDeviceExecutor().execute($0) },
         clipboardRead: @escaping @MainActor () throws -> SharedContent = { try SystemUserInitiatedClipboardReader().readAfterUserAction() },
         notificationEnable: @escaping @MainActor () async -> ProactiveNotificationEnableResult = { await ProductionNotificationRegistration.enable() },
-        voiceInputOverride: VoiceInputController? = nil,
+        voiceInputOverride: (any VoiceInputControlling)? = nil,
         quickLaunchStore: QuickLaunchRequestStore = QuickLaunchRequestStore(),
         systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
     ) -> AssistantViewModel {
         let context = CurrentContextStore()
-        let voiceInput = voiceInputOverride ?? VoiceInputController(contextualVocabulary: {
+        let voiceInput: any VoiceInputControlling = voiceInputOverride ?? WhisperVoiceInputController(contextualVocabulary: {
             await contacts.contextualVocabulary(limit: 32)
                 + languageUnderstanding.requestScopedCatalogVocabulary(limit: 24)
         })
