@@ -118,6 +118,51 @@ struct WhisperOfflineVoiceInputTests {
         await engine.releaseModel()
     }
 
+    @Test func a13EquivalentCapabilityUsesCPUAccelerate() {
+        let capabilities = WhisperGPUCapabilitySnapshot(
+            family: "APPLE6",
+            supportsApple7: false,
+            supportsMetal3: false
+        )
+        let selection = WhisperBackendSelector.selection(for: capabilities)
+        #expect(!selection.useGPU)
+        #expect(!selection.flashAttention)
+        #expect(selection.diagnosticName == "CPU_ACCELERATE")
+    }
+
+    @Test func supportedNewerGPUCapabilityAllowsMetal() {
+        let capabilities = WhisperGPUCapabilitySnapshot(
+            family: "APPLE7",
+            supportsApple7: true,
+            supportsMetal3: true
+        )
+        let selection = WhisperBackendSelector.selection(for: capabilities)
+        #expect(selection.useGPU)
+        #expect(selection.flashAttention)
+        #expect(selection.diagnosticName == "METAL")
+    }
+
+    @Test func disabledMetalPermissionForcesCPUOnOtherwiseSupportedGPU() {
+        let capabilities = WhisperGPUCapabilitySnapshot(
+            family: "APPLE9",
+            supportsApple7: true,
+            supportsMetal3: true
+        )
+        let selection = WhisperBackendSelector.selection(for: capabilities, permitsMetal: false)
+        #expect(!selection.useGPU)
+        #expect(!selection.flashAttention)
+    }
+
+    @Test func a13CPUContextLoadsSameBundledModel() async throws {
+        let url = try #require(WhisperOfflineVoiceConfiguration.modelURL())
+        let engine = WhisperTranscriptionEngine(
+            modelURL: url,
+            backendSelection: .init(useGPU: false, flashAttention: false)
+        )
+        try await engine.validateModelLoad()
+        await engine.releaseModel()
+    }
+
     @Test func corruptModelFailsWithoutCrashingTheApplication() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("whisper-corrupt-model-\(UUID().uuidString)", isDirectory: true)

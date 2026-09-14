@@ -436,7 +436,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         "location_source", "input_count", "output_count", "nearest_m_bucket", "radius_m",
         "permission_state", "category", "mode", "actual_sample_rate", "actual_input_channels",
         "component", "file_name", "file_created", "file_size", "is_recording",
-        "internal_code", "osstatus"
+        "internal_code", "osstatus", "gpu_family", "metal3_supported", "use_gpu", "flash_attn", "model", "backend"
     ]
 
     init(

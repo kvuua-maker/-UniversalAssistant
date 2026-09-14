@@ -1,6 +1,7 @@
 import AVFoundation
 import Darwin
 import Foundation
+import Metal
 import Observation
 import Synchronization
 import UIKit
@@ -822,6 +823,60 @@ protocol WhisperOfflineTranscribing: Sendable {
     func releaseModel() async
 }
 
+struct WhisperGPUCapabilitySnapshot: Equatable, Sendable {
+    let family: String
+    let supportsApple7: Bool
+    let supportsMetal3: Bool
+
+    var supportsWhisperMetalCompute: Bool {
+        supportsApple7 || supportsMetal3
+    }
+
+    static func current() -> Self {
+        guard let device = MTLCreateSystemDefaultDevice() else {
+            return .init(family: "NONE", supportsApple7: false, supportsMetal3: false)
+        }
+        return .init(
+            family: highestAppleFamilySupported(by: device),
+            supportsApple7: device.supportsFamily(.apple7),
+            supportsMetal3: device.supportsFamily(.metal3)
+        )
+    }
+
+    private static func highestAppleFamilySupported(by device: any MTLDevice) -> String {
+        if device.supportsFamily(.apple10) { return "APPLE10" }
+        if device.supportsFamily(.apple9) { return "APPLE9" }
+        if device.supportsFamily(.apple8) { return "APPLE8" }
+        if device.supportsFamily(.apple7) { return "APPLE7" }
+        if device.supportsFamily(.apple6) { return "APPLE6" }
+        if device.supportsFamily(.apple5) { return "APPLE5" }
+        if device.supportsFamily(.apple4) { return "APPLE4" }
+        if device.supportsFamily(.apple3) { return "APPLE3" }
+        if device.supportsFamily(.apple2) { return "APPLE2" }
+        if device.supportsFamily(.apple1) { return "APPLE1" }
+        return "UNKNOWN"
+    }
+}
+
+struct WhisperBackendSelection: Equatable, Sendable {
+    let useGPU: Bool
+    let flashAttention: Bool
+
+    var diagnosticName: String {
+        useGPU ? "METAL" : "CPU_ACCELERATE"
+    }
+}
+
+enum WhisperBackendSelector {
+    static func selection(
+        for capabilities: WhisperGPUCapabilitySnapshot,
+        permitsMetal: Bool = true
+    ) -> WhisperBackendSelection {
+        let useGPU = permitsMetal && capabilities.supportsWhisperMetalCompute
+        return .init(useGPU: useGPU, flashAttention: useGPU)
+    }
+}
+
 private final class WhisperContextBox: @unchecked Sendable {
     let pointer: OpaquePointer
 
@@ -836,10 +891,15 @@ private final class WhisperContextBox: @unchecked Sendable {
 
 actor WhisperTranscriptionEngine: WhisperOfflineTranscribing {
     private let modelURL: URL?
+    private let backendSelectionOverride: WhisperBackendSelection?
     private var context: WhisperContextBox?
 
-    init(modelURL: URL? = WhisperOfflineVoiceConfiguration.modelURL()) {
+    init(
+        modelURL: URL? = WhisperOfflineVoiceConfiguration.modelURL(),
+        backendSelection: WhisperBackendSelection? = nil
+    ) {
         self.modelURL = modelURL
+        backendSelectionOverride = backendSelection
     }
 
     func transcribe(
@@ -918,12 +978,25 @@ actor WhisperTranscriptionEngine: WhisperOfflineTranscribing {
             throw WhisperOfflineVoiceError.modelMissing
         }
         var parameters = whisper_context_default_params()
+        let capabilities = WhisperGPUCapabilitySnapshot.current()
 #if targetEnvironment(simulator)
-        parameters.use_gpu = false
+        let permitsMetal = false
 #else
-        parameters.use_gpu = true
-        parameters.flash_attn = true
+        let permitsMetal = true
 #endif
+        let selection = backendSelectionOverride
+            ?? WhisperBackendSelector.selection(for: capabilities, permitsMetal: permitsMetal)
+        parameters.use_gpu = selection.useGPU
+        parameters.flash_attn = selection.flashAttention
+        LocalVoiceDiagnosticReport.shared.record(
+            "WHISPER_BACKEND_SELECTED",
+            "gpu_family=\(capabilities.family) "
+                + "metal3_supported=\(capabilities.supportsMetal3) "
+                + "use_gpu=\(selection.useGPU) "
+                + "flash_attn=\(selection.flashAttention) "
+                + "model=\(WhisperOfflineVoiceConfiguration.modelName) "
+                + "backend=\(selection.diagnosticName)"
+        )
         guard let loaded = whisper_init_from_file_with_params(modelURL.path, parameters) else {
             throw WhisperOfflineVoiceError.modelLoadFailed
         }
