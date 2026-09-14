@@ -550,6 +550,52 @@ struct PhysicalDiagnosticDeliveryTests {
         #expect(store.activeSnapshot() == nil)
     }
 
+    @Test @MainActor func voiceStartFailurePersistsAndReadsBackTraceWithoutFakeAudio() async throws {
+        let store = makeStore()
+        let report = LocalVoiceDiagnosticReport(
+            defaults: UserDefaults(suiteName: UUID().uuidString)!,
+            persistenceKey: "voice-start-trace-only",
+            localStore: store
+        )
+        report.detailedDiagnosticsEnabled = true
+        report.reset()
+        let requestID = report.currentRequestIdentifier
+        report.record("VOICE_TAP", "source=home status=received")
+        report.record("start_listening_invoked", "provider=whisper mechanism=offline")
+        report.record("MIC_PERMISSION", "permission_state=AUTHORIZED granted=true")
+        report.record("RECORD", "component=AVAudioEngine status=error internal_code=AUDIO_ENGINE_START_FAILED")
+        report.recordTerminal(
+            .error,
+            details: "stage=AUDIO_ENGINE_START_FAILED internal_code=AUDIO_ENGINE_START_FAILED error_domain=none error_code=0"
+        )
+        let session = try #require(report.completedSession())
+        let pending = try #require(store.loadCloudKitAudioPending().first)
+        #expect(session.requestID == requestID)
+        #expect(pending.metadata.requestID == requestID)
+        #expect(pending.audioRelativePath == nil)
+        #expect(pending.metadata.audioByteCount == 0)
+        #expect(pending.requestTrace?.events.contains { $0.marker == "RECORD" } == true)
+        #expect(store.activeSnapshot() == nil)
+
+        let database = CloudKitDiagnosticAudioTestDatabase(failSaves: false)
+        let delivery = CloudKitDiagnosticAudioDelivery(
+            database: database,
+            localStore: store,
+            enabled: { true }
+        )
+        await delivery.flush(now: .now)
+        let readback = try await database.readBack(
+            recordName: "ua-audio-\(requestID.uuidString.lowercased())"
+        )
+        #expect(readback.metadata.requestID == requestID)
+        #expect(readback.downloadedByteCount == 0)
+        #expect(readback.downloadedSHA256 == DiagnosticAudioSHA256.hex(of: Data()))
+        #expect(readback.requestTrace?.requestID == requestID)
+        #expect(readback.requestTrace?.events.contains { $0.marker == "terminal_request_state" } == true)
+        #expect(readback.requestTrace?.events.last?.marker == "request_end")
+        #expect(await delivery.pendingUploads().isEmpty)
+    }
+
     @Test func relaunchRecoveryRestoresMissingCloudKitPendingFromPersistedSession() async throws {
         let store = makeStore()
         let now = Date(timeIntervalSinceReferenceDate: 40_000)

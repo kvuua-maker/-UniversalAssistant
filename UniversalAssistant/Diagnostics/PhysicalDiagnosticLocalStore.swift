@@ -121,7 +121,7 @@ struct CloudKitDiagnosticAudioMetadata: Codable, Equatable, Sendable {
 
 struct CloudKitDiagnosticAudioUpload: Codable, Equatable, Sendable {
     var metadata: CloudKitDiagnosticAudioMetadata
-    let audioRelativePath: String
+    let audioRelativePath: String?
     var attempts: Int
     var nextAttemptAt: Date
     var state: CloudKitDiagnosticAudioUploadState
@@ -358,8 +358,11 @@ final class PhysicalDiagnosticLocalStore: @unchecked Sendable {
             let receipts: [CloudKitDiagnosticAudioReceipt] = decode(cloudKitAudioReceiptFile) ?? []
             if receipts.contains(where: { $0.metadata.recordName == value.metadata.recordName }) { return true }
             if values.contains(where: { $0.idempotencyKey == value.idempotencyKey }) { return true }
-            guard values.count < maxPending,
-                  validatedAudioURLLocked(relativePath: value.audioRelativePath) != nil else { return false }
+            guard values.count < maxPending else { return false }
+            if let relativePath = value.audioRelativePath,
+               validatedAudioURLLocked(relativePath: relativePath) == nil { return false }
+            if value.audioRelativePath == nil,
+               (value.metadata.audioByteCount != 0 || value.requestTrace == nil) { return false }
             values.append(value)
             writeAtomic(values, to: cloudKitAudioQueueFile)
             return true
@@ -384,7 +387,8 @@ final class PhysicalDiagnosticLocalStore: @unchecked Sendable {
                 receipts.append(.init(metadata: value.metadata, verifiedAt: verifiedAt))
             }
             writeAtomic(Array(receipts.suffix(maxReceipts)), to: cloudKitAudioReceiptFile)
-            if let audioURL = validatedAudioURLLocked(relativePath: value.audioRelativePath) {
+            if let relativePath = value.audioRelativePath,
+               let audioURL = validatedAudioURLLocked(relativePath: relativePath) {
                 try? fileManager.removeItem(at: audioURL)
             }
         }
@@ -603,7 +607,7 @@ final class PhysicalDiagnosticLocalStore: @unchecked Sendable {
             return lhs > rhs
         }
         let pending: [CloudKitDiagnosticAudioUpload] = decode(cloudKitAudioQueueFile) ?? []
-        var protected = Set(pending.map(\.audioRelativePath))
+        var protected = Set(pending.compactMap(\.audioRelativePath))
         if let active: DiagnosticActiveRequestSnapshot = decode(activeFile),
            let path = active.diagnosticAudioRelativePath {
             protected.insert(path)

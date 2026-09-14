@@ -206,6 +206,26 @@ struct WhisperOfflineVoiceInputTests {
         #expect(try WhisperWaveFile.samples(from: outputURL).count > 15_000)
     }
 
+    @Test func productionNativeAudioEngineStartsAndProducesWhisperInput() async throws {
+        guard ProcessInfo.processInfo.environment["UA_LIVE_AUDIO_CAPTURE"] == "1" else { return }
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("whisper-live-capture-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let recorder = AppleWhisperAudioRecorder()
+        let destination = directory.appendingPathComponent("capture.wav")
+        try recorder.start(at: destination)
+        #expect(recorder.isRecording)
+        try await Task.sleep(for: .seconds(1))
+        let artifact = try #require(recorder.finish())
+        #expect(artifact.duration > 0)
+        #expect(FileManager.default.fileExists(atPath: artifact.url.path))
+        #expect((try artifact.url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) > 44)
+        let file = try AVAudioFile(forReading: artifact.url)
+        #expect(abs(file.fileFormat.sampleRate - 16_000) < 0.5)
+        #expect(file.fileFormat.channelCount == 1)
+    }
+
     @Test func languageIsUkrainian() {
         #expect(WhisperOfflineVoiceConfiguration.language == "uk")
     }
@@ -300,6 +320,51 @@ struct WhisperOfflineVoiceInputTests {
         controller.stop(reason: .externalRequest)
     }
 
+    @Test func authorizedPermissionTransitionsDeterministicallyToRecording() async {
+        let recorder = StubWhisperRecorder()
+        let controller = WhisperVoiceInputController(
+            recorder: recorder,
+            transcriber: StubWhisperTranscriber(outputs: []),
+            microphoneAuthorization: { .authorized },
+            modelAvailable: { true }
+        )
+        await controller.start(locale: Locale(identifier: "uk-UA"))
+        #expect(controller.state == .listening)
+        #expect(controller.lifecyclePhase == .recording)
+        #expect(recorder.startCount == 1)
+        controller.stop(reason: .externalRequest)
+        #expect(controller.lifecyclePhase == .idle)
+    }
+
+    @Test func restrictedPermissionNeverTouchesTheAudioOwner() async {
+        let recorder = StubWhisperRecorder()
+        let controller = WhisperVoiceInputController(
+            recorder: recorder,
+            transcriber: StubWhisperTranscriber(outputs: []),
+            microphoneAuthorization: { .restricted },
+            modelAvailable: { true }
+        )
+        await controller.start(locale: Locale(identifier: "uk-UA"))
+        #expect(controller.state == .denied)
+        #expect(controller.lifecyclePhase == .idle)
+        #expect(recorder.startCount == 0)
+    }
+
+    @Test func missingNSErrorDoesNotInventAnOSStatus() {
+        let failure = WhisperVoiceStartFailure(stage: .recordFailed)
+        #expect(failure.errorDomain == "none")
+        #expect(failure.errorCode == 0)
+        #expect(!failure.diagnosticDetails.contains("osstatus="))
+    }
+
+    @Test func realOSStatusIsPreservedExactly() {
+        let error = NSError(domain: NSOSStatusErrorDomain, code: -50)
+        let failure = WhisperVoiceStartFailure(stage: .audioEngineStartFailed, underlying: error)
+        #expect(failure.diagnosticDetails.contains("error_domain=NSOSStatusErrorDomain"))
+        #expect(failure.diagnosticDetails.contains("error_code=-50"))
+        #expect(failure.diagnosticDetails.contains("osstatus=-50"))
+    }
+
     @Test func voiceStartFailurePreservesExactStage() async {
         let recorder = StubWhisperRecorder()
         recorder.startError = WhisperVoiceStartFailure(stage: .recordFailed)
@@ -315,17 +380,35 @@ struct WhisperOfflineVoiceInputTests {
 
     @Test func repeatedRecordingCyclesRemainSerialized() async {
         let recorder = StubWhisperRecorder()
-        let outputs = (0..<10).map { "Команда \($0)" }
+        let outputs = (0..<20).map { "Команда \($0)" }
         let transcriber = StubWhisperTranscriber(outputs: outputs)
         let controller = makeController(recorder: recorder, transcriber: transcriber)
-        for _ in 0..<10 {
+        for _ in 0..<20 {
             await controller.start(locale: Locale(identifier: "uk-UA"))
             #expect(controller.state == .listening)
             controller.stop(reason: .userPressedStop)
             await waitUntil { controller.state == .idle }
         }
-        #expect(recorder.startCount == 10)
-        #expect(await transcriber.calls == 10)
+        #expect(recorder.startCount == 20)
+        #expect(await transcriber.calls == 20)
+    }
+
+    @Test func fastRepeatedStartsKeepExactlyOneCurrentRecorderOwner() async {
+        let recorder = StubWhisperRecorder()
+        let controller = makeController(
+            recorder: recorder,
+            transcriber: StubWhisperTranscriber(outputs: [])
+        )
+        for _ in 0..<20 {
+            await controller.start(locale: Locale(identifier: "uk-UA"))
+        }
+        #expect(recorder.startCount == 20)
+        #expect(recorder.cancelCount >= 20)
+        #expect(controller.state == .listening)
+        #expect(controller.lifecyclePhase == .recording)
+        controller.stop(reason: .externalRequest)
+        #expect(!recorder.isRecording)
+        #expect(controller.lifecyclePhase == .idle)
     }
 
     @Test func interruptionAllowsCleanSecondRecording() async {

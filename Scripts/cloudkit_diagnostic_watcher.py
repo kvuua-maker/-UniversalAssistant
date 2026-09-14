@@ -100,6 +100,8 @@ def decode_trace(record: dict) -> tuple[bytes, dict]:
 
 def download_audio(record: dict, destination: Path) -> tuple[int, str]:
     asset = field(record, "audio")
+    if int(field(record, "audioByteCount", -1)) == 0 and not asset:
+        return 0, sha256(b"")
     if not isinstance(asset, dict) or not asset.get("downloadURL"):
         raise RuntimeError("audio CKAsset absent")
     placeholder = "$" + "{f}"
@@ -235,7 +237,11 @@ def process(record, args) -> tuple[str, dict]:
     (temporary / "trace.json").write_bytes(trace_data)
     audio = temporary / "audio.caf"
     byte_count, audio_hash = download_audio(record, audio)
-    independent = transcribe(audio, temporary, locale_from(trace), args.whisper, args.model)
+    independent = (
+        transcribe(audio, temporary, locale_from(trace), args.whisper, args.model)
+        if byte_count > 0 else
+        {"status": "NO_AUDIO_VOICE_START_FAILURE", "language": locale_from(trace), "text": None}
+    )
     ended = date_epoch(trace.get("endedAt"))
     latency = started - ended if ended is not None else None
     analysis = {

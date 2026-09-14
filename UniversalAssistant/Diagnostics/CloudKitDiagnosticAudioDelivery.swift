@@ -22,7 +22,7 @@ struct CloudKitDiagnosticAudioReadback: Equatable, Sendable {
 }
 
 protocol CloudKitDiagnosticAudioDatabase: Sendable {
-    func save(_ upload: CloudKitDiagnosticAudioUpload, audioURL: URL) async throws
+    func save(_ upload: CloudKitDiagnosticAudioUpload, audioURL: URL?) async throws
     func readBack(recordName: String) async throws -> CloudKitDiagnosticAudioReadback
     func allMetadata() async throws -> [CloudKitDiagnosticAudioMetadata]
     func delete(recordNames: [String]) async throws
@@ -60,12 +60,16 @@ actor SystemCloudKitDiagnosticAudioDatabase: CloudKitDiagnosticAudioDatabase {
 
     init() {}
 
-    func save(_ upload: CloudKitDiagnosticAudioUpload, audioURL: URL) async throws {
+    func save(_ upload: CloudKitDiagnosticAudioUpload, audioURL: URL?) async throws {
         let (container, database) = resolveCloudKit()
         guard try await container.accountStatus() == .available else {
             throw CloudKitDiagnosticAudioError.accountUnavailable
         }
-        guard FileManager.default.fileExists(atPath: audioURL.path) else {
+        if let audioURL {
+            guard FileManager.default.fileExists(atPath: audioURL.path) else {
+                throw CloudKitDiagnosticAudioError.missingLocalAudio
+            }
+        } else if upload.metadata.audioByteCount != 0 {
             throw CloudKitDiagnosticAudioError.missingLocalAudio
         }
         let traceData = upload.requestTrace.flatMap { try? JSONEncoder.diagnostic.encode($0) }
@@ -110,7 +114,9 @@ actor SystemCloudKitDiagnosticAudioDatabase: CloudKitDiagnosticAudioDatabase {
         record["audioSHA256"] = metadata.audioSHA256 as NSString
         record["audioTruncated"] = NSNumber(value: metadata.audioTruncated)
         record["pinned"] = NSNumber(value: metadata.pinned)
-        record["audio"] = CKAsset(fileURL: audioURL)
+        if let audioURL {
+            record["audio"] = CKAsset(fileURL: audioURL)
+        }
         if let traceData {
             record["requestTrace"] = traceData as NSData
             record["requestTraceByteCount"] = NSNumber(value: traceData.count)
@@ -123,12 +129,19 @@ actor SystemCloudKitDiagnosticAudioDatabase: CloudKitDiagnosticAudioDatabase {
         let (_, database) = resolveCloudKit()
         let record = try await database.record(for: CKRecord.ID(recordName: recordName))
         let metadata = try Self.metadata(from: record)
-        guard let asset = record["audio"] as? CKAsset,
-              let fileURL = asset.fileURL else {
-            throw CloudKitDiagnosticAudioError.malformedRemoteRecord
+        let byteCount: Int
+        let checksum: String
+        if metadata.audioByteCount == 0, record["audio"] == nil {
+            byteCount = 0
+            checksum = DiagnosticAudioSHA256.hex(of: Data())
+        } else {
+            guard let asset = record["audio"] as? CKAsset,
+                  let fileURL = asset.fileURL else {
+                throw CloudKitDiagnosticAudioError.malformedRemoteRecord
+            }
+            byteCount = (try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            checksum = try DiagnosticAudioSHA256.hex(of: fileURL)
         }
-        let byteCount = (try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-        let checksum = try DiagnosticAudioSHA256.hex(of: fileURL)
         let traceData = record["requestTrace"] as? Data
         let trace = traceData.flatMap { try? JSONDecoder.diagnostic.decode(PhysicalDiagnosticSession.self, from: $0) }
         if let trace, trace.requestID != metadata.requestID {
@@ -235,7 +248,9 @@ actor SystemCloudKitDiagnosticAudioDatabase: CloudKitDiagnosticAudioDatabase {
     }
 }
 
-/// CloudKit is an audio-only side-car for the existing diagnostics pipeline.
+/// CloudKit is the existing remote side-car for voice evidence. A start failure
+/// has no audio asset, but its durable request trace still uses the same record
+/// type and immutable RequestID.
 /// Local persistence always happens before this actor is called, and every
 /// error is contained here so diagnostics cannot change command behavior.
 actor CloudKitDiagnosticAudioDelivery {
@@ -269,13 +284,16 @@ actor CloudKitDiagnosticAudioDelivery {
     ) -> Bool {
         guard session.feature == "voice",
               session.detailedDiagnosticsConsent == true,
-              let requestID = session.requestID,
-              let relativePath = session.diagnosticAudioRelativePath,
-              let audioURL = localStore.diagnosticAudioURL(relativePath: relativePath),
-              let fileSize = (try? audioURL.resourceValues(forKeys: [.fileSizeKey]).fileSize),
-              fileSize > 0,
-              let checksum = try? DiagnosticAudioSHA256.hex(of: audioURL) else { return false }
+              let requestID = session.requestID else { return false }
         guard let traceData = try? JSONEncoder.diagnostic.encode(session) else { return false }
+        let relativePath = session.diagnosticAudioRelativePath
+        let audioURL = relativePath.flatMap { localStore.diagnosticAudioURL(relativePath: $0) }
+        let fileSize = audioURL.flatMap {
+            try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize
+        } ?? 0
+        guard relativePath == nil || (audioURL != nil && fileSize > 0) else { return false }
+        let checksum = audioURL.flatMap { try? DiagnosticAudioSHA256.hex(of: $0) }
+            ?? DiagnosticAudioSHA256.hex(of: Data())
 
         let metadata = CloudKitDiagnosticAudioMetadata(
             recordName: "ua-audio-\(requestID.uuidString.lowercased())",
@@ -318,13 +336,19 @@ actor CloudKitDiagnosticAudioDelivery {
         var queue = localStore.loadCloudKitAudioPending()
         while let index = queue.firstIndex(where: { $0.nextAttemptAt <= now }) {
             var upload = queue[index]
-            guard let audioURL = localStore.diagnosticAudioURL(relativePath: upload.audioRelativePath) else {
-                upload.attempts += 1
-                upload.state = .retrying
-                upload.lastErrorCategory = "missing_local_audio"
-                upload.nextAttemptAt = now.addingTimeInterval(Self.retryDelay(attempts: upload.attempts))
-                queue[index] = upload
-                continue
+            let audioURL: URL?
+            if let relativePath = upload.audioRelativePath {
+                guard let resolvedURL = localStore.diagnosticAudioURL(relativePath: relativePath) else {
+                    upload.attempts += 1
+                    upload.state = .retrying
+                    upload.lastErrorCategory = "missing_local_audio"
+                    upload.nextAttemptAt = now.addingTimeInterval(Self.retryDelay(attempts: upload.attempts))
+                    queue[index] = upload
+                    continue
+                }
+                audioURL = resolvedURL
+            } else {
+                audioURL = nil
             }
             do {
                 try await database.save(upload, audioURL: audioURL)

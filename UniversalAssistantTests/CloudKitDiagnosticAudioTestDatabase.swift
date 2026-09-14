@@ -29,10 +29,10 @@ actor CloudKitDiagnosticAudioTestDatabase: CloudKitDiagnosticAudioDatabase {
     func saveAttempts() -> Int { saveAttemptCount }
     func savedRecordCount() -> Int { records.count }
 
-    func save(_ upload: CloudKitDiagnosticAudioUpload, audioURL: URL) async throws {
+    func save(_ upload: CloudKitDiagnosticAudioUpload, audioURL: URL?) async throws {
         saveAttemptCount += 1
         if shouldFailSaves { throw URLError(.notConnectedToInternet) }
-        let data = try Data(contentsOf: audioURL)
+        let data = try audioURL.map { try Data(contentsOf: $0) } ?? Data()
         let checksum = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         guard checksum == upload.metadata.audioSHA256 else {
             throw CloudKitDiagnosticAudioError.checksumMismatch

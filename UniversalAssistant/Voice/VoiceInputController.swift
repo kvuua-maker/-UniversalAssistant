@@ -433,7 +433,10 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         "input_type", "output_type", "permission", "terminal", "stage", "last_stage", "last_pre", "last_post",
         "missing_expected_post", "http_status", "schema", "detailed", "scheme", "operation", "provider", "route", "result",
         "parameter", "pages", "type", "accepted", "confirmed", "elapsed_ms", "fallback",
-        "location_source", "input_count", "output_count", "nearest_m_bucket", "radius_m"
+        "location_source", "input_count", "output_count", "nearest_m_bucket", "radius_m",
+        "permission_state", "category", "mode", "actual_sample_rate", "actual_input_channels",
+        "component", "file_name", "file_created", "file_size", "is_recording",
+        "internal_code", "osstatus"
     ]
 
     init(
