@@ -116,6 +116,27 @@ struct WhisperOfflineVoiceInputTests {
         await engine.releaseModel()
     }
 
+    @Test func corruptModelFailsWithoutCrashingTheApplication() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("whisper-corrupt-model-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("ggml-small-q5_1.bin")
+        try Data("not-a-whisper-model".utf8).write(to: url, options: .atomic)
+        let engine = WhisperTranscriptionEngine(modelURL: url)
+        await #expect(throws: WhisperOfflineVoiceError.modelLoadFailed) {
+            try await engine.validateModelLoad()
+        }
+    }
+
+    @Test func runtimeLoadsWhisperFromEmbeddedAppFrameworksDirectory() throws {
+        let frameworksDirectory = try #require(Bundle.main.privateFrameworksURL)
+        let whisperBinary = frameworksDirectory
+            .appendingPathComponent("whisper.framework", isDirectory: true)
+            .appendingPathComponent("whisper")
+        #expect(FileManager.default.fileExists(atPath: whisperBinary.path))
+    }
+
     @Test func architectureHasNoNetworkDependency() {
         #expect(!WhisperOfflineVoiceConfiguration.requiresNetwork)
     }
