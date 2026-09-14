@@ -550,6 +550,29 @@ struct PhysicalDiagnosticDeliveryTests {
         #expect(store.activeSnapshot() == nil)
     }
 
+    @Test @MainActor func voiceSessionAndDownstreamRequestKeepOneImmutableIdentifier() throws {
+        let store = makeStore()
+        let report = LocalVoiceDiagnosticReport(
+            defaults: UserDefaults(suiteName: UUID().uuidString)!,
+            persistenceKey: "voice-request-correlation",
+            localStore: store
+        )
+        let voiceSessionID = UUID()
+        report.reset(requestID: voiceSessionID)
+        report.record("VOICE_SESSION_CREATED", "voice_session_id=\(voiceSessionID.uuidString.lowercased())")
+        report.record("start_listening_invoked")
+        report.recordSpeechTranscript("Покажи погоду", isFinal: true)
+        report.record("transcript_delivered_to_router", "length=14")
+        report.beginHomeRequest(generation: 7)
+        report.record("visible_result", "result=success")
+        report.recordTerminal(.success)
+
+        let session = try #require(report.completedSession())
+        #expect(session.requestID == voiceSessionID)
+        #expect(session.events.allSatisfy { $0.requestID == voiceSessionID })
+        #expect(session.requestGeneration == 7)
+    }
+
     @Test @MainActor func voiceStartFailurePersistsAndReadsBackTraceWithoutFakeAudio() async throws {
         let store = makeStore()
         let report = LocalVoiceDiagnosticReport(
@@ -561,7 +584,7 @@ struct PhysicalDiagnosticDeliveryTests {
         report.reset()
         let requestID = report.currentRequestIdentifier
         report.record("VOICE_TAP", "source=home status=received")
-        report.record("start_listening_invoked", "provider=whisper mechanism=offline")
+        report.record("start_listening_invoked", "provider=apple_speech mechanism=live")
         report.record("MIC_PERMISSION", "permission_state=AUTHORIZED granted=true")
         report.record("RECORD", "component=AVAudioEngine status=error internal_code=AUDIO_ENGINE_START_FAILED")
         report.recordTerminal(

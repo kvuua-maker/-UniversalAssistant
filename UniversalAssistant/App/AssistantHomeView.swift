@@ -24,6 +24,12 @@ struct AssistantHomeView: View {
                     ))
                     .accessibilityIdentifier("assistant.voice-input-toggle")
                     Text(model.statusText).font(.headline).accessibilityIdentifier("assistant.status")
+                    if !model.visibleVoiceTranscript.isEmpty {
+                        Text(model.visibleVoiceTranscript)
+                            .font(.body)
+                            .frame(maxWidth: 520, alignment: .leading)
+                            .accessibilityIdentifier("assistant.voice-transcript")
+                    }
                     if model.shouldOfferSettings,
                        let settingsURL = URL(string: UIApplication.openSettingsURLString) {
                         Link("settings", destination: settingsURL)
@@ -41,7 +47,10 @@ struct AssistantHomeView: View {
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    AdaptiveRequestComposer(text: $model.input, submit: model.submit)
+                    AdaptiveRequestComposer(text: Binding(
+                        get: { model.input },
+                        set: { model.updateComposerTextFromUser($0) }
+                    ), submit: model.submit)
                         .padding(.horizontal)
                         .padding(.vertical, 8)
                         .background(.bar)

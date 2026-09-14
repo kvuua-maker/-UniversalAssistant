@@ -5,6 +5,11 @@ import Testing
 struct VoiceTextInputQualityTests {
     private let engine = LocalCommandEngine()
 
+    @Test @MainActor func productionVoiceEngineIsAppleSpeechOnly() {
+        let model = ProductionAssistantComposition.makeModel()
+        #expect(model.voiceInputEngineIdentifier == "apple-speech")
+    }
+
     @Test func speechRequestUsesSupportedQualityConfiguration() {
         let request = SFSpeechAudioBufferRecognitionRequest()
         let configuration = VoiceRecognitionRequestConfiguration(additionalVocabulary: ["Test Entity", "Test Entity", "Three word entity"])

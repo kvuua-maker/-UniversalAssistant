@@ -2,34 +2,66 @@ import Foundation
 import Testing
 @testable import UniversalAssistant
 
+private final class VoiceSubmitCountingParser: CommandParsing, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [String] = []
+
+    var submitted: [String] { lock.withLock { values } }
+
+    func parse(_ text: String) -> StructuredCommand {
+        lock.withLock { values.append(text) }
+        return .init(
+            originalText: text,
+            normalizedText: text.lowercased(),
+            language: .uk,
+            intent: .help
+        )
+    }
+}
+
 @MainActor
 @Suite("Accessibility, audio and contextual permissions")
 struct AccessibilityAudioPermissionTests {
-    @Test @MainActor func finalVoiceTranscriptStaysInEditableComposerUntilExplicitSubmit() {
-        // VoiceInputController creates the durable request before delivering callbacks.
-        // Mirror that production ownership boundary in this focused ViewModel test.
-        LocalVoiceDiagnosticReport.shared.reset()
-        let model = AssistantViewModel()
+    @Test @MainActor func finalVoiceTranscriptAutoSubmitsExactlyOnceThroughCanonicalSubmit() {
+        let parser = VoiceSubmitCountingParser()
+        LocalVoiceDiagnosticReport.shared.detailedDiagnosticsEnabled = false
+        LocalVoiceDiagnosticReport.shared.reset(requestID: UUID())
+        let model = AssistantViewModel(commandEngine: parser)
+        model.handleVoiceEvent(.state(.requestingPermission))
         model.handleVoiceEvent(.state(.listening))
         model.handleVoiceEvent(.transcript("відкрий календар", isFinal: false))
         #expect(model.input == "відкрий календар")
         #expect(model.isListening)
 
-        model.handleVoiceEvent(.state(.idle))
         model.handleVoiceEvent(.transcript("відкрий календар", isFinal: true))
-        #expect(model.input == "відкрий календар")
-        #expect(model.resultState == .idle)
+        model.handleVoiceEvent(.transcript("відкрий календар", isFinal: true))
+        #expect(parser.submitted == ["відкрий календар"])
+        #expect(model.visibleVoiceTranscript == "відкрий календар")
         let report = model.voiceDiagnosticReport()
         #expect(report.contains("transcript_delivered_to_view_model"))
-        #expect(report.contains("voice_transcript_ready_for_editing"))
-        #expect(!report.contains("transcript_delivered_to_router"))
+        #expect(report.contains("AUTO_SUBMIT_PRE"))
+        #expect(report.contains("AUTO_SUBMIT_POST"))
+        #expect(report.contains("transcript_delivered_to_router"))
         #expect(!report.contains("відкрий календар"))
+    }
 
-        model.input = "відкрий календар завтра"
+    @Test @MainActor func typedComposerWaitsForSendAndManualEditCancelsVoiceSubmit() {
+        let parser = VoiceSubmitCountingParser()
+        LocalVoiceDiagnosticReport.shared.detailedDiagnosticsEnabled = false
+        LocalVoiceDiagnosticReport.shared.reset(requestID: UUID())
+        let model = AssistantViewModel(commandEngine: parser)
+
+        model.updateComposerTextFromUser("Покажи погоду")
+        #expect(parser.submitted.isEmpty)
         model.submit()
-        #expect(model.input.isEmpty)
-        #expect(model.resultState != .idle)
-        #expect(model.voiceDiagnosticReport().contains("transcript_delivered_to_router"))
+        #expect(parser.submitted == ["Покажи погоду"])
+
+        model.handleVoiceEvent(.state(.requestingPermission))
+        model.handleVoiceEvent(.transcript("Знайди товар", isFinal: false))
+        model.updateComposerTextFromUser("Знайди інший товар")
+        model.handleVoiceEvent(.transcript("Знайди товар", isFinal: true))
+        #expect(parser.submitted == ["Покажи погоду"])
+        #expect(model.input == "Знайди інший товар")
     }
 
     @Test func voicePrivacyModeKeepsTypedInteractionWorking() {
@@ -55,6 +87,9 @@ struct AccessibilityAudioPermissionTests {
         #expect(!model.isListening)
         #expect(model.shouldOfferSettings)
         #expect(model.statusText == AppText.value("microphone_denied"))
+        model.applyVoiceState(.speechDenied)
+        #expect(model.shouldOfferSettings)
+        #expect(model.statusText == AppText.value("speech_unavailable"))
         model.applyVoiceState(.unavailable)
         #expect(!model.shouldOfferSettings)
     }

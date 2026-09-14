@@ -4,7 +4,14 @@ import OSLog
 import Speech
 import UIKit
 
-enum VoiceInputState: Equatable, Sendable { case idle, requestingPermission, listening, transcribing, denied, unavailable, failed }
+enum VoiceInputState: Equatable, Sendable {
+    case idle, requestingPermission, listening, transcribing
+    case denied, speechDenied, unavailable, failed
+}
+
+private enum VoiceAuthorizationOutcome: Equatable, Sendable {
+    case authorized, microphoneDenied, speechDenied
+}
 
 enum VoiceInputEvent: Equatable, Sendable {
     case state(VoiceInputState)
@@ -273,12 +280,23 @@ private enum VoiceDiagnostic {
     static let logger = Logger(subsystem: "com.universalassistant.app", category: "VoicePipeline")
 }
 
+/// Owns a deep PCM copy after the AVFAudio callback returns. The contained
+/// Objective-C buffer is created for this wrapper, never shared or mutated by
+/// AVFAudio, and is consumed only by the recorder's serial queue.
+private final class DiagnosticAudioBufferCopy: @unchecked Sendable {
+    let buffer: AVAudioPCMBuffer
+    init(_ buffer: AVAudioPCMBuffer) { self.buffer = buffer }
+}
+
 final class DiagnosticCommandAudioRecorder: @unchecked Sendable {
     struct Completion: Sendable {
         let relativePath: String?
         let truncated: Bool
         let byteCount: Int
         let durationMilliseconds: Int
+        let sampleRate: Double
+        let channelCount: Int
+        let bufferCount: Int
     }
 
     private let queue = DispatchQueue(label: "com.universalassistant.diagnostics.command-audio", qos: .utility)
@@ -290,6 +308,9 @@ final class DiagnosticCommandAudioRecorder: @unchecked Sendable {
     private var writtenFrames: AVAudioFramePosition = 0
     private var truncated = false
     private var recordedDurationSeconds: Double = 0
+    private var sampleRate: Double = 0
+    private var channelCount = 0
+    private var bufferCount = 0
 
     init(localStore: PhysicalDiagnosticLocalStore, maximumDurationSeconds: Double = 45) {
         self.localStore = localStore
@@ -304,13 +325,17 @@ final class DiagnosticCommandAudioRecorder: @unchecked Sendable {
             writtenFrames = 0
             truncated = false
             recordedDurationSeconds = 0
+            sampleRate = 0
+            channelCount = 0
+            bufferCount = 0
             if let destination { try? FileManager.default.removeItem(at: destination) }
         }
     }
 
     func appendSameSpeechBuffer(_ buffer: AVAudioPCMBuffer) {
         guard let copy = Self.copy(buffer) else { return }
-        queue.async { [weak self] in self?.write(copy) }
+        let ownedCopy = DiagnosticAudioBufferCopy(copy)
+        queue.async { [weak self] in self?.write(ownedCopy.buffer) }
     }
 
     func finish() -> Completion {
@@ -328,10 +353,16 @@ final class DiagnosticCommandAudioRecorder: @unchecked Sendable {
                 relativePath: byteCount > 0 ? relativePath : nil,
                 truncated: truncated,
                 byteCount: byteCount,
-                durationMilliseconds: durationMilliseconds
+                durationMilliseconds: durationMilliseconds,
+                sampleRate: sampleRate,
+                channelCount: channelCount,
+                bufferCount: bufferCount
             )
             truncated = false
             recordedDurationSeconds = 0
+            sampleRate = 0
+            channelCount = 0
+            bufferCount = 0
             return result
         }
     }
@@ -363,6 +394,9 @@ final class DiagnosticCommandAudioRecorder: @unchecked Sendable {
         guard buffer.frameLength > 0 else { return }
         do {
             try file?.write(from: buffer)
+            sampleRate = buffer.format.sampleRate
+            channelCount = Int(buffer.format.channelCount)
+            bufferCount += 1
             writtenFrames += AVAudioFramePosition(buffer.frameLength)
             recordedDurationSeconds += Double(buffer.frameLength) / buffer.format.sampleRate
         } catch {
@@ -436,7 +470,8 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         "location_source", "input_count", "output_count", "nearest_m_bucket", "radius_m",
         "permission_state", "category", "mode", "actual_sample_rate", "actual_input_channels",
         "component", "file_name", "file_created", "file_size", "is_recording",
-        "internal_code", "osstatus", "gpu_family", "metal3_supported", "use_gpu", "flash_attn", "model", "backend"
+        "internal_code", "osstatus", "gpu_family", "metal3_supported", "use_gpu", "flash_attn", "model", "backend",
+        "voice_session_id", "request_id", "sha256", "format", "fingerprint"
     ]
 
     init(
@@ -478,6 +513,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
             diagnosticAudioTruncated: false
         )
         record("diagnostic_audio_started", "status=recording")
+        record("AUDIO_DIAGNOSTIC_STARTED", "status=recording")
     }
 
     func appendCommandAudioBuffer(_ buffer: AVAudioPCMBuffer) {
@@ -499,13 +535,27 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
             "diagnostic_audio_finished",
             "status=saved reason=\(reason.rawValue) length=\(completion.byteCount) truncated=\(completion.truncated)"
         )
+        record(
+            "AUDIO_FORMAT",
+            "format=caf sample_rate=\(completion.sampleRate) channels=\(completion.channelCount)"
+        )
+        record("AUDIO_BUFFER_COUNT", "count=\(completion.bufferCount)")
+        record("AUDIO_SIZE", "file_size=\(completion.byteCount)")
+        if let url = localStore.diagnosticAudioURL(relativePath: relativePath),
+           let sha256 = try? DiagnosticAudioSHA256.hex(of: url) {
+            record("AUDIO_SHA256", "sha256=\(sha256)")
+        }
+        record(
+            "AUDIO_DIAGNOSTIC_FINISHED",
+            "status=saved reason=\(reason.rawValue) file_size=\(completion.byteCount)"
+        )
     }
 
 
-    func reset() {
+    func reset(requestID suppliedRequestID: UUID? = nil) {
         lock.lock()
         entries = []
-        requestID = UUID()
+        requestID = suppliedRequestID ?? UUID()
         requestGeneration = 0
         startedAt = .now
         finalSpeechTranscript = nil
@@ -551,6 +601,18 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         }
         lock.unlock()
         VoiceDiagnostic.logger.notice("\(marker, privacy: .public) \(safeDetails, privacy: .public)")
+    }
+
+    /// Stores bounded exact Speech evidence only when the existing detailed
+    /// diagnostics consent is enabled. Without consent, only metadata remains.
+    func recordVoiceText(_ marker: String, text: String, details: String = "") {
+        guard localStore.activeSnapshot() != nil else { return }
+        lock.lock()
+        let detailed = detailedDiagnosticsEnabled
+        let safeText = Self.privacySafeTranscript(text)
+        let metadata = "length=\(text.count) detailed=\(detailed) \(details)"
+        appendLocked(marker, metadata, durable: true, textPayload: detailed ? safeText : nil)
+        lock.unlock()
     }
 
     func recordBoundaryPre(_ boundary: String, _ details: String = "") {
@@ -725,7 +787,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
     func snapshot() -> String {
         lock.lock(); defer { lock.unlock() }
         let lines = entries.enumerated().map { "\($0.offset + 1). \($0.element.marker)\($0.element.details.isEmpty ? "" : " | \($0.element.details)")" }
-        return (["UniversalAssistant Local Diagnostic Black Box", "Command audio is local-only until Firebase Storage is configured."] + lines).joined(separator: "\n")
+        return (["UniversalAssistant Local Diagnostic Black Box", "Command audio is stored locally first, delivered through CloudKit, and removed locally only after verified read-back."] + lines).joined(separator: "\n")
     }
 
     @MainActor func recoveredIncompleteSession() -> PhysicalDiagnosticSession? {
@@ -840,20 +902,31 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
               entries.contains(where: { ["start_listening_invoked", "home_request_started"].contains($0.marker) }),
               !entries.contains(where: { $0.marker == "request_end" }),
               let terminalState = explicitTerminalState ?? inferredTerminalStateLocked() else { return nil }
+        if detailedDiagnosticsEnabled,
+           entries.contains(where: { $0.marker == "start_listening_invoked" }) {
+            appendLocked("CLOUDKIT_DELIVERY_STATE", "state=local_pending", durable: true)
+            appendLocked("REMOTE_READBACK_STATE", "state=pending", durable: true)
+        }
         if !entries.contains(where: { $0.marker == "terminal_request_state" }) {
             appendLocked("terminal_request_state", "state=\(terminalState.rawValue)", durable: true)
             localStore.updateActive(sequence: entries.count, stage: "terminal_request_state", terminal: terminalState)
         }
         appendLocked("request_end", "terminal=\(terminalState.rawValue)", durable: true)
         let bounded = Self.boundedForDelivery(entries)
+        let eventBuild = Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0") ?? 0
         let events = bounded.enumerated().map { index, entry in
-            PhysicalDiagnosticEvent(
+            var event = PhysicalDiagnosticEvent(
                 sequence: index + 1,
                 timestamp: entry.timestamp,
                 marker: entry.marker,
                 attributes: Self.privacySafeAttributes(entry.details),
                 textPayload: entry.textPayload
             )
+            event.diagnosticSessionID = diagnosticSessionID
+            event.requestID = requestID
+            event.requestGeneration = requestGeneration
+            event.build = eventBuild
+            return event
         }
         let error = events.reversed().first {
             let domain = $0.attributes["error_domain"]
@@ -958,7 +1031,6 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
     }
 
     private func inferredTerminalStateLocked() -> DiagnosticTerminalState? {
-        if entries.contains(where: { $0.marker == "WHISPER_RESULT" && $0.details.contains("status=success") }) { return .success }
         if entries.contains(where: { $0.marker == "visible_result" }) { return .success }
         if entries.contains(where: { $0.marker == "router_rejected" && $0.details.contains("clarification") }) { return .clarification }
         if entries.contains(where: { $0.marker == "execution_failed" && $0.details.contains("external_provider_required") }) { return .providerRequired }
@@ -996,6 +1068,9 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
     }
 
     private static func privacySafeTranscript(_ value: String) -> String {
+        if let identifier = UUID(uuidString: value) {
+            return identifier.uuidString.lowercased()
+        }
         var result = value.precomposedStringWithCanonicalMapping
         let patterns = [
             #"(?i)https?://\S+"#,
@@ -1023,6 +1098,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
 
 private final class VoiceBufferDiagnosticCounter: @unchecked Sendable {
     private let lock = NSLock()
+    private let reportingQueue = DispatchQueue(label: "com.universalassistant.voice-buffer-diagnostics", qos: .utility)
     private var count = 0
 
     func record(_ buffer: AVAudioPCMBuffer) {
@@ -1031,7 +1107,10 @@ private final class VoiceBufferDiagnosticCounter: @unchecked Sendable {
         let current = count
         lock.unlock()
         if current == 1 || current.isMultiple(of: 100) {
-            LocalVoiceDiagnosticReport.shared.record("audio_buffer_received", "count=\(current) frames=\(buffer.frameLength)")
+            let frames = buffer.frameLength
+            reportingQueue.async {
+                LocalVoiceDiagnosticReport.shared.record("audio_buffer_received", "count=\(current) frames=\(frames)")
+            }
         }
     }
 }
@@ -1126,19 +1205,6 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
         let brands = CanonicalCatalogEntityRegistry.brandNames.flatMap { name in
             [name] + speechTransliterationVariants(for: name)
         }
-        let applications = LaunchDeviceApplications.verified.flatMap { application in
-            [application.id] + preferredSpokenAlias(from: application.aliases, excluding: application.id)
-        }
-        let services = MessengerKind.allCases.map(\.rawValue)
-        return unique(providers + brands + applications + services)
-    }
-
-    /// Compact display-name-first vocabulary for local decoders with a strict
-    /// prompt budget. This keeps every canonical provider, brand, app and
-    /// service represented before request-scoped values are appended.
-    static var canonicalWhisperVocabulary: [String] {
-        let providers = OfficialPublicProviderHandoffRegistry.records.map(\.displayName)
-        let brands = CanonicalCatalogEntityRegistry.brandNames
         let applications = LaunchDeviceApplications.verified.flatMap { application in
             [application.id] + preferredSpokenAlias(from: application.aliases, excluding: application.id)
         }
@@ -1333,6 +1399,7 @@ struct VoiceAudioCaptureLifecycle {
 final class VoiceRecognitionRequestSink: @unchecked Sendable {
     private let request: SFSpeechAudioBufferRecognitionRequest
     private let lock = NSLock()
+    private let reportingQueue = DispatchQueue(label: "com.universalassistant.speech-buffer-diagnostics", qos: .utility)
     private var appendedCount = 0
     private var active = true
 
@@ -1348,7 +1415,9 @@ final class VoiceRecognitionRequestSink: @unchecked Sendable {
         request.append(buffer)
         lock.unlock()
         if current == 1 || current.isMultiple(of: 100) {
-            LocalVoiceDiagnosticReport.shared.record("buffer_appended", "count=\(current)")
+            reportingQueue.async {
+                LocalVoiceDiagnosticReport.shared.record("buffer_appended", "count=\(current)")
+            }
         }
     }
 
@@ -1407,11 +1476,11 @@ final class VoiceEndOfSpeechFinalizer {
 @MainActor
 @Observable
 final class VoiceInputController: VoiceInputControlling {
-    let engineIdentifier = "apple-speech-rollback"
+    let engineIdentifier = "apple-speech"
     private(set) var state: VoiceInputState = .idle
     private(set) var transcript = ""
     private let capture: VoiceAudioCaptureLifecycle
-    private let authorization: @Sendable () async -> Bool
+    private let authorization: @Sendable () async -> VoiceAuthorizationOutcome
     private let contextualVocabulary: @Sendable () async -> [String]
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var requestSink: VoiceRecognitionRequestSink?
@@ -1440,7 +1509,13 @@ final class VoiceInputController: VoiceInputControlling {
         contextualVocabulary: @escaping @Sendable () async -> [String] = { [] }
     ) {
         capture = VoiceAudioCaptureLifecycle(backend: captureBackend ?? AppleVoiceAudioCaptureBackend())
-        self.authorization = authorization ?? Self.authorizationGranted
+        if let authorization {
+            self.authorization = {
+                await authorization() ? .authorized : .microphoneDenied
+            }
+        } else {
+            self.authorization = Self.authorizationOutcome
+        }
         self.contextualVocabulary = contextualVocabulary
         endOfSpeechFinalizer = VoiceEndOfSpeechFinalizer(delay: endOfSpeechDelay)
         audioEvents = AudioSessionEventMonitor(
@@ -1453,20 +1528,23 @@ final class VoiceInputController: VoiceInputControlling {
         stop(reason: .sessionRestart)
         let sessionID = UUID()
         activeSessionID = sessionID
-        LocalVoiceDiagnosticReport.shared.reset()
+        LocalVoiceDiagnosticReport.shared.reset(requestID: sessionID)
         recognitionCallbackCount = 0
         partialResultCount = 0
         partialTranscriptHistory = []
         finalResultCount = 0
         isFinalizingRecognition = false
         speechActivity.reset()
+        LocalVoiceDiagnosticReport.shared.record("VOICE_SESSION_CREATED", "voice_session_id=\(sessionID.uuidString.lowercased())")
+        LocalVoiceDiagnosticReport.shared.record("SOURCE", "source=voice")
         LocalVoiceDiagnosticReport.shared.record("mic_tap", "source=home")
         LocalVoiceDiagnosticReport.shared.record("start_listening_invoked")
         setState(.requestingPermission)
-        guard await authorization() else {
+        let authorization = await authorization()
+        guard authorization == .authorized else {
             guard owns(sessionID) else { return }
             activeSessionID = nil
-            setState(.denied)
+            setState(authorization == .speechDenied ? .speechDenied : .denied)
             return
         }
         guard owns(sessionID) else {
@@ -1478,7 +1556,8 @@ final class VoiceInputController: VoiceInputControlling {
             setState(.unavailable)
             return
         }
-        LocalVoiceDiagnosticReport.shared.record("recognizer_ready", "locale=\(locale.identifier) available=\(recognizer.isAvailable)")
+        LocalVoiceDiagnosticReport.shared.record("recognizer_ready", "locale=\(recognizer.locale.identifier) available=\(recognizer.isAvailable)")
+        LocalVoiceDiagnosticReport.shared.record("APPLE_LOCALE", "locale=\(recognizer.locale.identifier)")
         self.recognizer = recognizer
         let refreshedVocabulary = await contextualVocabulary()
         guard owns(sessionID) else {
@@ -1491,6 +1570,11 @@ final class VoiceInputController: VoiceInputControlling {
         let configuration = VoiceRecognitionRequestConfiguration(additionalVocabulary: requestVocabulary)
         configuration.apply(to: request, recognizer: recognizer)
         activeContextualVocabulary = configuration.contextualVocabulary
+        let contextFingerprint = DiagnosticAudioSHA256.hex(
+            of: Data(configuration.contextualVocabulary.joined(separator: "\u{1f}").utf8)
+        )
+        LocalVoiceDiagnosticReport.shared.record("CONTEXTUAL_STRINGS_COUNT", "count=\(configuration.contextualVocabulary.count)")
+        LocalVoiceDiagnosticReport.shared.record("CONTEXTUAL_STRINGS_FINGERPRINT", "fingerprint=\(contextFingerprint)")
         LocalVoiceDiagnosticReport.shared.record(
             "recognition_request_created",
             "api=sfspeechrecognizer partial_results=true punctuation=true task_hint=dictation input_count=\(requestVocabulary.count) context_count=\(configuration.contextualVocabulary.count) on_device_supported=\(recognizer.supportsOnDeviceRecognition) on_device_required=\(request.requiresOnDeviceRecognition)"
@@ -1518,7 +1602,11 @@ final class VoiceInputController: VoiceInputControlling {
             LocalVoiceDiagnosticReport.shared.recordBoundaryPost("SPEECH_START", "locale=\(locale.identifier) status=success")
         } catch {
             guard owns(sessionID) else { return }
-            LocalVoiceDiagnosticReport.shared.record("voice_start_failed", "error_type=\(String(describing: type(of: error)))")
+            let nsError = error as NSError
+            LocalVoiceDiagnosticReport.shared.record(
+                "voice_start_failed",
+                "error_type=\(String(describing: type(of: error))) error_domain=\(nsError.domain) error_code=\(nsError.code)"
+            )
             stop(reason: .startFailure, ownedBy: sessionID); setState(.failed)
         }
     }
@@ -1558,7 +1646,7 @@ final class VoiceInputController: VoiceInputControlling {
         LocalVoiceDiagnosticReport.shared.record("end_audio_called", "reason=\(reason.rawValue) had_request=\(hadRequest)")
         capture.stop()
         LocalVoiceDiagnosticReport.shared.finishCommandAudioRecording(reason: reason)
-        if state == .listening || state == .requestingPermission { setState(.idle) }
+        if state == .listening || state == .transcribing || state == .requestingPermission { setState(.idle) }
     }
 
     func setEventHandler(_ handler: @escaping @MainActor @Sendable (VoiceInputEvent) -> Void) {
@@ -1581,6 +1669,7 @@ final class VoiceInputController: VoiceInputControlling {
             if isFinal { finalResultCount += 1 } else { partialResultCount += 1 }
         }
         LocalVoiceDiagnosticReport.shared.record("recognition_callback", "count=\(recognitionCallbackCount) has_text=\(transcript != nil) final=\(isFinal) error_domain=\(errorDomain) error_code=\(errorCode) partial_count=\(partialResultCount) final_count=\(finalResultCount)")
+        let deliverAsFinal = isFinal && !hasError
         if let transcript {
             var accumulatedEvidence: VoiceRecognitionEvidence?
             if !isFinal {
@@ -1600,8 +1689,16 @@ final class VoiceInputController: VoiceInputControlling {
                     "recognition_evidence",
                     "alternatives=\(value.alternativeTranscripts.count) segment_alternatives=\(value.segmentAlternativeCount) confidence_bucket=\(bucket)"
                 )
+                let alternatives = (value.alternativeTranscripts + value.segmentAlternativeTranscripts)
+                    .prefix(VoiceRecognitionCandidateBuilder.maximumWholeTranscriptions + VoiceRecognitionCandidateBuilder.maximumSegmentTranscriptions)
+                    .joined(separator: "\n")
+                LocalVoiceDiagnosticReport.shared.recordVoiceText("APPLE_ALTERNATIVES", text: alternatives)
+                LocalVoiceDiagnosticReport.shared.record(
+                    "SEGMENT_CONFIDENCE",
+                    "confidence=\(value.averageSegmentConfidence ?? -1) count=\(value.segmentAlternativeCount)"
+                )
             }
-            let stabilized = isFinal
+            let stabilized = deliverAsFinal
                 ? accumulatedEvidence.map { VoiceTranscriptStabilizer.stabilize($0, contextualVocabulary: activeContextualVocabulary) }
                 : nil
             let deliveredTranscript = stabilized?.text ?? VoiceTranscriptStabilizer.normalizedForDisplay(transcript)
@@ -1609,15 +1706,21 @@ final class VoiceInputController: VoiceInputControlling {
             // Persist the recognizer's final evidence before handing it to the
             // semantic pipeline. If downstream parsing terminates the process,
             // Crashlytics must still contain the exact Speech boundary input.
-            LocalVoiceDiagnosticReport.shared.recordSpeechTranscript(transcript, isFinal: isFinal)
+            LocalVoiceDiagnosticReport.shared.recordSpeechTranscript(transcript, isFinal: deliverAsFinal)
+            LocalVoiceDiagnosticReport.shared.recordVoiceText(
+                isFinal ? "APPLE_FINAL" : "PARTIAL_TRANSCRIPT",
+                text: transcript,
+                details: "final=\(isFinal) accepted=\(deliverAsFinal)"
+            )
             if let stabilized {
-                LocalVoiceDiagnosticReport.shared.record(
-                    "stabilized_transcript",
-                    "length=\(stabilized.text.count) source=\(stabilized.source.rawValue)"
+                LocalVoiceDiagnosticReport.shared.recordVoiceText(
+                    "STABILIZED_TRANSCRIPT",
+                    text: stabilized.text,
+                    details: "source=\(stabilized.source.rawValue)"
                 )
             }
-            eventHandler?(.transcript(deliveredTranscript, isFinal: isFinal))
-            LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_ui", "length=\(deliveredTranscript.count) final=\(isFinal)")
+            eventHandler?(.transcript(deliveredTranscript, isFinal: deliverAsFinal))
+            LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_ui", "length=\(deliveredTranscript.count) final=\(deliverAsFinal)")
             if !isFinal, !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 let speechActivity = speechActivity
                 endOfSpeechFinalizer.receivedPartial(
@@ -1641,6 +1744,7 @@ final class VoiceInputController: VoiceInputControlling {
               let request, let task else { return }
         isFinalizingRecognition = true
         requestSink?.deactivate()
+        setState(.transcribing)
         LocalVoiceDiagnosticReport.shared.record("end_audio_called", "reason=endOfSpeech had_request=true")
         request.endAudio()
         LocalVoiceDiagnosticReport.shared.record("recognition_task_finished", "reason=endOfSpeech")
@@ -1674,17 +1778,19 @@ final class VoiceInputController: VoiceInputControlling {
         }
     }
 
-    private nonisolated static func authorizationGranted() async -> Bool {
+    private nonisolated static func authorizationOutcome() async -> VoiceAuthorizationOutcome {
         LocalVoiceDiagnosticReport.shared.record("speech_permission_before", "state=\(String(describing: SFSpeechRecognizer.authorizationStatus()))")
         let speech = await awaitSpeechAuthorization { completion in
             SFSpeechRecognizer.requestAuthorization(completion)
         }
         LocalVoiceDiagnosticReport.shared.record("speech_permission_after", "state=\(String(describing: speech))")
-        guard speech == .authorized else { return false }
+        LocalVoiceDiagnosticReport.shared.record("SPEECH_PERMISSION", "permission_state=\(String(describing: speech))")
+        guard speech == .authorized else { return .speechDenied }
         LocalVoiceDiagnosticReport.shared.record("microphone_permission_before", "state=\(String(describing: AVAudioApplication.shared.recordPermission))")
         let microphone = await AVAudioApplication.requestRecordPermission()
         LocalVoiceDiagnosticReport.shared.record("microphone_permission", "granted=\(microphone)")
-        return microphone
+        LocalVoiceDiagnosticReport.shared.record("MIC_PERMISSION", "granted=\(microphone) permission_state=\(String(describing: AVAudioApplication.shared.recordPermission))")
+        return microphone ? .authorized : .microphoneDenied
     }
 
     private nonisolated static func makeRecognitionHandler(

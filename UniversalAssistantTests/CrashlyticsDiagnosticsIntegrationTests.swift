@@ -9,6 +9,31 @@ import Testing
 
 @Suite("Crashlytics diagnostics side-car", .serialized)
 struct CrashlyticsDiagnosticsIntegrationTests {
+    @Test @MainActor func disabledDetailedDiagnosticsDoesNotCreateCommandAudio() throws {
+        let defaults = UserDefaults(suiteName: "ua-diagnostics-disabled-\(UUID().uuidString)")!
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ua-diagnostics-disabled-\(UUID().uuidString)", isDirectory: true)
+        let store = PhysicalDiagnosticLocalStore(rootDirectory: root)
+        let report = LocalVoiceDiagnosticReport(
+            defaults: defaults,
+            persistenceKey: "diagnostics-disabled",
+            localStore: store
+        )
+        report.detailedDiagnosticsEnabled = false
+        report.reset(requestID: UUID())
+        report.record("start_listening_invoked")
+        report.beginCommandAudioRecording()
+        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1))
+        let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 480))
+        buffer.frameLength = 480
+        report.appendCommandAudioBuffer(buffer)
+        report.finishCommandAudioRecording(reason: .recognitionFinal)
+        report.recordTerminal(.success)
+        let session = try #require(report.completedSession())
+        #expect(session.diagnosticAudioRelativePath == nil)
+        #expect(!session.events.contains { $0.marker == "AUDIO_DIAGNOSTIC_STARTED" })
+    }
+
     @Test func detailedTraceUsesExistingIdentityAndEmitsOneTerminalNonFatal() throws {
         let client = RecordingCrashlyticsClient()
         let bridge = CrashlyticsDiagnosticBridge(client: client, readiness: { true })
@@ -356,6 +381,11 @@ struct CrashlyticsDiagnosticsIntegrationTests {
         #expect(durableEvents.contains {
             $0.marker == "normalization" && $0.textPayload == "знайти кав’ярню біля вокзалу"
         })
+        #expect(durableEvents.contains { $0.marker == "AUDIO_BUFFER_COUNT" && $0.attributes["count"] == "1" })
+        #expect(durableEvents.contains {
+            $0.marker == "AUDIO_SIZE" && (Int($0.attributes["file_size"] ?? "0") ?? 0) > 0
+        })
+        #expect(durableEvents.contains { $0.marker == "AUDIO_SHA256" && $0.attributes["sha256"]?.count == 64 })
         #expect(durableEvents.last?.marker == "request_end")
         #expect(FileManager.default.fileExists(atPath: localAudio.path))
 

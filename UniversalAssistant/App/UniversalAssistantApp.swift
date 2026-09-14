@@ -39,9 +39,8 @@ enum ProductionAssistantComposition {
         systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
     ) -> AssistantViewModel {
         let context = CurrentContextStore()
-        let voiceInput: any VoiceInputControlling = voiceInputOverride ?? WhisperVoiceInputController(contextualVocabulary: {
-            await contacts.contextualVocabulary(limit: 32)
-                + languageUnderstanding.requestScopedCatalogVocabulary(limit: 24)
+        let voiceInput: any VoiceInputControlling = voiceInputOverride ?? VoiceInputController(contextualVocabulary: {
+            languageUnderstanding.requestScopedCatalogVocabulary(limit: 32)
         })
         let executor = ProductionCanonicalCapabilityExecutor(
             contacts: contacts, photos: photos, photoSemanticLoader: photoSemanticLoader, photoSemanticLabeler: photoSemanticLabeler, podcasts: podcasts, mediaOverride: mediaOverride, locationResolver: locationResolver, placeSearch: placeSearch,

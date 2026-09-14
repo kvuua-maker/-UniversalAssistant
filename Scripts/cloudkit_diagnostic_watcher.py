@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 import argparse, base64, datetime as dt, fcntl, hashlib, json, os
+import difflib
 from pathlib import Path
 import shutil, subprocess, sys, time, urllib.error, urllib.parse, urllib.request, uuid
 
@@ -161,6 +162,11 @@ def summarize(trace: dict) -> dict:
                 if value is not None:
                     return value
         return None
+    def latest_text(markers):
+        for event in reversed(events):
+            if event.get("marker") in markers and event.get("textPayload") is not None:
+                return event.get("textPayload")
+        return None
     request_id = str(trace.get("requestID", "")).lower()
     action_events = [
         event for event in events
@@ -172,6 +178,10 @@ def summarize(trace: dict) -> dict:
             event.get("textPayload") for event in events
             if event.get("marker") == "partial_transcript" and event.get("textPayload")
         ],
+        "appleFinalTranscript": latest_text(("APPLE_FINAL",)) or trace.get("finalSpeechTranscript"),
+        "stabilizedTranscript": latest_text(("STABILIZED_TRANSCRIPT",)),
+        "visibleTranscript": latest_text(("VISIBLE_TRANSCRIPT",)),
+        "submittedText": latest_text(("SUBMITTED_TEXT",)) or trace.get("finalSpeechTranscript"),
         "finalTranscript": trace.get("finalSpeechTranscript"),
         "normalizedTranscript": trace.get("normalizedTranscript"),
         "semanticEvents": [
@@ -193,6 +203,33 @@ def summarize(trace: dict) -> dict:
         "errorDomain": trace.get("errorDomain"), "errorCode": trace.get("errorCode"),
         "failureStage": trace.get("failureStage"), "terminalState": trace.get("terminalState"),
     }
+
+
+def transcript_correlation(independent: dict, production: dict) -> dict:
+    values = {
+        "realAudio": independent.get("text"),
+        "appleFinal": production.get("appleFinalTranscript"),
+        "stabilized": production.get("stabilizedTranscript"),
+        "submitted": production.get("submittedText"),
+    }
+    pairs = (("APPLE", "realAudio", "appleFinal"),
+             ("STABILIZER", "appleFinal", "stabilized"),
+             ("SUBMIT", "stabilized", "submitted"))
+    differences = {}
+    first = "NONE"
+    for stage, left_name, right_name in pairs:
+        left, right = values[left_name], values[right_name]
+        if left is None or right is None:
+            differences[stage] = {"status": "UNKNOWN", "left": left, "right": right}
+            if first == "NONE":
+                first = "MISSING_EVIDENCE"
+            continue
+        delta = list(difflib.ndiff(str(left).split(), str(right).split()))
+        changed = [item for item in delta if item[:1] in ("+", "-")]
+        differences[stage] = {"status": "MATCH" if not changed else "DIFF", "tokens": changed}
+        if changed and first == "NONE":
+            first = stage
+    return {"values": values, "differences": differences, "firstDivergence": first}
 
 
 def date_epoch(value) -> float | None:
@@ -244,6 +281,7 @@ def process(record, args) -> tuple[str, dict]:
     )
     ended = date_epoch(trace.get("endedAt"))
     latency = started - ended if ended is not None else None
+    production = summarize(trace)
     analysis = {
         "schema": 1, "requestID": request_id, "recordName": record.get("recordName"),
         "physicalBuild": field(record, "physicalBuild"), "deviceModel": field(record, "deviceModel"),
@@ -253,7 +291,8 @@ def process(record, args) -> tuple[str, dict]:
         "deliveryLatencyStatus": "DELIVERY_LATENCY_FAIL" if latency is not None and latency > 5 else "PASS",
         "audio": {"byteSize": byte_count, "sha256": audio_hash,
                   "durationMilliseconds": field(record, "durationMilliseconds")},
-        "independentTranscription": independent, "productionTrace": summarize(trace),
+        "independentTranscription": independent, "productionTrace": production,
+        "audioTextSubmittedCorrelation": transcript_correlation(independent, production),
         "requestIDCorrelation": "PASS",
     }
     atomic_json(temporary / "analysis.json", analysis)

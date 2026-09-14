@@ -52,7 +52,7 @@ struct AssistantSettingsView: View {
                         LocalVoiceDiagnosticReport.shared.detailedDiagnosticsEnabled = value
                     }
                     .accessibilityIdentifier("settings.detailed-diagnostics")
-                Text("Зберігаються partial/final/normalized transcript і bounded audio команди з того самого Speech stream. Audio поки залишається локально.")
+                Text("Зберігаються partial/final/normalized transcript і bounded audio команди з того самого Apple Speech stream: спочатку локально, потім у CloudKit до підтвердженого read-back.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 Button("Оновити статус") { refreshDiagnostics() }

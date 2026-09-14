@@ -9,6 +9,7 @@ import UIKit
 final class AssistantViewModel {
     private static let voiceLogger = Logger(subsystem: "com.universalassistant.app", category: "VoicePipeline")
     var input = ""
+    private(set) var visibleVoiceTranscript = ""
     var isListening = false
     var voiceInputEnabled = true
     private(set) var statusText = AppText.value("ready")
@@ -55,6 +56,8 @@ final class AssistantViewModel {
     private var voiceStartTask: Task<Void, Never>?
     private var voiceDraftSourceText: String?
     private var pendingVoiceRecognitionEvidence: VoiceRecognitionEvidence?
+    private var voiceAutoSubmitArmed = false
+    private var voiceSubmitPerformed = false
     private var pendingConfirmation: (command: StructuredCommand, summary: ResultSummary, generation: UInt64)?
     private var pendingCanonicalSelection: (command: StructuredCommand, summary: ResultSummary, generation: UInt64, role: String, choices: [String])?
     var voiceInputEngineIdentifier: String { voiceInput.engineIdentifier }
@@ -73,7 +76,7 @@ final class AssistantViewModel {
         feedbackStore: UserFeedbackStore = .shared,
         compactResultDuration: Duration = .seconds(2),
         presentationPreferenceStore: PresentationPreferenceStore = PresentationPreferenceStore(),
-        voiceInput: any VoiceInputControlling = WhisperVoiceInputController(),
+        voiceInput: any VoiceInputControlling = VoiceInputController(),
         notificationEnable: @escaping @MainActor () async -> ProactiveNotificationEnableResult = { await ProductionNotificationRegistration.enable() },
         quickLaunchStore: QuickLaunchRequestStore = QuickLaunchRequestStore(),
         systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
@@ -129,11 +132,12 @@ final class AssistantViewModel {
 
     func applyVoiceState(_ state: VoiceInputState) {
         isListening = state == .listening
-        shouldOfferSettings = state == .denied
+        shouldOfferSettings = state == .denied || state == .speechDenied
         statusText = switch state {
                 case .listening: AppText.value("listening")
                 case .transcribing: AppText.value("processing")
                 case .denied: AppText.value("microphone_denied")
+                case .speechDenied: AppText.value("speech_unavailable")
                 case .unavailable: AppText.value("speech_unavailable")
                 case .failed: AppText.value("listening_failed")
                 default: AppText.value("ready")
@@ -144,24 +148,65 @@ final class AssistantViewModel {
         switch event {
         case let .state(state):
             LocalVoiceDiagnosticReport.shared.record("state_delivered_to_view_model", "state=\(String(describing: state))")
-            if state == .requestingPermission { voiceDraftSourceText = nil }
+            if state == .requestingPermission {
+                voiceDraftSourceText = nil
+                pendingVoiceRecognitionEvidence = nil
+                voiceAutoSubmitArmed = true
+                voiceSubmitPerformed = false
+                visibleVoiceTranscript = ""
+            }
+            if state == .idle { voiceAutoSubmitArmed = false }
             applyVoiceState(state)
-            if state == .idle, !weatherExecutionInFlight, !eventKitExecutionInFlight, !capabilityExecutionInFlight, let session = LocalVoiceDiagnosticReport.shared.completedSession() {
+            if [.denied, .speechDenied, .unavailable, .failed].contains(state) {
+                voiceAutoSubmitArmed = false
+                LocalVoiceDiagnosticReport.shared.recordTerminal(
+                    [.denied, .speechDenied].contains(state) ? .permissionRequired : .error,
+                    details: "stage=voice_input state=\(String(describing: state))"
+                )
+            }
+            if [.idle, .denied, .speechDenied, .unavailable, .failed].contains(state),
+               !weatherExecutionInFlight, !eventKitExecutionInFlight, !capabilityExecutionInFlight,
+               let session = LocalVoiceDiagnosticReport.shared.completedSession() {
                 Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
             }
         case let .recognitionEvidence(evidence):
             pendingVoiceRecognitionEvidence = evidence
         case let .transcript(transcript, isFinal):
+            guard voiceAutoSubmitArmed, !voiceSubmitPerformed else {
+                LocalVoiceDiagnosticReport.shared.record("stale_voice_transcript_rejected", "final=\(isFinal)")
+                return
+            }
             let visibleTranscript = VoiceTranscriptStabilizer.normalizedForDisplay(transcript)
             input = visibleTranscript
+            visibleVoiceTranscript = visibleTranscript
+            LocalVoiceDiagnosticReport.shared.recordVoiceText("VISIBLE_TRANSCRIPT", text: visibleTranscript, details: "final=\(isFinal)")
             LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_view_model", "length=\(transcript.count) final=\(isFinal)")
             Self.voiceLogger.notice("transcript_delivered_to_view_model length=\(transcript.count, privacy: .public) final=\(isFinal, privacy: .public)")
             if isFinal, !visibleTranscript.isEmpty {
                 voiceDraftSourceText = visibleTranscript
-                Self.voiceLogger.notice("voice_transcript_ready_for_editing")
-                LocalVoiceDiagnosticReport.shared.record("voice_transcript_ready_for_editing", "length=\(transcript.count)")
+                voiceSubmitPerformed = true
+                voiceAutoSubmitArmed = false
+                Self.voiceLogger.notice("voice_transcript_ready_for_auto_submit")
+                LocalVoiceDiagnosticReport.shared.recordVoiceText("AUTO_SUBMIT_PRE", text: visibleTranscript)
+                LocalVoiceDiagnosticReport.shared.recordVoiceText("SUBMITTED_TEXT", text: visibleTranscript)
+                LocalVoiceDiagnosticReport.shared.record("REQUEST_ID", "request_id=\(LocalVoiceDiagnosticReport.shared.currentRequestIdentifier.uuidString.lowercased())")
+                submit()
             }
         }
+    }
+
+    /// Called only by the editable composer. Manual input owns the field and
+    /// invalidates a pending voice submit so a late callback cannot overwrite it.
+    func updateComposerTextFromUser(_ value: String) {
+        if voiceAutoSubmitArmed {
+            voiceAutoSubmitArmed = false
+            voiceSubmitPerformed = true
+            voiceStartTask?.cancel()
+            voiceStartTask = nil
+            voiceInput.stop(reason: .externalRequest)
+            LocalVoiceDiagnosticReport.shared.record("voice_auto_submit_cancelled", "reason=manual_edit")
+        }
+        input = value
     }
 
     func voiceDiagnosticReport() -> String {
@@ -208,6 +253,7 @@ final class AssistantViewModel {
     }
 
     func submit() {
+        let isVoiceSubmission = voiceDraftSourceText != nil
         let voiceEvidence = voiceDraftSourceText == input ? pendingVoiceRecognitionEvidence : nil
         pendingVoiceRecognitionEvidence = nil
         if voiceDraftSourceText != nil {
@@ -221,6 +267,9 @@ final class AssistantViewModel {
             deliverCompletedDiagnosticSession()
         }
         LocalVoiceDiagnosticReport.shared.beginHomeRequest(generation: requestGeneration)
+        if isVoiceSubmission {
+            LocalVoiceDiagnosticReport.shared.record("AUTO_SUBMIT_POST", "status=accepted")
+        }
         capabilityExecutionTask?.cancel()
         ocrExecutionTask?.cancel()
         weatherExecutionTask?.cancel()
