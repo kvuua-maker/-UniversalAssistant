@@ -10,12 +10,14 @@ private final class StubWhisperRecorder: WhisperAudioRecording {
     var currentTime: TimeInterval = 1.25
     var averagePower: Float = -20
     var returnsArtifact = true
+    var startError: Error?
     private(set) var startCount = 0
     private(set) var cancelCount = 0
     private var url: URL?
 
     func start(at url: URL) throws {
         startCount += 1
+        if let startError { throw startError }
         self.url = url
         isRecording = true
         try Data(repeating: 0, count: 64).write(to: url, options: .atomic)
@@ -141,7 +143,7 @@ struct WhisperOfflineVoiceInputTests {
         #expect(!WhisperOfflineVoiceConfiguration.requiresNetwork)
     }
 
-    @Test func recorderSettingsArePCM16At16kMono() {
+    @Test func whisperWaveSettingsArePCM16At16kMono() {
         let settings = AppleWhisperAudioRecorder.recordingSettings
         #expect(settings[AVFormatIDKey] as? Int == Int(kAudioFormatLinearPCM))
         #expect(settings[AVSampleRateKey] as? Double == 16_000)
@@ -149,6 +151,59 @@ struct WhisperOfflineVoiceInputTests {
         #expect(settings[AVLinearPCMBitDepthKey] as? Int == 16)
         #expect(settings[AVLinearPCMIsFloatKey] as? Bool == false)
         #expect(settings[AVLinearPCMIsBigEndianKey] as? Bool == false)
+    }
+
+    @Test func nativeCaptureUsesNegotiatedHardwareSampleRate() {
+        let settings = AppleWhisperAudioRecorder.nativeCaptureSettings(sampleRate: 48_000)
+        #expect(settings[AVFormatIDKey] as? Int == Int(kAudioFormatLinearPCM))
+        #expect(settings[AVSampleRateKey] as? Double == 48_000)
+        #expect(settings[AVNumberOfChannelsKey] as? Int == 1)
+        #expect(settings[AVLinearPCMBitDepthKey] as? Int == 16)
+    }
+
+    @Test func nativeAudioIsConvertedToWhisperWave() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("whisper-conversion-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let sourceURL = directory.appendingPathComponent("native.caf")
+        let outputURL = directory.appendingPathComponent("whisper.wav")
+        let inputFormat = try #require(AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: 48_000,
+            channels: 1,
+            interleaved: false
+        ))
+        let frameCount: AVAudioFrameCount = 48_000
+        let buffer = try #require(AVAudioPCMBuffer(pcmFormat: inputFormat, frameCapacity: frameCount))
+        buffer.frameLength = frameCount
+        let samples = try #require(buffer.floatChannelData?.pointee)
+        for index in 0..<Int(frameCount) {
+            samples[index] = 0.1 * sin(2 * .pi * 440 * Float(index) / 48_000)
+        }
+        do {
+            try autoreleasepool {
+                let sourceFile = try AVAudioFile(forWriting: sourceURL, settings: inputFormat.settings)
+                try sourceFile.write(from: buffer)
+            }
+        } catch {
+            Issue.record("Не вдалося створити native fixture: \(error)")
+            return
+        }
+
+        do {
+            try WhisperWaveConverter.convert(nativeAudioAt: sourceURL, toWhisperWaveAt: outputURL)
+        } catch {
+            let value = error as NSError
+            Issue.record("Не вдалася native→Whisper конвертація: domain=\(value.domain) code=\(value.code) description=\(value.localizedDescription)")
+            return
+        }
+
+        let outputFile = try AVAudioFile(forReading: outputURL)
+        #expect(abs(outputFile.fileFormat.sampleRate - 16_000) < 0.5)
+        #expect(outputFile.fileFormat.channelCount == 1)
+        #expect(outputFile.length > 15_000)
+        #expect(try WhisperWaveFile.samples(from: outputURL).count > 15_000)
     }
 
     @Test func languageIsUkrainian() {
@@ -243,6 +298,51 @@ struct WhisperOfflineVoiceInputTests {
         #expect(recorder.startCount == 2)
         #expect(recorder.cancelCount >= 2)
         controller.stop(reason: .externalRequest)
+    }
+
+    @Test func voiceStartFailurePreservesExactStage() async {
+        let recorder = StubWhisperRecorder()
+        recorder.startError = WhisperVoiceStartFailure(stage: .recordFailed)
+        let controller = makeController(
+            recorder: recorder,
+            transcriber: StubWhisperTranscriber(outputs: [])
+        )
+        await controller.start(locale: Locale(identifier: "uk-UA"))
+        #expect(controller.state == .failed)
+        #expect(recorder.startCount == 1)
+        #expect(recorder.cancelCount >= 2)
+    }
+
+    @Test func repeatedRecordingCyclesRemainSerialized() async {
+        let recorder = StubWhisperRecorder()
+        let outputs = (0..<10).map { "Команда \($0)" }
+        let transcriber = StubWhisperTranscriber(outputs: outputs)
+        let controller = makeController(recorder: recorder, transcriber: transcriber)
+        for _ in 0..<10 {
+            await controller.start(locale: Locale(identifier: "uk-UA"))
+            #expect(controller.state == .listening)
+            controller.stop(reason: .userPressedStop)
+            await waitUntil { controller.state == .idle }
+        }
+        #expect(recorder.startCount == 10)
+        #expect(await transcriber.calls == 10)
+    }
+
+    @Test func interruptionAllowsCleanSecondRecording() async {
+        let recorder = StubWhisperRecorder()
+        let controller = makeController(
+            recorder: recorder,
+            transcriber: StubWhisperTranscriber(outputs: ["Після переривання"])
+        )
+        await controller.start(locale: Locale(identifier: "uk-UA"))
+        controller.handleInterruption()
+        #expect(controller.state == .failed)
+        #expect(!recorder.isRecording)
+        await controller.start(locale: Locale(identifier: "uk-UA"))
+        #expect(controller.state == .listening)
+        controller.stop(reason: .userPressedStop)
+        await waitUntil { controller.state == .idle }
+        #expect(controller.transcript == "Після переривання")
     }
 
     @Test func cancelledGenerationCannotPublishStaleTranscript() async {

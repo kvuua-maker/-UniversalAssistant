@@ -37,6 +37,35 @@ enum WhisperOfflineVoiceError: Error, Equatable {
     case cancelled
 }
 
+enum WhisperVoiceStartStage: String, Equatable, Sendable {
+    case micPermissionDenied = "MIC_PERMISSION_DENIED"
+    case audioSessionConfigFailed = "AUDIO_SESSION_CONFIG_FAILED"
+    case audioSessionActivateFailed = "AUDIO_SESSION_ACTIVATE_FAILED"
+    case noInput = "NO_INPUT"
+    case fileCreateFailed = "FILE_CREATE_FAILED"
+    case recorderInitFailed = "RECORDER_INIT_FAILED"
+    case prepareFailed = "PREPARE_FAILED"
+    case recordFailed = "RECORD_FAILED"
+    case audioRouteConflict = "AUDIO_ROUTE_CONFLICT"
+}
+
+struct WhisperVoiceStartFailure: Error, Equatable {
+    let stage: WhisperVoiceStartStage
+    let errorDomain: String
+    let errorCode: Int
+
+    init(stage: WhisperVoiceStartStage, underlying: Error? = nil) {
+        self.stage = stage
+        let error = underlying as NSError?
+        errorDomain = error?.domain ?? "AVAudioRecorder"
+        errorCode = error?.code ?? 0
+    }
+
+    var diagnosticDetails: String {
+        "stage=\(stage.rawValue) error_domain=\(errorDomain) error_code=\(errorCode) status=error"
+    }
+}
+
 struct WhisperRecordingArtifact: Sendable {
     let url: URL
     let duration: TimeInterval
@@ -57,6 +86,7 @@ protocol WhisperAudioRecording: AnyObject {
 final class AppleWhisperAudioRecorder: NSObject, WhisperAudioRecording {
     private var recorder: AVAudioRecorder?
     private var destination: URL?
+    private var nativeDestination: URL?
 
     var isRecording: Bool { recorder?.isRecording == true }
     var currentTime: TimeInterval { recorder?.currentTime ?? 0 }
@@ -74,42 +104,115 @@ final class AppleWhisperAudioRecorder: NSObject, WhisperAudioRecording {
         ]
     }
 
+    static func nativeCaptureSettings(sampleRate: Double) -> [String: Any] {
+        [
+            AVFormatIDKey: Int(kAudioFormatLinearPCM),
+            AVSampleRateKey: sampleRate,
+            AVNumberOfChannelsKey: 1,
+            AVLinearPCMBitDepthKey: WhisperOfflineVoiceConfiguration.bitDepth,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsNonInterleaved: false
+        ]
+    }
+
     func start(at url: URL) throws {
         cancel()
-        guard AVAudioSession.sharedInstance().isInputAvailable else {
-            throw WhisperOfflineVoiceError.microphoneUnavailable
-        }
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.record, mode: .measurement, options: [.duckOthers, .allowBluetoothHFP])
-        try session.setPreferredSampleRate(WhisperOfflineVoiceConfiguration.sampleRate)
-        try session.setPreferredIOBufferDuration(0.02)
-        try session.setActive(true, options: .notifyOthersOnDeactivation)
+        do {
+            try session.setCategory(
+                .playAndRecord,
+                mode: .measurement,
+                options: [.defaultToSpeaker, .allowBluetoothHFP]
+            )
+            try session.setPreferredIOBufferDuration(0.02)
+        } catch {
+            throw WhisperVoiceStartFailure(stage: .audioSessionConfigFailed, underlying: error)
+        }
+        do {
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+        } catch {
+            throw WhisperVoiceStartFailure(stage: .audioSessionActivateFailed, underlying: error)
+        }
+        guard session.isInputAvailable, session.inputNumberOfChannels > 0 else {
+            throw WhisperVoiceStartFailure(stage: .noInput)
+        }
+        let nativeSampleRate = session.sampleRate
+        guard nativeSampleRate > 0 else {
+            throw WhisperVoiceStartFailure(stage: .audioRouteConflict)
+        }
+        do {
+            try FileManager.default.createDirectory(
+                at: url.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+        } catch {
+            throw WhisperVoiceStartFailure(stage: .fileCreateFailed, underlying: error)
+        }
 
+        let nativeURL = url.deletingPathExtension()
+            .appendingPathExtension("native.caf")
+        try? FileManager.default.removeItem(at: nativeURL)
         try? FileManager.default.removeItem(at: url)
-        let recorder = try AVAudioRecorder(url: url, settings: Self.recordingSettings)
+        let recorder: AVAudioRecorder
+        do {
+            recorder = try AVAudioRecorder(
+                url: nativeURL,
+                settings: Self.nativeCaptureSettings(sampleRate: nativeSampleRate)
+            )
+        } catch {
+            throw WhisperVoiceStartFailure(stage: .recorderInitFailed, underlying: error)
+        }
         recorder.isMeteringEnabled = true
-        guard recorder.prepareToRecord(), recorder.record() else {
-            throw WhisperOfflineVoiceError.recordingFailed
+        guard recorder.prepareToRecord() else {
+            throw WhisperVoiceStartFailure(stage: .prepareFailed)
         }
         self.recorder = recorder
         destination = url
+        nativeDestination = nativeURL
+        guard recorder.record(), recorder.isRecording else {
+            cancel()
+            throw WhisperVoiceStartFailure(stage: .recordFailed)
+        }
+        let route = session.currentRoute.inputs.first?.portType.rawValue ?? "none"
         LocalVoiceDiagnosticReport.shared.record(
             "whisper_audio_recording_started",
-            "sample_rate=16000 channels=1 input=pcm16"
+            "sample_rate=\(Int(nativeSampleRate.rounded())) channels=1 input=pcm16 route=\(route)"
         )
     }
 
     func updateMeters() { recorder?.updateMeters() }
 
     func finish() -> WhisperRecordingArtifact? {
-        guard let recorder, let destination else { return nil }
+        guard let recorder, let destination, let nativeDestination else { return nil }
         let duration = recorder.currentTime
         recorder.stop()
         self.recorder = nil
         self.destination = nil
+        self.nativeDestination = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        guard duration > 0,
-              (try? destination.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) ?? 0 > 44 else {
+        guard duration > 0 else {
+            try? FileManager.default.removeItem(at: nativeDestination)
+            try? FileManager.default.removeItem(at: destination)
+            return nil
+        }
+        do {
+            try WhisperWaveConverter.convert(
+                nativeAudioAt: nativeDestination,
+                toWhisperWaveAt: destination
+            )
+        } catch {
+            let failure = error as NSError
+            LocalVoiceDiagnosticReport.shared.record(
+                "whisper_audio_conversion_failed",
+                "stage=AUDIO_CONVERSION_FAILED error_domain=\(failure.domain) error_code=\(failure.code) status=error"
+            )
+            try? FileManager.default.removeItem(at: nativeDestination)
+            try? FileManager.default.removeItem(at: destination)
+            return nil
+        }
+        try? FileManager.default.removeItem(at: nativeDestination)
+        guard (try? destination.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) ?? 0 > 44 else {
             try? FileManager.default.removeItem(at: destination)
             return nil
         }
@@ -120,8 +223,157 @@ final class AppleWhisperAudioRecorder: NSObject, WhisperAudioRecording {
         recorder?.stop()
         recorder = nil
         if let destination { try? FileManager.default.removeItem(at: destination) }
+        if let nativeDestination { try? FileManager.default.removeItem(at: nativeDestination) }
         destination = nil
+        nativeDestination = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+}
+
+enum WhisperWaveConverter {
+    private final class InputProvider: @unchecked Sendable {
+        private let lock = NSLock()
+        private let file: AVAudioFile
+        private let format: AVAudioFormat
+        private var reachedEnd = false
+        private var storedError: Error?
+
+        init(file: AVAudioFile, format: AVAudioFormat) {
+            self.file = file
+            self.format = format
+        }
+
+        var error: Error? { lock.withLock { storedError } }
+        var isAtEnd: Bool { lock.withLock { reachedEnd } }
+
+        func next(
+            requestedPackets: AVAudioPacketCount,
+            status: UnsafeMutablePointer<AVAudioConverterInputStatus>
+        ) -> AVAudioBuffer? {
+            lock.withLock {
+                if reachedEnd {
+                    status.pointee = .endOfStream
+                    return nil
+                }
+                let remainingFrames = file.length - file.framePosition
+                guard remainingFrames > 0 else {
+                    reachedEnd = true
+                    status.pointee = .endOfStream
+                    return nil
+                }
+                let capacity = AVAudioFrameCount(min(
+                    AVAudioFramePosition(max(1, requestedPackets)),
+                    remainingFrames
+                ))
+                guard let inputBuffer = AVAudioPCMBuffer(
+                    pcmFormat: format,
+                    frameCapacity: capacity
+                ) else {
+                    status.pointee = .noDataNow
+                    storedError = WhisperOfflineVoiceError.invalidWaveFormat
+                    return nil
+                }
+                do {
+                    try file.read(into: inputBuffer)
+                } catch {
+                    status.pointee = .noDataNow
+                    storedError = error
+                    return nil
+                }
+                guard inputBuffer.frameLength > 0 else {
+                    reachedEnd = true
+                    status.pointee = .endOfStream
+                    return nil
+                }
+                status.pointee = .haveData
+                return inputBuffer
+            }
+        }
+    }
+
+    static func convert(nativeAudioAt sourceURL: URL, toWhisperWaveAt destinationURL: URL) throws {
+        let sourceFile: AVAudioFile
+        do {
+            sourceFile = try AVAudioFile(forReading: sourceURL)
+        } catch {
+            throw stageError(1, underlying: error)
+        }
+        let sourceFormat = sourceFile.processingFormat
+        guard sourceFile.length > 0,
+              sourceFormat.sampleRate > 0,
+              sourceFormat.channelCount > 0,
+              let outputFormat = AVAudioFormat(
+                  commonFormat: .pcmFormatInt16,
+                  sampleRate: WhisperOfflineVoiceConfiguration.sampleRate,
+                  channels: WhisperOfflineVoiceConfiguration.channelCount,
+                  interleaved: true
+              ),
+              let converter = AVAudioConverter(from: sourceFormat, to: outputFormat) else {
+            throw WhisperOfflineVoiceError.invalidWaveFormat
+        }
+        try? FileManager.default.removeItem(at: destinationURL)
+        let outputFile: AVAudioFile
+        do {
+            outputFile = try AVAudioFile(
+                forWriting: destinationURL,
+                settings: [
+                    AVFormatIDKey: Int(kAudioFormatLinearPCM),
+                    AVSampleRateKey: WhisperOfflineVoiceConfiguration.sampleRate,
+                    AVNumberOfChannelsKey: Int(WhisperOfflineVoiceConfiguration.channelCount),
+                    AVLinearPCMBitDepthKey: WhisperOfflineVoiceConfiguration.bitDepth,
+                    AVLinearPCMIsBigEndianKey: false,
+                    AVLinearPCMIsFloatKey: false,
+                    AVLinearPCMIsNonInterleaved: false
+                ],
+                commonFormat: .pcmFormatInt16,
+                interleaved: true
+            )
+        } catch {
+            throw stageError(2, underlying: error)
+        }
+        let outputCapacity: AVAudioFrameCount = 4_096
+        let inputProvider = InputProvider(file: sourceFile, format: sourceFormat)
+
+        while true {
+            guard let outputBuffer = AVAudioPCMBuffer(
+                pcmFormat: outputFormat,
+                frameCapacity: outputCapacity
+            ) else { throw WhisperOfflineVoiceError.invalidWaveFormat }
+            var conversionError: NSError?
+            let status = converter.convert(to: outputBuffer, error: &conversionError) { requestedPackets, inputStatus in
+                inputProvider.next(requestedPackets: requestedPackets, status: inputStatus)
+            }
+            if let readError = inputProvider.error { throw stageError(3, underlying: readError) }
+            if let conversionError { throw stageError(4, underlying: conversionError) }
+            if outputBuffer.frameLength > 0 {
+                do { try outputFile.write(from: outputBuffer) }
+                catch { throw stageError(5, underlying: error) }
+            }
+            switch status {
+            case .haveData:
+                continue
+            case .endOfStream:
+                return
+            case .inputRanDry:
+                if inputProvider.isAtEnd { return }
+            case .error:
+                throw WhisperOfflineVoiceError.invalidWaveFormat
+            @unknown default:
+                throw WhisperOfflineVoiceError.invalidWaveFormat
+            }
+        }
+    }
+
+    private static func stageError(_ stage: Int, underlying: Error) -> NSError {
+        let value = underlying as NSError
+        return NSError(
+            domain: "WhisperWaveConverter",
+            code: stage,
+            userInfo: [
+                NSUnderlyingErrorKey: value,
+                NSLocalizedDescriptionKey: "stage=\(stage) underlying_domain=\(value.domain) underlying_code=\(value.code)"
+            ]
+        )
     }
 }
 
@@ -373,11 +625,18 @@ final class WhisperVoiceInputController: VoiceInputControlling {
             "voice_engine_selected",
             "provider=whisper language=uk mechanism=offline"
         )
+        LocalVoiceDiagnosticReport.shared.record(
+            "start_listening_invoked",
+            "provider=whisper mechanism=offline"
+        )
         setState(.requestingPermission)
         guard await authorization() else {
             guard activeSessionID == sessionID else { return }
             activeSessionID = nil
+            let failure = WhisperVoiceStartFailure(stage: .micPermissionDenied)
+            LocalVoiceDiagnosticReport.shared.record("whisper_recording_failed", failure.diagnosticDetails)
             setState(.denied)
+            finishFailedDiagnosticRequest(details: failure.diagnosticDetails)
             return
         }
         guard activeSessionID == sessionID else { return }
@@ -400,11 +659,14 @@ final class WhisperVoiceInputController: VoiceInputControlling {
             guard activeSessionID == sessionID else { return }
             activeSessionID = nil
             recorder.cancel()
+            let failure = error as? WhisperVoiceStartFailure
+                ?? WhisperVoiceStartFailure(stage: .recorderInitFailed, underlying: error)
             LocalVoiceDiagnosticReport.shared.record(
                 "whisper_recording_failed",
-                "error_type=\(String(describing: type(of: error)))"
+                failure.diagnosticDetails
             )
             setState(.failed)
+            finishFailedDiagnosticRequest(details: failure.diagnosticDetails)
         }
     }
 
@@ -542,7 +804,7 @@ final class WhisperVoiceInputController: VoiceInputControlling {
         }
     }
 
-    private func handleInterruption() {
+    func handleInterruption() {
         LocalVoiceDiagnosticReport.shared.record("audio_interruption", "state=began provider=whisper")
         cancelCurrentSession(reason: .audioInterruption)
         setState(.failed)
@@ -565,6 +827,12 @@ final class WhisperVoiceInputController: VoiceInputControlling {
         state = newState
         LocalVoiceDiagnosticReport.shared.record("state_transition", "state=\(String(describing: newState))")
         eventHandler?(.state(newState))
+    }
+
+    private func finishFailedDiagnosticRequest(details: String) {
+        LocalVoiceDiagnosticReport.shared.recordTerminal(.error, details: details)
+        guard let session = LocalVoiceDiagnosticReport.shared.completedSession() else { return }
+        Task { await PhysicalDiagnosticDelivery.shared.enqueue(session) }
     }
 
     private nonisolated static func microphoneAuthorizationGranted() async -> Bool {
