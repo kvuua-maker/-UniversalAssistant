@@ -217,7 +217,7 @@ struct Build34PhysicalSystemicSemanticTests {
         #expect((await engine.search("космічний телескоп", limit: 3)).isEmpty)
     }
 
-    @Test @MainActor func typedCommerceAndRideBoundariesNeverBecomeGenericGoogleErrors() async throws {
+    @Test @MainActor func typedCommerceAndRideBoundariesFollowTheSingleCanonicalPolicy() async throws {
         let requests: [(String, Set<CommandIntent>, Bool)] = [
             ("Підбери жіночі туристичні черевики 39 розміру до 4800 гривень", [.productSearch, .fashionDiscovery], true),
             ("Збери кошик для овочевого рагу з доставкою", [.groceryBasket], true),
@@ -227,28 +227,16 @@ struct Build34PhysicalSystemicSemanticTests {
             let command = parser.parse(request)
             #expect(expected.contains(command.intent), "Wrong typed provider family for \(request): \(command.intent)")
             if request.contains("39") { #expect(command.constraints.size == "39") }
-
-            let model = ProductionAssistantComposition.makeModel(
-                personalSearchSources: [], compactResultDuration: .seconds(60)
-            )
-            model.input = request
-            model.submit()
-            for _ in 0..<100 {
-                if case .deterministic = model.resultState { break }
-                if case .failure = model.resultState { break }
-                try await Task.sleep(for: .milliseconds(10))
-            }
-            #expect({ if case .webHandoff = model.resultState { return false }; return true }())
-            if hasOfficialPublicRoute {
-                guard case let .deterministic(result) = model.resultState else {
-                    Issue.record("Official provider chooser was not reached for \(request)")
-                    continue
-                }
-                #expect(!result.actions.isEmpty)
-                #expect(result.actions.allSatisfy { $0.destination?.host?.contains("google") != true })
+            let decision = CanonicalRoutingPolicy().decide(command)
+            if request.contains("доставкою") {
+                #expect(decision.providerID == "market.prom")
+                #expect(decision.allowsMultipleResults == false)
+            } else if hasOfficialPublicRoute {
+                #expect(decision.lane == .localDiscovery)
+                #expect(decision.providerID == "google.maps.url")
+                #expect(decision.allowsMultipleResults == false)
             } else {
-                #expect({ if case .failure = model.resultState { return true }; return false }())
-                #expect(model.statusText.contains("провайдер"))
+                #expect(decision.lane == .providerBoundary)
             }
         }
     }
@@ -282,16 +270,14 @@ struct Build34PhysicalSystemicSemanticTests {
             address: "Центр міста", officialWebsite: URL(string: "https://rental.example/reserve"),
             source: "MapKit", timestamp: .now, verification: .providerReturned
         )
-        let makeModel = {
-            ProductionAssistantComposition.makeModel(
-                locationResolver: .init(geocoder: Build34ServiceGeocoderBoundary(sample)),
-                placeSearch: .init(providers: [Build34ServicePlaceBoundary(values: [place])]),
-                currentLocation: Build34ServiceLocationBoundary(location),
-                personalSearchSources: [], compactResultDuration: .seconds(60)
-            )
-        }
-
-        let direct = makeModel()
+        var directDestinations: [URL] = []
+        let direct = ProductionAssistantComposition.makeModel(
+            locationResolver: .init(geocoder: Build34ServiceGeocoderBoundary(sample)),
+            placeSearch: .init(providers: [Build34ServicePlaceBoundary(values: [place])]),
+            currentLocation: Build34ServiceLocationBoundary(location),
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            systemHandoffOpen: { directDestinations.append($0) }
+        )
         let directText = "Знайди прокат машини у Львові на післязавтра"
         let document = LanguageUnderstandingBlock.document(directText)
         let tokenForms = document.tokens.reduce(into: Set<String>()) { values, token in
@@ -315,17 +301,24 @@ struct Build34PhysicalSystemicSemanticTests {
         direct.input = directText
         direct.submit()
         for _ in 0..<100 {
-            if case .deterministic = direct.resultState { break }
+            if !directDestinations.isEmpty { break }
             try await Task.sleep(for: .milliseconds(10))
         }
-        guard case let .deterministic(result) = direct.resultState else {
+        guard let directDestination = directDestinations.first else {
             Issue.record("Explicit car rental did not reach Release boundary; command=\(directCommand); state=\(direct.resultState); status=\(direct.statusText)")
             return
         }
-        #expect(result.facts.first?.id == place.id)
-        #expect(result.actions.first?.destination?.host == "rental.example")
+        #expect(directDestination.host == "www.google.com")
+        #expect(directDestination.path == "/maps/search")
 
-        let continued = makeModel()
+        var continuedDestinations: [URL] = []
+        let continued = ProductionAssistantComposition.makeModel(
+            locationResolver: .init(geocoder: Build34ServiceGeocoderBoundary(sample)),
+            placeSearch: .init(providers: [Build34ServicePlaceBoundary(values: [place])]),
+            currentLocation: Build34ServiceLocationBoundary(location),
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            systemHandoffOpen: { continuedDestinations.append($0) }
+        )
         continued.input = "Замов автомобіль"
         continued.submit()
         for _ in 0..<100 {
@@ -334,10 +327,11 @@ struct Build34PhysicalSystemicSemanticTests {
         }
         continued.resolveActionRequiredChoice("Оренда автомобіля")
         for _ in 0..<100 {
-            if case .deterministic = continued.resultState { break }
+            if !continuedDestinations.isEmpty { break }
             try await Task.sleep(for: .milliseconds(10))
         }
-        #expect({ if case .deterministic = continued.resultState { return true }; return false }())
+        #expect(continuedDestinations.count == 1)
+        #expect(continuedDestinations.first?.host == "www.google.com")
         #expect({ if case .webHandoff = continued.resultState { return false }; return true }())
     }
 

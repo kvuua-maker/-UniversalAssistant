@@ -159,6 +159,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
                 original,
                 afterActionFamilies: [
                     ["контакт", "contact"], ["подзвон", "зателефон", "набер", "позвон", "call", "dial"],
+                    ["картк", "card"],
                     ["покаж", "знайд", "відобраз", "show", "find", "display"]
                 ],
                 stoppingAt: [" через ", " via ", " using "]
@@ -668,6 +669,9 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         let explicitContact = tokens.contains { token in
             ["контакт", "contact"].contains { token.hasPrefix($0) }
         }
+        let contactCard = tokens.contains { token in
+            ["картк", "card"].contains { token.hasPrefix($0) }
+        }
         let directContactDatum = tokens.contains { token in
             ["телефон", "email", "mail", "address", "phone"].contains {
                 token.hasPrefix($0)
@@ -681,7 +685,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         let isMailApplicationRequest = action == .open && tokens.contains { token in
             ["email", "mail", "пошт"].contains { token.hasPrefix($0) }
         }
-        return (explicitContact || directContactDatum || electronicMailDatum) && !isMailApplicationRequest
+        return (explicitContact || contactCard || directContactDatum || electronicMailDatum) && !isMailApplicationRequest
     }
 
     private func partySize(in text: String) -> Int? {

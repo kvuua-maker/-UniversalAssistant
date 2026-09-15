@@ -34,7 +34,7 @@ final class AssistantViewModel {
     private let feedbackStore: UserFeedbackStore
     private let compactResultDuration: Duration
     private let presentationPreferenceStore: PresentationPreferenceStore
-    private let systemHandoffOpen:  (URL) -> Void
+    private let systemHandoffOpenResult: @MainActor (URL) async -> Bool
     private let quickLaunchStore: QuickLaunchRequestStore
     private let notificationEnable: @MainActor () async -> ProactiveNotificationEnableResult
     private var resultDismissTask: Task<Void, Never>?
@@ -79,7 +79,8 @@ final class AssistantViewModel {
         voiceInput: any VoiceInputControlling = VoiceInputController(),
         notificationEnable: @escaping @MainActor () async -> ProactiveNotificationEnableResult = { await ProductionNotificationRegistration.enable() },
         quickLaunchStore: QuickLaunchRequestStore = QuickLaunchRequestStore(),
-        systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
+        systemHandoffOpen: (@MainActor (URL) -> Void)? = nil,
+        systemHandoffOpenResult: (@MainActor (URL) async -> Bool)? = nil
     ) {
         self.commandEngine = commandEngine
         self.interactionEngine = interactionEngine
@@ -98,7 +99,22 @@ final class AssistantViewModel {
         self.voiceInput = voiceInput
         self.notificationEnable = notificationEnable
         self.quickLaunchStore = quickLaunchStore
-        self.systemHandoffOpen = systemHandoffOpen
+        if let systemHandoffOpenResult {
+            self.systemHandoffOpenResult = systemHandoffOpenResult
+        } else if let systemHandoffOpen {
+            // Test and host-app compatibility boundary: injected openers are
+            // responsible for accepting the URL they capture.
+            self.systemHandoffOpenResult = { destination in
+                systemHandoffOpen(destination)
+                return true
+            }
+        } else {
+            // Production acceptance is the result reported by iOS, not the
+            // mere construction of a URL.
+            self.systemHandoffOpenResult = { destination in
+                await UIApplication.shared.open(destination)
+            }
+        }
         voiceInput.setEventHandler { [weak self] event in
             self?.handleVoiceEvent(event)
         }
@@ -348,8 +364,17 @@ final class AssistantViewModel {
         )
         LocalVoiceDiagnosticReport.shared.record("candidate_capabilities", "count=1 capability=\(command.intent.rawValue)")
         LocalVoiceDiagnosticReport.shared.record("selected_capability", "capability=\(command.intent.rawValue)")
+        let routingDecision = CanonicalRoutingPolicy().decide(command)
+        LocalVoiceDiagnosticReport.shared.record(
+            "routing_policy_decision",
+            "lane=\(routingDecision.lane.rawValue) provider=\(routingDecision.providerID ?? "none") " +
+                "reason=\(routingDecision.reason) multiple=\(routingDecision.allowsMultipleResults)"
+        )
         let genericWeb = command.intent == .webSearch
-        LocalVoiceDiagnosticReport.shared.record("system_first_decision", "selected=\(!genericWeb) capability=\(command.intent.rawValue)")
+        LocalVoiceDiagnosticReport.shared.record(
+            "system_first_decision",
+            "selected=\(routingDecision.lane == .appleSystem) capability=\(command.intent.rawValue)"
+        )
         LocalVoiceDiagnosticReport.shared.record("generic_web_selected", "selected=\(genericWeb) reason=\(genericWeb ? "structured_general_or_web_intent" : "canonical_non_web_intent")")
         LocalVoiceDiagnosticReport.shared.record(
             "current_context_input",
@@ -650,16 +675,16 @@ final class AssistantViewModel {
         }.joined(separator: "|")
     }
 
-    private func openSystemHandoffObserved(_ destination: URL) {
+    private func openSystemHandoffObserved(_ destination: URL) async -> Bool {
         let scheme = destination.scheme?.lowercased()
-        let boundary = scheme == "tel" ? "CALL_URL" : nil
-        if let boundary {
-            LocalVoiceDiagnosticReport.shared.recordBoundaryPre(boundary, "scheme=tel")
-        }
-        systemHandoffOpen(destination)
-        if let boundary {
-            LocalVoiceDiagnosticReport.shared.recordBoundaryPost(boundary, "scheme=tel status=dispatched")
-        }
+        let boundary = scheme == "tel" ? "CALL_URL" : "EXACT_HANDOFF"
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre(boundary, "scheme=\(scheme ?? "unknown")")
+        let opened = await systemHandoffOpenResult(destination)
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPost(
+            boundary,
+            "scheme=\(scheme ?? "unknown") status=\(opened ? "opened" : "rejected")"
+        )
+        return opened
     }
 
     private func executeCanonicalCapability(_ command: StructuredCommand, summary: ResultSummary, requestGeneration: UInt64) {
@@ -688,9 +713,11 @@ final class AssistantViewModel {
                     resultState = .deterministic(result)
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=deterministic capability=\(command.intent.rawValue)")
                 case let .handoff(result):
-                    if result.kind == .system ||
+                    if result.kind == .system || result.kind == .navigation ||
                         (result.kind == .provider && !result.requiresExplicitUserActivation) {
-                        openSystemHandoffObserved(result.destination)
+                        guard await openSystemHandoffObserved(result.destination) else {
+                            throw CanonicalCapabilityExecutionError.unavailable("exact_handoff_rejected")
+                        }
                         resultState = .idle
                     } else {
                         resultState = .webHandoff(result)
@@ -1021,7 +1048,9 @@ final class AssistantViewModel {
                 case let .handoff(value):
                     if value.kind == .system || value.kind == .navigation ||
                         (value.kind == .provider && !value.requiresExplicitUserActivation) {
-                        openSystemHandoffObserved(value.destination)
+                        guard await openSystemHandoffObserved(value.destination) else {
+                            throw CanonicalCapabilityExecutionError.unavailable("exact_handoff_rejected")
+                        }
                         resultState = .idle
                     } else {
                         resultState = .webHandoff(value)

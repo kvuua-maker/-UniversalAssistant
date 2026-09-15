@@ -418,10 +418,13 @@ struct Build35ConsolidatedSystemicRepairTests {
         )
         let command = language.parse("Знайди прокат автомобіля в Тернополі на завтра")
         #expect(command.intent == .serviceSearch)
-        guard case let .result(result) = try await executor.execute(command) else {
-            Issue.record("Expected bounded local-service result")
+        guard case let .handoff(result) = try await executor.execute(command) else {
+            Issue.record("Expected one bounded local-service handoff")
             return
         }
-        #expect(result.facts.map { $0.id } == ["near"])
+        #expect(result.kind == .navigation)
+        #expect(result.destination.host == "www.google.com")
+        #expect(URLComponents(url: result.destination, resolvingAgainstBaseURL: false)?.queryItems?
+            .contains { $0.name == "query" && $0.value == "49.5600000,25.6000000" } == true)
     }
 }

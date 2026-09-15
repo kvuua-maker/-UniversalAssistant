@@ -1039,6 +1039,25 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             }
         }
 
+        // A terse catalogue request may legitimately omit an imperative
+        // (for example, OBJECT + canonical BRAND). Classify that typed role
+        // combination as product discovery without memorizing any command.
+        if (intent == .unknown || intent == .webSearch),
+           let brand = constraints.brand.flatMap({ catalogBrand(named: $0) }) ?? exactCatalogBrand(in: document),
+           hasPhysicalProductObject(in: document) {
+            intent = .productSearch
+            entities["brand"] = brand.displayName
+            entities["catalog_entity_id"] = brand.id
+            entities["provider_domain"] = "product_catalog"
+            entities["query"] = text
+            entities["semantic_evidence"] = "typed_product_object_and_canonical_brand"
+            constraints.brand = brand.displayName
+            constraints.hardConstraintKeys.insert("brand")
+            entities.removeValue(forKey: "clarification_options")
+            entities.removeValue(forKey: "clarification_role")
+            needsClarification = false
+        }
+
         // Availability and a provider mutation are distinct typed operations.
         // A subsequent ordinal selection may advance an already explicit
         // booking request, but it never turns a plain restaurant search into a
@@ -1401,19 +1420,41 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         let resolver = ContextScopedEntityResolver(candidates: [candidate])
         var bestSpan: Range<Int>?
         var bestScore = 0.0
-        for length in 1...min(3, document.tokens.count) {
-            for start in 0...(document.tokens.count - length) {
-                let subject = document.tokens[start..<(start + length)].map(\.surface).joined(separator: " ")
+        let markers: Set<String> = ["через", "via", "using", "у", "в", "по", "канал", "каналом"]
+        let normalized = document.tokens.map { CanonicalMorphology.comparableText($0.surface) }
+
+        // A channel introduced by a semantic marker owns the longest bounded
+        // resolved prefix after that marker. This removes every token of a
+        // split/clipped service name without consuming the recipient before it.
+        if let marker = normalized.indices.first(where: { markers.contains(normalized[$0]) }),
+           marker + 1 < document.tokens.count {
+            let maximumLength = min(3, document.tokens.count - marker - 1)
+            for length in stride(from: maximumLength, through: 1, by: -1) {
+                let span = (marker + 1)..<(marker + 1 + length)
+                let subject = document.tokens[span].map(\.surface).joined(separator: " ")
                 let evidence = resolver.resolveWithEvidence(subject)
-                guard case .resolved = evidence.resolution, evidence.bestScore > bestScore else { continue }
-                bestSpan = start..<(start + length)
-                bestScore = evidence.bestScore
+                if case .resolved = evidence.resolution {
+                    bestSpan = span
+                    bestScore = evidence.bestScore
+                    break
+                }
+            }
+        }
+
+        if bestSpan == nil {
+            for length in 1...min(3, document.tokens.count) {
+                for start in 0...(document.tokens.count - length) {
+                    let subject = document.tokens[start..<(start + length)].map(\.surface).joined(separator: " ")
+                    let evidence = resolver.resolveWithEvidence(subject)
+                    guard case .resolved = evidence.resolution, evidence.bestScore > bestScore else { continue }
+                    bestSpan = start..<(start + length)
+                    bestScore = evidence.bestScore
+                }
             }
         }
         guard let bestSpan else { return nil }
         var surfaces = document.tokens.map(\.surface)
         surfaces.removeSubrange(bestSpan)
-        let markers: Set<String> = ["через", "via", "using", "у", "в", "по", "канал", "каналом"]
         if bestSpan.lowerBound > 0, surfaces.indices.contains(bestSpan.lowerBound - 1),
            markers.contains(CanonicalMorphology.comparableText(surfaces[bestSpan.lowerBound - 1])) {
             surfaces.remove(at: bestSpan.lowerBound - 1)
@@ -1524,6 +1565,43 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         }
         guard !subjects.isEmpty else { return nil }
         return bestScopedResolution(in: subjects, candidates: candidates)
+    }
+
+    private func exactCatalogBrand(in document: LanguageUnderstandingDocument) -> CanonicalCatalogEntity? {
+        let text = " \(CanonicalMorphology.comparableText(document.originalText)) "
+        return catalogCandidates.lazy
+            .filter { $0.value.kind == .brand }
+            .first { candidate in
+                candidate.aliases.union([candidate.displayName]).contains { alias in
+                    let value = CanonicalMorphology.comparableText(alias)
+                    return !value.isEmpty && text.contains(" \(value) ")
+                }
+            }?.value
+    }
+
+    private func catalogBrand(named name: String) -> CanonicalCatalogEntity? {
+        let expected = CanonicalMorphology.comparableText(name)
+        return catalogCandidates.first { candidate in
+            candidate.value.kind == .brand &&
+                CanonicalMorphology.comparableText(candidate.displayName) == expected
+        }?.value
+    }
+
+    private func hasPhysicalProductObject(in document: LanguageUnderstandingDocument) -> Bool {
+        let roots = [
+            "товар", "продукт", "взут", "черев", "кросів", "одяг", "сумк", "рюкзак",
+            "ноутбук", "телефон", "мебл", "годин", "product", "item", "shoe", "boot",
+            "clothing", "bag", "backpack", "laptop", "phone", "furniture", "watch"
+        ]
+        let tokenMatch = document.tokens.contains { token in
+            ([token.normalized] + Array(token.morphologyForms)).contains { form in
+                roots.contains(where: form.hasPrefix)
+            }
+        }
+        if tokenMatch { return true }
+        return CanonicalMorphology.comparableText(document.originalText)
+            .split(separator: " ")
+            .contains { token in roots.contains { token.hasPrefix($0) } }
     }
 
     private func bestScopedResolution<Value: Equatable & Sendable>(

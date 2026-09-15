@@ -100,10 +100,10 @@ struct ContactsRequestLifecycleTests {
         let resumed = StructuredCommand(id: suspended.id, originalText: suspended.originalText, normalizedText: suspended.normalizedText,
                                         language: suspended.language, intent: suspended.intent, entities: entities,
                                         constraints: suspended.constraints, risk: suspended.risk, needsClarification: false)
-        guard case let .result(result) = try await executor.execute(resumed) else {
-            Issue.record("Expected selected limited contact result"); return
+        guard case let .presentation(.contactCard(identifier)) = try await executor.execute(resumed) else {
+            Issue.record("Expected selected limited contact system card"); return
         }
-        #expect(result.facts.first?.label == "Марія Коваль")
+        #expect(identifier == contact.identifier)
         #expect(await resolver.resolvedIdentifiers == [contact.identifier])
     }
 

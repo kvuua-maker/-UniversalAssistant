@@ -107,6 +107,8 @@ struct AssistantHomeView: View {
                 )
                 .contactAccessButtonCaption(.phone)
                 .padding()
+            case let .contactCard(identifier):
+                ExistingContactCardView(identifier: identifier, onComplete: model.dismissCapabilityPresentation)
             case let .translationTarget(text):
                 TranslationTargetPickerView(text: text, onSelect: model.startTranslation)
             case .photoLibrary:

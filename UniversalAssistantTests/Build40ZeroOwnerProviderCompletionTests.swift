@@ -106,32 +106,32 @@ struct Build40ZeroOwnerProviderCompletionTests {
         #expect(query == "механічна клавіатура")
     }
 
-    @Test func productionExecutorOffersEveryApplicableOfficialProviderWithoutFakeSuccess() async throws {
-        let cases: [(StructuredCommand, Int, Set<String>)] = [
-            (command(.productSearch, ["product": "туристичний рюкзак"]), 5,
-             ["market.amazon", "market.ebay", "market.aliexpress", "market.temu", "market.prom"]),
-            (command(.groceryBasket, ["query": "овочі для супу"]), 4,
-             ["retail.silpo", "retail.atb", "retail.fora", "retail.fozzy"]),
-            (command(.productSearch, ["provider_domain": "jobs", "query": "qa engineer remote"]), 7,
-             ["jobs.workua", "jobs.robotaua", "jobs.jobsua", "jobs.dcz", "jobs.djinni", "jobs.dou", "jobs.happymonday"]),
-            (command(.hotelSearch, ["location": "Краків"]), 2,
-             ["lodging.booking", "lodging.dobovo"]),
-            (command(.ticketSearch, ["provider_domain": "tickets", "query": "сімейні події"]), 3,
-             ["events.karabas", "cinema.multiplex", "cinema.planetakino"]),
-            (command(.parcelTrack, ["provider_domain": "parcel_tracking", "query": "RR123456789UA"]), 3,
-             ["parcel.novaposhta", "parcel.ukrposhta", "parcel.meest"])
-        ]
-        for (input, count, ids) in cases {
-            guard case let .result(result) = try await executor().execute(input) else {
-                Issue.record("Expected a deterministic provider chooser for \(input.intent)")
-                continue
-            }
-            #expect(result.actions.count == count)
-            #expect(Set(result.actions.map(\.id)) == ids)
-            #expect(result.facts.isEmpty)
-            #expect(result.warnings.contains { $0.contains("підтверджує") })
-            #expect(result.actions.allSatisfy { $0.destination?.host?.contains("google") != true })
+    @Test func productionPolicySelectsOneProviderAndNeverCreatesAnUnrequestedChooser() async throws {
+        let jobs = command(.productSearch, ["provider_domain": "jobs", "query": "qa engineer remote"])
+        guard case let .handoff(jobHandoff) = try await executor().execute(jobs) else {
+            Issue.record("Expected one Jobs fallback handoff"); return
         }
+        #expect(jobHandoff.destination.host == "www.work.ua")
+
+        let hotel = command(.hotelSearch, ["location": "Краків"])
+        guard case let .handoff(hotelHandoff) = try await executor().execute(hotel) else {
+            Issue.record("Expected Booking handoff"); return
+        }
+        #expect(hotelHandoff.destination.host == "www.booking.com")
+
+        let event = command(.ticketSearch, ["provider_domain": "tickets", "query": "сімейні події", "location": "Полтава"])
+        guard case let .handoff(eventHandoff) = try await executor().execute(event) else {
+            Issue.record("Expected city-scoped KARABAS handoff"); return
+        }
+        #expect(eventHandoff.destination.host == "poltava.karabas.com")
+
+        let parcel = command(.parcelTrack, ["provider_domain": "parcel_tracking", "query": "RR123456789UA"])
+        await #expect(throws: CanonicalCapabilityExecutionError.missingParameter("parcel_provider")) {
+            try await executor().execute(parcel)
+        }
+
+        #expect(CanonicalRoutingPolicy().decide(command(.productSearch, ["product": "туристичний рюкзак"])).lane == .localDiscovery)
+        #expect(CanonicalRoutingPolicy().decide(command(.groceryBasket, ["query": "овочі для супу"])).lane == .localDiscovery)
     }
 
     @Test func carRentalRailAndExplicitParcelUseTheirOfficialConsumerDestinations() async throws {

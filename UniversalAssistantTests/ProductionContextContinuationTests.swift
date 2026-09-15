@@ -36,19 +36,16 @@ struct ProductionContextContinuationTests {
         #expect(store.freshPhotoAssetIdentifier(at: now.addingTimeInterval(12)) == nil)
     }
 
-    @Test func productionExecutorShowsAndOpensStoredPersonalResult() async throws {
+    @Test func productionExecutorPresentsTheOfficialContactCardWithoutCreatingAStaleCustomResult() async throws {
         let store = CurrentContextStore()
         let contact = ContactCandidate(identifier: "contact-1", displayName: "Mama", phoneNumbers: ["+380501234567"])
         let executor = ProductionCanonicalCapabilityExecutor(contacts: ContextContactResolverFixture(.resolved(contact)), currentContext: store, personalSearchSources: [])
         let search = StructuredCommand(originalText: "Знайди контакт мама", normalizedText: "знайди контакт мама", language: .uk, intent: .contactLookup, entities: ["contact":"мама"])
-        _ = try await executor.execute(search)
+        #expect(try await executor.execute(search) == .presentation(.contactCard(identifier: "contact-1")))
         let show = StructuredCommand(originalText: "Покажи перший", normalizedText: "покажи перший", language: .uk, intent: .contextualSelection, constraints: .init(ordinal: 1))
-        guard case let .result(value) = try await executor.execute(show) else { Issue.record("Expected result"); return }
-        #expect(value.facts.first?.id == "phone-0")
-        let open = StructuredCommand(originalText: "Відкрий перший", normalizedText: "відкрий перший", language: .uk, intent: .open, constraints: .init(ordinal: 1))
-        guard case let .handoff(value) = try await executor.execute(open) else { Issue.record("Expected handoff"); return }
-        #expect(value.destination.absoluteString == "tel:+380501234567")
-        await #expect(throws: CanonicalCapabilityExecutionError.unavailable("context_action_unavailable_or_replayed")) { try await executor.execute(open) }
+        await #expect(throws: CanonicalCapabilityExecutionError.missingParameter("active_result_context")) {
+            try await executor.execute(show)
+        }
     }
 
     @Test func typedTranslationAndSharedContentReplaceExpireAndReset() {

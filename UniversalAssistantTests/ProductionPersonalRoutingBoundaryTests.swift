@@ -36,12 +36,11 @@ struct ProductionPersonalRoutingBoundaryTests {
         )
         let command = LocalCommandEngine().parse("Знайди контакт Сашко")
         #expect(command.intent == .contactLookup)
-        guard case let .result(result) = try await executor.execute(command) else {
-            Issue.record("Expected a direct Contacts result")
+        guard case let .presentation(presentation) = try await executor.execute(command) else {
+            Issue.record("Expected the official existing-contact presentation")
             return
         }
-        #expect(result.facts.first?.label == "Сашко")
-        #expect(result.facts.first?.value == "+380501234567")
+        #expect(presentation == .contactCard(identifier: "sashko"))
         #expect(await probe.calls == 0)
     }
 

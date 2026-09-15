@@ -510,9 +510,11 @@ struct Build29ReleaseRootLocationRouteTests {
         let model = model { opened.append($0) }
         model.input = "Яка клініка розташована найближче до мене?"
         model.submit()
-        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
-        guard case let .deterministic(nearby) = model.resultState else { Issue.record("Nearby did not reach Place boundary"); return }
-        #expect(nearby.facts.first?.id == "near")
+        for _ in 0..<100 { if opened.count == 1 { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard let nearbyDestination = opened.first else { Issue.record("Nearby did not reach exact Google Maps destination"); return }
+        #expect(nearbyDestination.host == "www.google.com")
+        #expect(nearbyDestination.path == "/maps/search")
+        #expect(nearbyDestination.absoluteString.contains("50.4510000,30.5210000"))
 
         model.input = "Визнач моє теперішнє місцезнаходження"
         model.submit()
@@ -535,11 +537,9 @@ struct Build29ReleaseRootLocationRouteTests {
 
         model.input = "Побудуй шлях до центральної бібліотеки"
         model.submit()
-        for _ in 0..<100 { if case .webHandoff = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
-        guard case let .webHandoff(navigation) = model.resultState else { Issue.record("Navigation did not reach handoff renderer"); return }
-        #expect(navigation.kind == .navigation)
-        #expect(navigation.destination.host?.contains("maps.apple.com") == true)
-        #expect(opened.isEmpty)
+        for _ in 0..<100 { if opened.count == 2 { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard opened.count == 2 else { Issue.record("Navigation did not open its exact destination"); return }
+        #expect(opened[1].host?.contains("maps.apple.com") == true)
 
         model.input = "Скільки триватиме дорога до виставкового центру?"
         model.submit()
@@ -549,10 +549,9 @@ struct Build29ReleaseRootLocationRouteTests {
 
         model.input = "Як дістатися громадським транспортом до ботанічного саду?"
         model.submit()
-        for _ in 0..<100 { if case .webHandoff = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
-        guard case let .webHandoff(transit) = model.resultState else { Issue.record("Transit route did not reach MapKit handoff"); return }
-        #expect(transit.kind == .navigation)
-        #expect(transit.destination.absoluteString.contains("dirflg=r") == true)
+        for _ in 0..<100 { if opened.count == 3 { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard opened.count == 3 else { Issue.record("Transit route did not open its exact destination"); return }
+        #expect(opened[2].absoluteString.contains("dirflg=r") == true)
 
         model.input = "Знайди клініку вздовж цього маршруту"
         model.submit()
@@ -566,35 +565,35 @@ struct Build29ReleaseRootLocationRouteTests {
     }
 
     @Test func indirectPropositionsUseTheShippedLanguageBlockAndMapKitGraph() async throws {
+        var opened: [URL] = []
         let model = model(places: [
             Place(id: "far", providerID: "far", name: "Far Cafe", category: .cafe, latitude: 50.70, longitude: 30.80, source: "MapKit boundary", timestamp: .now, verification: .providerReturned),
             Place(id: "near", providerID: "near", name: "Near Cafe", category: .cafe, latitude: 50.451, longitude: 30.521, source: "MapKit boundary", timestamp: .now, verification: .providerReturned)
-        ])
+        ], opened: { opened.append($0) })
         model.input = "Хотілося б випити теплого напою десь поряд"
         model.submit()
         for _ in 0..<100 {
-            if case .deterministic = model.resultState { break }
+            if opened.count == 1 { break }
             try await Task.sleep(for: .milliseconds(10))
         }
-        guard case let .deterministic(nearby) = model.resultState else {
-            Issue.record("Indirect nearby proposition did not reach Place boundary")
+        guard let nearby = opened.first else {
+            Issue.record("Indirect nearby proposition did not open an exact place")
             return
         }
-        #expect(nearby.facts.first?.id == "near")
-        #expect(!nearby.facts.contains(where: { $0.id == "far" }))
+        #expect(nearby.host == "www.google.com")
+        #expect(nearby.absoluteString.contains("50.4510000,30.5210000"))
 
         model.input = "Мені необхідно потрапити до виставкового павільйону"
         model.submit()
         for _ in 0..<100 {
-            if case .webHandoff = model.resultState { break }
+            if opened.count == 2 { break }
             try await Task.sleep(for: .milliseconds(10))
         }
-        guard case let .webHandoff(route) = model.resultState else {
-            Issue.record("Indirect movement proposition did not reach Navigation boundary")
+        guard opened.count == 2 else {
+            Issue.record("Indirect movement proposition did not open its navigation destination")
             return
         }
-        #expect(route.kind == .navigation)
-        #expect(route.destination.host?.contains("maps.apple.com") == true)
+        #expect(opened[1].host?.contains("maps.apple.com") == true)
     }
 }
 
@@ -709,24 +708,25 @@ struct Build29ReleaseExternalProviderBoundaryTests {
         #expect(parsed.constraints.brand == "Gucci")
         #expect(parsed.entities["catalog_match_mechanism"] != "exact")
 
+        var opened: [URL] = []
         let model = ProductionAssistantComposition.makeModel(
             personalSearchSources: [],
-            compactResultDuration: .seconds(60)
+            compactResultDuration: .seconds(60),
+            systemHandoffOpen: { opened.append($0) }
         )
         model.input = request
         model.submit()
         for _ in 0..<150 {
-            if case .deterministic = model.resultState { break }
+            if !opened.isEmpty { break }
             try await Task.sleep(for: .milliseconds(10))
         }
 
-        guard case let .deterministic(result) = model.resultState else {
+        guard let destination = opened.first else {
             Issue.record("Verified catalog entity did not reach official provider handoffs")
             return
         }
-        #expect(result.actions.count == 5)
-        #expect(result.actions.allSatisfy { $0.destination?.host?.contains("google") != true })
-        #expect(result.warnings.contains { $0.contains("підтверджує") })
+        #expect(destination.host == "www.gucci.com")
+        #expect(destination.path.contains("search"))
         #expect({ if case .webHandoff = model.resultState { return false }; return true }())
         #expect(model.statusText != AppText.value("clarification_needed"))
         #expect(model.statusText != AppText.value("processing"))
@@ -734,7 +734,22 @@ struct Build29ReleaseExternalProviderBoundaryTests {
 
 @Test func configuredProviderIsReachableFromUnknownAndTypedCommerceHomePaths() async throws {
         let discovery = GenericUnknownRequestCoordinator(providers: [Build29ReleaseDiscoveryBoundary()], cache: GenericSemanticCache(), ai: nil)
-        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60), genericDiscovery: discovery)
+        let origin = ValidatedLocation(
+            sample: .init(latitude: 50.45, longitude: 30.52, horizontalAccuracy: 5, timestamp: .now, speed: 0, course: 0, source: .device),
+            quality: .precise, isSafeForLocationActions: true, manualLabel: nil
+        )
+        let productPlace = Place(
+            id: "local-product", providerID: "local-product", name: "Магазин спорядження",
+            category: .shop, latitude: 50.451, longitude: 30.521,
+            source: "MapKit boundary", timestamp: .now, verification: .providerReturned
+        )
+        var opened: [URL] = []
+        let model = ProductionAssistantComposition.makeModel(
+            placeSearch: .init(providers: [Build29ReleasePlaceBoundary(values: [productPlace])]),
+            currentLocation: Build29ReleaseLocationBoundary(origin), personalSearchSources: [],
+            compactResultDuration: .seconds(60), genericDiscovery: discovery,
+            systemHandoffOpen: { opened.append($0) }
+        )
         model.input = "Розкажи актуальний стан міжнародної місії"
         model.submit()
         for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
@@ -744,10 +759,10 @@ struct Build29ReleaseExternalProviderBoundaryTests {
 
         model.input = "Підбери водостійкий туристичний рюкзак до 4200 гривень"
         model.submit()
-        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
-        guard case let .deterministic(commerce) = model.resultState else { Issue.record("Official buyer routes were not reached"); return }
-        #expect(commerce.actions.count == 5)
-        #expect(commerce.actions.allSatisfy { $0.destination?.host != "provider.example" })
+        for _ in 0..<100 { if !opened.isEmpty { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard let destination = opened.first else { Issue.record("Local-first product route was not reached"); return }
+        #expect(destination.host == "www.google.com")
+        #expect(destination.path == "/maps/search")
     }
 
 @Test func unseenProviderDomainsRemainTypedAtTheTruthfulReleaseBoundary() async throws {
@@ -758,9 +773,8 @@ struct Build29ReleaseExternalProviderBoundaryTests {
         #expect(parsedParcel.entities["provider_domain"] == "parcel_tracking")
         model.input = parcel
         model.submit()
-        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
-        guard case let .deterministic(parcelResult) = model.resultState else { Issue.record("Official parcel forms were not reached"); return }
-        #expect(parcelResult.actions.count == 3)
+        for _ in 0..<100 { if case .clarification = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case .clarification = model.resultState else { Issue.record("Missing parcel provider did not ask one clarification"); return }
 
         let loyalty = "Переліч бонусні винагороди програми лояльності"
         let parsedLoyalty = LanguageUnderstandingBlock().parse(loyalty)
@@ -775,8 +789,7 @@ struct Build29ReleaseExternalProviderBoundaryTests {
     }
 
     @Test func absentCommercialProvidersPreserveRequestsInDeliberateBrowserFallback() async throws {
-        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
-        enum Expected { case deliberateWeb, officialProvider, providerRequired }
+        enum Expected { case deliberateWeb, officialProvider, providerRequired, clarification }
         let requests: [(text: String, expected: Expected)] = [
             ("Покажи свіжі економічні новини за сьогодні", .deliberateWeb),
             ("Дізнайся поточне котирування акцій виробника напівпровідників", .deliberateWeb),
@@ -784,19 +797,27 @@ struct Build29ReleaseExternalProviderBoundaryTests {
             ("Порівняй доступні поїздки таксі до музею", .providerRequired),
             ("Підбери готель у Кракові на дві ночі", .officialProvider),
             ("Знайди квитки на нічний потяг до Варшави", .officialProvider),
-            ("Відстеж міжнародне відправлення за номером", .officialProvider),
+            ("Відстеж міжнародне відправлення за номером", .clarification),
             ("Покажи офіційний муніципальний сервіс для реєстрації", .providerRequired),
             ("Знайди вакансії дизайнера з віддаленою роботою", .officialProvider),
             ("Покажи доступні персональні знижки програми лояльності", .providerRequired)
         ]
+        var opened: [URL] = []
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            systemHandoffOpen: { opened.append($0) }
+        )
         for (request, expected) in requests {
             let parsed = LanguageUnderstandingBlock().parse(request)
+            let openedBefore = opened.count
             model.input = request
             model.submit()
             for _ in 0..<100 {
                 if case .webHandoff = model.resultState { break }
                 if case .deterministic = model.resultState { break }
                 if case .failure = model.resultState { break }
+                if case .clarification = model.resultState { break }
+                if opened.count > openedBefore { break }
                 try await Task.sleep(for: .milliseconds(10))
             }
             switch expected {
@@ -808,12 +829,8 @@ struct Build29ReleaseExternalProviderBoundaryTests {
                 #expect(fallback.query == request)
                 #expect(fallback.destination.host?.contains("google") == true)
             case .officialProvider:
-                if case let .webHandoff(handoff) = model.resultState {
-                    #expect(handoff.kind == .provider)
-                    #expect(handoff.destination.host?.contains("google") != true)
-                } else if case let .deterministic(result) = model.resultState {
-                    #expect(!result.actions.isEmpty)
-                    #expect(result.actions.allSatisfy { $0.destination?.host?.contains("google") != true })
+                if opened.count == openedBefore + 1 {
+                    #expect(opened.last?.host?.contains("google") != true)
                 } else {
                     Issue.record("Official provider route was not reached: \(request); intent=\(parsed.intent.rawValue); entities=\(parsed.entities); state=\(String(describing: model.resultState))")
                 }
@@ -824,6 +841,11 @@ struct Build29ReleaseExternalProviderBoundaryTests {
                 }
                 #expect(failure.message.contains("провайдер"))
                 #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+            case .clarification:
+                guard case .clarification = model.resultState else {
+                    Issue.record("Missing required provider did not clarify: \(request)")
+                    continue
+                }
             }
             #expect(model.statusText != AppText.value("processing"))
         }
@@ -849,8 +871,8 @@ struct Build29ReleaseRemainingNativeTests {
         #expect(parsed.intent == .localUtility)
 
         let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        model.handleVoiceEvent(.state(.requestingPermission))
         model.handleVoiceEvent(.transcript("Двох тисяч трьохсот сорока два плюс пʼятдесят вісім", isFinal: true))
-        model.submit()
         try await wait { if case .deterministic = model.resultState { return true }; return false }
         guard case let .deterministic(voiceResult) = model.resultState else { return }
         #expect(voiceResult.primaryAnswer.filter(\.isNumber) == "2400")

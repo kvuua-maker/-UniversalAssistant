@@ -76,8 +76,7 @@ extension ApplePersonalSearchSourcesTests {
         let contact = ContactCandidate(identifier: "c1", displayName: "Mama", phoneNumbers: ["+380501234567"])
         let executor = ProductionCanonicalCapabilityExecutor(contacts: ContactSearchStub(.resolved(contact)), personalSearchSources: [])
         let command = StructuredCommand(originalText: "Знайди контакт мама", normalizedText: "знайди контакт мама", language: .uk, intent: .contactLookup, entities: ["contact":"Mama"])
-        guard case let .result(result) = try await executor.execute(command) else { Issue.record("Expected native deterministic result"); return }
-        #expect(result.facts.first?.id == "phone-0"); #expect(result.actions.first?.destination?.absoluteString == "tel:+380501234567")
+        #expect(try await executor.execute(command) == .presentation(.contactCard(identifier: "c1")))
     }
     @Test @MainActor func latestPhotoUsesOneNewestAssetAndInAppPresentationAction() async throws {
         let older = PhotoAssetReference(localIdentifier: "old", creationDate: .init(timeIntervalSince1970: 1), coordinate: nil, album: nil)

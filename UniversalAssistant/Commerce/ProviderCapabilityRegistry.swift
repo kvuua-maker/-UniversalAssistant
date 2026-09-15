@@ -122,7 +122,7 @@ enum OfficialPublicProviderHandoffRegistry {
         r("lodging.booking", "Booking.com", ["booking", "booking.com", "букінг"], .lodging, .query(base: u("https://www.booking.com/searchresults.html"), parameter: "ss"), "official_destination_search", "https://www.booking.com/"),
         r("lodging.dobovo", "Dobovo", ["dobovo", "добово"], .lodging, .fixed(u("https://www.dobovo.com/ukraine.html")), "official_filtered_catalog", "https://www.dobovo.com/ukraine.html"),
         r("rental.getmancar", "Getmancar", ["getmancar", "get man car", "гетманкар"], .carRental, .fixed(u("https://getmancar.com/uk")), "official_rental_search", "https://getmancar.com/uk"),
-        r("events.karabas", "KARABAS", ["karabas", "карабас"], .events, .fixed(u("https://kyiv.karabas.com/")), "official_event_catalog", "https://kyiv.karabas.com/"),
+        r("events.karabas", "KARABAS", ["karabas", "карабас"], .events, .fixed(u("https://karabas.com/")), "official_city_event_catalog", "https://karabas.com/"),
         r("cinema.multiplex", "Multiplex", ["multiplex", "мультиплекс"], .cinema, .fixed(u("https://multiplex.ua/movies")), "official_movie_schedule", "https://multiplex.ua/movies"),
         r("cinema.planetakino", "Планета Кіно", ["планета кіно", "planeta kino", "planetakino"], .cinema, .fixed(u("https://planetakino.ua/")), "official_movie_schedule", "https://planetakino.ua/"),
         r("jobs.workua", "Work.ua", ["work ua", "work.ua"], .jobs, .query(base: u("https://www.work.ua/jobs/"), parameter: "search"), "official_job_search", "https://www.work.ua/jobs/"),

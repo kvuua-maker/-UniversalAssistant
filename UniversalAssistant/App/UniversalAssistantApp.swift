@@ -36,7 +36,8 @@ enum ProductionAssistantComposition {
         notificationEnable: @escaping @MainActor () async -> ProactiveNotificationEnableResult = { await ProductionNotificationRegistration.enable() },
         voiceInputOverride: (any VoiceInputControlling)? = nil,
         quickLaunchStore: QuickLaunchRequestStore = QuickLaunchRequestStore(),
-        systemHandoffOpen: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }
+        systemHandoffOpen: (@MainActor (URL) -> Void)? = nil,
+        systemHandoffOpenResult: (@MainActor (URL) async -> Bool)? = nil
     ) -> AssistantViewModel {
         let context = CurrentContextStore()
         let voiceInput: any VoiceInputControlling = voiceInputOverride ?? VoiceInputController(contextualVocabulary: {
@@ -56,7 +57,8 @@ enum ProductionAssistantComposition {
             capabilityExecutor: executor, currentContext: context, recorder: recorder,
             compactResultDuration: compactResultDuration, voiceInput: voiceInput,
             notificationEnable: notificationEnable, quickLaunchStore: quickLaunchStore,
-            systemHandoffOpen: systemHandoffOpen
+            systemHandoffOpen: systemHandoffOpen,
+            systemHandoffOpenResult: systemHandoffOpenResult
         )
     }
 }

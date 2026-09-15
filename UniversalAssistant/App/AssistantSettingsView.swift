@@ -70,6 +70,22 @@ struct AssistantSettingsView: View {
                 .accessibilityIdentifier("settings.enable-proactive-notifications")
                 if let url = URL(string: UIApplication.openSettingsURLString) { Link("iPhone Permissions", destination: url) }
             }
+            Section("Підключити сервіси") {
+                ForEach(ConnectableServiceRegistry.records) { service in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(service.displayName)
+                            Spacer()
+                            Text(connectionStatus(service.status)).foregroundStyle(.secondary)
+                        }
+                        Text(service.capabilitySummary).font(.footnote).foregroundStyle(.secondary)
+                    }
+                    .accessibilityIdentifier("settings.connected-service.\(service.id)")
+                }
+                Text("Підключення використовує тільки офіційний OAuth або виданий провайдером token/API key. Паролі сторонніх сервісів UniversalAssistant не приймає.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
             Section("Privacy & Data") { Text("On-device preferences contain no raw command history.").foregroundStyle(.secondary) }
             Section("About") { LabeledContent("App", value: "UniversalAssistant") }
         }
@@ -116,6 +132,14 @@ struct AssistantSettingsView: View {
             } catch {
                 diagnosticExportError = "Не вдалося створити пакет діагностики."
             }
+        }
+    }
+
+    private func connectionStatus(_ status: ConnectableServiceStatus) -> String {
+        switch status {
+        case .available: "Доступно"
+        case .configurationRequired: "Потрібна конфігурація"
+        case .providerCredentialRequired: "Потрібен token/API key"
         }
     }
 

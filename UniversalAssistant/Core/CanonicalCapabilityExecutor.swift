@@ -21,6 +21,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case email(recipients: [String], subject: String?, body: String?)
     case contactImport(Data)
     case contactAccess(query: String, command: StructuredCommand)
+    case contactCard(identifier: String)
     case translationTarget(String)
     case translation(LocalTranslationPlan)
     case photoLibrary
@@ -46,6 +47,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
         case .email: "email"
         case .contactImport: "contact-import"
         case .contactAccess: "contact-access"
+        case .contactCard: "contact-card"
         case .translationTarget: "translation-target"
         case .translation: "translation"
         case .photoLibrary: "photo-library"
@@ -284,12 +286,18 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     }
 
     func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        let routingDecision = CanonicalRoutingPolicy().decide(command)
+        LocalVoiceDiagnosticReport.shared.record(
+            "canonical_routing_policy",
+            "lane=\(routingDecision.lane.rawValue) provider=\(routingDecision.providerID ?? "none") " +
+                "reason=\(routingDecision.reason) multiple=\(routingDecision.allowsMultipleResults)"
+        )
         let diagnosticBoundary = DiagnosticBoundaryName.forCommand(command)
         if let diagnosticBoundary {
             LocalVoiceDiagnosticReport.shared.recordBoundaryPre(diagnosticBoundary, "capability=\(command.intent.rawValue)")
         }
         do {
-            let outcome = try await executeUnobserved(command)
+            let outcome = try await executeUnobserved(command, routingDecision: routingDecision)
             if let diagnosticBoundary {
                 LocalVoiceDiagnosticReport.shared.recordBoundaryPost(diagnosticBoundary, "capability=\(command.intent.rawValue) status=success")
             }
@@ -302,7 +310,31 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         }
     }
 
-    private func executeUnobserved(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+    private func executeUnobserved(
+        _ command: StructuredCommand,
+        routingDecision: CanonicalRoutingDecision
+    ) async throws -> CapabilityExecutionOutcome {
+        // Provider/product ownership is decided once, above. The existing
+        // specialized executors remain responsible for the actual operation.
+        switch routingDecision.lane {
+        case .explicitProvider, .accommodation, .jobs, .events, .delivery:
+            return try officialPublicProviderHandoff(command)
+        case .officialBrand:
+            return try officialBrandHandoff(command)
+        case .localDiscovery:
+            if command.intent == .serviceSearch { return try await localServices(command) }
+            return try await places(command)
+        case .restaurantReservation:
+            return try await restaurantReservation(command)
+        case .clarification where command.intent == .parcelTrack:
+            throw CanonicalCapabilityExecutionError.missingParameter("parcel_provider")
+        case .informationalWeb:
+            throw CanonicalCapabilityExecutionError.unavailable("handled_by_specialized_executor")
+        case .providerBoundary:
+            throw CanonicalCapabilityExecutionError.externalProviderRequired(command.entities["provider_domain"] ?? command.intent.rawValue)
+        case .appleSystem, .specialized, .clarification:
+            break
+        }
         switch command.intent {
         case .open, .appAction:
             if command.constraints.ordinal != nil { return try await contextual(command, opensSelection: true) }
@@ -443,9 +475,26 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 return try await route(routed, mode: .transit)
             }
             return try officialPublicProviderHandoff(command)
-        case .productSearch, .fashionDiscovery, .groceryBasket, .ticketSearch,
-             .ticketPurchaseHandoff, .hotelSearch, .travelPlan, .parcelTrack:
+        case .productSearch, .fashionDiscovery:
+            let decision = CanonicalRoutingPolicy().decide(command)
+            if decision.lane == .officialBrand { return try officialBrandHandoff(command) }
+            if decision.lane == .localDiscovery { return try await places(command) }
             return try officialPublicProviderHandoff(command)
+        case .groceryBasket:
+            let decision = CanonicalRoutingPolicy().decide(command)
+            return decision.lane == .localDiscovery
+                ? try await places(command)
+                : try officialPublicProviderHandoff(command)
+        case .ticketSearch, .ticketPurchaseHandoff, .hotelSearch:
+            return try officialPublicProviderHandoff(command)
+        case .parcelTrack:
+            let decision = CanonicalRoutingPolicy().decide(command)
+            guard decision.lane != .clarification else {
+                throw CanonicalCapabilityExecutionError.missingParameter("parcel_provider")
+            }
+            return try officialPublicProviderHandoff(command)
+        case .travelPlan:
+            return .result(try await multiStep.execute(command))
         case .taxiSearch, .taxiCompare:
             throw CanonicalCapabilityExecutionError.externalProviderRequired(command.intent.rawValue)
         case .placeSearch:
@@ -464,7 +513,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .deviceAction:
             return try await systemQuickAction(command)
         case .calendarCreate, .calendarQuery, .calendarDelete, .reminderCreate,
-             .reminderQuery, .weather, .webSearch, .deviceAction, .audioRecord, .unknown:
+             .reminderQuery, .weather, .webSearch, .audioRecord, .unknown:
             throw CanonicalCapabilityExecutionError.unavailable("handled_by_specialized_executor")
         }
     }
@@ -507,7 +556,10 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             if remaining.isEmpty { return .handoff(value) }
             let fact = ResultFact(id: command.id.uuidString, label: command.intent.rawValue, value: value.destination.absoluteString,
                                   state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100 - aggregate.count)
-            return try await executeCompound(remaining, aggregate: aggregate + [fact], dependencyOutput: nil)
+            let output: CanonicalDependencyOutput? = [.placeSearch, .restaurantSearch, .serviceSearch].contains(command.intent)
+                ? currentContext.selectFirstResult().map(CanonicalDependencyOutput.selectedEntity)
+                : nil
+            return try await executeCompound(remaining, aggregate: aggregate + [fact], dependencyOutput: output)
         case let .presentation(presentation):
             return remaining.isEmpty ? .presentation(presentation) : .suspended(presentation, .init(remainingCommands: remaining))
         case .suspended:
@@ -540,7 +592,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             switch value {
             case .message, .email, .share, .documents, .contactImport, .photoAsset, .photoOCR, .photoShare, .audioFile, .documentFile, .documentFiles:
                 return .init(id: step.id, label: command.intent.rawValue, value: value.id, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
-            case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .contactAccess, .translationTarget, .translation, .photoLibrary, .audioRoutes, .pdfWorkflow:
+            case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .contactAccess, .contactCard, .translationTarget, .translation, .photoLibrary, .audioRoutes, .pdfWorkflow:
                 throw CoordinationOperationError.confirmationRequired
             }
         case .suspended:
@@ -659,14 +711,22 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             ? distanceOrdered.filter { ($0.distanceMeters ?? .greatestFiniteMagnitude) <= nearbyRadiusMeters }
             : distanceOrdered
         guard !places.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_places_found") }
-        let output = try result("Знайдено місця", facts: places.prefix(5).enumerated().map { index, place in
+        let allowsMultiple = CanonicalRoutingPolicy().decide(command).allowsMultipleResults
+        let selectedPlaces = Array(places.prefix(allowsMultiple ? 5 : 1))
+        let output = try result(allowsMultiple ? "Знайдено місця" : selectedPlaces[0].name, facts: selectedPlaces.enumerated().map { index, place in
             ResultFact(id: place.id, label: place.name, value: place.address ?? place.category.rawValue, state: .verified, source: place.source, observedAt: place.timestamp, priority: 100 - index)
-        }, actions: places.prefix(5).compactMap { place in
-            guard let destination = try? navigation.url(provider: .appleMaps, destination: .init(latitude: place.latitude, longitude: place.longitude, name: place.name), mode: .walking) else { return nil }
-            return ResultAction(id: place.id, title: "Маршрут", kind: .open, destination: destination)
+        }, actions: selectedPlaces.compactMap { place in
+            guard let destination = googleMapsExactPlaceURL(place) else { return nil }
+            return ResultAction(id: place.id, title: "Відкрити в Google Maps", kind: .navigate, destination: destination)
         })
-        currentContext.replacePlaceResults(output, places: Array(places.prefix(5)))
-        return .result(output)
+        currentContext.replacePlaceResults(output, places: selectedPlaces)
+        guard !allowsMultiple, let destination = output.actions.first?.destination else { return .result(output) }
+        LocalVoiceDiagnosticReport.shared.record(
+            "provider_handoff_selected",
+            "provider=google.maps.url mechanism=exact_maps_url source=\(selectedPlaces[0].source) " +
+                "place_id=\(selectedPlaces[0].providerID ?? "unavailable") destination=\(destination.absoluteString)"
+        )
+        return .handoff(.init(query: selectedPlaces[0].name, destination: destination, kind: .navigation))
     }
 
     private func localServices(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
@@ -705,10 +765,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         )
         guard !places.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_local_services_found") }
 
-        let planner = LocalServiceHandoffPlanner()
-        let handoffs = places.prefix(8).compactMap { place -> (Place, ServiceHandoff)? in
-            guard let handoff = try? planner.handoff(for: .init(place: place)) else { return nil }
-            return (place, handoff)
+        let allowsMultiple = CanonicalRoutingPolicy().decide(command).allowsMultipleResults
+        let handoffs = places.prefix(allowsMultiple ? 8 : 1).compactMap { place -> (Place, URL)? in
+            googleMapsExactPlaceURL(place).map { (place, $0) }
         }
         guard !handoffs.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_legitimate_service_handoff") }
         let facts = handoffs.enumerated().map { index, value in
@@ -719,18 +778,13 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 observedAt: value.0.timestamp, priority: 100 - index
             )
         }
-        let actions = handoffs.map { place, handoff in
-            let title: String = switch handoff.kind {
-            case .directOrder: "Замовити"
-            case .phone: "Зателефонувати"
-            case .officialWebsite: "Офіційний сайт"
-            case .navigation: "Маршрут"
-            }
-            return ResultAction(id: place.id, title: title, kind: .open, destination: handoff.destination)
+        let actions = handoffs.map { place, destination in
+            ResultAction(id: place.id, title: "Відкрити в Google Maps", kind: .navigate, destination: destination)
         }
-        let output = try result("Знайдено відповідні місцеві сервіси", facts: facts, actions: actions)
+        let output = try result(allowsMultiple ? "Знайдено відповідні місцеві сервіси" : handoffs[0].0.name, facts: facts, actions: actions)
         currentContext.replacePlaceResults(output, places: handoffs.map(\.0))
-        return .result(output)
+        guard !allowsMultiple, let destination = actions.first?.destination else { return .result(output) }
+        return .handoff(.init(query: handoffs[0].0.name, destination: destination, kind: .navigation))
     }
 
     private func restaurantReservation(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
@@ -1040,11 +1094,14 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let result = await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
                 completion.install(continuation)
-                let work = Task(priority: .userInitiated) { [photos] in
+                // PhotoKit/provider work and its deadline must not inherit the
+                // executor's MainActor. Under UI load an actor-bound deadline
+                // can run after the provider and silently defeat the bound.
+                let work = Task.detached(priority: .userInitiated) { [photos] in
                     completion.finish(.values(await photos.search(criteria, limit: limit)))
                 }
                 completion.setWork(work)
-                Task(priority: .background) { [photoSearchTimeout] in
+                Task.detached(priority: .background) { [photoSearchTimeout] in
                     do { try await Task.sleep(for: photoSearchTimeout) }
                     catch { completion.finish(.cancelled, cancelWork: true); return }
                     completion.finish(.timedOut, cancelWork: true)
@@ -1242,15 +1299,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CONTACT_ACTION", "kind=resolved_contact status=returned") }
                 return .handoff(.init(query: value.displayName, destination: try callDestination(number: number, service: requestedService), kind: .system))
             }
-            let facts = value.phoneNumbers.enumerated().map { index, number in
-                ResultFact(id: "phone-\(index)", label: value.displayName, value: number, state: .verified, source: "Contacts", observedAt: .now, priority: 100 - index)
-            }
-            let actions = try value.phoneNumbers.enumerated().map { index, number in
-                ResultAction(id: "phone-\(index)", title: "Подзвонити", kind: .open, destination: try callDestination(number: number, service: nil))
-            }
-            let output = try result(value.displayName, facts: facts, actions: actions)
-            currentContext.replaceResults(output)
-            return .result(output)
+            return .presentation(.contactCard(identifier: value.identifier))
         }
     }
 
@@ -1393,6 +1442,20 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         try DeterministicResultComposer().compose(primaryAnswer: answer, facts: facts, actions: actions)
     }
 
+    private func googleMapsExactPlaceURL(_ place: Place) -> URL? {
+        var components = URLComponents(string: "https://www.google.com/maps/search/")
+        let coordinate = String(format: "%.7f,%.7f", place.latitude, place.longitude)
+        var items = [
+            URLQueryItem(name: "api", value: "1"),
+            URLQueryItem(name: "query", value: coordinate)
+        ]
+        if place.source == "google-places", let placeID = place.providerID, !placeID.isEmpty {
+            items.append(.init(name: "query_place_id", value: placeID))
+        }
+        components?.queryItems = items
+        return components?.url
+    }
+
     private func placeCategory(in text: String) -> PlaceCategory? {
         if ["кав", "кафе", "кофе", "coffee", "cafe"].contains(where: text.contains) { return .cafe }
         if ["ресторан", "restaurant"].contains(where: text.contains) { return .restaurant }
@@ -1451,6 +1514,53 @@ struct VCardImportConfirmationView: UIViewControllerRepresentable {
         let onComplete: () -> Void
         init(onComplete: @escaping () -> Void) { self.onComplete = onComplete }
         func contactViewController(_ viewController: CNContactViewController, didCompleteWith contact: CNContact?) { onComplete() }
+    }
+}
+
+struct ExistingContactCardView: UIViewControllerRepresentable {
+    let identifier: String
+    let onComplete: () -> Void
+
+    func makeUIViewController(context: Context) -> UINavigationController {
+        let root: UIViewController
+        do {
+            let contact = try CNContactStore().unifiedContact(
+                withIdentifier: identifier,
+                keysToFetch: [CNContactViewController.descriptorForRequiredKeys()]
+            )
+            let controller = CNContactViewController(for: contact)
+            controller.delegate = context.coordinator
+            controller.allowsEditing = true
+            controller.allowsActions = true
+            root = controller
+        } catch {
+            let controller = UIViewController()
+            controller.view.backgroundColor = .systemBackground
+            let label = UILabel()
+            label.translatesAutoresizingMaskIntoConstraints = false
+            label.text = "Не вдалося відкрити картку контакту"
+            label.textAlignment = .center
+            label.numberOfLines = 0
+            controller.view.addSubview(label)
+            NSLayoutConstraint.activate([
+                label.leadingAnchor.constraint(equalTo: controller.view.leadingAnchor, constant: 24),
+                label.trailingAnchor.constraint(equalTo: controller.view.trailingAnchor, constant: -24),
+                label.centerYAnchor.constraint(equalTo: controller.view.centerYAnchor)
+            ])
+            root = controller
+        }
+        return UINavigationController(rootViewController: root)
+    }
+
+    func updateUIViewController(_ controller: UINavigationController, context: Context) {}
+    func makeCoordinator() -> Coordinator { Coordinator(onComplete: onComplete) }
+
+    final class Coordinator: NSObject, CNContactViewControllerDelegate {
+        let onComplete: () -> Void
+        init(onComplete: @escaping () -> Void) { self.onComplete = onComplete }
+        func contactViewController(_ viewController: CNContactViewController, didCompleteWith contact: CNContact?) {
+            onComplete()
+        }
     }
 }
 
