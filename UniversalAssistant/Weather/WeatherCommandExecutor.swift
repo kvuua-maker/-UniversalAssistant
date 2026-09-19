@@ -58,7 +58,18 @@ struct ProductionWeatherCommandExecutor: WeatherCommandExecuting, Sendable {
         }
         recordDiagnostic("weather_context_started", "")
         do {
-            let snapshot = try await weatherEngine.weather(for: .init(location: location, context: context))
+            let locale = LanguageConfiguration(uiLanguage: .uk, commandLanguage: command.language).voiceLocale
+            let targetDate: Date? = {
+                if case let .resolved(value) = NaturalDateTimeResolver().resolve(
+                    command, locale: locale, timeZone: .autoupdatingCurrent, relativeTo: .now
+                ) { return value.instant }
+                return nil
+            }()
+            let snapshot = try await weatherEngine.weather(for: .init(
+                location: location,
+                context: context,
+                targetDate: targetDate
+            ))
             recordDiagnostic("weather_context_succeeded", "status=success")
             return snapshot
         } catch {

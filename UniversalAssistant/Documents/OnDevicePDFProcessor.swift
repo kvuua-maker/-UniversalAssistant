@@ -139,6 +139,26 @@ struct OnDevicePDFProcessor {
         return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
     }
 
+    /// Conservative post-processing for VNDocumentCameraViewController pages.
+    /// VisionKit already performs document detection and perspective correction;
+    /// this normalizes orientation and applies restrained levels without a
+    /// speculative second crop that could remove page content.
+    func scanEnhanced(_ image: UIImage) throws -> UIImage {
+        guard let input = CIImage(image: image, options: [.applyOrientationProperty: true]) else {
+            throw PDFProcessingError.invalidPDF
+        }
+        let controls = CIFilter(name: "CIColorControls")
+        controls?.setValue(input, forKey: kCIInputImageKey)
+        controls?.setValue(1.07, forKey: kCIInputContrastKey)
+        controls?.setValue(0.01, forKey: kCIInputBrightnessKey)
+        controls?.setValue(0.98, forKey: kCIInputSaturationKey)
+        guard let output = controls?.outputImage?.cropped(to: input.extent),
+              let cgImage = CIContext(options: [.useSoftwareRenderer: false]).createCGImage(output, from: output.extent) else {
+            throw PDFProcessingError.invalidPDF
+        }
+        return UIImage(cgImage: cgImage, scale: image.scale, orientation: .up)
+    }
+
     func images(from data: Data, maximumDimension: CGFloat = 2_048) throws -> [UIImage] {
         let source = try document(data)
         guard maximumDimension >= 320 else { throw PDFProcessingError.invalidPageSelection }

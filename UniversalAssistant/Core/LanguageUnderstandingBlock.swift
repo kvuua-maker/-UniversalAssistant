@@ -239,11 +239,11 @@ private enum CanonicalExternalProviderBoundaryAnalyzer {
 /// The single semantic entry point for typed text, final Speech transcripts,
 /// App Intent parameters, and compound subcommands in the shipped graph.
 ///
-/// LocalCommandEngine is retained only as a compatibility candidate generator
-/// while the 96 families migrate. It cannot bypass structural framing,
-/// confidence decisions, or protected-domain web isolation.
+/// Canonical lexical extraction is an internal evidence stage. It cannot
+/// bypass structural framing, confidence decisions, or protected-domain web
+/// isolation, and it is not a competing production parser.
 struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
-    private let legacyCandidate: LocalCommandEngine
+    private let lexicalCandidate: CanonicalLexicalCandidateExtractor
     private let analyzer: CanonicalSemanticFrameAnalyzer
     private let propositionAnalyzer: CanonicalPropositionAnalyzer
     private let applicationCandidates: [ScopedEntityCandidate<String>]
@@ -251,14 +251,14 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
     private let catalogCandidates: [ScopedEntityCandidate<CanonicalCatalogEntity>]
 
     init(
-        legacyCandidate: LocalCommandEngine = .init(),
+        lexicalCandidate: CanonicalLexicalCandidateExtractor = .init(),
         analyzer: CanonicalSemanticFrameAnalyzer = .init(),
         propositionAnalyzer: CanonicalPropositionAnalyzer = .init(),
         applicationCandidates: [ScopedEntityCandidate<String>]? = nil,
         serviceCandidates: [ScopedEntityCandidate<String>]? = nil,
         catalogCandidates: [ScopedEntityCandidate<CanonicalCatalogEntity>]? = nil
     ) {
-        self.legacyCandidate = legacyCandidate
+        self.lexicalCandidate = lexicalCandidate
         self.analyzer = analyzer
         self.propositionAnalyzer = propositionAnalyzer
         self.applicationCandidates = applicationCandidates ?? Self.verifiedApplicationCandidates
@@ -321,7 +321,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             entities["speech_mean_confidence"] = String(format: "%.3f", confidence)
         }
         if selectedAlternative { entities["speech_selected_alternative"] = "true" }
-        return ExplicitCurrentCommandPolicy.apply(to: .init(
+        return CanonicalCurrentCommandRoleNormalizer.apply(to: .init(
             id: primary.id,
             originalText: text,
             normalizedText: selected.normalizedText,
@@ -742,7 +742,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             return .init(originalText: text, normalizedText: "", language: document.language, intent: .unknown, needsClarification: true)
         }
 
-        let legacy = legacyCandidate.parse(text)
+        let legacy = lexicalCandidate.parse(text)
         if legacy.entities["direct_url"] != nil {
             return authoritative(legacy, document: document, evidence: "verified_http_url")
         }
@@ -777,8 +777,9 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             entities["source_text"] = translation.sourceText
             entities["target_language"] = translation.targetLanguage
             entities["semantic_evidence"] = "typed_translation_roles"
-        } else if legacy.intent == .multiStep, frameResult.frame.compound != nil {
-            // LocalCommandEngine has already required every separated clause to
+        } else if legacy.intent == .multiStep,
+                  frameResult.frame.compound != nil || isRoutineDefinition(document.normalizedText) {
+            // The lexical evidence stage has already required every separated clause to
             // resolve to a concrete canonical command. Preserve that validated
             // typed graph before selecting any one clause's structural intent;
             // otherwise an interactive first step loses its continuation.
@@ -1101,7 +1102,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             risk: intent == .emergency ? .emergency : legacy.risk,
             needsClarification: needsClarification || intent == .unknown
         )
-        return ExplicitCurrentCommandPolicy.apply(to: parsed)
+        return CanonicalCurrentCommandRoleNormalizer.apply(to: parsed)
     }
 
     /// A local-utility recognizer may observe digits or separators inside a
@@ -1380,6 +1381,11 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             [.show, .search, .query].contains($0)
         } == true
         return informationObjectAction || (actionEvidence && (objectEvidence || document.tokens.count >= 4))
+    }
+
+    private func isRoutineDefinition(_ normalized: String) -> Bool {
+        ["коли я кажу", "когда я говорю", "when i say", "wenn ich", "quand je dis"]
+            .contains(where: normalized.contains)
     }
 
     private func communicationRecipient(_ value: String, excludingResolvedService service: String) -> String? {
@@ -1777,7 +1783,10 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             // public URL/API to launch Voice Memos or start its recording, but
             // the command must still resolve to a truthful system restriction.
             .init(value: "voice-memos", displayName: "Voice Memos",
-                  aliases: ["voice memos", "диктофон", "голосові записи", "голосовые записи"])
+                  aliases: CanonicalSpeechEntityRegistry.aliases(for: "voice-memos")),
+            .init(value: "files", displayName: "Files", aliases: CanonicalSpeechEntityRegistry.aliases(for: "files")),
+            .init(value: "camera", displayName: "Camera", aliases: CanonicalSpeechEntityRegistry.aliases(for: "camera")),
+            .init(value: "calendar", displayName: "Calendar", aliases: CanonicalSpeechEntityRegistry.aliases(for: "calendar"))
         ]
 
     private static let verifiedServiceCandidates: [ScopedEntityCandidate<String>] =

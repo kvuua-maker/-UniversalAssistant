@@ -4,46 +4,70 @@ import SwiftUI
 
 struct AssistantHomeView: View {
     @Bindable var model: AssistantViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         TabView {
             NavigationStack {
-                ScrollView {
-                    VStack(spacing: 28) {
-                        Spacer(minLength: 24)
-                        Button(action: model.toggleListening) {
-                            Image(systemName: model.isListening ? "waveform.circle.fill" : "mic.circle.fill")
-                            .font(.system(size: 112))
-                            .symbolRenderingMode(.palette)
-                            .foregroundStyle(.white, Color.accentColor)
+                ZStack {
+                    PremiumAssistantBackdrop(colorScheme: colorScheme)
+                        .ignoresSafeArea()
+                    ScrollView {
+                        VStack(spacing: 22) {
+                            VStack(spacing: 5) {
+                                Text("UniversalAssistant")
+                                    .font(.system(.title2, design: .rounded, weight: .semibold))
+                                Text(model.statusText)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityIdentifier("assistant.status")
+                            }
+                            .padding(.top, 18)
+
+                            if showsOrb {
+                                Button(action: model.toggleListening) {
+                                    AssistantVoiceOrb(
+                                        isListening: model.isListening,
+                                        isProcessing: model.resultState == .processing,
+                                        reduceMotion: reduceMotion
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(!model.voiceInputEnabled)
+                                .accessibilityLabel(model.isListening ? Text("stop_listening") : Text("start_listening"))
+                                .accessibilityIdentifier("assistant.voice-orb")
+                            }
+
+                            if !model.visibleVoiceTranscript.isEmpty {
+                                Text(model.visibleVoiceTranscript)
+                                    .font(.body)
+                                    .multilineTextAlignment(.center)
+                                    .foregroundStyle(.primary.opacity(0.86))
+                                    .frame(maxWidth: 520)
+                                    .padding(.horizontal, 14)
+                                    .accessibilityIdentifier("assistant.voice-transcript")
+                            }
+
+                            if model.shouldOfferSettings,
+                               let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                                Link("settings", destination: settingsURL)
+                                    .buttonStyle(.bordered)
+                                    .accessibilityIdentifier("assistant.permission-settings")
+                            }
+
+                            CompactResultCard(state: model.resultState, onReportIssue: {
+                                Task { await model.reportWrongResult() }
+                            }, onScannerAction: model.performScannerAction, onOCRAction: model.performOCRAction, onTranslationAction: model.performTranslationAction, onResultAction: model.performResultAction, onActionRequiredChoice: model.resolveActionRequiredChoice)
+                                .frame(maxWidth: 560)
+                                .transition(reduceMotion ? .opacity : .asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.98)), removal: .opacity))
+
+                            RecordingStatusPill(state: model.recorder.state)
+                            Spacer(minLength: 28)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 18)
                     }
-                        .disabled(!model.voiceInputEnabled)
-                        .accessibilityLabel(model.isListening ? Text("stop_listening") : Text("start_listening"))
-                    Toggle("voice_input_enabled", isOn: Binding(
-                        get: { model.voiceInputEnabled }, set: { model.setVoiceInputEnabled($0) }
-                    ))
-                    .accessibilityIdentifier("assistant.voice-input-toggle")
-                    Text(model.statusText).font(.headline).accessibilityIdentifier("assistant.status")
-                    if !model.visibleVoiceTranscript.isEmpty {
-                        Text(model.visibleVoiceTranscript)
-                            .font(.body)
-                            .frame(maxWidth: 520, alignment: .leading)
-                            .accessibilityIdentifier("assistant.voice-transcript")
-                    }
-                    if model.shouldOfferSettings,
-                       let settingsURL = URL(string: UIApplication.openSettingsURLString) {
-                        Link("settings", destination: settingsURL)
-                            .accessibilityIdentifier("assistant.permission-settings")
-                    }
-                    RecordingStatusPill(state: model.recorder.state)
-                    CompactResultCard(state: model.resultState, onReportIssue: {
-                        Task { await model.reportWrongResult() }
-                    }, onScannerAction: model.performScannerAction, onOCRAction: model.performOCRAction, onTranslationAction: model.performTranslationAction, onResultAction: model.performResultAction, onActionRequiredChoice: model.resolveActionRequiredChoice)
-                        .frame(maxWidth: 520)
-                        Spacer(minLength: 24)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal)
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -52,10 +76,11 @@ struct AssistantHomeView: View {
                         set: { model.updateComposerTextFromUser($0) }
                     ), submit: model.submit)
                         .padding(.horizontal)
-                        .padding(.vertical, 8)
-                        .background(.bar)
+                        .padding(.top, 8)
+                        .padding(.bottom, 6)
+                        .background(.ultraThinMaterial)
                 }
-                .navigationTitle("UniversalAssistant")
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     NavigationLink(destination: QuickLaunchView(capabilities: .init(
                         actionButton: .unavailable, backTap: .available, appShortcut: .available,
@@ -153,6 +178,70 @@ struct AssistantHomeView: View {
                 }
             }
         }
+    }
+
+    private var showsOrb: Bool {
+        switch model.resultState {
+        case .idle, .processing, .recognized: true
+        default: false
+        }
+    }
+}
+
+private struct PremiumAssistantBackdrop: View {
+    let colorScheme: ColorScheme
+
+    var body: some View {
+        ZStack {
+            (colorScheme == .dark ? Color(red: 0.018, green: 0.025, blue: 0.065) : Color(red: 0.965, green: 0.968, blue: 0.985))
+            RadialGradient(
+                colors: [Color.indigo.opacity(colorScheme == .dark ? 0.22 : 0.10), .clear],
+                center: .top,
+                startRadius: 20,
+                endRadius: 520
+            )
+        }
+    }
+}
+
+private struct AssistantVoiceOrb: View {
+    let isListening: Bool
+    let isProcessing: Bool
+    let reduceMotion: Bool
+    @State private var breathes = false
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.indigo.opacity(0.22))
+                .frame(width: 190, height: 190)
+                .blur(radius: 24)
+                .scaleEffect(breathes ? 1.08 : 0.94)
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [Color(red: 0.48, green: 0.22, blue: 1.0), Color(red: 0.12, green: 0.55, blue: 1.0)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay {
+                    Circle().stroke(.white.opacity(0.22), lineWidth: 1)
+                }
+                .shadow(color: .indigo.opacity(0.52), radius: 30, y: 12)
+                .frame(width: 142, height: 142)
+            Image(systemName: isListening ? "waveform" : (isProcessing ? "sparkles" : "mic.fill"))
+                .font(.system(size: 42, weight: .medium, design: .rounded))
+                .symbolEffect(.variableColor.iterative, options: reduceMotion ? .nonRepeating : .repeating, isActive: isListening || isProcessing)
+                .foregroundStyle(.white)
+        }
+        .frame(width: 210, height: 210)
+        .contentShape(Circle())
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) { breathes = true }
+        }
+        .accessibilityAddTraits(.isButton)
     }
 }
 

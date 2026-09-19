@@ -162,29 +162,24 @@ struct CanonicalCapabilityExecutionTests {
         #expect(executor.received == [.cameraCapture])
     }
 
-    @Test func simpleProductRequestUsesExactGoogleFallbackWithoutMultiStepLeakage() async throws {
+    @Test func capabilityFailureCannotRerouteProductAfterTheFrozenPlan() async throws {
         let executor = CapabilityExecutorStub(.failure(CanonicalCapabilityExecutionError.externalProviderRequired("productSearch")))
         let model = AssistantViewModel(capabilityExecutor: executor)
         model.input = "Знайди зимові черевики"
         model.submit()
-        try await waitUntil { if case .webHandoff = model.resultState { true } else { false } }
+        try await waitUntil { if case .failure = model.resultState { true } else { false } }
         #expect(executor.received == [.productSearch])
-        guard case let .webHandoff(result) = model.resultState else { return }
-        #expect(result.query == "Знайди зимові черевики")
-        #expect(result.destination.path == "/search")
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
     }
 
-    @Test func externalProductProviderRequirementUsesExactQueryNotGenericHomepage() async throws {
+    @Test func providerErrorCannotBecomeAnAfterFailureGoogleRoute() async throws {
         let executor = CapabilityExecutorStub(.failure(CanonicalCapabilityExecutionError.externalProviderRequired("productSearch")))
         let model = AssistantViewModel(capabilityExecutor: executor)
         model.input = "Знайди черевики"
         model.submit()
-        try await waitUntil { if case .webHandoff = model.resultState { true } else { false } }
+        try await waitUntil { if case .failure = model.resultState { true } else { false } }
         #expect(executor.received == [.productSearch])
-        guard case let .webHandoff(result) = model.resultState else { return }
-        #expect(result.query == "Знайди черевики")
-        #expect(result.destination.host == "www.google.com")
-        #expect(result.destination.path == "/search")
+        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
     }
 
     @Test func verifiedSystemHandoffExecutesImmediatelyWithoutNarrationCard() async throws {

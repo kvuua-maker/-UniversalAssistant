@@ -8,14 +8,14 @@ private func productionFact(_ id: String) -> ResultFact { .init(id: id, label: i
 struct ProductionMultiStepTests {
     private func command(id: UUID = UUID()) -> StructuredCommand { .init(id: id, originalText: "multi", normalizedText: "multi", language: .en, intent: .multiStep) }
 
-    @Test func productionExecutorAggregatesVerifiedAndUnavailableSteps() async throws {
-        let executor = ProductionCanonicalCapabilityExecutor(multiStepOperationFactory: { _, plan in
+    @Test func isolatedLegacyCoordinatorAggregatesVerifiedAndUnavailableSteps() async throws {
+        let coordinator = ProductionMultiStepCoordinator(operationFactory: { _, plan in
             Dictionary(uniqueKeysWithValues: plan.steps.compactMap { step in
                 if ["date", "location", "calendar"].contains(step.id) { return (step.id, { productionFact(step.id) } as CoordinationStepOperation) }
                 return nil
             })
         })
-        guard case let .result(result) = try await executor.execute(command()) else { Issue.record("Expected aggregate"); return }
+        let result = try await coordinator.execute(command())
         #expect(result.facts.contains { $0.id == "calendar" && $0.state == .verified })
         #expect(result.facts.contains { $0.id == "hotel" && $0.state == .unavailable })
         #expect(!result.warnings.isEmpty); #expect(result.aiInvocationCount == 0)
@@ -174,7 +174,7 @@ extension ProductionMultiStepTests {
             placeSearch: .init(providers: [MultiStepPlaceStub()]),
             currentLocation: location, currentContext: context, personalSearchSources: []
         )
-        let command = LocalCommandEngine().parse("Знайди магазин Nike у Києві і покажи, як до нього доїхати")
+        let command = LanguageUnderstandingBlock().parse("Знайди найближчий магазин у Києві і покажи, як до нього доїхати")
         #expect(command.intent == .multiStep)
         let planned = try DeterministicExecutionPlanBuilder().plan(for: command)
         #expect(planned.steps.compactMap(\.command?.intent) == [.placeSearch, .navigation])
@@ -190,7 +190,7 @@ extension ProductionMultiStepTests {
             placeSearch: .init(providers: [MultiStepPlaceStub()]),
             currentLocation: MultiStepLocationStub(), personalSearchSources: []
         )
-        let command = LocalCommandEngine().parse("Знайди найближчий ресторан у Львові, потім проклади до нього маршрут")
+        let command = LanguageUnderstandingBlock().parse("Знайди найближчий ресторан у Львові, потім проклади до нього маршрут")
         #expect(command.intent == .multiStep)
         guard case let .handoff(result) = try await executor.execute(command) else { Issue.record("Expected typed navigation handoff"); return }
         #expect(result.kind == .navigation)

@@ -42,7 +42,8 @@ struct AppleWeatherKitProvider: WeatherProvider {
             fetchedAt: .now,
             locationSource: sample.source,
             locationLabel: request.location.manualLabel,
-            context: request.context
+            context: request.context,
+            requestedDate: request.targetDate
         )
         LocalVoiceDiagnosticReport.shared.record("weather_result_mapped", "status=success")
         return snapshot

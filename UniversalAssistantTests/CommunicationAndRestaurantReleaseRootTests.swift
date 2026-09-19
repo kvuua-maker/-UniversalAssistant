@@ -308,15 +308,14 @@ struct RestaurantReservationReleaseRootTests {
         )
         model.input = "Покажи доступний ресторан завтра о 18:45 для 4 гостей"
         model.submit()
-        try await waitUntil { if case .deterministic = model.resultState { return true }; return false }
-        guard case let .deterministic(result) = model.resultState else {
+        try await waitUntil { if case .webHandoff = model.resultState { return true }; return false }
+        guard case let .webHandoff(result) = model.resultState else {
             Issue.record("Missing truthful restaurant fallback")
             return
         }
-        #expect(result.primaryAnswer.contains("Пряме бронювання недоступне"))
-        #expect(result.warnings.contains { $0.contains("не підтверджено провайдером") })
-        #expect(result.actions.first?.destination?.host == "river.example")
-        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+        #expect(result.destination.host == "www.google.com")
+        #expect(result.destination.path == "/search")
+        #expect(result.query.contains("ресторан"))
     }
 
     @Test func emptyDedicatedDiscoveryUsesOneExactGoogleQueryWithoutDeadEnd() async throws {

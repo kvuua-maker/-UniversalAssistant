@@ -28,7 +28,12 @@ struct ControlledWebSearchHandoff: Sendable {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard explicitWebSearch else { return trimmed }
         guard let range = prefixes.compactMap({ trimmed.range(of: $0, options: [.caseInsensitive, .diacriticInsensitive]) })
-            .min(by: { $0.lowerBound < $1.lowerBound }) else { return "" }
+            .min(by: { $0.lowerBound < $1.lowerBound }) else {
+            // A canonical webSearch intent is already an explicit routing
+            // decision; natural informational text does not require a magic
+            // "search the web" prefix to become an exact query.
+            return trimmed
+        }
         return trimmed[range.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

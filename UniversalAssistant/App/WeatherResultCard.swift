@@ -6,22 +6,34 @@ struct WeatherResultCard: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
-            Image(systemName: snapshot.current.symbolName)
+            Image(systemName: selectedDaily?.symbolName ?? snapshot.current.symbolName)
                 .font(.largeTitle)
                 .foregroundStyle(.blue)
                 .frame(width: 44)
             VStack(alignment: .leading, spacing: 5) {
                 Text(snapshot.locationLabel ?? String(localized: "weather_current_location", table: "Weather"))
                     .font(.headline)
-                (Text(snapshot.current.temperatureCelsius,
-                      format: .number.precision(.fractionLength(0))) + Text(" °C"))
-                    .font(.system(.title, design: .rounded, weight: .semibold))
-                Text(snapshot.current.condition)
+                if let requestedDate = snapshot.requestedDate {
+                    Text(requestedDate.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                if let selectedDaily {
+                    Text("\(selectedDaily.lowTemperatureCelsius.formatted(.number.precision(.fractionLength(0))))…\(selectedDaily.highTemperatureCelsius.formatted(.number.precision(.fractionLength(0)))) °C")
+                        .font(.system(.title, design: .rounded, weight: .semibold))
+                } else {
+                    (Text(snapshot.current.temperatureCelsius,
+                          format: .number.precision(.fractionLength(0))) + Text(" °C"))
+                        .font(.system(.title, design: .rounded, weight: .semibold))
+                }
+                Text(selectedDaily?.condition ?? snapshot.current.condition)
                     .font(.subheadline)
-                Text(String(format: String(localized: "weather_feels_like_format", table: "Weather"),
-                            snapshot.current.apparentTemperatureCelsius))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if selectedDaily == nil {
+                    Text(String(format: String(localized: "weather_feels_like_format", table: "Weather"),
+                                snapshot.current.apparentTemperatureCelsius))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Button(action: onReportIssue) {
                     Text("feedback_wrong_result", tableName: "Feedback")
                 }
@@ -35,5 +47,14 @@ struct WeatherResultCard: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("assistant.weather-result")
+    }
+
+    private var selectedDaily: DailyWeatherValue? {
+        guard let target = snapshot.requestedDate else { return nil }
+        let calendar = Calendar.autoupdatingCurrent
+        return snapshot.daily.min {
+            abs(calendar.startOfDay(for: $0.date).timeIntervalSince(calendar.startOfDay(for: target))) <
+                abs(calendar.startOfDay(for: $1.date).timeIntervalSince(calendar.startOfDay(for: target)))
+        }
     }
 }

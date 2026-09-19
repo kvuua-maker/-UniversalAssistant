@@ -99,7 +99,7 @@ enum CanonicalDependencyBinder {
             }
             entities["source_text"] = text
         case let .selectedEntity(entity):
-            guard [.navigation, .routeSearch].contains(command.intent),
+            guard [.navigation, .routeSearch, .transportRoute].contains(command.intent),
                   let latitude = entity.latitude, let longitude = entity.longitude else {
                 throw CanonicalCapabilityExecutionError.unavailable("dependency_output_type_mismatch")
             }
@@ -114,12 +114,17 @@ enum CanonicalDependencyBinder {
 }
 
 struct CanonicalCapabilityContinuation: Equatable, Sendable {
-    let remainingCommands: [StructuredCommand]
+    let remainingPlans: [RoutePlan]
 
-    func consuming(_ output: CanonicalDependencyOutput) throws -> [StructuredCommand] {
-        guard let command = remainingCommands.first else { return [] }
-        let first = try CanonicalDependencyBinder.bind(command, output: output)
-        return [first] + remainingCommands.dropFirst()
+    func consuming(_ output: CanonicalDependencyOutput) throws -> [RoutePlan] {
+        guard let plan = remainingPlans.first else { return [] }
+        let command = try CanonicalDependencyBinder.bind(plan.command, output: output)
+        let first = RoutePlan(
+            command: command, room: plan.room, primaryMechanism: plan.primaryMechanism,
+            providerID: plan.providerID, terminalStrategy: plan.terminalStrategy,
+            routingDecision: plan.routingDecision, atomicPlans: plan.atomicPlans
+        )
+        return [first] + remainingPlans.dropFirst()
     }
 }
 
@@ -175,10 +180,14 @@ private final class PhotoSearchDeadlineCompletion: @unchecked Sendable {
 @MainActor
 protocol CanonicalCapabilityExecuting: AnyObject {
     func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome
+    func execute(_ plan: RoutePlan) async throws -> CapabilityExecutionOutcome
     func resume(_ continuation: CanonicalCapabilityContinuation, with output: CanonicalDependencyOutput) async throws -> CapabilityExecutionOutcome
 }
 
 extension CanonicalCapabilityExecuting {
+    func execute(_ plan: RoutePlan) async throws -> CapabilityExecutionOutcome {
+        try await execute(plan.command)
+    }
     func resume(_ continuation: CanonicalCapabilityContinuation, with output: CanonicalDependencyOutput) async throws -> CapabilityExecutionOutcome {
         throw CanonicalCapabilityExecutionError.unavailable("compound_continuation_unsupported")
     }
@@ -186,7 +195,7 @@ extension CanonicalCapabilityExecuting {
 
 @MainActor
 final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting {
-    private let deviceRouter: UniversalDeviceCommandRouter
+    private let applicationResolver: DeviceApplicationResolver
     private let contacts: any ContactResolving
     private let photos: any PhotoLibrarySearching
     private let photoSemanticLoader: any PhotoAssetImageLoading
@@ -202,8 +211,6 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let routeAwareSearch: RouteAwareSearchEngine
     private let routeProvider: any RouteProvider
     private let reverseLocation: any ReverseLocationGeocoding
-    private var multiStep: ProductionMultiStepCoordinator
-    private let multiStepOperationFactory: ProductionStepOperationFactory?
     private let recorder: AudioRecorderController
     private let eventKit: any EventKitCommandExecuting
     private let publicDeviceExecute: @MainActor (SystemQuickAction) throws -> String
@@ -212,7 +219,6 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let restaurantDiscovery: RestaurantDiscoveryEngine
     private let photoSearchTimeout: Duration
     private let alarmExecute: ( (SystemQuickAction) async throws -> String)?
-    private let commandParser: any CommandParsing
     let affiliateConfigurations: [String: AffiliateRoutingConfiguration]
     private var restaurantOffersByID: [String: RestaurantOffer] = [:]
     private var restaurantSlotsByID: [String: RestaurantReservationSlot] = [:]
@@ -221,7 +227,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private var latestRestaurantBookingID: String?
 
     init(
-        deviceRouter: UniversalDeviceCommandRouter = .init(applications: .init(applications: LaunchDeviceApplications.verified)),
+        applicationResolver: DeviceApplicationResolver = .init(applications: LaunchDeviceApplications.verified),
         contacts: any ContactResolving = LocalContactResolver(),
         photos: any PhotoLibrarySearching = PhotoKitLibrarySearch(),
         photoSemanticLoader: any PhotoAssetImageLoading = PhotoKitAssetImageLoader(),
@@ -234,7 +240,6 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         reverseLocation: any ReverseLocationGeocoding = AppleReverseLocationGeocoder(),
         currentContext: CurrentContextStore = CurrentContextStore(),
         routeProvider: any RouteProvider = MapKitRouteProvider(),
-        multiStepOperationFactory: ProductionStepOperationFactory? = nil,
         eventKit: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
         recorder: AudioRecorderController = AudioRecorderController(),
         publicDeviceExecute: @escaping @MainActor (SystemQuickAction) throws -> String = { try ProductionPublicDeviceExecutor().execute($0) },
@@ -244,10 +249,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         alarmExecute: (  (SystemQuickAction) async throws -> String)? = nil,
         photoSearchTimeout: Duration = .seconds(3),
         personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())],
-        commandParser: any CommandParsing = LanguageUnderstandingBlock(),
         affiliateConfigurations: [String: AffiliateRoutingConfiguration] = [:]
     ) {
-        self.deviceRouter = deviceRouter
+        self.applicationResolver = applicationResolver
         self.contacts = contacts
         self.photos = photos
         self.photoSemanticLoader = photoSemanticLoader
@@ -269,33 +273,21 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.restaurantDiscovery = RestaurantDiscoveryEngine(providers: restaurantProviders)
         self.alarmExecute = alarmExecute
         self.photoSearchTimeout = photoSearchTimeout
-        self.commandParser = commandParser
         self.affiliateConfigurations = affiliateConfigurations
-        self.multiStepOperationFactory = multiStepOperationFactory
-        if let multiStepOperationFactory {
-            self.multiStep = ProductionMultiStepCoordinator(parser: commandParser, operationFactory: multiStepOperationFactory)
-        } else {
-            let operationMap = ProductionStepOperationMap(eventKit: eventKit, currentLocation: currentLocation, locationResolver: locationResolver, places: placeSearch, typedExecutor: nil)
-            self.multiStep = ProductionMultiStepCoordinator(parser: commandParser) { command, plan in
-                operationMap.operations(for: command, plan: plan)
-            }
-        }
 #if canImport(MusicKit)
         self.media = mediaOverride ?? MediaIntegrationEngine(adapters: [AppleMusicProviderAdapter()])
 #else
         self.media = mediaOverride
 #endif
-        if multiStepOperationFactory == nil {
-            let operationMap = ProductionStepOperationMap(eventKit: eventKit, currentLocation: currentLocation, locationResolver: locationResolver, places: placeSearch) { [weak self] subcommand, step in
-                guard let self else { throw CanonicalCapabilityExecutionError.unavailable("multi_step_executor_released") }
-                return try await self.executeTypedStep(subcommand, step: step)
-            }
-            self.multiStep = ProductionMultiStepCoordinator(parser: commandParser) { command, plan in operationMap.operations(for: command, plan: plan) }
-        }
     }
 
     func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
-        let routingDecision = CanonicalRoutingPolicy().decide(command)
+        try await execute(SingleCorridorRouter().plan(command))
+    }
+
+    func execute(_ plan: RoutePlan) async throws -> CapabilityExecutionOutcome {
+        let command = plan.command
+        let routingDecision = plan.routingDecision
         LocalVoiceDiagnosticReport.shared.record(
             "canonical_routing_policy",
             "lane=\(routingDecision.lane.rawValue) provider=\(routingDecision.providerID ?? "none") " +
@@ -306,6 +298,10 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             LocalVoiceDiagnosticReport.shared.recordBoundaryPre(diagnosticBoundary, "capability=\(command.intent.rawValue)")
         }
         do {
+            if command.intent == .multiStep {
+                guard !plan.atomicPlans.isEmpty else { throw CanonicalCapabilityExecutionError.missingParameter("compound_steps") }
+                return try await executeFrozenCompound(plan.atomicPlans, aggregate: [], dependencyOutput: nil)
+            }
             let outcome = try await executeUnobserved(command, routingDecision: routingDecision)
             if let diagnosticBoundary {
                 LocalVoiceDiagnosticReport.shared.recordBoundaryPost(diagnosticBoundary, "capability=\(command.intent.rawValue) status=success")
@@ -327,12 +323,12 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         // specialized executors remain responsible for the actual operation.
         switch routingDecision.lane {
         case .explicitProvider, .accommodation, .jobs, .events, .delivery:
-            return try officialPublicProviderHandoff(command)
+            return try officialPublicProviderHandoff(command, routingDecision: routingDecision)
         case .officialBrand:
             return try officialBrandHandoff(command)
         case .localDiscovery:
-            if command.intent == .serviceSearch { return try await localServices(command) }
-            return try await places(command)
+            if command.intent == .serviceSearch { return try await localServices(command, allowsMultiple: routingDecision.allowsMultipleResults) }
+            return try await places(command, allowsMultiple: routingDecision.allowsMultipleResults)
         case .restaurantReservation:
             return try await restaurantReservation(command)
         case .clarification where command.intent == .parcelTrack:
@@ -385,6 +381,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                     }
                     return .presentation(.pdfWorkflow(.create, text: nil))
                 }
+                if source == .photo { return .presentation(.pdfPhotoPicker) }
                 return .presentation(.pdfSourcePicker(.choose, text: shared?.kind == .text ? shared?.value : currentContext.freshAnswer()))
             }
             return .presentation(.documents)
@@ -433,14 +430,19 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             guard let media else { throw CanonicalCapabilityExecutionError.unavailable("musickit_unavailable") }
             let query = command.entities["query"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             if command.entities["media_action"] == "play", query.isEmpty {
-                let playback = try await media.playCurrent(providerID: "apple-music")
-                guard playback.state == .playing else {
-                    throw CanonicalCapabilityExecutionError.unavailable("music_playback_not_started")
+                if let playback = try? await media.playCurrent(providerID: "apple-music"), playback.state == .playing {
+                    return .result(try result("Музика відтворюється", facts: [
+                        .init(id: "apple-music-playback", label: "Стан", value: playback.state.rawValue,
+                              state: .verified, source: "MusicKit", observedAt: .now, priority: 100)
+                    ]))
                 }
-                return .result(try result("Музика відтворюється", facts: [
-                    .init(id: "apple-music-playback", label: "Стан", value: playback.state.rawValue,
-                          state: .verified, source: "MusicKit", observedAt: .now, priority: 100)
-                ]))
+                // No resumable queue exists. Open Apple Music truthfully; this
+                // is a handoff, never a false playback-success claim.
+                return .handoff(.init(
+                    query: command.originalText,
+                    destination: URL(string: "https://music.apple.com")!,
+                    kind: .system
+                ))
             }
             guard !query.isEmpty else { throw CanonicalCapabilityExecutionError.missingParameter("media_query") }
             let values = try await media.search(providerID: "apple-music", query: query, kinds: [.song, .album, .artist, .playlist], limit: 3, requestAuthorization: true)
@@ -507,11 +509,11 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .serviceSearch:
             if command.entities["provider_domain"] == "car_rental",
                hasExplicitOfficialPublicProvider(in: command) {
-                return try officialPublicProviderHandoff(command)
+                return try officialPublicProviderHandoff(command, routingDecision: routingDecision)
             }
-            return try await localServices(command)
+            return try await localServices(command, allowsMultiple: routingDecision.allowsMultipleResults)
         case .restaurantSearch:
-            return try await places(command)
+            return try await places(command, allowsMultiple: routingDecision.allowsMultipleResults)
         case .publicTransport:
             var entities = command.entities
             if entities["destination"] == nil { entities["destination"] = entities["location"] }
@@ -525,36 +527,33 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             }
             return try officialPublicProviderHandoff(command)
         case .productSearch, .fashionDiscovery:
-            let decision = CanonicalRoutingPolicy().decide(command)
-            if decision.lane == .officialBrand { return try officialBrandHandoff(command) }
-            if decision.lane == .localDiscovery { return try await places(command) }
-            return try officialPublicProviderHandoff(command)
+            if routingDecision.lane == .officialBrand { return try officialBrandHandoff(command) }
+            if routingDecision.lane == .localDiscovery { return try await places(command, allowsMultiple: routingDecision.allowsMultipleResults) }
+            return try officialPublicProviderHandoff(command, routingDecision: routingDecision)
         case .groceryBasket:
-            let decision = CanonicalRoutingPolicy().decide(command)
-            return decision.lane == .localDiscovery
-                ? try await places(command)
-                : try officialPublicProviderHandoff(command)
+            return routingDecision.lane == .localDiscovery
+                ? try await places(command, allowsMultiple: routingDecision.allowsMultipleResults)
+                : try officialPublicProviderHandoff(command, routingDecision: routingDecision)
         case .ticketSearch, .ticketPurchaseHandoff, .hotelSearch:
-            return try officialPublicProviderHandoff(command)
+            return try officialPublicProviderHandoff(command, routingDecision: routingDecision)
         case .parcelTrack:
-            let decision = CanonicalRoutingPolicy().decide(command)
-            guard decision.lane != .clarification else {
+            guard routingDecision.lane != .clarification else {
                 throw CanonicalCapabilityExecutionError.missingParameter("parcel_provider")
             }
-            return try officialPublicProviderHandoff(command)
+            return try officialPublicProviderHandoff(command, routingDecision: routingDecision)
         case .travelPlan:
-            return .result(try await multiStep.execute(command))
+            throw CanonicalCapabilityExecutionError.unavailable("travel_plan_requires_predetermined_web_route")
         case .taxiSearch, .taxiCompare:
             throw CanonicalCapabilityExecutionError.externalProviderRequired(command.intent.rawValue)
         case .placeSearch:
-            return try await places(command)
+            return try await places(command, allowsMultiple: routingDecision.allowsMultipleResults)
         case .navigation, .routeSearch:
             if command.entities["destination"] == nil { return try await contextual(command, opensSelection: true) }
             return try await route(command)
         case .routeAwareSearch:
             return try await routeAware(command)
         case .multiStep:
-            return try await executeCompound(command)
+            throw CanonicalCapabilityExecutionError.unavailable("compound_plan_required")
         case .reminderComplete, .reminderDelete, .shoppingList, .undo:
             throw CanonicalCapabilityExecutionError.unavailable("canonical_mutation_context_required")
         case .calendarUpdate:
@@ -567,87 +566,49 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         }
     }
 
-    private func executeCompound(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
-        let plan = try DeterministicExecutionPlanBuilder(parser: commandParser).plan(for: command)
-        let commands = plan.steps.compactMap(\.command)
-        guard commands.count == plan.steps.count, !commands.isEmpty else {
-            return .result(try await multiStep.execute(command))
+    private func executeFrozenCompound(
+        _ plans: [RoutePlan],
+        aggregate: [ResultFact],
+        dependencyOutput: CanonicalDependencyOutput?
+    ) async throws -> CapabilityExecutionOutcome {
+        guard let plan = plans.first else {
+            return .result(try result("Виконано", facts: aggregate))
         }
-        return try await executeCompound(commands, aggregate: [], dependencyOutput: nil)
+        var command = plan.command
+        if let dependencyOutput { command = try CanonicalDependencyBinder.bind(command, output: dependencyOutput) }
+        let reboundPlan = RoutePlan(
+            command: command, room: plan.room, primaryMechanism: plan.primaryMechanism,
+            providerID: plan.providerID, terminalStrategy: plan.terminalStrategy,
+            routingDecision: plan.routingDecision, atomicPlans: []
+        )
+        let outcome = try await execute(reboundPlan)
+        let remaining = Array(plans.dropFirst())
+        switch outcome {
+        case let .result(value):
+            if remaining.isEmpty { return .result(value) }
+            let fact = ResultFact(id: command.id.uuidString, label: value.primaryAnswer, value: value.primaryAnswer,
+                                  state: .verified, source: "UniversalAssistant", observedAt: .now,
+                                  priority: 100 - aggregate.count)
+            let output = [.placeSearch, .restaurantSearch, .serviceSearch].contains(command.intent)
+                ? currentContext.selectFirstResult().map(CanonicalDependencyOutput.selectedEntity) : nil
+            return try await executeFrozenCompound(remaining, aggregate: aggregate + [fact], dependencyOutput: output)
+        case let .handoff(value):
+            if remaining.isEmpty { return .handoff(value) }
+            let fact = ResultFact(id: command.id.uuidString, label: command.intent.rawValue,
+                                  value: value.destination.absoluteString, state: .verified,
+                                  source: "UniversalAssistant", observedAt: .now, priority: 100 - aggregate.count)
+            let output = [.placeSearch, .restaurantSearch, .serviceSearch].contains(command.intent)
+                ? currentContext.selectFirstResult().map(CanonicalDependencyOutput.selectedEntity) : nil
+            return try await executeFrozenCompound(remaining, aggregate: aggregate + [fact], dependencyOutput: output)
+        case let .presentation(presentation):
+            return remaining.isEmpty ? .presentation(presentation) : .suspended(presentation, .init(remainingPlans: remaining))
+        case let .suspended(presentation, continuation):
+            return .suspended(presentation, continuation)
+        }
     }
 
     func resume(_ continuation: CanonicalCapabilityContinuation, with output: CanonicalDependencyOutput) async throws -> CapabilityExecutionOutcome {
-        try await executeCompound(continuation.consuming(output), aggregate: [], dependencyOutput: nil)
-    }
-
-    private func executeCompound(_ commands: [StructuredCommand], aggregate: [ResultFact], dependencyOutput: CanonicalDependencyOutput?) async throws -> CapabilityExecutionOutcome {
-        guard var command = commands.first else {
-            return .result(try result("Виконано", facts: aggregate))
-        }
-        let dependencyInputType = dependencyOutput?.diagnosticTypeName ?? "none"
-        LocalVoiceDiagnosticReport.shared.recordBoundaryPre("COMPOUND_STEP", "capability=\(command.intent.rawValue) input_type=\(dependencyInputType)")
-        defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("COMPOUND_STEP", "capability=\(command.intent.rawValue) status=returned") }
-        LocalVoiceDiagnosticReport.shared.record("dependency_input_type", "capability=\(command.intent.rawValue) input_type=\(dependencyInputType)")
-        if let dependencyOutput { command = try CanonicalDependencyBinder.bind(command, output: dependencyOutput) }
-        let outcome = try await execute(command)
-        let remaining = Array(commands.dropFirst())
-        switch outcome {
-        case let .result(value):
-            let fact = ResultFact(id: command.id.uuidString, label: value.primaryAnswer, value: value.primaryAnswer,
-                                  state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100 - aggregate.count)
-            if remaining.isEmpty { return .result(value) }
-            let output: CanonicalDependencyOutput? = [.placeSearch, .restaurantSearch, .serviceSearch].contains(command.intent)
-                ? currentContext.selectFirstResult().map(CanonicalDependencyOutput.selectedEntity)
-                : nil
-            LocalVoiceDiagnosticReport.shared.record("dependency_output_type", "capability=\(command.intent.rawValue) output_type=\(output?.diagnosticTypeName ?? "none")")
-            return try await executeCompound(remaining, aggregate: aggregate + [fact], dependencyOutput: output)
-        case let .handoff(value):
-            if remaining.isEmpty { return .handoff(value) }
-            let fact = ResultFact(id: command.id.uuidString, label: command.intent.rawValue, value: value.destination.absoluteString,
-                                  state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100 - aggregate.count)
-            let output: CanonicalDependencyOutput? = [.placeSearch, .restaurantSearch, .serviceSearch].contains(command.intent)
-                ? currentContext.selectFirstResult().map(CanonicalDependencyOutput.selectedEntity)
-                : nil
-            return try await executeCompound(remaining, aggregate: aggregate + [fact], dependencyOutput: output)
-        case let .presentation(presentation):
-            return remaining.isEmpty ? .presentation(presentation) : .suspended(presentation, .init(remainingCommands: remaining))
-        case .suspended:
-            throw CanonicalCapabilityExecutionError.unavailable("nested_compound_continuation")
-        }
-    }
-
-    private func executeTypedStep(_ command: StructuredCommand, step: ExecutionPlanStep) async throws -> ResultFact {
-        if [.calendarCreate, .calendarQuery, .calendarUpdate, .calendarDelete, .reminderCreate, .reminderQuery, .reminderComplete, .reminderDelete, .shoppingList, .undo].contains(command.intent) {
-            let value = try await eventKit.execute(command)
-            return .init(id: step.id, label: command.intent.rawValue, value: value.title + ": " + value.detail, state: .verified, source: "EventKit", observedAt: .now, priority: 100)
-        }
-        if command.intent == .audioRecord {
-            let action = AudioRecorderCommand(rawValue: command.entities["recorder_action"] ?? "start") ?? .start
-            await recorder.execute(action)
-            guard recorder.state != .failed && recorder.state != .denied else { throw CanonicalCapabilityExecutionError.unavailable("recorder_unavailable") }
-            return .init(id: step.id, label: command.intent.rawValue, value: String(describing: recorder.state), state: .verified, source: "AudioRecorderController", observedAt: .now, priority: 100)
-        }
-        if [.navigation, .routeSearch].contains(command.intent), command.entities["destination"] == nil {
-            guard currentContext.selectFirstResult() != nil, let destination = currentContext.consumeSelectedAction(), destination.host == "maps.apple.com" else {
-                throw CanonicalCapabilityExecutionError.missingParameter("resolved_place_destination")
-            }
-            return .init(id: step.id, label: command.intent.rawValue, value: destination.absoluteString, state: .verified, source: "MapKit", observedAt: .now, priority: 100)
-        }
-        let outcome = try await execute(command)
-        switch outcome {
-        case let .result(value): return .init(id: step.id, label: command.intent.rawValue, value: value.primaryAnswer, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
-        case let .handoff(value): return .init(id: step.id, label: command.intent.rawValue, value: value.destination.absoluteString, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
-        case let .presentation(value):
-            switch value {
-            case .message, .email, .share, .documents, .contactImport, .photoAsset, .photoOCR, .photoShare, .audioFile, .documentFile, .documentFiles:
-                return .init(id: step.id, label: command.intent.rawValue, value: value.id, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
-            case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .contactAccess, .contactCard, .translationTarget, .translation, .photoLibrary, .audioRoutes, .pdfSourcePicker, .pdfTextInput, .pdfPhotoPicker, .pdfWorkflow:
-                throw CoordinationOperationError.confirmationRequired
-            }
-        case .suspended:
-            throw CoordinationOperationError.confirmationRequired
-
-        }
+        try await executeFrozenCompound(continuation.consuming(output), aggregate: [], dependencyOutput: nil)
     }
 
     private func systemQuickAction(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
@@ -733,7 +694,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         }
     }
 
-    private func places(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+    private func places(_ command: StructuredCommand, allowsMultiple: Bool = false) async throws -> CapabilityExecutionOutcome {
         let location: ValidatedLocation
         if let area = command.entities["location"], !area.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             location = try await locationResolver.resolve(area)
@@ -760,7 +721,6 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             ? distanceOrdered.filter { ($0.distanceMeters ?? .greatestFiniteMagnitude) <= nearbyRadiusMeters }
             : distanceOrdered
         guard !places.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_places_found") }
-        let allowsMultiple = CanonicalRoutingPolicy().decide(command).allowsMultipleResults
         let selectedPlaces = Array(places.prefix(allowsMultiple ? 5 : 1))
         let output = try result(allowsMultiple ? "Знайдено місця" : selectedPlaces[0].name, facts: selectedPlaces.enumerated().map { index, place in
             ResultFact(id: place.id, label: place.name, value: place.address ?? place.category.rawValue, state: .verified, source: place.source, observedAt: place.timestamp, priority: 100 - index)
@@ -778,7 +738,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         return .handoff(.init(query: selectedPlaces[0].name, destination: destination, kind: .navigation))
     }
 
-    private func localServices(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+    private func localServices(_ command: StructuredCommand, allowsMultiple: Bool = false) async throws -> CapabilityExecutionOutcome {
         // Validate the typed service role before requesting CoreLocation. An
         // unresolved external service must terminate at its provider boundary,
         // not wait for location permission that cannot make the request valid.
@@ -814,7 +774,6 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         )
         guard !places.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_local_services_found") }
 
-        let allowsMultiple = CanonicalRoutingPolicy().decide(command).allowsMultipleResults
         let handoffs = places.prefix(allowsMultiple ? 8 : 1).compactMap { place -> (Place, URL)? in
             googleMapsExactPlaceURL(place).map { (place, $0) }
         }
@@ -1185,16 +1144,21 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         }
         if ["файли", "файлы", "files"].contains(target) { return .presentation(.documents) }
         if ["камера", "camera"].contains(target) { return .presentation(.camera) }
+        if ["photos", "photo", "фото", "фотографії", "фотографии"].contains(target) {
+            return .presentation(.photoLibrary)
+        }
         if ["календар", "календарь", "calendar"].contains(target) {
             let query = StructuredCommand(originalText: command.originalText, normalizedText: command.normalizedText, language: command.language, intent: .calendarQuery)
             let value = try await eventKit.execute(query)
             return .result(try result(value.title, facts: [.init(id: command.id.uuidString, label: value.title, value: value.detail, state: .verified, source: "EventKit", observedAt: .now, priority: 100)]))
         }
-        switch deviceRouter.route(command) {
-        case let .deviceApplication(_, destination, _): return .handoff(.init(query: command.originalText, destination: destination, kind: .system))
-        case let .clarification(values): throw CanonicalCapabilityExecutionError.ambiguous(values)
-        case let .unsupported(reason): throw CanonicalCapabilityExecutionError.unavailable(reason)
-        default: throw CanonicalCapabilityExecutionError.unavailable("unsupported_app_route")
+        switch applicationResolver.resolve(spokenName: target) {
+        case let .direct(application):
+            return .handoff(.init(query: command.originalText, destination: application.launchURL, kind: .system))
+        case let .clarification(values):
+            throw CanonicalCapabilityExecutionError.ambiguous(values)
+        case .unsupported:
+            throw CanonicalCapabilityExecutionError.unavailable("no_verified_public_app_mechanism")
         }
     }
 
@@ -1302,7 +1266,11 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             return .result(output)
         }
         let response = await PhotosPersonalSearchSource(library: photos, loader: photoSemanticLoader, labeler: photoSemanticLabeler).search(query: query, limit: 5)
-        guard !response.results.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("photos_no_semantic_match") }
+        guard !response.results.isEmpty else {
+            // Never substitute unrelated recent assets for a semantic miss.
+            // The Photos picker is the truthful, useful system-owned boundary.
+            return .presentation(.photoLibrary)
+        }
         let facts = response.results.enumerated().map { index, value in
             ResultFact(id: value.id, label: value.title, value: value.subtitle ?? value.sourceObjectID, state: .verified, source: "Photos", observedAt: .now, priority: 100 - index)
         }

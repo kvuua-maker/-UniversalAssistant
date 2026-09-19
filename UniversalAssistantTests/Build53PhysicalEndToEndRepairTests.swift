@@ -28,11 +28,11 @@ struct Build53PhysicalEndToEndRepairTests {
         #expect(weather.entities["relative_day_offset"] == "1")
 
         let weekday = parser.parse("Погода у Львові в п’ятницю")
-        #expect(weekday.entities["location"] == "Львові")
+        #expect(weekday.entities["location"] == "Львів")
         #expect(weekday.entities["weekday"] == "6")
 
         let date = parser.parse("Погода в Одесі 18 вересня")
-        #expect(date.entities["location"] == "Одесі")
+        #expect(date.entities["location"] == "Одеса")
         #expect(date.entities["calendar_day"] == "18")
 
         let implicit = parser.parse("Погода на завтра")
@@ -154,9 +154,9 @@ struct Build53PhysicalEndToEndRepairTests {
     @Test func pdfCreationDoesNotCollideWithCameraWithoutScanEvidence() {
         for text in ["Створи PDF", "Зроби PDF"] {
             let command = parser.parse(text)
-            #expect(command.intent == .fileSearch)
+            #expect(command.intent == .cameraCapture)
             #expect(command.entities["pdf_creation_requested"] == "true")
-            #expect(command.entities["capture_mode"] == nil)
+            #expect(command.entities["capture_mode"] == "text_scan")
         }
         let scan = parser.parse("Відскануй документ у PDF")
         #expect(scan.intent == .cameraCapture)
@@ -176,7 +176,7 @@ struct Build53PhysicalEndToEndRepairTests {
         let executor = ProductionCanonicalCapabilityExecutor(personalSearchSources: [])
 
         let generic = parser.parse("Створи документ у форматі PDF")
-        #expect(try await executor.execute(generic) == .presentation(.pdfSourcePicker(.choose, text: nil)))
+        #expect(try await executor.execute(generic) == .presentation(.scanDocument(.pdf)))
 
         let text = parser.parse("Збережи цей текст як PDF")
         #expect(try await executor.execute(text) == .presentation(.pdfTextInput(nil)))

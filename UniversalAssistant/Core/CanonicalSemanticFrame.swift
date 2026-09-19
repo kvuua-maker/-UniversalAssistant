@@ -523,7 +523,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.query, ["перевір", "дізнай", "розкаж", "уточн", "check", "tell", "explain", "query"]),
             (.disable, ["вимк", "выключ", "disable", "turnoff"]),
             (.enable, ["увімк", "включ", "enable", "turnon"]),
-            (.delete, ["видал", "скас", "удал", "отмен", "delete", "remove", "cancel"]),
+            (.delete, ["видал", "скас", "удал", "отмен", "annul", "delete", "remove", "cancel"]),
             (.update, ["перенес", "перенос", "змін", "измени", "move", "reschedul", "update"]),
             (.choose, ["вибер", "обер", "выбер", "перемк", "переключ", "switch", "select", "choose"]),
             (.share, ["поділ", "подел", "надішл", "відправ", "отправ", "share", "send"]),
@@ -540,15 +540,15 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             (.search, ["знайд", "пошук", "найд", "search", "find"]),
             (.show, ["покаж", "відобраз", "відображ", "show", "display", "render"])
         ]
-        if let leading = tokens.first,
-           let explicit = families.first(where: { _, roots in roots.contains { actionToken(leading, matches: $0) } }) {
-            return explicit.0
-        }
         let howInterrogatives: Set<String> = ["як", "как", "how"]
         let movementRoots = ["діст", "добрат", "доїхат", "доехать", "reach", "navigat", "route"]
         if !howInterrogatives.isDisjoint(with: tokens),
            tokens.contains(where: { token in movementRoots.contains { actionToken(token, matches: $0) } }) {
             return .navigate
+        }
+        if let leading = tokens.first,
+           let explicit = families.first(where: { _, roots in roots.contains { actionToken(leading, matches: $0) } }) {
+            return explicit.0
         }
         // A leading imperative owns the ACTION role. Interrogatives in its
         // payload must not turn the command into a query for another family.

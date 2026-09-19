@@ -11,6 +11,17 @@ enum CanonicalSpeechEntityRegistry {
         "spotify": ["spotify", "спотіфай", "спотифай"],
         "youtube": ["youtube", "ютуб"],
         "apple-music": ["apple music", "епл мюзік", "эппл мьюзик"],
+        "files": ["files", "файли", "файлы"],
+        "camera": ["camera", "камера", "камеру"],
+        "calendar": ["calendar", "календар", "календарь"],
+        "photos": ["photos", "photo", "фото", "фотографії", "фотографии"],
+        "settings": ["settings", "налаштування", "настройки"],
+        "contacts": ["contacts", "контакти", "контакты"],
+        "reminders": ["reminders", "нагадування", "напоминания"],
+        "clock": ["clock", "годинник", "часы"],
+        "safari": ["safari", "сафарі"],
+        "maps": ["maps", "apple maps", "мапи", "карти"],
+        "voice-memos": ["voice memos", "диктофон", "голосові записи"],
         "mail": ["mail", "пошта", "почта"],
         "google-maps": ["google maps", "гугл мапи", "гугл карты"]
     ]
@@ -27,7 +38,7 @@ enum CanonicalSpeechEntityRegistry {
     /// Context-only acoustic evidence. These values improve ASR hypotheses but
     /// are not resolver aliases, so a noisy fragment cannot cause an action.
     static let acousticContextOnly = [
-        "Baldinini", "Pierre Cardin", "бані", "баді", "Buddy", "Bady",
+        "Baldinini", "Балдинини", "Pierre Cardin", "бані", "баді", "Buddy", "Bady",
         "QR", "QR-код", "Q Club", "Q-клуб", "Quad", "OCR", "PDF",
         "розпізнай", "розпізнає", "відскануй", "відсканував", "проскануй",
         "про скануй", "оцифруй", "обчисли", "відкрий", "запусти", "покажи",

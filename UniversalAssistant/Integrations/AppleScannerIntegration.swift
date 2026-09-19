@@ -161,6 +161,10 @@ final class OnDeviceDocumentOCR: DocumentOCRProcessing {
             }
             request.recognitionLevel = .accurate
             request.usesLanguageCorrection = true
+            if let supported = try? request.supportedRecognitionLanguages() {
+                let preferred = ["uk-UA", "en-US", "ru-RU"]
+                request.recognitionLanguages = preferred.filter(supported.contains)
+            }
             do { try VNImageRequestHandler(cgImage: cgImage).perform([request]) }
             catch { continuation.resume(throwing: error) }
         }

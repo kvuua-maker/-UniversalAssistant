@@ -143,7 +143,9 @@ struct PhotoKitAssetImageLoader: PhotoAssetImageLoading {
             try await withCheckedThrowingContinuation { continuation in
                 completion.install(continuation)
                 let options = PHImageRequestOptions()
-                options.isNetworkAccessAllowed = false
+                // A user-selected exact asset may legitimately be backed by
+                // iCloud. PhotoKit owns the authenticated network transfer.
+                options.isNetworkAccessAllowed = true
                 options.deliveryMode = .highQualityFormat
                 let id = manager.requestImageDataAndOrientation(for: asset, options: options) { data, _, _, info in
                     if let error = info?[PHImageErrorKey] as? Error { completion.finish(.failure(error)) }
@@ -152,7 +154,7 @@ struct PhotoKitAssetImageLoader: PhotoAssetImageLoading {
                 }
                 completion.setRequestID(id)
                 Task {
-                    try? await Task.sleep(for: .seconds(3))
+                    try? await Task.sleep(for: .seconds(15))
                     completion.finish(.failure(PhotoAssetImageLoadError.timedOut), cancelRequest: true)
                 }
             }

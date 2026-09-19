@@ -1550,6 +1550,7 @@ final class VoiceInputController: VoiceInputControlling {
     @ObservationIgnored private var recognitionCallbackCount = 0
     @ObservationIgnored private var partialResultCount = 0
     @ObservationIgnored private var partialTranscriptHistory: [String] = []
+    @ObservationIgnored private var latestRecognitionEvidence: VoiceRecognitionEvidence?
     @ObservationIgnored private var cachedContextualVocabulary: [String] = []
     @ObservationIgnored private var vocabularyRefresh: Task<Void, Never>?
     @ObservationIgnored private var finalResultCount = 0
@@ -1591,6 +1592,7 @@ final class VoiceInputController: VoiceInputControlling {
         recognitionCallbackCount = 0
         partialResultCount = 0
         partialTranscriptHistory = []
+        latestRecognitionEvidence = nil
         finalResultCount = 0
         isFinalizingRecognition = false
         speechActivity.reset()
@@ -1755,6 +1757,7 @@ final class VoiceInputController: VoiceInputControlling {
             }
             if let evidence {
                 let value = evidence.withPartialTranscriptHistory(partialTranscriptHistory)
+                latestRecognitionEvidence = value
                 accumulatedEvidence = value
                 eventHandler?(.recognitionEvidence(value))
                 let bucket = value.averageSegmentConfidence.map {
@@ -1824,6 +1827,7 @@ final class VoiceInputController: VoiceInputControlling {
         let audioURL = LocalVoiceDiagnosticReport.shared.finishCommandAudioRecording(reason: .recognitionFinal)
         let localAssessment = VoiceDeterministicCommandAssessment(text: appleFallback)
         if localAssessment.isResolvedDeterministic,
+           !hasMissingCriticalRole(localAssessment, evidence: latestRecognitionEvidence),
            let final = VoiceAuthoritativeTranscriptSelector.select(groq: nil, appleFallback: appleFallback) {
             LocalVoiceDiagnosticReport.shared.record(
                 "deterministic_voice_fast_path",
@@ -1847,10 +1851,18 @@ final class VoiceInputController: VoiceInputControlling {
                     requestID: sessionID,
                     prompt: context
                 )
-                final = VoiceAuthoritativeTranscriptSelector.select(groq: cloud, appleFallback: appleFallback)
+                final = VoiceAuthoritativeTranscriptSelector.select(
+                    groq: cloud,
+                    appleFallback: appleFallback,
+                    appleEvidence: self.latestRecognitionEvidence
+                )
             } catch {
                 guard !Task.isCancelled else { return }
-                final = VoiceAuthoritativeTranscriptSelector.select(groq: nil, appleFallback: appleFallback)
+                final = VoiceAuthoritativeTranscriptSelector.select(
+                    groq: nil,
+                    appleFallback: appleFallback,
+                    appleEvidence: self.latestRecognitionEvidence
+                )
                 LocalVoiceDiagnosticReport.shared.record(
                     "cloud_transcription_fallback",
                     "provider=groq error_type=\(String(describing: type(of: error)))"
@@ -1861,6 +1873,27 @@ final class VoiceInputController: VoiceInputControlling {
                 return
             }
             self.commit(final, sessionID: sessionID)
+        }
+    }
+
+    private func hasMissingCriticalRole(
+        _ assessment: VoiceDeterministicCommandAssessment,
+        evidence: VoiceRecognitionEvidence?
+    ) -> Bool {
+        guard let evidence else { return false }
+        let candidates = evidence.alternativeTranscripts + evidence.segmentAlternativeTranscripts + evidence.partialTranscriptHistory.suffix(4)
+        switch assessment.command.intent {
+        case .contactCall, .messageCompose:
+            let evidenceHasChannel = candidates.contains { CanonicalSpeechEntityRegistry.communicationChannel(in: $0) != nil }
+            return evidenceHasChannel && assessment.channel == nil
+        case .cameraCapture:
+            let evidenceHasCodeRole = candidates.contains {
+                let value = $0.lowercased()
+                return value.contains("qr") || value.contains("штрих") || value.contains("barcode")
+            }
+            return evidenceHasCodeRole && assessment.command.entities["capture_mode"] != "code_scan"
+        default:
+            return false
         }
     }
 

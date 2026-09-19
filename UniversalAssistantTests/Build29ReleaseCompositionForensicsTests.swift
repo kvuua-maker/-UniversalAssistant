@@ -752,10 +752,10 @@ struct Build29ReleaseExternalProviderBoundaryTests {
         )
         model.input = "Розкажи актуальний стан міжнародної місії"
         model.submit()
-        for _ in 0..<100 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
-        guard case let .deterministic(general) = model.resultState else { Issue.record("Configured informational provider was not reached"); return }
-        #expect(general.facts.first?.source?.hasPrefix("structuredMarketplace:") == true)
-        #expect(general.actions.first?.destination?.host == "provider.example")
+        for _ in 0..<100 { if case .webHandoff = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .webHandoff(general) = model.resultState else { Issue.record("Predetermined informational web route was not reached"); return }
+        #expect(general.destination.host == "www.google.com")
+        #expect(general.destination.path == "/search")
 
         model.input = "Підбери водостійкий туристичний рюкзак до 4200 гривень"
         model.submit()
@@ -1126,7 +1126,7 @@ struct Build29ReleaseRemainingGapTests {
         let weak = ProductionAssistantComposition.makeModel(photos: library, photoSemanticLoader: Build29PhotoLoaderBoundary(), photoSemanticLabeler: Build29PhotoLabelBoundary(confidence: 0.31), personalSearchSources: [], compactResultDuration: .seconds(60))
         weak.input = "Знайди у фото паперовий документ"
         weak.submit()
-        try await wait { if case .failure = weak.resultState { return true }; return false }
+        try await wait { weak.capabilityPresentation == .photoLibrary }
         #expect({ if case .webHandoff = weak.resultState { return false }; return true }())
 
         // A content-bearing SHOW formulation must use semantic classification;
@@ -1134,7 +1134,7 @@ struct Build29ReleaseRemainingGapTests {
         let weakShow = ProductionAssistantComposition.makeModel(photos: library, photoSemanticLoader: Build29PhotoLoaderBoundary(), photoSemanticLabeler: Build29PhotoLabelBoundary(confidence: 0.31), personalSearchSources: [], compactResultDuration: .seconds(60))
         weakShow.input = "Покажи серед світлин паперовий документ"
         weakShow.submit()
-        try await wait { if case .failure = weakShow.resultState { return true }; return false }
+        try await wait { weakShow.capabilityPresentation == .photoLibrary }
         #expect({ if case .deterministic = weakShow.resultState { return false }; return true }())
         #expect({ if case .webHandoff = weakShow.resultState { return false }; return true }())
     }

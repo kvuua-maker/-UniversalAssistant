@@ -62,10 +62,11 @@ struct AssistantResultStateTests {
         #expect(model.resultState == .expanded(summary))
     }
 
-    @Test func novelInformationalWordingUsesTypedWebHandoffInsteadOfAcknowledgement() {
+    @Test func novelInformationalWordingUsesTypedWebHandoffInsteadOfAcknowledgement() async throws {
         let model = AssistantViewModel()
         model.input = "Чому небо змінює колір перед заходом сонця?"
         model.submit()
+        try await waitUntil { if case .webHandoff = model.resultState { return true }; return false }
         guard case .webHandoff(let result) = model.resultState else {
             Issue.record("Expected a typed web handoff")
             return
@@ -74,10 +75,11 @@ struct AssistantResultStateTests {
         #expect(result.query.contains("небо"))
     }
 
-    @Test func russianNovelInformationalWordingUsesSameMechanism() {
+    @Test func russianNovelInformationalWordingUsesSameMechanism() async throws {
         let model = AssistantViewModel()
         model.input = "Почему листья меняют цвет осенью?"
         model.submit()
+        try await waitUntil { if case .webHandoff = model.resultState { return true }; return false }
         guard case .webHandoff(let result) = model.resultState else {
             Issue.record("Expected the same typed web handoff")
             return

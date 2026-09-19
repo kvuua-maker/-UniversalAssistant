@@ -34,7 +34,7 @@ struct GoldenJourneyExecution: Equatable, Sendable {
 }
 
 struct GoldenJourneyRunner: Sendable {
-    private let parser = LocalCommandEngine()
+    private let parser = LanguageUnderstandingBlock()
     private let planner = DeterministicExecutionPlanBuilder()
 
     func execute(_ journey: GoldenJourneyDefinition) -> GoldenJourneyExecution {

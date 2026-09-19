@@ -28,7 +28,9 @@ struct EventKitCommandArgumentExtractor: Sendable {
         let locale = LanguageConfiguration(uiLanguage: .uk, commandLanguage: command.language).voiceLocale
         let resolution = NaturalDateTimeResolver().resolve(command, locale: locale, timeZone: timeZone, relativeTo: now)
         let dateTime: ResolvedNaturalDateTime? = if case let .resolved(value) = resolution { value } else { nil }
-        let action = ["запиши", "створи", "додай", "заплануй", "запланируй", "подію", "подія", "зустріч", "перенеси", "видали", "скасуй", "нагадай", "нагадати", "покажи", "календарі", "нагадування", "виконай", "познач", "виконаним", "заверши", "complete", "создай", "событие", "встречу", "удали", "напомни", "календаре", "напоминания", "add", "create", "event", "move", "delete", "remind", "show", "calendar", "reminders", "termin", "erstellen", "verschieben", "löschen", "erinnere", "kalendertermine", "rendez-vous", "ajoute", "déplace", "supprime", "rappelle", "événements", "rappels"]
+        // Event-type vocabulary is not automatically disposable title text.
+        // “зустріч” may be the complete user-supplied subject.
+        let action = ["запиши", "створи", "додай", "заплануй", "запланируй", "подію", "подія", "перенеси", "видали", "скасуй", "нагадай", "нагадати", "покажи", "календарі", "нагадування", "виконай", "познач", "виконаним", "заверши", "complete", "создай", "событие", "удали", "напомни", "календаре", "напоминания", "add", "create", "event", "move", "delete", "remind", "show", "calendar", "reminders", "termin", "erstellen", "verschieben", "löschen", "erinnere", "kalendertermine", "rendez-vous", "ajoute", "déplace", "supprime", "rappelle", "événements", "rappels"]
         let temporal = ["будь ласка", "пожалуйста", "please", "на сьогодні", "на завтра", "на післязавтра", "на сегодня", "на послезавтра", "сьогодні", "завтра", "післязавтра", "сегодня", "послезавтра", "today", "tomorrow", "day after tomorrow", "heute", "morgen", "übermorgen", "aujourd’hui", "demain", "après-demain", "мені", "мне", "через", "ранку", "утра", "вранці", "вечора", "вечером"]
         var subject = command.originalText
         // Remove canonical action/object roles by morphology, not by one
@@ -40,7 +42,7 @@ struct EventKitCommandArgumentExtractor: Sendable {
             options: [.regularExpression, .caseInsensitive]
         )
         subject = subject.replacingOccurrences(
-            of: #"\b(?:нагадув\p{L}*|напомин\p{L}*|reminder\p{L}*|календар\p{L}*|поді\p{L}*|событ\p{L}*|зустріч\p{L}*|встреч\p{L}*|event\p{L}*|appointment\p{L}*)\b"#,
+            of: #"\b(?:нагадув\p{L}*|напомин\p{L}*|reminder\p{L}*|календар\p{L}*|поді\p{L}*|событ\p{L}*|event\p{L}*)\b"#,
             with: " ",
             options: [.regularExpression, .caseInsensitive]
         )
@@ -59,6 +61,13 @@ struct EventKitCommandArgumentExtractor: Sendable {
             options: [.regularExpression, .caseInsensitive]
         )
         subject = subject.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        // Keep a bare event-type word as the user's actual title, but when it
+        // prefixes a richer subject it is structural vocabulary, not payload.
+        subject = subject.replacingOccurrences(
+            of: #"^(?:зустріч\p{L}*|встреч\p{L}*)\s+(?=\S)"#,
+            with: "",
+            options: [.regularExpression, .caseInsensitive]
+        )
         let durationSeconds = command.entities["duration_seconds"].flatMap(TimeInterval.init) ?? duration(in: command.originalText)
         return .init(subject: subject.isEmpty ? nil : subject, dateTime: dateTime, durationSeconds: durationSeconds)
     }

@@ -12,6 +12,11 @@ enum CommandIntent: String, Codable, CaseIterable, Sendable {
     case localUtility, currencyConversion
     case multiStep, settings, help, contextualSelection, unknown
 }
+
+// Source compatibility for isolated legacy tests and helpers. Production uses
+// LanguageUnderstandingBlock and never instantiates this alias directly.
+@available(*, deprecated, message: "Use LanguageUnderstandingBlock for production command resolution")
+typealias LocalCommandEngine = CanonicalLexicalCandidateExtractor
 enum ActionRisk: String, Codable, Sendable { case informational, reversible, consequential, emergency }
 
 struct CommandConstraints: Equatable, Codable, Sendable {
@@ -143,7 +148,9 @@ enum CompoundCommandClauses {
     }
 }
 
-struct LocalCommandEngine: CommandParsing {
+/// Lexical candidate extraction used inside the canonical resolver. It is not
+/// a production router and never owns the final command decision.
+struct CanonicalLexicalCandidateExtractor: CommandParsing {
     private static let priceRegex = try! NSRegularExpression(pattern: #"(?:до|max(?:imum)?|under|bis|jusqu[’']?à)\s*([0-9]+(?:[.,][0-9]+)?)\s*(грн|uah|usd|eur|€|\$|₴|гривень)?"#)
     private static let sizeRegexes = [
         try! NSRegularExpression(pattern: #"(?:розмір|размер|size|größe|taille)\s*([0-9]{1,3}|[xsml]{1,3})"#),

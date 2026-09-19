@@ -107,7 +107,11 @@ struct Build35ConsolidatedSystemicRepairTests {
         })
         #expect(configuration.contextualVocabulary.contains("Контакт 19"))
         #expect(!configuration.contextualVocabulary.contains("Контакт 20"))
-        for phrase in CanonicalSpeechEntityRegistry.speechVocabulary + ["QR-код", "OCR", "PDF"] {
+        let requestCritical = [
+            "Viber", "Telegram", "WhatsApp", "Spotify", "YouTube", "Apple Music",
+            "QR-код", "OCR", "PDF", "відкрий", "запусти"
+        ]
+        for phrase in requestCritical {
             let key = phrase.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
             #expect(folded.contains(key), "Priority Speech entity was evicted: \(phrase)")
         }

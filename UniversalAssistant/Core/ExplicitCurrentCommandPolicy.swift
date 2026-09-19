@@ -3,7 +3,9 @@ import Foundation
 /// Enforces the product invariant that roles explicitly stated in the current
 /// command outrank recovered context, defaults and fuzzy catalogue evidence.
 /// This layer never chooses a provider; it only preserves typed user roles.
-enum ExplicitCurrentCommandPolicy {
+/// Final current-command role normalization performed as part of canonical
+/// resolution. Downstream routing and execution may not mutate these roles.
+enum CanonicalCurrentCommandRoleNormalizer {
     static func apply(to command: StructuredCommand) -> StructuredCommand {
         var intent = command.intent
         var entities = command.entities
@@ -20,8 +22,12 @@ enum ExplicitCurrentCommandPolicy {
             openRoots.contains(where: token.hasPrefix)
         }
         let appActionRoots = openRoots + ["запуст", "launch", "go"]
+        let requestsCameraCapture = currentTokens.contains(where: {
+            $0.hasPrefix("фотографув") || $0.hasPrefix("сфотограф") || $0.hasPrefix("знім") || $0 == "capture"
+        })
         if let application = CanonicalSpeechEntityRegistry.applicationID(in: command.originalText),
-           currentTokens.contains(where: { token in appActionRoots.contains(where: token.hasPrefix) }) {
+           currentTokens.contains(where: { token in appActionRoots.contains(where: token.hasPrefix) }),
+           !(application == "camera" && requestsCameraCapture) {
             intent = .open
             entities["app"] = application
             entities["requested_action"] = "open"
@@ -102,7 +108,7 @@ enum ExplicitCurrentCommandPolicy {
 
         if intent == .weather,
            let location = explicitWeatherLocation(in: command.originalText) {
-            entities["location"] = location
+            entities["location"] = CanonicalLocalityNormalizer.normalize(location)
             entities.removeValue(forKey: "near_current_location")
             entities["explicit_location"] = "true"
             entities["explicit_slot_precedence"] = "current_command"
@@ -125,19 +131,30 @@ enum ExplicitCurrentCommandPolicy {
             let asksForPDF = tokens.contains("pdf")
             let asksToCreate = tokens.contains { token in createRoots.contains(where: token.hasPrefix) }
             if asksForPDF && asksToCreate {
-                intent = .fileSearch
                 entities["query"] = "pdf"
                 entities["file_type"] = "public.pdf"
                 entities["pdf_creation_requested"] = "true"
-                let referencesText = currentTokens.contains("текст") || currentTokens.contains("text")
-                let referencesCurrentObject = currentTokens.contains(where: {
-                    $0.hasPrefix("це") || $0.hasPrefix("цьо") || $0 == "this"
-                })
-                let referencesDocument = currentTokens.contains(where: {
-                    $0.hasPrefix("документ") || $0.hasPrefix("файл") || $0 == "document" || $0 == "file"
-                }) && referencesCurrentObject
-                entities["pdf_source_mode"] = referencesText ? "text" : (referencesDocument ? "document" : "choose")
-                entities.removeValue(forKey: "capture_mode")
+                let referencesText = currentTokens.contains(where: { $0.hasPrefix("текст") || $0 == "text" })
+                let referencesPhoto = currentTokens.contains(where: { $0.hasPrefix("фото") || $0.hasPrefix("зображ") || $0 == "photo" || $0 == "image" })
+                let convertRoots = ["перетвор", "конверт", "convert"]
+                let asksToConvert = currentTokens.contains { token in convertRoots.contains(where: token.hasPrefix) }
+                let referencesFile = currentTokens.contains(where: {
+                    $0.hasPrefix("файл") || $0 == "file"
+                }) || (asksToConvert && currentTokens.contains(where: { $0.hasPrefix("документ") || $0 == "document" }))
+                if referencesText || referencesPhoto || referencesFile {
+                    intent = .fileSearch
+                    entities["pdf_source_mode"] = referencesText ? "text" : (referencesPhoto ? "photo" : "document")
+                    entities.removeValue(forKey: "capture_mode")
+                    entities.removeValue(forKey: "input_source")
+                } else {
+                    // Bare PDF creation is a direct document-scanner workflow,
+                    // not a generic clarification or source chooser.
+                    intent = .cameraCapture
+                    entities["pdf_source_mode"] = "document"
+                    entities["capture_mode"] = "text_scan"
+                    entities["input_source"] = "document_camera"
+                    entities["output_format"] = "pdf"
+                }
                 needsClarification = false
             }
         }
@@ -173,6 +190,14 @@ enum ExplicitCurrentCommandPolicy {
                 entities.removeValue(forKey: "catalog_match_confidence")
                 entities["catalog_fuzzy_brand_rejected"] = "true"
             }
+        }
+
+        if let location = entities["location"], !location.isEmpty {
+            entities["location"] = CanonicalLocalityNormalizer.normalize(location)
+        }
+        if let destination = entities["destination"], !destination.isEmpty,
+           !destination.contains(",") {
+            entities["destination"] = CanonicalLocalityNormalizer.normalize(destination)
         }
 
         return .init(

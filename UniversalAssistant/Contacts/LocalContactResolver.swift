@@ -232,6 +232,18 @@ actor LocalContactResolver: ContactResolving {
         defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CONTACT_FETCH", "kind=name status=returned") }
         LocalVoiceDiagnosticReport.shared.record("contacts_query_started", "kind=name")
         let predicateContacts = try await query.contacts(matching: name, timeout: queryTimeout)
+        // CNContact's predicate is sufficient when it proves exactly one
+        // strong identity. Avoid the expensive full authorized-domain scan in
+        // this common path; ambiguity safety remains unchanged below.
+        let predicateEvidence = resolveCandidates(predicateContacts, query: name)
+        if predicateEvidence.mechanism == .exact,
+           case .resolved = predicateEvidence.resolution {
+            LocalVoiceDiagnosticReport.shared.record(
+                "contacts_query_finished",
+                "status=resolved count=1 mechanism=predicate_exact_fast_path"
+            )
+            return predicateEvidence.resolution
+        }
         let accessibleContacts: [ContactCandidate]
         do {
             accessibleContacts = try await query.accessibleContacts(limit: 500, timeout: queryTimeout)
@@ -239,11 +251,10 @@ actor LocalContactResolver: ContactResolving {
             // A predicate result is safe on its own only when it is exact.
             // Fuzzy evidence from a provider-pruned subset cannot identify a
             // person without comparison against the authorized domain.
-            let predicateOnly = resolveCandidates(predicateContacts, query: name)
-            let result = predicateOnly.mechanism == .exact ? predicateOnly.resolution : .notFound
+            let result = predicateEvidence.mechanism == .exact ? predicateEvidence.resolution : .notFound
             LocalVoiceDiagnosticReport.shared.record(
                 "contacts_domain_recovery_finished",
-                "status=\(Self.status(result)) count=\(predicateOnly.candidateCount) mechanism=predicate_only"
+                "status=\(Self.status(result)) count=\(predicateEvidence.candidateCount) mechanism=predicate_only"
             )
             return result
         }

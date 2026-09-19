@@ -57,10 +57,14 @@ struct ProductionScannerTests {
         #expect(try ScannerProductionRouter().route(.init(payload: "4006381333931", symbology: .ean13)).actionTitle == "Знайти товар")
     }
 
-    @Test func retailBarcodeActionContinuesWithExactGTINFallback() throws {
+    @Test func retailBarcodeActionContinuesWithExactGTINFallback() async throws {
         let model = AssistantViewModel(compactResultDuration: .seconds(60))
         let result = try ScannerProductionRouter().route(.init(payload: "4006381333931", symbology: .ean13))
         model.performScannerAction(result)
+        for _ in 0..<100 {
+            if case .webHandoff = model.resultState { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
         guard case let .webHandoff(handoff) = model.resultState else { Issue.record("Expected exact GTIN continuation"); return }
         #expect(handoff.destination.host == "www.google.com")
         #expect(handoff.destination.path == "/search")

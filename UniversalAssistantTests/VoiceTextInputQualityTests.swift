@@ -141,7 +141,7 @@ struct VoiceTextInputQualityTests {
         #expect(contact.entities["contact"] == "Мама")
         let place = engine.parse("Знайди магазин у Києві, який сьогодні працює, і покажи маршрут")
         let placePlan = try? DeterministicExecutionPlanBuilder().plan(for: place)
-        #expect(placePlan?.steps.compactMap(\.command?.entities["location"]) == ["Києві"])
+        #expect(placePlan?.steps.compactMap(\.command?.entities["location"]) == ["Київ"])
         let media = engine.parse("Увімкни композицію Example Artist в Apple Music")
         #expect(media.entities["query"] == "композицію Example Artist")
     }

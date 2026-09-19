@@ -19,14 +19,31 @@ struct FinalVoiceTranscript: Equatable, Sendable {
 }
 
 enum VoiceAuthoritativeTranscriptSelector {
-    static func select(groq: String?, appleFallback: String) -> FinalVoiceTranscript? {
+    static func select(
+        groq: String?,
+        appleFallback: String,
+        appleEvidence: VoiceRecognitionEvidence? = nil
+    ) -> FinalVoiceTranscript? {
         let cloud = groq?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let apple = appleFallback.trimmingCharacters(in: .whitespacesAndNewlines)
+        var apple = appleFallback.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let appleEvidence {
+            let stabilized = VoiceTranscriptStabilizer.stabilize(
+                appleEvidence,
+                contextualVocabulary: CanonicalSpeechEntityRegistry.speechVocabulary
+            ).text
+            if VoiceDeterministicCommandAssessment(text: stabilized).score > VoiceDeterministicCommandAssessment(text: apple).score {
+                apple = stabilized
+            }
+        }
         if cloud.isEmpty { return apple.isEmpty ? nil : .init(text: apple, source: .appleFallback) }
         if apple.isEmpty { return .init(text: cloud, source: .groq) }
 
         let cloudEvidence = VoiceDeterministicCommandAssessment(text: cloud)
         let appleEvidence = VoiceDeterministicCommandAssessment(text: apple)
+        if let fused = fuseComplementaryRoles(apple: apple, cloud: cloud, appleAssessment: appleEvidence, cloudAssessment: cloudEvidence) {
+            let source: FinalVoiceTranscriptSource = cloudEvidence.score > appleEvidence.score ? .groq : .appleFallback
+            return .init(text: fused, source: source)
+        }
         if cloudEvidence.conflicts(with: appleEvidence) {
             let common = commonPrefix(cloud, apple)
             return common.isEmpty ? nil : .init(text: common, source: .appleFallback)
@@ -44,6 +61,30 @@ enum VoiceAuthoritativeTranscriptSelector {
             return .init(text: cloud, source: .groq)
         }
         return .init(text: apple, source: .appleFallback)
+    }
+
+    private static func fuseComplementaryRoles(
+        apple: String,
+        cloud: String,
+        appleAssessment: VoiceDeterministicCommandAssessment,
+        cloudAssessment: VoiceDeterministicCommandAssessment
+    ) -> String? {
+        let appleWords = apple.split(whereSeparator: \.isWhitespace).count
+        let cloudWords = cloud.split(whereSeparator: \.isWhitespace).count
+        let base = appleWords >= cloudWords ? apple : cloud
+        let baseAssessment = appleWords >= cloudWords ? appleAssessment : cloudAssessment
+        let other = appleWords >= cloudWords ? cloudAssessment : appleAssessment
+
+        if [.open, .appAction].contains(baseAssessment.command.intent),
+           baseAssessment.application == nil, let application = other.application {
+            return "\(base) \(application)"
+        }
+        if [.contactCall, .messageCompose].contains(baseAssessment.command.intent),
+           baseAssessment.channel == nil, let channel = other.channel,
+           baseAssessment.command.entities["contact"] != nil || baseAssessment.command.entities["recipient"] != nil {
+            return "\(base) через \(channel)"
+        }
+        return nil
     }
 
     private static func commonPrefix(_ lhs: String, _ rhs: String) -> String {
@@ -65,7 +106,7 @@ struct VoiceDeterministicCommandAssessment: Sendable {
     let score: Int
 
     init(text: String) {
-        command = ExplicitCurrentCommandPolicy.apply(to: LanguageUnderstandingBlock().parse(text))
+        command = CanonicalCurrentCommandRoleNormalizer.apply(to: LanguageUnderstandingBlock().parse(text))
         application = CanonicalSpeechEntityRegistry.applicationID(in: text)
         channel = CanonicalSpeechEntityRegistry.communicationChannel(in: text)
         var value = 0
@@ -86,15 +127,32 @@ struct VoiceDeterministicCommandAssessment: Sendable {
         case .open, .appAction:
             return command.entities["app"] != nil || application != nil
         case .contactCall:
-            return command.entities["contact"] != nil || command.entities["phone_number"] != nil
+            return (command.entities["contact"] != nil || command.entities["phone_number"] != nil) &&
+                (!Self.hasChannelMarker(text: command.originalText) || channel != nil || command.entities["call_service"] != nil)
         case .messageCompose:
-            return command.entities["recipient"] != nil || command.entities["contact"] != nil
+            return (command.entities["recipient"] != nil || command.entities["contact"] != nil) &&
+                (!Self.hasChannelMarker(text: command.originalText) || channel != nil || command.entities["message_service"] != nil)
+        case .calendarCreate:
+            return EventKitCommandArgumentExtractor().extract(command).subject?.isEmpty == false && Self.hasTemporalRole(command)
+        case .reminderCreate:
+            return EventKitCommandArgumentExtractor().extract(command).subject?.isEmpty == false && Self.hasTemporalRole(command)
         case .localUtility, .calendarQuery, .cameraCapture, .settings, .deviceAction,
              .reminderQuery, .audioRecord, .fileSearch:
             return true
         default:
             return false
         }
+    }
+
+    private static func hasChannelMarker(text: String) -> Bool {
+        let tokens = text.lowercased().split { !$0.isLetter }.map(String.init)
+        return tokens.contains(where: { ["через", "via", "using"].contains($0) }) ||
+            CanonicalSpeechEntityRegistry.communicationChannel(in: text) != nil
+    }
+
+    private static func hasTemporalRole(_ command: StructuredCommand) -> Bool {
+        ["relative_day_offset", "relative_interval_seconds", "calendar_day", "weekday", "hour"]
+            .contains(where: { command.entities[$0] != nil })
     }
 
     func conflicts(with other: Self) -> Bool {
@@ -188,7 +246,7 @@ struct GroqSemanticCommandResolver: SemanticCommandResolving {
 
     func resolveCommand(_ text: String, language: CommandLanguage) async throws -> StructuredCommand {
         let frame = try await generic.semanticFrame(for: text)
-        let currentEvidence = ExplicitCurrentCommandPolicy.apply(to: LanguageUnderstandingBlock().parse(text))
+        let currentEvidence = CanonicalCurrentCommandRoleNormalizer.apply(to: LanguageUnderstandingBlock().parse(text))
         guard let intent = CommandIntent(rawValue: frame.intent), intent != .unknown else {
             throw GenericDiscoveryError.invalidIntent
         }
@@ -244,7 +302,7 @@ struct GroqSemanticCommandResolver: SemanticCommandResolving {
             risk: risk,
             needsClarification: frame.ambiguous
         )
-        return ExplicitCurrentCommandPolicy.apply(to: command)
+        return CanonicalCurrentCommandRoleNormalizer.apply(to: command)
     }
 
     private static func explicitBrand(in text: String) -> String? {

@@ -162,7 +162,9 @@ struct ASRCorePhysicalEvidenceTests {
         let holdout = [
             ReplayFixture(final: "Знайди на Каба концерти у Полтаві", alternatives: ["Знайди на Карабасі концерти у Полтаві", "Знайди на Карас концерти у Полтаві"], partials: [], expectedCatalogID: "events.karabas", expectedService: nil),
             ReplayFixture(final: "Знайди в Абе сир Моцарела", alternatives: ["Знайди в тебе сир Моцарела"], partials: [], expectedCatalogID: "retail.atb", expectedService: nil),
-            ReplayFixture(final: "Покажи у Фра рис басма", alternatives: ["Покажи у фото рис басма"], partials: [], expectedCatalogID: "retail.fora", expectedService: nil),
+            // Conflicting real hypotheses (provider versus Photos) must fail
+            // closed instead of guessing a consequential provider.
+            ReplayFixture(final: "Покажи у Фра рис басма", alternatives: ["Покажи у фото рис басма"], partials: [], expectedCatalogID: nil, expectedService: nil),
             ReplayFixture(final: "Покажи у фазі пральний порошок персів", alternatives: ["Покажи у позі пральний порошок персів"], partials: [], expectedCatalogID: "retail.fozzy", expectedService: nil),
             // The spoken provider is absent from all Apple text evidence.
             ReplayFixture(final: "Відкрий і знайди житло в Кам'янці-Подільському", alternatives: [], partials: [], expectedCatalogID: nil, expectedService: nil),
@@ -198,7 +200,7 @@ struct ASRCorePhysicalEvidenceTests {
             return false
         }.count
         #expect(knownRecovered == 4)
-        #expect(holdoutRecovered == 6)
+        #expect(holdoutRecovered == 5)
         #expect(parse(known[4]).entities["speech_entity_evidence"] == nil)
         #expect(parse(holdout[4]).entities["speech_entity_evidence"] == nil)
     }

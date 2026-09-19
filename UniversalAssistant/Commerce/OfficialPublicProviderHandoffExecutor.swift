@@ -8,8 +8,11 @@ extension ProductionCanonicalCapabilityExecutor {
             .contains { officialProviderIsExplicit($0, command: command) }
     }
 
-    func officialPublicProviderHandoff(_ command: StructuredCommand) throws -> CapabilityExecutionOutcome {
-        let policy = CanonicalRoutingPolicy().decide(command)
+    func officialPublicProviderHandoff(
+        _ command: StructuredCommand,
+        routingDecision: CanonicalRoutingDecision? = nil
+    ) throws -> CapabilityExecutionOutcome {
+        let policy = routingDecision ?? SingleCorridorRouter().plan(command).routingDecision
         let domains = officialProviderDomains(for: command)
         var candidates = domains.flatMap(OfficialPublicProviderHandoffRegistry.records(in:))
         if let policyID = policy.providerID,
@@ -35,7 +38,7 @@ extension ProductionCanonicalCapabilityExecutor {
         } else {
             throw CanonicalCapabilityExecutionError.externalProviderRequired("deterministic_provider_selection_required")
         }
-        let query = officialProviderQuery(command)
+        let query = officialProviderQuery(command, selectedProviderOrBrand: selected.first?.displayName)
         let destinations = try selected.compactMap { provider -> (OfficialPublicProviderHandoff, PurchaseHandoff)? in
             guard let exact = officialProviderDestination(provider, command: command, query: query) else { return nil }
             let routed = try AffiliatePurchaseRouter().route(
@@ -97,7 +100,7 @@ extension ProductionCanonicalCapabilityExecutor {
                 ?? BrandOfficialDestinationRegistry.match(inText: command.originalText) else {
             throw CanonicalCapabilityExecutionError.externalProviderRequired("official_brand_destination_unavailable")
         }
-        let query = officialProviderQuery(command)
+        let query = officialProviderQuery(command, selectedProviderOrBrand: brand.displayName)
         guard let exact = brand.route.destination(query: query) else {
             throw CanonicalCapabilityExecutionError.externalProviderRequired("official_brand_destination_invalid")
         }
@@ -197,13 +200,14 @@ extension ProductionCanonicalCapabilityExecutor {
             .joined(separator: " ")
     }
 
-    private func officialProviderQuery(_ command: StructuredCommand) -> String {
+    private func officialProviderQuery(_ command: StructuredCommand, selectedProviderOrBrand: String? = nil) -> String {
         let domain = command.entities["provider_domain"]
         let preferred: String? = switch domain {
         case "lodging", "car_rental": command.entities["location"] ?? command.entities["destination"]
         default: command.entities["product"] ?? command.entities["query"]
         }
-        var parts = [preferred ?? command.originalText]
+        var parts = [CanonicalProductQueryBuilder.query(for: command, selectedProviderOrBrand: selectedProviderOrBrand)]
+        if ["lodging", "car_rental"].contains(domain), let preferred { parts = [preferred] }
         let constraints: [String?] = [
             command.constraints.brand,
             command.constraints.category,
@@ -239,7 +243,8 @@ enum KarabasOfficialCityRoute {
     ]
 
     static func destination(for city: String, command: StructuredCommand? = nil) -> URL? {
-        let normalized = city.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        let normalized = CanonicalLocalityNormalizer.normalize(city)
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
             .lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         guard let slug = verifiedSlugs[normalized] else { return nil }
         let path = command.flatMap(verifiedCategoryPath) ?? ""

@@ -6,6 +6,7 @@ enum WeatherContextKind: String, Codable, Sendable {
 struct WeatherRequest: Equatable, Sendable {
     let location: ValidatedLocation
     let context: WeatherContextKind
+    var targetDate: Date? = nil
     var hourlyLimit = 24
     var dailyLimit = 10
 
@@ -54,6 +55,7 @@ struct WeatherSnapshot: Equatable, Codable, Sendable {
     let locationSource: LocationSource
     let locationLabel: String?
     let context: WeatherContextKind
+    var requestedDate: Date? = nil
 }
 
 enum WeatherProviderError: Error, Equatable, Sendable {
