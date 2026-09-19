@@ -18,6 +18,7 @@ private final class ContactStoreStub: ContactStoreQuerying, @unchecked Sendable 
         return values
     }
     func contact(identifier: String) throws -> ContactCandidate? { values.first { $0.identifier == identifier } }
+    func accessibleContacts(limit: Int) throws -> [ContactCandidate] { Array(values.prefix(limit)) }
 }
 
 private struct FailingContactStoreStub: ContactStoreQuerying {
@@ -27,6 +28,13 @@ private struct FailingContactStoreStub: ContactStoreQuerying {
     func contact(identifier: String) throws -> ContactCandidate? {
         throw NSError(domain: "CNErrorDomain", code: 100)
     }
+}
+
+private struct AccessibleContactStoreStub: ContactStoreQuerying {
+    let values: [ContactCandidate]
+    func contacts(matching name: String) throws -> [ContactCandidate] { [] }
+    func contact(identifier: String) throws -> ContactCandidate? { values.first { $0.identifier == identifier } }
+    func accessibleContacts(limit: Int) throws -> [ContactCandidate] { Array(values.prefix(limit)) }
 }
 
 @MainActor
@@ -170,6 +178,34 @@ struct ContactsRequestLifecycleTests {
         let duplicate = ContactCandidate(identifier: "3", displayName: "Олег", phoneNumbers: ["3"])
         let trueAmbiguity = LocalContactResolver(authorization: ContactAuthorizationStub(status: .authorized, granted: true), query: SystemContactQuery(store: ContactStoreStub(values: [one, duplicate])))
         #expect(try await trueAmbiguity.resolve(name: "Олег") == .ambiguous([one, duplicate]))
+    }
+
+    @Test func authorizedContactDomainRecoversNoisyNameWithoutInventingAPerson() async throws {
+        let christina = ContactCandidate(identifier: "christina", displayName: "Христина Коваль", phoneNumbers: ["+380501234567"])
+        let resolver = LocalContactResolver(
+            authorization: ContactAuthorizationStub(status: .authorized, granted: true),
+            query: SystemContactQuery(store: AccessibleContactStoreStub(values: [christina]))
+        )
+        #expect(try await resolver.resolve(name: "Крістіна Коваль") == .resolved(christina))
+        #expect(try await resolver.resolve(name: "зовсім інша людина") == .notFound)
+    }
+
+    @Test func contactVocabularyIsPermissionBoundedAndUsesAccessibleNames() async {
+        let contacts = [
+            ContactCandidate(identifier: "1", displayName: "Марія Коваль", phoneNumbers: []),
+            ContactCandidate(identifier: "2", displayName: "Іван Бондар", phoneNumbers: [])
+        ]
+        let authorized = LocalContactResolver(
+            authorization: ContactAuthorizationStub(status: .authorized, granted: true),
+            query: SystemContactQuery(store: ContactStoreStub(values: contacts))
+        )
+        #expect(await authorized.contextualVocabulary(limit: 1) == ["Марія Коваль"])
+
+        let denied = LocalContactResolver(
+            authorization: ContactAuthorizationStub(status: .denied, granted: false),
+            query: SystemContactQuery(store: ContactStoreStub(values: contacts))
+        )
+        #expect(await denied.contextualVocabulary(limit: 10).isEmpty)
     }
 
     @Test func deniedRestrictedAndFailedGrantReturnTruthfully() async {

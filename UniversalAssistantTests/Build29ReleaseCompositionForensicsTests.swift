@@ -632,11 +632,9 @@ struct Build29ReleaseExternalProviderBoundaryTests {
             "Порівняй доступні поїздки таксі до музею",
             "Підбери готель у Кракові на дві ночі",
             "Знайди квитки на нічний потяг до Варшави",
-            "Відстеж міжнародне відправлення за номером",
             "Знайди майстра для ремонту посудомийної машини",
             "Покажи офіційний муніципальний сервіс для реєстрації",
-            "Знайди вакансії дизайнера з віддаленою роботою",
-            "Покажи доступні персональні знижки програми лояльності"
+            "Знайди вакансії дизайнера з віддаленою роботою"
         ]
         for request in requests {
             model.input = request
@@ -646,6 +644,23 @@ struct Build29ReleaseExternalProviderBoundaryTests {
             #expect(fallback.query == request)
             #expect(fallback.destination.host?.contains("google") == true)
             #expect(model.statusText != AppText.value("processing"))
+        }
+    }
+
+    @Test func missingProviderInputAndPrivateLoyaltyDataNeverLeakToGenericWeb() async throws {
+        let model = ProductionAssistantComposition.makeModel(personalSearchSources: [], compactResultDuration: .seconds(60))
+        for request in [
+            "Відстеж міжнародне відправлення за номером",
+            "Покажи доступні персональні знижки програми лояльності"
+        ] {
+            model.input = request
+            model.submit()
+            for _ in 0..<100 {
+                if case .clarification = model.resultState { break }
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            #expect({ if case .clarification = model.resultState { return true }; return false }())
+            #expect({ if case .webHandoff = model.resultState { return false }; return true }())
         }
     }
 }

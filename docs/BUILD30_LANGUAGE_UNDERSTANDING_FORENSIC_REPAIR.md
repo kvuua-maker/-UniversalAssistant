@@ -156,3 +156,26 @@ Verification:
 
 Status is **AUTOMATED GREEN FOR SPEECH ENRICHMENT — PHYSICAL IPHONE RETEST
 REQUIRED**.
+
+## Role-scoped service, contact and catalog continuation
+
+The interrupted continuation is complete. The production composition now gives
+Apple Speech a bounded request vocabulary made only from Contacts currently
+visible under the granted Contacts authorization; denial and query failure yield
+an empty hint list and never block voice. Contact lookup may recover a noisy name
+only against those same accessible Contacts, while weak evidence remains not
+found and competing candidates remain an explicit ambiguity.
+
+Explicit communication services are recovered only after a CALL/MESSAGE/SHARE
+role and an explicit service marker have been established. Candidate aliases
+come from the verified application registry; a recovered service cannot select a
+different channel. Configured catalog/brand/product/provider candidates use the
+same typed, evidence-bearing boundary. The shipped default catalog contains only
+the existing verified retailer registry; unavailable brand or product catalogs
+are not invented.
+
+Targeted verification: affected language-understanding, Contacts lifecycle,
+Voice/Speech, call, messaging and provider-boundary suites, 43/43 PASS.
+The final consolidated iOS regression completed with 846/846 PASS across
+151 suites. Development compilation completed as
+part of these runs. Physical iPhone verification remains required.

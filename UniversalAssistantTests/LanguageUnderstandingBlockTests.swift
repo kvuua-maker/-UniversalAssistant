@@ -83,6 +83,55 @@ struct LanguageUnderstandingBlockTests {
         #expect(command.entities["speech_alternative_count"] == "2")
         #expect(command.intent != .deviceAction)
     }
+
+    @Test func noisyExplicitServiceRecoversOnlyInsideCommunicationRole() {
+        let services = [
+            ScopedEntityCandidate(value: "channel-a", displayName: "Channel A", aliases: ["Velora"]),
+            ScopedEntityCandidate(value: "channel-b", displayName: "Channel B", aliases: ["Nexora"])
+        ]
+        let parser = LanguageUnderstandingBlock(serviceCandidates: services)
+        let call = parser.parse("Набери Олену через Велора")
+        #expect(call.intent == .contactCall)
+        #expect(call.entities["call_service"] == "channel-a")
+        #expect(!call.needsClarification)
+
+        let unrelated = parser.parse("Покажи календар Велора")
+        #expect(unrelated.entities["call_service"] == nil)
+        #expect(unrelated.entities["message_service"] == nil)
+    }
+
+    @Test func verifiedLocalizedServiceAliasPreservesExplicitChannel() {
+        let command = LanguageUnderstandingBlock().parse("Набери Олену через Вайбера")
+        #expect(command.intent == .contactCall)
+        #expect(command.entities["call_service"] == "viber")
+        #expect(command.entities["call_service"] != "whatsapp")
+        #expect(!command.needsClarification)
+    }
+
+    @Test func configuredCatalogEntityRecoveryPreservesTypedKindAndFailsClosedWhenWeak() {
+        let brands = [
+            ScopedEntityCandidate(
+                value: CanonicalCatalogEntity(id: "brand.alpina", displayName: "Alpina", kind: .brand),
+                displayName: "Alpina",
+                aliases: ["Alpina"]
+            ),
+            ScopedEntityCandidate(
+                value: CanonicalCatalogEntity(id: "brand.velora", displayName: "Velora", kind: .brand),
+                displayName: "Velora",
+                aliases: ["Velora"]
+            )
+        ]
+        let parser = LanguageUnderstandingBlock(catalogCandidates: brands)
+        let recovered = parser.parse("Знайди куртку Альпіна")
+        #expect([CommandIntent.productSearch, .fashionDiscovery].contains(recovered.intent))
+        #expect(recovered.entities["brand"] == "Alpina")
+        #expect(recovered.constraints.brand == "Alpina")
+        #expect(recovered.constraints.hardConstraintKeys.contains("brand"))
+
+        let weak = parser.parse("Знайди звичайну зимову куртку")
+        #expect(weak.entities["brand"] == nil)
+        #expect(weak.constraints.brand == nil)
+    }
 }
 
 @MainActor

@@ -21,6 +21,16 @@ protocol EvidenceAwareCommandParsing: CommandParsing {
     func parse(_ text: String, speechEvidence: VoiceRecognitionEvidence?) -> StructuredCommand
 }
 
+enum CanonicalCatalogEntityKind: String, Equatable, Sendable {
+    case brand, product, provider, retailer
+}
+
+struct CanonicalCatalogEntity: Equatable, Sendable {
+    let id: String
+    let displayName: String
+    let kind: CanonicalCatalogEntityKind
+}
+
 /// The single semantic entry point for typed text, final Speech transcripts,
 /// App Intent parameters, and compound subcommands in the shipped graph.
 ///
@@ -31,15 +41,21 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
     private let legacyCandidate: LocalCommandEngine
     private let analyzer: CanonicalSemanticFrameAnalyzer
     private let applicationCandidates: [ScopedEntityCandidate<String>]
+    private let serviceCandidates: [ScopedEntityCandidate<String>]
+    private let catalogCandidates: [ScopedEntityCandidate<CanonicalCatalogEntity>]
 
     init(
         legacyCandidate: LocalCommandEngine = .init(),
         analyzer: CanonicalSemanticFrameAnalyzer = .init(),
-        applicationCandidates: [ScopedEntityCandidate<String>]? = nil
+        applicationCandidates: [ScopedEntityCandidate<String>]? = nil,
+        serviceCandidates: [ScopedEntityCandidate<String>]? = nil,
+        catalogCandidates: [ScopedEntityCandidate<CanonicalCatalogEntity>]? = nil
     ) {
         self.legacyCandidate = legacyCandidate
         self.analyzer = analyzer
         self.applicationCandidates = applicationCandidates ?? Self.verifiedApplicationCandidates
+        self.serviceCandidates = serviceCandidates ?? Self.verifiedServiceCandidates
+        self.catalogCandidates = catalogCandidates ?? Self.verifiedCatalogCandidates
     }
 
     func parse(_ text: String) -> StructuredCommand {
@@ -102,14 +118,22 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             intent = .localUtility
         } else if LocalUtilityEngine.recognizesCurrency(document.normalizedText) {
             intent = .currencyConversion
+        } else if [.emergency, .multiStep, .shoppingList].contains(legacy.intent) {
+            // These families are recognized from complete command structure.
+            // A frame describing one clause (for example CALL inside an
+            // emergency request or SCAN inside a scan-then-translate request)
+            // must not replace the authoritative whole-command intent.
+            intent = legacy.intent
         } else if let structural = frameResult.intent {
             intent = structural
         } else {
             intent = legacy.intent
         }
 
+        var constraints = legacy.constraints
         var needsClarification = legacy.needsClarification || entities["clarification_options"] != nil
-        if let recovered = recoverApplication(frame: frameResult.frame, document: document) {
+        if shouldRecoverApplication(frame: frameResult.frame, resolvedIntent: frameResult.intent),
+           let recovered = recoverApplication(frame: frameResult.frame, document: document) {
             switch recovered.resolution {
             case let .resolved(identifier):
                 entities["app"] = identifier
@@ -126,6 +150,52 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                     intent = .open
                     needsClarification = true
                 }
+            }
+        }
+
+        if let recovered = recoverService(frame: frameResult.frame, document: document),
+           frameResult.frame.service == nil {
+            switch recovered.resolution {
+            case let .resolved(service):
+                let key = intent == .contactCall ? "call_service" : "message_service"
+                entities[key] = service
+                entities["service_match_mechanism"] = recovered.mechanism.rawValue
+                entities["service_match_confidence"] = String(format: "%.3f", recovered.bestScore)
+                needsClarification = false
+            case let .ambiguous(options):
+                entities["clarification_options"] = options.joined(separator: "|")
+                needsClarification = true
+            case .unresolved:
+                needsClarification = true
+            }
+        }
+
+        if let recovered = recoverCatalog(intent: intent, document: document) {
+            switch recovered.resolution {
+            case let .resolved(entity):
+                switch entity.kind {
+                case .brand:
+                    entities["brand"] = entity.displayName
+                    constraints.brand = entity.displayName
+                    constraints.hardConstraintKeys.insert("brand")
+                case .product:
+                    entities["product_entity_id"] = entity.id
+                    entities["product"] = entity.displayName
+                case .provider, .retailer:
+                    entities["provider_id"] = entity.id
+                    entities["retailer"] = entity.displayName
+                }
+                entities["catalog_match_mechanism"] = recovered.mechanism.rawValue
+                entities["catalog_match_confidence"] = String(format: "%.3f", recovered.bestScore)
+            case let .ambiguous(options):
+                // Low-score collisions in a broad configured catalog are not
+                // evidence that the user named any catalog entity. Clarify only
+                // when the utterance is itself a strong match to that domain.
+                if recovered.bestScore >= 0.72 {
+                    entities["clarification_options"] = options.joined(separator: "|")
+                    needsClarification = true
+                }
+            case .unresolved: break
             }
         }
 
@@ -146,7 +216,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             language: language,
             intent: intent,
             entities: entities,
-            constraints: legacy.constraints,
+            constraints: constraints,
             risk: legacy.risk,
             needsClarification: needsClarification || intent == .unknown
         )
@@ -160,7 +230,8 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         if primary.needsClarification && !candidate.needsClarification { return true }
         let roleKeys: Set<String> = [
             "app", "contact", "recipient", "call_service", "message_service",
-            "location", "destination", "query", "source_text", "target_language"
+            "brand", "product", "provider_id", "retailer", "location",
+            "destination", "query", "source_text", "target_language"
         ]
         let primaryRoles = primary.entities.keys.filter(roleKeys.contains).count
         let candidateRoles = candidate.entities.keys.filter(roleKeys.contains).count
@@ -255,6 +326,61 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             .resolveWithEvidence(subject)
     }
 
+    /// Application-name recovery is only allowed when application launch is
+    /// still the unresolved semantic role. A leading OPEN must not steal a
+    /// resolved Clipboard, Settings, Find My, Files, or other system action.
+    private func shouldRecoverApplication(
+        frame: CanonicalSemanticFrame,
+        resolvedIntent: CommandIntent?
+    ) -> Bool {
+        guard isApplicationLaunch(frame) else { return false }
+        return frame.object == .app || frame.app != nil || resolvedIntent == nil || resolvedIntent == .open
+    }
+
+    private func recoverService(
+        frame: CanonicalSemanticFrame,
+        document: LanguageUnderstandingDocument
+    ) -> ScopedEntityResolutionEvidence<String>? {
+        guard frame.action == .call || frame.action == .message || frame.action == .share else { return nil }
+        let markers = [" через ", " via ", " using ", " каналом ", " сервісом ", " сервисом ", " у застосунку ", " в приложении "]
+        guard let marker = markers.compactMap({ value in
+            document.originalText.range(of: value, options: [.caseInsensitive, .diacriticInsensitive])
+        }).min(by: { $0.lowerBound < $1.lowerBound }) else { return nil }
+        let subject = String(document.originalText[marker.upperBound...])
+        return bestScopedResolution(in: subject, candidates: serviceCandidates)
+    }
+
+    private func recoverCatalog(
+        intent: CommandIntent,
+        document: LanguageUnderstandingDocument
+    ) -> ScopedEntityResolutionEvidence<CanonicalCatalogEntity>? {
+        guard [.productSearch, .fashionDiscovery, .groceryBasket].contains(intent),
+              !catalogCandidates.isEmpty else { return nil }
+        return bestScopedResolution(in: document.originalText, candidates: catalogCandidates)
+    }
+
+    /// Compare bounded token windows only inside a typed entity domain. This
+    /// tolerates surrounding natural language without letting an entity name
+    /// select the capability or compete with candidates from another domain.
+    private func bestScopedResolution<Value: Equatable & Sendable>(
+        in text: String,
+        candidates: [ScopedEntityCandidate<Value>]
+    ) -> ScopedEntityResolutionEvidence<Value> {
+        let tokens = text.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        var subjects = [text]
+        for length in 1...min(3, tokens.count) {
+            for start in 0...(tokens.count - length) {
+                subjects.append(tokens[start..<(start + length)].joined(separator: " "))
+            }
+        }
+        let resolver = ContextScopedEntityResolver(candidates: candidates)
+        return subjects.map(resolver.resolveWithEvidence)
+            .max { lhs, rhs in
+                if lhs.bestScore == rhs.bestScore { return lhs.confidenceMargin < rhs.confidenceMargin }
+                return lhs.bestScore < rhs.bestScore
+            } ?? .init(resolution: .unresolved, bestScore: 0, confidenceMargin: 0, mechanism: .unresolved)
+    }
+
     /// “Start/launch” is structurally a set action for timers and alarms, but
     /// becomes an app launch only when no concrete device/personal object was
     /// identified. This keeps capability selection role-driven rather than
@@ -293,6 +419,28 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 displayName: descriptor.id,
                 aliases: descriptor.aliases.union([descriptor.id])
             )
+        }
+
+    private static let verifiedServiceCandidates: [ScopedEntityCandidate<String>] = {
+        let verifiedApps = Dictionary(
+            uniqueKeysWithValues: LaunchDeviceApplications.verified.map { ($0.id, $0) }
+        )
+        return MessengerKind.allCases.map { kind in
+            let aliases = verifiedApps[kind.rawValue]?.aliases ?? []
+            return .init(
+                value: kind.rawValue,
+                displayName: kind.rawValue,
+                aliases: aliases.union([kind.rawValue])
+            )
+        } + [
+            .init(value: "email", displayName: "email", aliases: ["email", "mail", "пошта", "почта"])
+        ]
+    }()
+
+    private static let verifiedCatalogCandidates: [ScopedEntityCandidate<CanonicalCatalogEntity>] =
+        UkrainianRetailerRegistry.records.map { record in
+            let entity = CanonicalCatalogEntity(id: record.id, displayName: record.displayName, kind: .retailer)
+            return .init(value: entity, displayName: record.displayName, aliases: [record.displayName, record.id])
         }
 
     private static func morphology(_ token: String) -> String {

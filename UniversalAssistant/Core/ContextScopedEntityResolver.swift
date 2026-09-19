@@ -76,8 +76,13 @@ struct ContextScopedEntityResolver<Value: Equatable & Sendable>: Sendable {
     }
 
     private static func bestScore(for candidate: ScopedEntityCandidate<Value>, query: String) -> (value: Double, mechanism: ScopedEntityMatchMechanism) {
-        var output = evidenceScore(query, normalize(candidate.displayName))
-        for alias in candidate.aliases {
+        // When a registry supplies explicit aliases, those are the authoritative
+        // fuzzy surface forms. Internal/display identifiers remain valid exact
+        // matches, but must not make a different candidate look phonetically
+        // close merely because its internal id shares a prefix.
+        let surfaces = candidate.aliases.isEmpty ? [candidate.displayName] : Array(candidate.aliases)
+        var output: (value: Double, mechanism: ScopedEntityMatchMechanism) = (0, .unresolved)
+        for alias in surfaces {
             let value = evidenceScore(query, normalize(alias))
             if value.value > output.value { output = value }
         }
