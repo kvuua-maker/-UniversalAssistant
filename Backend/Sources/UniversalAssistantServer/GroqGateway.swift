@@ -152,7 +152,8 @@ private struct GroqAPIClient: Sendable {
         let schema: [String: Any] = ["name": "universal_assistant_semantic_frame", "strict": true,
             "schema": ["type": "object", "additionalProperties": false, "properties": properties, "required": required]]
         let payload: [String: Any] = [
-            "model": "openai/gpt-oss-20b", "temperature": 0, "max_completion_tokens": 300,
+            "model": "openai/gpt-oss-20b", "temperature": 0, "max_completion_tokens": 800,
+            "reasoning_effort": "low",
             "messages": [
                 ["role": "system", "content": "Extract only explicit semantic roles. Preserve Ukrainian names, brands, providers, cities and channels verbatim. Never choose or substitute a provider. Return the strict schema only."],
                 ["role": "user", "content": input.text]
