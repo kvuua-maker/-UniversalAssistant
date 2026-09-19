@@ -5,9 +5,9 @@ import Testing
 struct VoiceTextInputQualityTests {
     private let engine = LocalCommandEngine()
 
-    @Test @MainActor func productionVoiceEngineIsAppleSpeechOnly() {
+    @Test @MainActor func productionVoiceEngineUsesGroqPrimaryWithAppleSpeechFallback() {
         let model = ProductionAssistantComposition.makeModel()
-        #expect(model.voiceInputEngineIdentifier == "apple-speech")
+        #expect(model.voiceInputEngineIdentifier == "groq-whisper-large-v3+apple-speech-fallback")
     }
 
     @Test func speechRequestUsesSupportedQualityConfiguration() {

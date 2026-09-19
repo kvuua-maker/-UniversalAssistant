@@ -138,6 +138,11 @@ private struct AddedRestaurantPlaceBoundary: PlaceProvider {
     func search(_ query: PlaceQuery) async throws -> [Place] { [restaurant] }
 }
 
+private struct AddedEmptyRestaurantPlaceBoundary: PlaceProvider {
+    let providerID = "empty-place-release-boundary"
+    func search(_ query: PlaceQuery) async throws -> [Place] { [] }
+}
+
 private actor AddedRestaurantProviderBoundary: ReservationProvider {
     nonisolated let providerID = "official-table-provider"
     nonisolated let capabilities: Set<RestaurantProviderCapability> = [
@@ -312,6 +317,30 @@ struct RestaurantReservationReleaseRootTests {
         #expect(result.warnings.contains { $0.contains("не підтверджено провайдером") })
         #expect(result.actions.first?.destination?.host == "river.example")
         #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+    }
+
+    @Test func emptyDedicatedDiscoveryUsesOneExactGoogleQueryWithoutDeadEnd() async throws {
+        let input = "Знайди столик у ресторані в Чернівцях післязавтра о 18:45 для 4 гостей"
+        let model = ProductionAssistantComposition.makeModel(
+            placeSearch: .init(providers: [AddedEmptyRestaurantPlaceBoundary()]),
+            currentLocation: AddedRestaurantLocationBoundary(makeLocation()),
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            restaurantProviders: []
+        )
+        model.input = input
+        model.submit()
+        try await waitUntil { if case .webHandoff = model.resultState { return true }; return false }
+        guard case let .webHandoff(handoff) = model.resultState else {
+            Issue.record("Missing exact Google fallback"); return
+        }
+        let destination = handoff.destination
+        #expect(destination.host == "www.google.com")
+        #expect(destination.path == "/search")
+        let query = try #require(URLComponents(url: destination, resolvingAgainstBaseURL: false)?
+            .queryItems?.first(where: { $0.name == "q" })?.value)
+        #expect(query.contains(input))
+        #expect(query.contains("Чернівцях"))
+        #expect(query.contains("18:45"))
     }
 
     @Test func reservationMutationsWithoutAuthoritativeBookingNeverFakeSuccess() async throws {

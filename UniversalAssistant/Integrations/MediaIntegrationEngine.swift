@@ -9,7 +9,7 @@ enum MediaAuthorizationState: String, Equatable, Sendable { case authorized, den
 enum MediaControlAction: String, Sendable { case play, pause, resume, next, previous }
 enum MediaActionState: String, Equatable, Sendable { case playing, paused, resumed, advanced, rewound, destinationPrepared }
 struct MediaActionResult: Equatable, Sendable { let providerID: String; let itemID: String?; let state: MediaActionState; let destination: URL? }
-enum MediaIntegrationError: Error, Equatable, Sendable { case invalidRequest, authorizationRequired, unsupportedAction, unmanagedPlayback, invalidDestination }
+enum MediaIntegrationError: Error, Equatable, Sendable { case invalidRequest, authorizationRequired, unsupportedAction, unmanagedPlayback, invalidDestination, playbackNotStarted }
 
 protocol MediaProviderAdapter: Sendable {
     var providerID: String { get }
@@ -17,6 +17,12 @@ protocol MediaProviderAdapter: Sendable {
     func requestAuthorization() async -> MediaAuthorizationState
     func search(query: String, kinds: Set<MediaItemKind>, limit: Int) async throws -> [MediaItem]
     func control(_ action: MediaControlAction, item: MediaItem?) async throws
+    func playCurrent() async throws
+    func playbackState() async -> MediaActionState?
+}
+extension MediaProviderAdapter {
+    func playCurrent() async throws { throw MediaIntegrationError.unsupportedAction }
+    func playbackState() async -> MediaActionState? { nil }
 }
 
 actor MediaIntegrationEngine {
@@ -38,6 +44,19 @@ actor MediaIntegrationEngine {
         guard let adapter = adapters[item.providerID], await adapter.authorizationState() == .authorized else { throw MediaIntegrationError.authorizationRequired }
         try await adapter.control(.play, item: item); managedProviderID = item.providerID
         return .init(providerID: item.providerID, itemID: item.id, state: .playing, destination: nil)
+    }
+
+    func playCurrent(providerID: String) async throws -> MediaActionResult {
+        guard let adapter = adapters[providerID] else { throw MediaIntegrationError.invalidRequest }
+        var state = await adapter.authorizationState()
+        if state == .notDetermined { state = await adapter.requestAuthorization() }
+        guard state == .authorized else { throw MediaIntegrationError.authorizationRequired }
+        try await adapter.playCurrent()
+        guard await adapter.playbackState() == .playing else {
+            throw MediaIntegrationError.playbackNotStarted
+        }
+        managedProviderID = providerID
+        return .init(providerID: providerID, itemID: nil, state: .playing, destination: nil)
     }
 
     func control(_ action: MediaControlAction) async throws -> MediaActionResult {
@@ -67,6 +86,9 @@ struct AppleMusicAuthorizationGateway: Sendable {
 @MainActor final class AppleMusicProviderAdapter: @preconcurrency MediaProviderAdapter {
     nonisolated let providerID = "apple-music"
     private let player = ApplicationMusicPlayer.shared
+    private let systemPlayer = SystemMusicPlayer.shared
+    private enum PlaybackSource { case application, system }
+    private var playbackSource: PlaybackSource?
 
     func authorizationState() -> MediaAuthorizationState { AppleMusicAuthorizationGateway().current() }
     func requestAuthorization() async -> MediaAuthorizationState { await AppleMusicAuthorizationGateway().request() }
@@ -92,11 +114,27 @@ struct AppleMusicAuthorizationGateway: Sendable {
             guard let song = try await request.response().items.first else { throw MediaIntegrationError.invalidRequest }
             player.queue = [song]
             try await player.play()
+            playbackSource = .application
         case .pause: player.pause()
         case .resume: try await player.play()
         case .next: try await player.skipToNextEntry()
         case .previous: try await player.skipToPreviousEntry()
         }
+    }
+
+
+    func playCurrent() async throws {
+        try await systemPlayer.play()
+        playbackSource = .system
+    }
+
+    func playbackState() -> MediaActionState? {
+        guard let playbackSource else { return nil }
+        let status = switch playbackSource {
+        case .application: player.state.playbackStatus
+        case .system: systemPlayer.state.playbackStatus
+        }
+        return status == .playing ? .playing : nil
     }
 }
 #endif

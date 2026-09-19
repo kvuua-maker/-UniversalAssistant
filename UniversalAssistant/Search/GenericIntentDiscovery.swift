@@ -147,8 +147,12 @@ struct GenericUnknownRequestCoordinator: Sendable {
         if parsed.intent != .unknown, let result = await specialized?.resolve(parsed) { return result }
         let intent: GenericIntent
         let aiInvocationCount: Int
-        do { intent = try GenericIntentParser().parse(text, now: now); aiInvocationCount = 0 }
-        catch { if let ai { intent = try await ai.resolve(text).validated(); aiInvocationCount = 1 } else { throw error } }
+        if parsed.intent == .unknown, let ai {
+            intent = try await ai.resolve(text).validated(); aiInvocationCount = 1
+        } else {
+            do { intent = try GenericIntentParser().parse(text, now: now); aiInvocationCount = 0 }
+            catch { if let ai { intent = try await ai.resolve(text).validated(); aiInvocationCount = 1 } else { throw error } }
+        }
         if intent.risk != .informational || ![nil, "open", "view"].contains(intent.requestedAction) { throw GenericDiscoveryError.unsafeAction }
         if let cached = try await cache.get(intent, now: now) { return try compose(cached, partial: false, aiInvocationCount: aiInvocationCount) }
         let query = try GenericQuerySanitizer().query(for: intent)

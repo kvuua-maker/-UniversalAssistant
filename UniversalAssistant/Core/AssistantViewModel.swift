@@ -26,6 +26,7 @@ final class AssistantViewModel {
     private let weatherExecutor: any WeatherCommandExecuting
     private let webSearchHandoff: ControlledWebSearchHandoff
     private let genericDiscovery: GenericUnknownRequestCoordinator?
+    private let semanticCommandResolver: (any SemanticCommandResolving)?
     private let eventKitExecutor: any EventKitCommandExecuting
     private let capabilityExecutor: any CanonicalCapabilityExecuting
     private let currentContext: CurrentContextStore
@@ -59,7 +60,7 @@ final class AssistantViewModel {
     private var voiceAutoSubmitArmed = false
     private var voiceSubmitPerformed = false
     private var pendingConfirmation: (command: StructuredCommand, summary: ResultSummary, generation: UInt64)?
-    private var pendingCanonicalSelection: (command: StructuredCommand, summary: ResultSummary, generation: UInt64, role: String, choices: [String])?
+    private var pendingCanonicalSelection: (command: StructuredCommand, summary: ResultSummary, generation: UInt64, role: String, choices: [String], identifiers: [String: String])?
     var voiceInputEngineIdentifier: String { voiceInput.engineIdentifier }
 
     init(
@@ -68,6 +69,7 @@ final class AssistantViewModel {
         weatherExecutor: any WeatherCommandExecuting = ProductionWeatherCommandExecutor(),
         webSearchHandoff: ControlledWebSearchHandoff = ControlledWebSearchHandoff(),
         genericDiscovery: GenericUnknownRequestCoordinator? = nil,
+        semanticCommandResolver: (any SemanticCommandResolving)? = nil,
         eventKitExecutor: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
         capabilityExecutor: (any CanonicalCapabilityExecuting)? = nil,
         currentContext suppliedCurrentContext: CurrentContextStore? = nil,
@@ -87,6 +89,7 @@ final class AssistantViewModel {
         self.weatherExecutor = weatherExecutor
         self.webSearchHandoff = webSearchHandoff
         self.genericDiscovery = genericDiscovery
+        self.semanticCommandResolver = semanticCommandResolver
         self.eventKitExecutor = eventKitExecutor
         let currentContext = suppliedCurrentContext ?? CurrentContextStore()
         self.currentContext = currentContext
@@ -387,6 +390,15 @@ final class AssistantViewModel {
         let summary = ResultSummary(request: command.originalText, intent: command.intent, risk: command.risk)
         interactionDecision = interactionEngine.decide(for: command)
         input = ""
+        if command.intent == .unknown, command.entities["clarification_options"] == nil {
+            LocalVoiceDiagnosticReport.shared.record("semantic_engine_selection", "engine=groq reason=deterministic_unresolved")
+            resolveSemanticCommand(
+                original: command,
+                summary: summary,
+                requestGeneration: requestGeneration
+            )
+            return
+        }
         if command.needsClarification {
             LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=clarification")
             if let raw = command.entities["clarification_options"] {
@@ -394,7 +406,7 @@ final class AssistantViewModel {
                 pendingCanonicalSelection = (
                     command, summary, requestGeneration,
                     command.entities["clarification_role"] ?? Self.selectionRole(for: command, choices: choices),
-                    choices
+                    choices, [:]
                 )
                 LocalVoiceDiagnosticReport.shared.suspendForInteractiveContinuation("canonical-clarification", generation: requestGeneration)
                 requireAction(prompt: AppText.value("clarification_needed"), choices: choices)
@@ -520,6 +532,156 @@ final class AssistantViewModel {
         }
     }
 
+    private func resolveSemanticCommand(
+        original: StructuredCommand,
+        summary: ResultSummary,
+        requestGeneration: UInt64
+    ) {
+        guard let semanticCommandResolver else {
+            presentGeneralInformation(original, summary: summary, requestGeneration: requestGeneration)
+            return
+        }
+        resultState = .processing
+        statusText = AppText.value("processing")
+        genericDiscoveryTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let resolved = try await semanticCommandResolver.resolveCommand(
+                    original.originalText,
+                    language: original.language
+                )
+                try Task.checkCancellation()
+                guard activeRequestGeneration == requestGeneration else { return }
+                LocalVoiceDiagnosticReport.shared.record(
+                    "semantic_frame_validated",
+                    "engine=groq intent=\(resolved.intent.rawValue) schema=valid"
+                )
+                routeSemanticCommand(resolved, requestGeneration: requestGeneration)
+            } catch GenericDiscoveryError.ambiguous {
+                guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
+                resultState = .clarification(summary)
+                statusText = AppText.value("clarification_needed")
+                LocalVoiceDiagnosticReport.shared.recordTerminal(.clarification)
+                deliverCompletedDiagnosticSession()
+            } catch GroqLanguageServiceError.privacyBlocked {
+                guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
+                LocalVoiceDiagnosticReport.shared.recordTerminal(.unsupported, details: "reason=never_ai_privacy_gate")
+                presentFailure(message: "Цей запит містить захищені дані й обробляється лише локально.")
+                deliverCompletedDiagnosticSession()
+            } catch {
+                guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
+                LocalVoiceDiagnosticReport.shared.record(
+                    "semantic_engine_fallback",
+                    "engine=groq reason=unavailable_or_invalid"
+                )
+                presentGeneralInformation(original, summary: summary, requestGeneration: requestGeneration)
+            }
+        }
+    }
+
+    private func routeSemanticCommand(_ command: StructuredCommand, requestGeneration: UInt64) {
+        let summary = ResultSummary(request: command.originalText, intent: command.intent, risk: command.risk)
+        interactionDecision = interactionEngine.decide(for: command)
+        let decision = CanonicalRoutingPolicy().decide(command)
+        LocalVoiceDiagnosticReport.shared.record(
+            "routing_policy_decision",
+            "lane=\(decision.lane.rawValue) provider=\(decision.providerID ?? "none") reason=\(decision.reason) source=groq_semantics"
+        )
+        if command.needsClarification {
+            resultState = .clarification(summary)
+            statusText = AppText.value("clarification_needed")
+            LocalVoiceDiagnosticReport.shared.recordTerminal(.clarification)
+            deliverCompletedDiagnosticSession()
+            return
+        }
+        if command.intent == .weather {
+            weatherExecutionInFlight = true
+            resultState = .processing
+            weatherExecutionTask = Task { [weak self] in
+                guard let self else { return }
+                defer {
+                    if activeRequestGeneration == requestGeneration {
+                        weatherExecutionInFlight = false
+                        deliverCompletedDiagnosticSession()
+                    }
+                }
+                do {
+                    let snapshot = try await weatherExecutor.execute(command)
+                    try Task.checkCancellation()
+                    guard activeRequestGeneration == requestGeneration else { return }
+                    resultState = .weather(snapshot)
+                    statusText = AppText.value("ready")
+                } catch {
+                    guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
+                    presentFailure(message: String(localized: "weather_unavailable", table: "Weather"))
+                }
+            }
+            return
+        }
+        let eventKitIntents: Set<CommandIntent> = [
+            .calendarCreate, .calendarQuery, .calendarDelete, .reminderCreate,
+            .reminderQuery, .reminderComplete, .reminderDelete, .shoppingList, .undo
+        ]
+        if eventKitIntents.contains(command.intent) {
+            if interactionDecision?.pattern == .confirmation {
+                requireConfirmation(command, summary: summary, generation: requestGeneration)
+                return
+            }
+            eventKitExecutionInFlight = true
+            resultState = .processing
+            eventKitExecutionTask = Task { [weak self] in
+                guard let self else { return }
+                defer {
+                    if activeRequestGeneration == requestGeneration {
+                        eventKitExecutionInFlight = false
+                        deliverCompletedDiagnosticSession()
+                    }
+                }
+                do {
+                    let result = try await eventKitExecutor.execute(command)
+                    try Task.checkCancellation()
+                    guard activeRequestGeneration == requestGeneration else { return }
+                    resultState = .eventKit(result)
+                    statusText = AppText.value("ready")
+                } catch {
+                    guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
+                    resultState = .clarification(summary)
+                    statusText = AppText.value("clarification_needed")
+                }
+            }
+            return
+        }
+        if command.intent == .audioRecord {
+            let action = AudioRecorderCommand(rawValue: command.entities["recorder_action"] ?? "start") ?? .start
+            resultState = .processing
+            capabilityExecutionInFlight = true
+            Task { [weak self] in
+                guard let self else { return }
+                await recorder.execute(action)
+                guard activeRequestGeneration == requestGeneration else { return }
+                if recorder.state == .failed || recorder.state == .denied {
+                    presentFailure(message: AppText.value("request_unavailable"))
+                } else {
+                    resultState = .idle
+                    statusText = AppText.value("ready")
+                }
+                capabilityExecutionInFlight = false
+                deliverCompletedDiagnosticSession()
+            }
+            return
+        }
+        if command.intent == .webSearch {
+            presentGeneralWebFallback(command)
+            deliverCompletedDiagnosticSession()
+            return
+        }
+        if interactionDecision?.pattern == .confirmation {
+            requireConfirmation(command, summary: summary, generation: requestGeneration)
+            return
+        }
+        executeCanonicalCapability(command, summary: summary, requestGeneration: requestGeneration)
+    }
+
     private func presentGeneralInformation(
         _ command: StructuredCommand,
         summary: ResultSummary,
@@ -594,8 +756,13 @@ final class AssistantViewModel {
     /// commerce, ride, booking and service requests at a truthful provider
     /// boundary when no structured provider is configured.
     private func externalProviderBrowserFallbackAllowed(for command: StructuredCommand) -> Bool {
-        _ = command
-        return false
+        let eligible: Set<CommandIntent> = [
+            .webSearch, .productSearch, .fashionDiscovery, .groceryBasket,
+            .placeSearch, .serviceSearch, .restaurantSearch, .reservation,
+            .taxiSearch, .taxiCompare, .publicTransport, .transportRoute,
+            .ticketSearch, .ticketPurchaseHandoff, .hotelSearch, .travelPlan
+        ]
+        return eligible.contains(command.intent)
     }
 
     private func presentExternalProviderRequirement(_ command: StructuredCommand) {
@@ -613,13 +780,15 @@ final class AssistantViewModel {
             "selected=true reason=deliberate_provider_or_general_information_fallback"
         )
         do {
-            let intent = try GenericIntentParser().parse(command.originalText)
-            let minimized = try GenericQuerySanitizer().query(for: intent)
-            let safe = StructuredCommand(originalText: minimized, normalizedText: minimized.lowercased(), language: command.language, intent: .unknown)
+            _ = try GenericIntentParser().parse(command.originalText)
+            let query = command.originalText.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !query.isEmpty else { throw WebSearchHandoffError.emptyQuery }
+            let safe = StructuredCommand(originalText: query, normalizedText: query.lowercased(), language: command.language, intent: .unknown)
             let destination = try webSearchHandoff.destination(for: safe, structuredCapabilityAvailable: false)
             resultState = .webHandoff(.init(query: command.originalText, destination: destination))
             statusText = AppText.value("ready")
             LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=web_handoff_fallback")
+            LocalVoiceDiagnosticReport.shared.recordTerminal(.success, details: "terminal_contract=EXACT_GOOGLE_RESULT")
         } catch {
             LocalVoiceDiagnosticReport.shared.record("execution_failed", "mechanism=web_handoff reason=invalid_safe_destination")
             LocalVoiceDiagnosticReport.shared.recordTerminal(.error)
@@ -749,17 +918,49 @@ final class AssistantViewModel {
                 let choices = Array(values.prefix(3))
                 pendingCanonicalSelection = (
                     command, summary, requestGeneration,
-                    Self.selectionRole(for: command, choices: choices), choices
+                    Self.selectionRole(for: command, choices: choices), choices, [:]
                 )
                 LocalVoiceDiagnosticReport.shared.suspendForInteractiveContinuation("canonical-clarification", generation: requestGeneration)
                 requireAction(prompt: AppText.value("clarification_needed"), choices: choices)
+                statusText = AppText.value("clarification_needed")
+            } catch let CanonicalCapabilityExecutionError.ambiguousContacts(values) {
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=clarification reason=ambiguous_contacts count=\(values.count)")
+                guard activeRequestGeneration == requestGeneration else { return }
+                var labels: [String: Int] = [:]
+                var choices: [String] = []
+                var identifiers: [String: String] = [:]
+                for value in values {
+                    let base = value.selectionLabel
+                    let occurrence = (labels[base] ?? 0) + 1
+                    labels[base] = occurrence
+                    let label = occurrence == 1 ? base : "\(base) · \(occurrence)"
+                    choices.append(label)
+                    identifiers[label] = value.identifier
+                }
+                pendingCanonicalSelection = (
+                    command, summary, requestGeneration,
+                    "contact_identifier", choices, identifiers
+                )
+                LocalVoiceDiagnosticReport.shared.suspendForInteractiveContinuation("contact-disambiguation", generation: requestGeneration)
+                requireAction(prompt: "Оберіть потрібний контакт", choices: choices)
                 statusText = AppText.value("clarification_needed")
             } catch let CanonicalCapabilityExecutionError.missingParameter(parameter) {
                 LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=error")
                 guard activeRequestGeneration == requestGeneration else { return }
                 LocalVoiceDiagnosticReport.shared.record("router_rejected", "reason=missing_parameter parameter=\(parameter)")
-                resultState = .clarification(summary)
-                statusText = AppText.value("clarification_needed")
+                if parameter == "pdf_source" {
+                    presentClarification(
+                        message: "Що потрібно перетворити на PDF: текст, фото чи файл?",
+                        summary: summary
+                    )
+                } else if parameter == "restaurant_date_time" {
+                    presentClarification(message: "На яку дату й час потрібен столик?", summary: summary)
+                } else if parameter == "party_size" {
+                    presentClarification(message: "На скільки людей потрібен столик?", summary: summary)
+                } else {
+                    resultState = .clarification(summary)
+                    statusText = AppText.value("clarification_needed")
+                }
                 LocalVoiceDiagnosticReport.shared.recordTerminal(.clarification)
             } catch let CanonicalCapabilityExecutionError.confirmationRequired(preparedCommand) {
                 LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=confirmation_required")
@@ -779,17 +980,27 @@ final class AssistantViewModel {
                 LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=provider_required")
                 guard activeRequestGeneration == requestGeneration else { return }
                 LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=external_provider_required capability=\(providerClass)")
-                presentGeneralInformation(
-                    command,
-                    summary: summary,
-                    requestGeneration: requestGeneration,
-                    browserFallbackAllowed: externalProviderBrowserFallbackAllowed(for: command)
-                )
+                if externalProviderBrowserFallbackAllowed(for: command) {
+                    presentGeneralWebFallback(command)
+                    deliverCompletedDiagnosticSession()
+                } else {
+                    presentExternalProviderRequirement(command)
+                    deliverCompletedDiagnosticSession()
+                }
             } catch let CanonicalCapabilityExecutionError.unavailable(reason) {
                 LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=error")
                 guard activeRequestGeneration == requestGeneration else { return }
                 LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=capability_unavailable capability=\(command.intent.rawValue) detail=\(reason)")
                 presentFailure(message: AppText.value("request_unavailable"))
+            } catch let CanonicalCapabilityExecutionError.systemRestricted(reason) {
+                LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=system_restricted")
+                guard activeRequestGeneration == requestGeneration else { return }
+                LocalVoiceDiagnosticReport.shared.record("execution_failed", "reason=system_restricted capability=\(command.intent.rawValue) detail=\(reason)")
+                LocalVoiceDiagnosticReport.shared.recordTerminal(
+                    .unsupported,
+                    details: "terminal_contract=SYSTEM_RESTRICTED reason=\(reason)"
+                )
+                presentFailure(message: truthfulSystemRestrictionMessage(reason))
             } catch {
                 LocalVoiceDiagnosticReport.shared.recordBoundaryPost("EXECUTOR", "capability=\(command.intent.rawValue) status=error")
                 guard activeRequestGeneration == requestGeneration else { return }
@@ -797,6 +1008,19 @@ final class AssistantViewModel {
                 presentFailure(message: AppText.value("request_unavailable"))
             }
         }
+    }
+
+    private func truthfulSystemRestrictionMessage(_ reason: String) -> String {
+        if reason.contains("system_settings") {
+            return "iPhone не дозволяє стороннім застосункам відкривати цей системний розділ. Відкрийте Налаштування вручну."
+        }
+        if reason.contains("voice_memos") {
+            return "iPhone не надає публічного способу відкрити або запустити системний Диктофон з іншого застосунку."
+        }
+        if reason.contains("viber") || reason.contains("telegram") || reason.contains("signal") {
+            return "Цей застосунок не надає підтвердженого публічного переходу для запитаної дії."
+        }
+        return "Ця дія недоступна через публічні можливості iPhone."
     }
 
     private func resumeInteractiveDiagnosticContinuation(generation: UInt64? = nil) {
@@ -842,8 +1066,18 @@ final class AssistantViewModel {
             let number = value.replacingOccurrences(of: "tel:", with: ""); if let url = URL(string: "tel:\(number.filter(\.isNumber))") { UIApplication.shared.open(url) }
         case let .vCard(data) where result.route.action == .importContact: capabilityPresentation = .contactImport(data)
         case let .retailBarcode(value):
-            let command = StructuredCommand(originalText: "GTIN \(value)", normalizedText: "gtin \(value)", language: .automatic, intent: .productSearch, entities: ["query": "GTIN \(value)"])
-            presentExternalProviderRequirement(command)
+            let exact = "GTIN \(value)"
+            let command = StructuredCommand(
+                originalText: exact,
+                normalizedText: exact.lowercased(),
+                language: .automatic,
+                intent: .productSearch,
+                entities: ["query": exact, "gtin": value, "identity_strength": "exact"]
+            )
+            // The scanner has already validated the checksum. If no first-
+            // party catalogue provider is connected, continue with the exact
+            // GTIN instead of terminating at a provider-connection message.
+            presentGeneralWebFallback(command)
         default: presentFailure(message: AppText.value("request_unavailable"))
         }
     }
@@ -1161,7 +1395,11 @@ final class AssistantViewModel {
            pending.generation == activeRequestGeneration,
            pending.choices.contains(choice) {
             pendingCanonicalSelection = nil
-            let resumed = Self.command(pending.command, selecting: choice, role: pending.role)
+            let resumed = Self.command(
+                pending.command,
+                selecting: pending.identifiers[choice] ?? choice,
+                role: pending.role
+            )
             resumeInteractiveDiagnosticContinuation(generation: pending.generation)
             LocalVoiceDiagnosticReport.shared.record(
                 "clarification_resolved",
@@ -1248,6 +1486,8 @@ final class AssistantViewModel {
         case "contact":
             if command.intent == .messageCompose { entities["recipient"] = choice }
             else { entities["contact"] = choice }
+        case "contact_identifier":
+            entities["contact_identifier"] = choice
         case "recipient":
             entities["recipient"] = choice
         case "catalog":
@@ -1287,6 +1527,12 @@ final class AssistantViewModel {
         resultDismissTask?.cancel()
         statusText = message
         resultState = .failure(.init(message: message, recoveryAction: recoveryAction))
+    }
+
+    private func presentClarification(message: String, summary: ResultSummary) {
+        resultDismissTask?.cancel()
+        statusText = message
+        resultState = .clarification(summary)
     }
 
     func presentExpanded(_ summary: ResultSummary) {

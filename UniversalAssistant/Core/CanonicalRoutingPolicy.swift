@@ -196,6 +196,7 @@ enum BrandOfficialDestinationRegistry {
         record("brand.zara", "Zara", "https://www.zara.com/ua/uk/search", "searchTerm", "https://www.zara.com/ua/"),
         record("brand.mango", "Mango", "https://shop.mango.com/ua/uk/search", "q", "https://shop.mango.com/ua/"),
         record("brand.gucci", "Gucci", "https://www.gucci.com/ua/en_gb/st/search", "text", "https://www.gucci.com/ua/"),
+        record("brand.pierre-cardin", "Pierre Cardin", "https://pierrecardin.com/en/search", "q", "https://pierrecardin.com/en/collections/all"),
         .init(id: "brand.prada", displayName: "Prada", aliases: ["prada"],
               route: .fixed(URL(string: "https://www.prada.com/ww/en.html")!),
               evidence: URL(string: "https://www.prada.com/")!)

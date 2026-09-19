@@ -246,6 +246,19 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             if asksForPDF { entities["file_type"] = "public.pdf" }
             return (.fileSearch, entities)
         }
+
+        // This guard must precede generic document handling: the requested
+        // operation is PDF creation, while its source is still genuinely
+        // missing. It is not a camera/scan command.
+        if frame.object == .document,
+           frame.action == .create,
+           lexicalTokens(normalized).contains("pdf") {
+            entities["query"] = "pdf"
+            entities["file_type"] = "public.pdf"
+            entities["pdf_creation_requested"] = "true"
+            entities["pdf_source_required"] = "true"
+            return (.fileSearch, entities)
+        }
         if frame.source == .camera, frame.action.map({ [.scan, .recognize].contains($0) }) == true {
             entities["capture_mode"] = frame.object == .code ? "code_scan" : "text_scan"
             if frame.object == .document {
@@ -418,7 +431,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             return (.fileSearch, entities)
         }
 
-        if frame.action == .scan || frame.action == .recognize || (frame.action == .create && frame.object == .document) {
+        if frame.action == .scan || frame.action == .recognize {
             if frame.object == .code {
                 entities["capture_mode"] = "code_scan"
                 return (.cameraCapture, entities)
@@ -761,10 +774,16 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         // Without an explicit SERVICE/CHANNEL marker only an exact canonical
         // name is service evidence. Contextual fuzzy recovery happens later
         // inside the marked channel span, never over action/person tokens.
-        let services = Set(MessengerKind.allCases.map(\.rawValue))
+        let services: [(String, Set<String>)] = [
+            ("messages", ["messages", "повідомлення", "смс", "sms", "imessage"]),
+            ("whatsapp", ["whatsapp", "whats", "what's", "вотсап", "ватсап", "вотс", "ватс"]),
+            ("telegram", ["telegram", "телеграм"]),
+            ("viber", ["viber", "вайбер", "вібер"]),
+            ("signal", ["signal", "сигнал"])
+        ]
         for token in tokens {
-            if services.contains(token) {
-                return .resolved(token)
+            if let match = services.first(where: { $0.1.contains(token) }) {
+                return .resolved(match.0)
             }
         }
         return .unresolved
@@ -775,6 +794,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         if tokens.contains("youtube") { return "YouTube" }
         if tokens.contains("whatsapp") { return "WhatsApp" }
         if tokens.contains("telegram") { return "Telegram" }
+        if tokens.contains("viber") || tokens.contains("вайбер") || tokens.contains("вібер") { return "Viber" }
         if tokens.contains("диктофон") || (tokens.contains("voice") && tokens.contains("memos")) { return "Voice Memos" }
         if tokens.contains("apple") && tokens.contains("music") { return "Apple Music" }
         return nil

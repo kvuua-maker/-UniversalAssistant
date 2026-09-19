@@ -81,11 +81,25 @@ struct CanonicalCapabilityExecutionTests {
             let command = parser.parse(phrase)
             #expect(command.intent == .settings)
             #expect(command.entities["settings_target"] == "system")
-            await #expect(throws: CanonicalCapabilityExecutionError.unavailable("system_settings_destination_not_publicly_available")) {
+            await #expect(throws: CanonicalCapabilityExecutionError.systemRestricted("system_settings_destination_not_publicly_available")) {
                 try await executor.execute(command)
             }
             #expect(command.intent != .webSearch)
         }
+    }
+
+    @Test func voiceMemosOpenIsRestrictedButLocalRecorderStartRemainsAvailable() async throws {
+        let parser = LanguageUnderstandingBlock()
+        let executor = ProductionCanonicalCapabilityExecutor(personalSearchSources: [])
+
+        let open = parser.parse("Відкрий диктофон")
+        await #expect(throws: CanonicalCapabilityExecutionError.systemRestricted("voice_memos_has_no_public_app_launch_or_recording_api")) {
+            try await executor.execute(open)
+        }
+
+        let start = parser.parse("Увімкни диктофон")
+        #expect(start.intent == .audioRecord)
+        #expect(start.entities["recorder_action"] == "start")
     }
 
     @Test func unseenTemporalNumericAndContextRolesReachProductionBoundary() async throws {
@@ -148,25 +162,29 @@ struct CanonicalCapabilityExecutionTests {
         #expect(executor.received == [.cameraCapture])
     }
 
-    @Test func simpleProductRequestStopsAtTruthfulProviderBoundaryWithoutMultiStepLeakage() async throws {
+    @Test func simpleProductRequestUsesExactGoogleFallbackWithoutMultiStepLeakage() async throws {
         let executor = CapabilityExecutorStub(.failure(CanonicalCapabilityExecutionError.externalProviderRequired("productSearch")))
         let model = AssistantViewModel(capabilityExecutor: executor)
-        model.input = "Знайди iPhone 17 Pro"
+        model.input = "Знайди зимові черевики"
         model.submit()
-        try await waitUntil { if case .failure = model.resultState { true } else { false } }
+        try await waitUntil { if case .webHandoff = model.resultState { true } else { false } }
         #expect(executor.received == [.productSearch])
-        guard case let .failure(result) = model.resultState else { return }
-        #expect(result.message.contains("провайдер"))
+        guard case let .webHandoff(result) = model.resultState else { return }
+        #expect(result.query == "Знайди зимові черевики")
+        #expect(result.destination.path == "/search")
     }
 
-    @Test func externalProductProviderRequirementNeverUsesGenericWebAsErrorHandler() async throws {
+    @Test func externalProductProviderRequirementUsesExactQueryNotGenericHomepage() async throws {
         let executor = CapabilityExecutorStub(.failure(CanonicalCapabilityExecutionError.externalProviderRequired("productSearch")))
         let model = AssistantViewModel(capabilityExecutor: executor)
         model.input = "Знайди черевики"
         model.submit()
-        try await waitUntil { if case .failure = model.resultState { true } else { false } }
+        try await waitUntil { if case .webHandoff = model.resultState { true } else { false } }
         #expect(executor.received == [.productSearch])
-        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+        guard case let .webHandoff(result) = model.resultState else { return }
+        #expect(result.query == "Знайди черевики")
+        #expect(result.destination.host == "www.google.com")
+        #expect(result.destination.path == "/search")
     }
 
     @Test func verifiedSystemHandoffExecutesImmediatelyWithoutNarrationCard() async throws {

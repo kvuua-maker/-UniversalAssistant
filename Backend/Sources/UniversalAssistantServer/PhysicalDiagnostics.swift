@@ -82,10 +82,17 @@ actor ChallengeStore {
     struct Entry: Codable { let value: Data; let operation: String; let expiresAt: Date }
     private var entries: [UUID: Entry] = [:]
     private let lifetime: TimeInterval
-    init(lifetime: TimeInterval = 300) { self.lifetime = lifetime }
+    private let allowedOperations: Set<String>
+    init(
+        lifetime: TimeInterval = 300,
+        allowedOperations: Set<String> = ["attest", "diagnostic", "groq-transcription", "groq-semantic"]
+    ) {
+        self.lifetime = lifetime
+        self.allowedOperations = allowedOperations
+    }
 
     func issue(operation: String, now: Date = .now) throws -> (UUID, Entry) {
-        guard ["attest", "diagnostic"].contains(operation) else { throw DiagnosticServerError.invalidChallenge }
+        guard allowedOperations.contains(operation) else { throw DiagnosticServerError.invalidChallenge }
         entries = entries.filter { $0.value.expiresAt > now }
         var generator = SystemRandomNumberGenerator()
         let bytes = (0..<32).map { _ in UInt8.random(in: .min ... .max, using: &generator) }
@@ -340,7 +347,9 @@ extension Application {
         let challengeRateLimit = PrincipalRateLimiter(policy: .init(maximumRequests: 20, window: 60))
         let ingestRateLimit = PrincipalRateLimiter(policy: .init(maximumRequests: 60, window: 60))
         let bootstrapRateLimit = PrincipalRateLimiter(policy: .init(maximumRequests: 5, window: 60))
-        routes.defaultMaxBodySize = "96kb"
+        // Audio is transported only through the attested Groq endpoint; each
+        // route still enforces its own smaller decoded-payload bound below.
+        routes.defaultMaxBodySize = "30mb"
 
         get("health") { _ in HealthResponse() }
         post("v1", "app-attest", "challenge") { request async throws -> ChallengeResponse in
@@ -401,6 +410,11 @@ extension Application {
             catch DiagnosticServerError.forbiddenField { throw Abort(.badRequest) }
             return .init(sessionID: decoded.diagnostic.sessionID, status: "delivered", receivedAt: .now)
         }
+        try configureGroqGateway(
+            challenges: challenges,
+            registrations: registrations,
+            verifier: verifier
+        )
     }
 }
 

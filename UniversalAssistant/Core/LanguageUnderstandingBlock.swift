@@ -38,7 +38,7 @@ struct CanonicalCatalogEntity: Equatable, Sendable {
 /// `ScopedEntityCandidate` boundary.
 enum CanonicalCatalogEntityRegistry {
     static let brandNames = [
-        "Baldinini", "Nike", "Adidas", "Puma", "Zara", "Mango", "Gucci", "Prada"
+        "Baldinini", "Nike", "Adidas", "Puma", "Zara", "Mango", "Gucci", "Pierre Cardin", "Prada"
     ]
 
     static let candidates: [ScopedEntityCandidate<CanonicalCatalogEntity>] = {
@@ -321,7 +321,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             entities["speech_mean_confidence"] = String(format: "%.3f", confidence)
         }
         if selectedAlternative { entities["speech_selected_alternative"] = "true" }
-        return .init(
+        return ExplicitCurrentCommandPolicy.apply(to: .init(
             id: primary.id,
             originalText: text,
             normalizedText: selected.normalizedText,
@@ -331,7 +331,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             constraints: selected.constraints,
             risk: selected.risk,
             needsClarification: selected.needsClarification
-        )
+        ))
     }
 
     private func uniqueSpeechHypotheses(
@@ -837,12 +837,11 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             entities.removeValue(forKey: "clarification_role")
         }
         if providerInference?.domain == "car_rental" {
-        if providerInference?.domain == "car_rental",
-           entities["location"] == nil,
-           let explicitLocation = frameResult.frame.location?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !explicitLocation.isEmpty {
-            entities["location"] = explicitLocation
-        }
+            if entities["location"] == nil,
+               let explicitLocation = frameResult.frame.location?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !explicitLocation.isEmpty {
+                entities["location"] = explicitLocation
+            }
             entities["serviceCategory"] = LocalServiceCategory.carRental.rawValue
         } else if providerInference == nil,
                   CanonicalExternalProviderBoundaryAnalyzer.hasAmbiguousVehicleServiceGoal(
@@ -932,7 +931,6 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         }
 
         if let serviceKey = serviceKey(for: intent),
-           entities[serviceKey] == nil,
            let recovered = recoverService(frame: frameResult.frame, document: document, intent: intent) {
             recordResolutionEvidence(recovered, prefix: "service_match", entities: &entities)
             switch recovered.resolution {
@@ -1092,7 +1090,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         }
 
         let language = document.language == .automatic ? legacy.language : document.language
-        return .init(
+        let parsed = StructuredCommand(
             id: legacy.id,
             originalText: text,
             normalizedText: document.normalizedText,
@@ -1103,6 +1101,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             risk: intent == .emergency ? .emergency : legacy.risk,
             needsClarification: needsClarification || intent == .unknown
         )
+        return ExplicitCurrentCommandPolicy.apply(to: parsed)
     }
 
     /// A local-utility recognizer may observe digits or separators inside a
@@ -1773,16 +1772,24 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 displayName: descriptor.id,
                 aliases: descriptor.aliases.union([descriptor.id])
             )
-        }
+        } + [
+            // Recognition is separate from execution availability. iOS has no
+            // public URL/API to launch Voice Memos or start its recording, but
+            // the command must still resolve to a truthful system restriction.
+            .init(value: "voice-memos", displayName: "Voice Memos",
+                  aliases: ["voice memos", "диктофон", "голосові записи", "голосовые записи"])
+        ]
 
     private static let verifiedServiceCandidates: [ScopedEntityCandidate<String>] =
-        MessengerKind.allCases.map { kind in
-            .init(
-                value: kind.rawValue,
-                displayName: kind.rawValue,
-                aliases: [kind.rawValue]
-            )
-        } + [
+        [
+            // “повідомлення/message” describes the action/object, not an
+            // explicitly selected provider. Unqualified messages default to
+            // Apple Messages later in the typed semantic contract.
+            .init(value: "messages", displayName: "messages", aliases: ["messages", "смс", "sms", "imessage"]),
+            .init(value: "whatsapp", displayName: "whatsapp", aliases: ["whatsapp", "whats", "what's", "вотсап", "ватсап", "вотс", "ватс"]),
+            .init(value: "telegram", displayName: "telegram", aliases: ["telegram", "телеграм"]),
+            .init(value: "viber", displayName: "viber", aliases: ["viber", "вайбер", "вібер"]),
+            .init(value: "signal", displayName: "signal", aliases: ["signal", "сигнал"]),
             .init(value: "email", displayName: "email", aliases: ["email", "mail", "пошта", "почта"])
         ]
 

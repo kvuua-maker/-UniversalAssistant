@@ -179,14 +179,14 @@ struct LanguageUnderstandingBlockTests {
         #expect(service.entities["message_service"] == "matrix")
     }
 
-    @Test func personWithoutChannelMarkerNeverBecomesMessenger() {
+    @Test func personWithoutChannelMarkerDefaultsOnlyToTelephone() {
         let block = LanguageUnderstandingBlock(serviceCandidates: [
             .init(value: "oleksii-service", displayName: "Oleksii", aliases: ["Олексій"])
         ])
         let command = block.parse("Набери Олексію")
         #expect(command.intent == .contactCall)
         #expect(command.entities["contact"] == "Олексію")
-        #expect(command.entities["call_service"] == nil)
+        #expect(command.entities["call_service"] == "telephone")
         #expect(command.intent != .webSearch)
     }
 

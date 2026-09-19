@@ -53,7 +53,12 @@ struct ProductionCallRoutingTests {
         await #expect(throws: CanonicalCapabilityExecutionError.ambiguous(["1111111", "2222222"])) { try await executor.execute(LocalCommandEngine().parse("Подзвони мамі")) }
         let choices = [ContactCandidate(identifier: "1", displayName: "Олег", phoneNumbers: ["1111111"]), .init(identifier: "2", displayName: "Олег Робота", phoneNumbers: ["2222222"])]
         let ambiguous = ProductionCanonicalCapabilityExecutor(contacts: CallContactResolverStub(.ambiguous(choices)), personalSearchSources: [])
-        await #expect(throws: CanonicalCapabilityExecutionError.ambiguous(["Олег", "Олег Робота"])) { try await ambiguous.execute(LocalCommandEngine().parse("Подзвони Олегу")) }
+        do {
+            _ = try await ambiguous.execute(LocalCommandEngine().parse("Подзвони Олегу"))
+            Issue.record("Expected contact disambiguation")
+        } catch let CanonicalCapabilityExecutionError.ambiguousContacts(values) {
+            #expect(Set(values.map(\.identifier)) == ["1", "2"])
+        } catch { Issue.record("Unexpected error: \(error)") }
     }
 
     @Test func missingContactIsTruthfullyUnavailable() async {

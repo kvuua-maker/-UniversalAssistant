@@ -51,9 +51,12 @@ enum ProductionAssistantComposition {
             restaurantProviders: restaurantProviders, alarmExecute: alarmExecute,
             personalSearchSources: personalSearchSources, commandParser: languageUnderstanding, affiliateConfigurations: affiliateConfigurations
         )
+        let productionGenericDiscovery = genericDiscovery
         return AssistantViewModel(
             commandEngine: languageUnderstanding, weatherExecutor: weather,
-            genericDiscovery: genericDiscovery, eventKitExecutor: eventKit,
+            genericDiscovery: productionGenericDiscovery,
+            semanticCommandResolver: genericDiscovery == nil ? GroqSemanticCommandResolver() : nil,
+            eventKitExecutor: eventKit,
             capabilityExecutor: executor, currentContext: context, recorder: recorder,
             compactResultDuration: compactResultDuration, voiceInput: voiceInput,
             notificationEnable: notificationEnable, quickLaunchStore: quickLaunchStore,

@@ -10,7 +10,7 @@ enum VoiceInputState: Equatable, Sendable {
 }
 
 private enum VoiceAuthorizationOutcome: Equatable, Sendable {
-    case authorized, microphoneDenied, speechDenied
+    case authorized(appleSpeechAvailable: Bool), microphoneDenied
 }
 
 enum VoiceInputEvent: Equatable, Sendable {
@@ -376,7 +376,16 @@ final class DiagnosticCommandAudioRecorder: @unchecked Sendable {
         }
         if file == nil {
             do {
-                file = try AVAudioFile(forWriting: destination, settings: buffer.format.settings)
+                let settings: [String: Any] = [
+                    AVFormatIDKey: kAudioFormatLinearPCM,
+                    AVSampleRateKey: buffer.format.sampleRate,
+                    AVNumberOfChannelsKey: Int(buffer.format.channelCount),
+                    AVLinearPCMBitDepthKey: 16,
+                    AVLinearPCMIsFloatKey: false,
+                    AVLinearPCMIsBigEndianKey: false,
+                    AVLinearPCMIsNonInterleaved: false
+                ]
+                file = try AVAudioFile(forWriting: destination, settings: settings)
                 try? FileManager.default.setAttributes(
                     [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
                     ofItemAtPath: destination.path
@@ -452,6 +461,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
     private let localStore: PhysicalDiagnosticLocalStore
     private let crashlyticsRecorder: any CrashlyticsDiagnosticRecording
     private let audioRecorder: DiagnosticCommandAudioRecorder
+    private var completedCommandAudioURL: URL?
     private var legacyRecovered: LegacyPersisted?
     private static let maximumDeliveredEvents = 250
     private static let detailedConsentKey = "build32-detailed-diagnostics-consent"
@@ -503,8 +513,9 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
 
     func beginCommandAudioRecording() {
         let identity = lock.withLock { (requestID, detailedDiagnosticsEnabled) }
-        guard identity.1 else { return }
+        completedCommandAudioURL = nil
         audioRecorder.start(requestID: identity.0)
+        guard identity.1 else { return }
         let relativePath = localStore.diagnosticAudioRelativePath(for: identity.0)
         localStore.updateActive(
             sequence: lock.withLock { entries.count },
@@ -517,13 +528,15 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
     }
 
     func appendCommandAudioBuffer(_ buffer: AVAudioPCMBuffer) {
-        guard detailedDiagnosticsEnabled else { return }
         audioRecorder.appendSameSpeechBuffer(buffer)
     }
 
-    func finishCommandAudioRecording(reason: VoiceStopReason) {
+    @discardableResult
+    func finishCommandAudioRecording(reason: VoiceStopReason) -> URL? {
         let completion = audioRecorder.finish()
-        guard let relativePath = completion.relativePath else { return }
+        guard let relativePath = completion.relativePath else { return completedCommandAudioURL }
+        completedCommandAudioURL = localStore.diagnosticAudioURL(relativePath: relativePath)
+        guard detailedDiagnosticsEnabled else { return completedCommandAudioURL }
         localStore.updateActive(
             sequence: lock.withLock { entries.count },
             stage: "diagnostic_audio_finished",
@@ -537,7 +550,7 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
         )
         record(
             "AUDIO_FORMAT",
-            "format=caf sample_rate=\(completion.sampleRate) channels=\(completion.channelCount)"
+            "format=wav_pcm16 sample_rate=\(completion.sampleRate) channels=\(completion.channelCount)"
         )
         record("AUDIO_BUFFER_COUNT", "count=\(completion.bufferCount)")
         record("AUDIO_SIZE", "file_size=\(completion.byteCount)")
@@ -549,6 +562,13 @@ final class LocalVoiceDiagnosticReport: @unchecked Sendable {
             "AUDIO_DIAGNOSTIC_FINISHED",
             "status=saved reason=\(reason.rawValue) file_size=\(completion.byteCount)"
         )
+        return completedCommandAudioURL
+    }
+
+    func discardTransientCommandAudioIfNeeded(_ url: URL?) {
+        guard !detailedDiagnosticsEnabled, let url else { return }
+        try? FileManager.default.removeItem(at: url)
+        if completedCommandAudioURL == url { completedCommandAudioURL = nil }
     }
 
 
@@ -1199,18 +1219,47 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
     }
 
     static var canonicalEntityVocabulary: [String] {
-        let providers = OfficialPublicProviderHandoffRegistry.records.flatMap { provider in
-            [provider.displayName] + preferredSpokenAlias(from: provider.aliases, excluding: provider.displayName)
-        }
+        let providers = OfficialPublicProviderHandoffRegistry.records.map(\.displayName)
         let brands = CanonicalCatalogEntityRegistry.brandNames.flatMap { name in
             [name] + speechTransliterationVariants(for: name)
         }
         let applications = LaunchDeviceApplications.verified.flatMap { application in
-            [application.id] + preferredSpokenAlias(from: application.aliases, excluding: application.id)
+            let spokenID = application.id.replacingOccurrences(of: "-", with: " ")
+            return [application.id, spokenID]
+                + preferredSpokenAlias(from: application.aliases, excluding: application.id)
         }
-        let services = MessengerKind.allCases.map(\.rawValue)
-        return unique(providers + brands + applications + services)
+        let services = [
+            "Messages", "повідомлення", "SMS", "WhatsApp", "Ватсап",
+            "Telegram", "Телеграм", "Viber", "Вайбер", "Signal"
+        ]
+        // App/channel names are short and most vulnerable to disappearing from
+        // Apple Speech finals. Reserve their place before the larger provider
+        // and catalogue lists; request-scoped values are still prepended below.
+        return unique(applications + services + brands + providers)
     }
+
+    /// Complete production speech inventory. Apple/Groq requests receive a
+    /// bounded relevant subset, while consistency tests validate this single
+    /// source instead of maintaining provider-specific word lists.
+    static var masterVocabulary: [String] {
+        let capabilityNames = [
+            "Phone", "Messages", "Mail", "YouTube", "Spotify", "Apple Music", "Safari", "Maps",
+            "Contacts", "Calendar", "Reminders", "Clock", "Camera", "Photos", "Files", "Settings",
+            "Voice Memos", "Wi-Fi", "Bluetooth", "Google", "Google Search", "Google Maps", "Google Places",
+            "ChoiceQR", "RestOn", "Glovo", "Bolt Food", "Дія", "Diia", "Seiko", "Apple", "iPhone"
+        ]
+        return unique(canonicalEntityVocabulary + capabilityNames + canonicalFunctionVocabulary)
+    }
+
+    private static var canonicalSecondaryAliasVocabulary: [String] {
+        OfficialPublicProviderHandoffRegistry.records.flatMap { provider in
+            preferredSpokenAlias(from: provider.aliases, excluding: provider.displayName)
+        }
+    }
+
+    private static let essentialFunctionVocabulary = [
+        "QR-код", "OCR", "відскануй", "розпізнай", "відкрий", "знайди"
+    ]
 
     static var canonicalFunctionVocabulary: [String] {
         [
@@ -1218,14 +1267,18 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
             "нагадування", "маршрут", "погода", "контакт", "нотатка",
             "документ", "файл", "світлина", "будильник", "таймер",
             "QR-код", "QR code", "OCR", "відкрий", "запусти",
-            "відскануй", "розпізнай", "знайди", "покажи", "проклади",
-            "подзвони", "набери", "повідомлення", "переклади", "ліхтарик"
+            "відскануй", "проскануй", "розпізнай", "оцифруй", "обчисли", "збільш",
+            "знайди", "покажи", "проклади", "подзвони", "набери", "повідомлення",
+            "переклади", "ліхтарик", "PDF", "QR"
         ]
     }
 
     static var canonicalVocabulary: [String] {
         boundedVocabulary(
-            additional: canonicalEntityVocabulary + canonicalFunctionVocabulary,
+            additional: canonicalEntityVocabulary
+                + essentialFunctionVocabulary
+                + canonicalSecondaryAliasVocabulary
+                + canonicalFunctionVocabulary,
             includeCanonical: false
         )
     }
@@ -1246,14 +1299,15 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
             }
         }
         if includeCanonical {
-            let entities = boundedVocabulary(additional: canonicalEntityVocabulary, includeCanonical: false)
-            let essentialFunctions = ["QR-код", "OCR", "відскануй", "розпізнай", "відкрий", "знайди"]
-            let dynamicLimit = max(0, maximumContextualStringCount - entities.count - essentialFunctions.count)
-            // Fresh request-scoped values remain first, while every canonical
-            // provider/app/brand keeps one display and one general spoken form.
+            // Reserve primary names, generalized spoken brand/app forms and
+            // the small cross-capability verb set. Lower-priority provider
+            // aliases fill only remaining capacity instead of evicting the
+            // commands those entities are meant to qualify.
+            let reserved = unique(canonicalEntityVocabulary + essentialFunctionVocabulary)
+            let dynamicLimit = max(0, maximumContextualStringCount - reserved.count)
             append(additional.prefix(dynamicLimit))
-            append(entities)
-            append(essentialFunctions)
+            append(reserved)
+            append(canonicalSecondaryAliasVocabulary)
             append(canonicalFunctionVocabulary)
         } else {
             append(additional)
@@ -1476,12 +1530,13 @@ final class VoiceEndOfSpeechFinalizer {
 @MainActor
 @Observable
 final class VoiceInputController: VoiceInputControlling {
-    let engineIdentifier = "apple-speech"
+    let engineIdentifier = "groq-whisper-large-v3+apple-speech-fallback"
     private(set) var state: VoiceInputState = .idle
     private(set) var transcript = ""
     private let capture: VoiceAudioCaptureLifecycle
     private let authorization: @Sendable () async -> VoiceAuthorizationOutcome
     private let contextualVocabulary: @Sendable () async -> [String]
+    private let cloudTranscriber: any CloudVoiceTranscribing
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var requestSink: VoiceRecognitionRequestSink?
     private var task: SFSpeechRecognitionTask?
@@ -1501,22 +1556,26 @@ final class VoiceInputController: VoiceInputControlling {
     @ObservationIgnored private var vocabularyRefresh: Task<Void, Never>?
     @ObservationIgnored private var finalResultCount = 0
     @ObservationIgnored private var activeContextualVocabulary: [String] = []
+    @ObservationIgnored private var cloudFinalizationTask: Task<Void, Never>?
+    @ObservationIgnored private var cloudSilenceMonitorTask: Task<Void, Never>?
 
     init(
         captureBackend: (any VoiceAudioCaptureBackend)? = nil,
         endOfSpeechDelay: Duration = .milliseconds(2_400),
         authorization: (@Sendable () async -> Bool)? = nil,
-        contextualVocabulary: @escaping @Sendable () async -> [String] = { [] }
+        contextualVocabulary: @escaping @Sendable () async -> [String] = { [] },
+        cloudTranscriber: any CloudVoiceTranscribing = GroqCloudVoiceTranscriber()
     ) {
         capture = VoiceAudioCaptureLifecycle(backend: captureBackend ?? AppleVoiceAudioCaptureBackend())
         if let authorization {
             self.authorization = {
-                await authorization() ? .authorized : .microphoneDenied
+                await authorization() ? .authorized(appleSpeechAvailable: true) : .microphoneDenied
             }
         } else {
             self.authorization = Self.authorizationOutcome
         }
         self.contextualVocabulary = contextualVocabulary
+        self.cloudTranscriber = cloudTranscriber
         endOfSpeechFinalizer = VoiceEndOfSpeechFinalizer(delay: endOfSpeechDelay)
         audioEvents = AudioSessionEventMonitor(
             onInterruption: { [weak self] in self?.handleAudioInterruptionBegan() },
@@ -1541,23 +1600,23 @@ final class VoiceInputController: VoiceInputControlling {
         LocalVoiceDiagnosticReport.shared.record("start_listening_invoked")
         setState(.requestingPermission)
         let authorization = await authorization()
-        guard authorization == .authorized else {
+        guard case let .authorized(appleSpeechAvailable) = authorization else {
             guard owns(sessionID) else { return }
             activeSessionID = nil
-            setState(authorization == .speechDenied ? .speechDenied : .denied)
+            setState(.denied)
             return
         }
         guard owns(sessionID) else {
             LocalVoiceDiagnosticReport.shared.record("stale_start_suppressed", "reason=authorization_completed")
             return
         }
-        guard let recognizer = SFSpeechRecognizer(locale: locale), recognizer.isAvailable else {
-            activeSessionID = nil
-            setState(.unavailable)
-            return
-        }
-        LocalVoiceDiagnosticReport.shared.record("recognizer_ready", "locale=\(recognizer.locale.identifier) available=\(recognizer.isAvailable)")
-        LocalVoiceDiagnosticReport.shared.record("APPLE_LOCALE", "locale=\(recognizer.locale.identifier)")
+        let recognizer = appleSpeechAvailable ? SFSpeechRecognizer(locale: locale) : nil
+        let appleRecognitionAvailable = recognizer?.isAvailable == true
+        LocalVoiceDiagnosticReport.shared.record(
+            "recognizer_ready",
+            "locale=\(recognizer?.locale.identifier ?? locale.identifier) available=\(appleRecognitionAvailable)"
+        )
+        LocalVoiceDiagnosticReport.shared.record("APPLE_LOCALE", "locale=\(recognizer?.locale.identifier ?? locale.identifier)")
         self.recognizer = recognizer
         let refreshedVocabulary = await contextualVocabulary()
         guard owns(sessionID) else {
@@ -1566,9 +1625,7 @@ final class VoiceInputController: VoiceInputControlling {
         }
         if !refreshedVocabulary.isEmpty { cachedContextualVocabulary = refreshedVocabulary }
         let requestVocabulary = refreshedVocabulary.isEmpty ? cachedContextualVocabulary : refreshedVocabulary
-        let request = SFSpeechAudioBufferRecognitionRequest()
         let configuration = VoiceRecognitionRequestConfiguration(additionalVocabulary: requestVocabulary)
-        configuration.apply(to: request, recognizer: recognizer)
         activeContextualVocabulary = configuration.contextualVocabulary
         let contextFingerprint = DiagnosticAudioSHA256.hex(
             of: Data(configuration.contextualVocabulary.joined(separator: "\u{1f}").utf8)
@@ -1577,20 +1634,28 @@ final class VoiceInputController: VoiceInputControlling {
         LocalVoiceDiagnosticReport.shared.record("CONTEXTUAL_STRINGS_FINGERPRINT", "fingerprint=\(contextFingerprint)")
         LocalVoiceDiagnosticReport.shared.record(
             "recognition_request_created",
-            "api=sfspeechrecognizer partial_results=true punctuation=true task_hint=dictation input_count=\(requestVocabulary.count) context_count=\(configuration.contextualVocabulary.count) on_device_supported=\(recognizer.supportsOnDeviceRecognition) on_device_required=\(request.requiresOnDeviceRecognition)"
+            "api=sfspeechrecognizer partial_results=true punctuation=true task_hint=dictation input_count=\(requestVocabulary.count) context_count=\(configuration.contextualVocabulary.count) on_device_supported=\(recognizer?.supportsOnDeviceRecognition == true) on_device_required=false available=\(appleRecognitionAvailable)"
         )
+        let request: SFSpeechAudioBufferRecognitionRequest? = appleRecognitionAvailable
+            ? SFSpeechAudioBufferRecognitionRequest()
+            : nil
+        if let request, let recognizer { configuration.apply(to: request, recognizer: recognizer) }
         self.request = request
-        let requestSink = VoiceRecognitionRequestSink(request)
+        let requestSink = request.map(VoiceRecognitionRequestSink.init)
         self.requestSink = requestSink
         LocalVoiceDiagnosticReport.shared.recordBoundaryPre("SPEECH_START", "locale=\(locale.identifier)")
         do {
-            task = recognizer.recognitionTask(with: request, resultHandler: Self.makeRecognitionHandler(owner: self, sessionID: sessionID))
-            LocalVoiceDiagnosticReport.shared.record("recognition_task_created")
+            if let request, let recognizer {
+                task = recognizer.recognitionTask(with: request, resultHandler: Self.makeRecognitionHandler(owner: self, sessionID: sessionID))
+                LocalVoiceDiagnosticReport.shared.record("recognition_task_created")
+            } else {
+                LocalVoiceDiagnosticReport.shared.record("recognition_task_skipped", "reason=apple_speech_unavailable cloud_primary=true")
+            }
             LocalVoiceDiagnosticReport.shared.beginCommandAudioRecording()
             let speechActivity = speechActivity
             try capture.start { buffer in
                 speechActivity.record(buffer)
-                requestSink.append(buffer)
+                requestSink?.append(buffer)
                 LocalVoiceDiagnosticReport.shared.appendCommandAudioBuffer(buffer)
             }
             guard owns(sessionID) else {
@@ -1598,6 +1663,7 @@ final class VoiceInputController: VoiceInputControlling {
                 return
             }
             setState(.listening)
+            startCloudSilenceMonitor(sessionID: sessionID)
             prewarmContextualVocabulary()
             LocalVoiceDiagnosticReport.shared.recordBoundaryPost("SPEECH_START", "locale=\(locale.identifier) status=success")
         } catch {
@@ -1626,6 +1692,10 @@ final class VoiceInputController: VoiceInputControlling {
     }
 
     func stop(reason: VoiceStopReason = .externalRequest) {
+        if reason == .userPressedStop, let sessionID = activeSessionID, state == .listening {
+            finalizeAuthoritativeTranscript(sessionID: sessionID, appleFallback: transcript)
+            return
+        }
         stop(reason: reason, ownedBy: nil)
     }
 
@@ -1635,6 +1705,10 @@ final class VoiceInputController: VoiceInputControlling {
             return
         }
         activeSessionID = nil
+        cloudFinalizationTask?.cancel()
+        cloudFinalizationTask = nil
+        cloudSilenceMonitorTask?.cancel()
+        cloudSilenceMonitorTask = nil
         endOfSpeechFinalizer.cancel()
         isFinalizingRecognition = false
         LocalVoiceDiagnosticReport.shared.record("stop_invoked", "reason=\(reason.rawValue)")
@@ -1645,7 +1719,8 @@ final class VoiceInputController: VoiceInputControlling {
         LocalVoiceDiagnosticReport.shared.record("recognition_task_cancelled", "reason=\(reason.rawValue) had_task=\(hadTask)")
         LocalVoiceDiagnosticReport.shared.record("end_audio_called", "reason=\(reason.rawValue) had_request=\(hadRequest)")
         capture.stop()
-        LocalVoiceDiagnosticReport.shared.finishCommandAudioRecording(reason: reason)
+        let transientAudioURL = LocalVoiceDiagnosticReport.shared.finishCommandAudioRecording(reason: reason)
+        LocalVoiceDiagnosticReport.shared.discardTransientCommandAudioIfNeeded(transientAudioURL)
         if state == .listening || state == .transcribing || state == .requestingPermission { setState(.idle) }
     }
 
@@ -1670,6 +1745,7 @@ final class VoiceInputController: VoiceInputControlling {
         }
         LocalVoiceDiagnosticReport.shared.record("recognition_callback", "count=\(recognitionCallbackCount) has_text=\(transcript != nil) final=\(isFinal) error_domain=\(errorDomain) error_code=\(errorCode) partial_count=\(partialResultCount) final_count=\(finalResultCount)")
         let deliverAsFinal = isFinal && !hasError
+        var stabilizedAppleFinal: String?
         if let transcript {
             var accumulatedEvidence: VoiceRecognitionEvidence?
             if !isFinal {
@@ -1702,6 +1778,7 @@ final class VoiceInputController: VoiceInputControlling {
                 ? accumulatedEvidence.map { VoiceTranscriptStabilizer.stabilize($0, contextualVocabulary: activeContextualVocabulary) }
                 : nil
             let deliveredTranscript = stabilized?.text ?? VoiceTranscriptStabilizer.normalizedForDisplay(transcript)
+            if deliverAsFinal { stabilizedAppleFinal = deliveredTranscript }
             self.transcript = deliveredTranscript
             // Persist the recognizer's final evidence before handing it to the
             // semantic pipeline. If downstream parsing terminates the process,
@@ -1719,8 +1796,12 @@ final class VoiceInputController: VoiceInputControlling {
                     details: "source=\(stabilized.source.rawValue)"
                 )
             }
-            eventHandler?(.transcript(deliveredTranscript, isFinal: deliverAsFinal))
-            LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_ui", "length=\(deliveredTranscript.count) final=\(deliverAsFinal)")
+            // Apple provides live UI and the bounded offline fallback. The
+            // authoritative final is emitted only once after Groq either
+            // succeeds or fails; Apple final must never trigger a second
+            // command submission.
+            eventHandler?(.transcript(deliveredTranscript, isFinal: false))
+            LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_ui", "length=\(deliveredTranscript.count) final=false")
             if !isFinal, !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 let speechActivity = speechActivity
                 endOfSpeechFinalizer.receivedPartial(
@@ -1732,25 +1813,106 @@ final class VoiceInputController: VoiceInputControlling {
                 }
             }
         }
-        if hasError { stop(reason: .recognitionError, ownedBy: sessionID) }
+        if hasError {
+            LocalVoiceDiagnosticReport.shared.record("apple_recognition_failed", "cloud_primary_continues=true")
+            finalizeAuthoritativeTranscript(sessionID: sessionID, appleFallback: self.transcript)
+        }
         else if isFinal {
             LocalVoiceDiagnosticReport.shared.record("recognition_task_finished", "reason=final_result")
-            stop(reason: .recognitionFinal, ownedBy: sessionID)
+            let appleFinal = stabilizedAppleFinal ?? transcript.map(VoiceTranscriptStabilizer.normalizedForDisplay) ?? self.transcript
+            finalizeAuthoritativeTranscript(sessionID: sessionID, appleFallback: appleFinal)
         }
     }
 
-    private func finishAfterEndOfSpeech(sessionID: UUID) {
-        guard owns(sessionID), state == .listening, !isFinalizingRecognition,
-              let request, let task else { return }
+    private func finalizeAuthoritativeTranscript(sessionID: UUID, appleFallback: String) {
+        guard owns(sessionID), cloudFinalizationTask == nil else { return }
         isFinalizingRecognition = true
+        cloudSilenceMonitorTask?.cancel()
+        cloudSilenceMonitorTask = nil
         requestSink?.deactivate()
-        setState(.transcribing)
-        LocalVoiceDiagnosticReport.shared.record("end_audio_called", "reason=endOfSpeech had_request=true")
-        request.endAudio()
-        LocalVoiceDiagnosticReport.shared.record("recognition_task_finished", "reason=endOfSpeech")
-        task.finish()
+        request?.endAudio()
         capture.stop()
-        LocalVoiceDiagnosticReport.shared.finishCommandAudioRecording(reason: .recognitionFinal)
+        let audioURL = LocalVoiceDiagnosticReport.shared.finishCommandAudioRecording(reason: .recognitionFinal)
+        setState(.transcribing)
+        let transcriber = cloudTranscriber
+        let context = activeContextualVocabulary
+        cloudFinalizationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { LocalVoiceDiagnosticReport.shared.discardTransientCommandAudioIfNeeded(audioURL) }
+            let final: FinalVoiceTranscript?
+            do {
+                guard let audioURL else { throw URLError(.fileDoesNotExist) }
+                let cloud = try await transcriber.transcribe(
+                    audioURL: audioURL,
+                    requestID: sessionID,
+                    prompt: context
+                )
+                final = VoiceAuthoritativeTranscriptSelector.select(groq: cloud, appleFallback: appleFallback)
+            } catch {
+                guard !Task.isCancelled else { return }
+                final = VoiceAuthoritativeTranscriptSelector.select(groq: nil, appleFallback: appleFallback)
+                LocalVoiceDiagnosticReport.shared.record(
+                    "cloud_transcription_fallback",
+                    "provider=groq error_type=\(String(describing: type(of: error)))"
+                )
+            }
+            guard !Task.isCancelled, self.owns(sessionID), let final else {
+                if self.owns(sessionID) { self.stop(reason: .recognitionError, ownedBy: sessionID) }
+                return
+            }
+            self.transcript = final.text
+            LocalVoiceDiagnosticReport.shared.recordVoiceText(
+                "FINAL_TRANSCRIPT",
+                text: final.text,
+                details: "source=\(final.source.rawValue)"
+            )
+            LocalVoiceDiagnosticReport.shared.record("final_transcript_source", "source=\(final.source.rawValue)")
+            self.eventHandler?(.transcript(final.text, isFinal: true))
+            LocalVoiceDiagnosticReport.shared.record(
+                "transcript_delivered_to_ui",
+                "length=\(final.text.count) final=true source=\(final.source.rawValue)"
+            )
+            self.completeFinalizedSession(sessionID: sessionID)
+        }
+    }
+
+    private func completeFinalizedSession(sessionID: UUID) {
+        guard owns(sessionID) else { return }
+        activeSessionID = nil
+        cloudFinalizationTask = nil
+        cloudSilenceMonitorTask?.cancel()
+        cloudSilenceMonitorTask = nil
+        endOfSpeechFinalizer.cancel()
+        requestSink?.deactivate(); requestSink = nil
+        task?.cancel(); task = nil
+        request = nil
+        isFinalizingRecognition = false
+        setState(.idle)
+    }
+
+    private func finishAfterEndOfSpeech(sessionID: UUID) {
+        guard owns(sessionID), state == .listening, !isFinalizingRecognition else { return }
+        LocalVoiceDiagnosticReport.shared.record("end_of_speech_detected", "cloud_primary=true")
+        finalizeAuthoritativeTranscript(sessionID: sessionID, appleFallback: transcript)
+    }
+
+    private func startCloudSilenceMonitor(sessionID: UUID) {
+        cloudSilenceMonitorTask?.cancel()
+        let speechActivity = speechActivity
+        cloudSilenceMonitorTask = Task { @MainActor [weak self] in
+            let started = ContinuousClock.now
+            var voiceDetected = false
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(250))
+                guard !Task.isCancelled, let self, self.owns(sessionID), self.state == .listening else { return }
+                if speechActivity.hasRecentVoiceActivity(within: 0.75) { voiceDetected = true }
+                let elapsed = started.duration(to: .now)
+                if (voiceDetected && !speechActivity.hasRecentVoiceActivity(within: 1.6)) || elapsed >= .seconds(45) {
+                    self.finalizeAuthoritativeTranscript(sessionID: sessionID, appleFallback: self.transcript)
+                    return
+                }
+            }
+        }
     }
 
     func handleAudioInterruptionBegan() {
@@ -1785,12 +1947,11 @@ final class VoiceInputController: VoiceInputControlling {
         }
         LocalVoiceDiagnosticReport.shared.record("speech_permission_after", "state=\(String(describing: speech))")
         LocalVoiceDiagnosticReport.shared.record("SPEECH_PERMISSION", "permission_state=\(String(describing: speech))")
-        guard speech == .authorized else { return .speechDenied }
         LocalVoiceDiagnosticReport.shared.record("microphone_permission_before", "state=\(String(describing: AVAudioApplication.shared.recordPermission))")
         let microphone = await AVAudioApplication.requestRecordPermission()
         LocalVoiceDiagnosticReport.shared.record("microphone_permission", "granted=\(microphone)")
         LocalVoiceDiagnosticReport.shared.record("MIC_PERMISSION", "granted=\(microphone) permission_state=\(String(describing: AVAudioApplication.shared.recordPermission))")
-        return microphone ? .authorized : .microphoneDenied
+        return microphone ? .authorized(appleSpeechAvailable: speech == .authorized) : .microphoneDenied
     }
 
     private nonisolated static func makeRecognitionHandler(

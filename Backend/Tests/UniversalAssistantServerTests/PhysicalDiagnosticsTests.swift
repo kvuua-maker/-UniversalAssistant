@@ -14,6 +14,20 @@ struct PhysicalDiagnosticsTests {
         await #expect(throws: DiagnosticServerError.self) { try await store.consume(id: expired.0, operation: "attest", now: now.addingTimeInterval(6)) }
     }
 
+    @Test func groqChallengesAreExplicitlyAllowlistedAndOperationBound() async throws {
+        let store = ChallengeStore(lifetime: 5)
+        let now = Date(timeIntervalSince1970: 1_000)
+        let transcription = try await store.issue(operation: "groq-transcription", now: now)
+        await #expect(throws: DiagnosticServerError.self) {
+            try await store.consume(id: transcription.0, operation: "groq-semantic", now: now)
+        }
+        let semantic = try await store.issue(operation: "groq-semantic", now: now)
+        _ = try await store.consume(id: semantic.0, operation: "groq-semantic", now: now)
+        await #expect(throws: DiagnosticServerError.self) {
+            _ = try await store.issue(operation: "arbitrary-ai-operation", now: now)
+        }
+    }
+
     @Test func storeDeduplicatesAndRejectsForbiddenOrUnknownSchema() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }

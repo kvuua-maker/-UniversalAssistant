@@ -21,10 +21,29 @@ struct DeviceApplicationResolver: Sendable {
     let applications: [DeviceApplicationDescriptor]
 
     func resolve(spokenName: String) -> DeviceApplicationResolution {
+        let normalizedName = Self.normalize(spokenName)
+        if normalizedName.count < 5 {
+            let exact = applications.filter { application in
+                application.aliases.map(Self.normalize).contains(normalizedName) ||
+                    Self.normalize(application.id) == normalizedName
+            }
+            if exact.count == 1, let app = exact.first { return .direct(app) }
+            if exact.count > 1 { return .clarification(exact.map(\.id).sorted()) }
+            return .unsupported
+        }
         let domain = applications.map {
             ScopedEntityCandidate(value: $0, displayName: $0.id, aliases: Set($0.aliases.map(Self.normalize)))
         }
-        switch ContextScopedEntityResolver(candidates: domain).resolve(Self.normalize(spokenName)) {
+        // Weak phonetic overlap with unrelated installed apps is not a useful
+        // clarification. Keep direct clipped-name recovery, but require every
+        // rendered ambiguity to clear a stronger app-identity floor.
+        let resolver = ContextScopedEntityResolver(
+            candidates: domain,
+            directThreshold: 0.72,
+            ambiguityThreshold: 0.65,
+            requiredMargin: 0.12
+        )
+        switch resolver.resolve(normalizedName) {
         case let .resolved(app): return .direct(app)
         case let .ambiguous(names): return .clarification(names)
         case .unresolved: return .unsupported
@@ -92,7 +111,9 @@ enum LaunchDeviceApplications {
                   components?.queryItems = [.init(name: "domain", value: value)]
                   return components?.url
               }),
-        .init(id: "viber", aliases: ["viber", "вайбер"], launchURL: URL(string: "viber://")!, exactContext: nil),
+        // A root launch carries no unsupported contact/page parameters and
+        // therefore avoids Viber's "page unavailable" intermediate screen.
+        .init(id: "viber", aliases: ["viber", "вайбер", "вібер"], launchURL: URL(string: "viber://")!, exactContext: nil),
         .init(id: "youtube", aliases: ["youtube", "ютуб"], launchURL: URL(string: "https://www.youtube.com")!, exactContext: nil),
         .init(id: "app-store", aliases: ["app store", "ап стор", "магазин застосунків"], launchURL: URL(string: "https://apps.apple.com")!, exactContext: nil),
         .init(id: "mail", aliases: ["mail", "пошта", "почта"], launchURL: URL(string: "mailto:")!, exactContext: nil),

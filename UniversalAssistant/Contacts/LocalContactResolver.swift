@@ -22,6 +22,19 @@ struct ContactCandidate: Equatable, Sendable {
         self.aliases = aliases
     }
 }
+
+extension ContactCandidate {
+    /// A user-visible discriminator for same-name contacts. The opaque Contacts
+    /// identifier remains internal; only existing authorized fields are shown.
+    var selectionLabel: String {
+        if let phone = phoneNumbers.first {
+            let digits = phone.filter(\.isNumber)
+            return "\(displayName) · •••\(digits.suffix(4))"
+        }
+        if let email = emailAddresses.first { return "\(displayName) · \(email)" }
+        return displayName
+    }
+}
 enum ContactResolution: Equatable, Sendable { case resolved(ContactCandidate), ambiguous([ContactCandidate]), notFound }
 enum ContactResolutionError: Error, Equatable, Sendable { case permissionRequired, permissionDenied, timedOut, cancelled, queryFailed }
 
@@ -291,11 +304,24 @@ actor LocalContactResolver: ContactResolving {
     ) -> (resolution: ContactResolution, mechanism: ScopedEntityMatchMechanism, candidateCount: Int) {
         guard !contacts.isEmpty else { return (.notFound, .unresolved, 0) }
         let comparableQuery = CanonicalMorphology.comparableText(name)
+        let exact = contacts.filter { contact in
+            ([contact.displayName] + contact.aliases).contains {
+                CanonicalMorphology.comparableText($0) == comparableQuery
+            }
+        }
+        if exact.count == 1, let value = exact.first {
+            return (.resolved(value), .exact, contacts.count)
+        }
+        if exact.count > 1 {
+            return (.ambiguous(Self.deduplicated(exact)), .exact, contacts.count)
+        }
         let domain = contacts.filter { contact in
             let identityValues = [contact.displayName] + contact.aliases
             return identityValues.contains { value in
                 let comparable = CanonicalMorphology.comparableText(value)
-                return comparable == comparableQuery || comparable.count >= 3
+                guard comparable.count >= 3, comparableQuery.count >= 2 else { return false }
+                return comparable.contains(comparableQuery) || comparableQuery.contains(comparable) ||
+                    Self.sharesMorphologyEvidence(name, value)
             }
         }.map {
             ScopedEntityCandidate(
@@ -313,7 +339,7 @@ actor LocalContactResolver: ContactResolving {
         )
         let tokens = name.split { !$0.isLetter && !$0.isNumber }.map(String.init)
         var subjects = [name]
-        if !tokens.isEmpty {
+        if tokens.count > 1 {
             for length in 1...min(4, tokens.count) {
                 for start in 0...(tokens.count - length) {
                     subjects.append(tokens[start..<(start + length)].joined(separator: " "))
@@ -343,6 +369,21 @@ actor LocalContactResolver: ContactResolving {
         return values.values.sorted {
             $0.displayName == $1.displayName ? $0.identifier < $1.identifier : $0.displayName < $1.displayName
         }
+    }
+
+    private static func sharesMorphologyEvidence(_ lhs: String, _ rhs: String) -> Bool {
+        let left = lhs.split { !$0.isLetter && !$0.isNumber }.map(String.init)
+        let right = rhs.split { !$0.isLetter && !$0.isNumber }.map(String.init)
+        guard !left.isEmpty, !right.isEmpty else { return false }
+        let intersections = left.reduce(into: 0) { count, token in
+            let forms = CanonicalMorphology.forms(for: token).filter { $0.count >= 3 }
+            if right.contains(where: { !forms.isDisjoint(with: CanonicalMorphology.forms(for: $0)) }) {
+                count += 1
+            }
+        }
+        // A multi-token identity needs more than an accidental one-token hit;
+        // a single-name lookup may legitimately match one contact-name token.
+        return intersections >= (min(left.count, right.count) > 1 ? 2 : 1)
     }
 
     private static func status(_ resolution: ContactResolution) -> String {

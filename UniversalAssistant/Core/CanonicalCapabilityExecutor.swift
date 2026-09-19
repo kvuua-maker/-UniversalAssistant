@@ -119,7 +119,9 @@ struct CanonicalCapabilityContinuation: Equatable, Sendable {
 enum CanonicalCapabilityExecutionError: Error, Equatable, Sendable {
     case missingParameter(String)
     case ambiguous([String])
+    case ambiguousContacts([ContactCandidate])
     case unavailable(String)
+    case systemRestricted(String)
     case externalProviderRequired(String)
     case providerRequiredNoFallback(String)
     case confirmationRequired(StructuredCommand)
@@ -360,6 +362,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             if let raw = command.entities["pdf_operation"], let operation = PDFWorkflowOperation(rawValue: raw) {
                 return .presentation(.pdfWorkflow(operation, text: command.entities["pdf_text"]))
             }
+            if command.entities["pdf_creation_requested"] == "true" {
+                throw CanonicalCapabilityExecutionError.missingParameter("pdf_source")
+            }
             return .presentation(.documents)
         case .cameraCapture:
             if command.entities["capture_mode"] == "code_scan" { return .presentation(.scanner) }
@@ -404,8 +409,30 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 return .handoff(.init(query: command.originalText, destination: url, kind: .system))
             }
             guard let media else { throw CanonicalCapabilityExecutionError.unavailable("musickit_unavailable") }
-            let query = try required(command.entities["query"], "media_query")
+            let query = command.entities["query"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if command.entities["media_action"] == "play", query.isEmpty {
+                let playback = try await media.playCurrent(providerID: "apple-music")
+                guard playback.state == .playing else {
+                    throw CanonicalCapabilityExecutionError.unavailable("music_playback_not_started")
+                }
+                return .result(try result("Музика відтворюється", facts: [
+                    .init(id: "apple-music-playback", label: "Стан", value: playback.state.rawValue,
+                          state: .verified, source: "MusicKit", observedAt: .now, priority: 100)
+                ]))
+            }
+            guard !query.isEmpty else { throw CanonicalCapabilityExecutionError.missingParameter("media_query") }
             let values = try await media.search(providerID: "apple-music", query: query, kinds: [.song, .album, .artist, .playlist], limit: 3, requestAuthorization: true)
+            if command.entities["media_action"] == "play" {
+                guard let item = values.first else { throw CanonicalCapabilityExecutionError.unavailable("media_item_not_found") }
+                let playback = try await media.play(item)
+                guard playback.state == .playing else {
+                    throw CanonicalCapabilityExecutionError.unavailable("music_playback_not_started")
+                }
+                return .result(try result("Відтворюється \(item.title)", facts: [
+                    .init(id: item.id, label: item.title, value: item.artist,
+                          state: .verified, source: "Apple Music", observedAt: .now, priority: 100)
+                ]))
+            }
             return .result(try result("Знайдено в Apple Music", facts: values.enumerated().map { index, item in
                 ResultFact(id: item.id, label: item.title, value: item.artist ?? item.kind.rawValue, state: .verified, source: "Apple Music", observedAt: .now, priority: 100 - index)
             }, actions: values.compactMap { item in item.exactURL.map { .init(id: item.id, title: "Відкрити", kind: .open, destination: $0) } }))
@@ -421,7 +448,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             return .handoff(.init(query: command.originalText, destination: url, kind: .system))
         case .settings:
             guard command.entities["settings_target"] == "application" else {
-                throw CanonicalCapabilityExecutionError.unavailable("system_settings_destination_not_publicly_available")
+                throw CanonicalCapabilityExecutionError.systemRestricted("system_settings_destination_not_publicly_available")
             }
             guard let url = URL(string: UIApplication.openSettingsURLString) else {
                 throw CanonicalCapabilityExecutionError.unavailable("app_settings_unavailable")
@@ -653,7 +680,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         if kind == "audio_route_picker" {
             return .presentation(.audioRoutes)
         }
-        if kind == "unsupported_system_control" { throw CanonicalCapabilityExecutionError.unavailable("system_control_not_publicly_available") }
+        if kind == "unsupported_system_control" { throw CanonicalCapabilityExecutionError.systemRestricted("system_control_not_publicly_available") }
         let action: SystemQuickAction
         if kind == "timer", let seconds = Int(command.entities["duration_seconds"] ?? "") { action = .startTimer(seconds: seconds, label: command.entities["label"]) }
         else if kind == "alarm", let hour = Int(command.entities["hour"] ?? ""), let minute = Int(command.entities["minute"] ?? "") { action = .createAlarm(hour: hour, minute: minute, label: command.entities["label"]) }
@@ -806,23 +833,32 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let partySize = try requiredInteger(command.entities["party_size"], "restaurant_party_size", range: 1...50)
         let interval = try restaurantInterval(command)
         let location: ValidatedLocation
-        if let area = command.entities["location"]?.trimmingCharacters(in: .whitespacesAndNewlines), !area.isEmpty {
-            location = try await locationResolver.resolve(area)
-        } else {
-            location = try await currentLocation.resolveCurrent(for: .nearbySearch)
+        do {
+            if let area = command.entities["location"]?.trimmingCharacters(in: .whitespacesAndNewlines), !area.isEmpty {
+                location = try await locationResolver.resolve(area)
+            } else {
+                location = try await currentLocation.resolveCurrent(for: .nearbySearch)
+            }
+        } catch {
+            return try exactRestaurantGoogleHandoff(command, reason: "location_unavailable")
         }
         let query = command.entities["restaurant_query"]?.trimmingCharacters(in: .whitespacesAndNewlines)
         let searchText = query?.isEmpty == false ? query! : "restaurant"
-        let response = try await placeSearch.search(.init(
-            text: searchText, category: .restaurant, location: location,
-            radiusMeters: 10_000, limit: 8
-        ))
+        let response: PlaceSearchResponse
+        do {
+            response = try await placeSearch.search(.init(
+                text: searchText, category: .restaurant, location: location,
+                radiusMeters: 10_000, limit: 8
+            ))
+        } catch {
+            return try exactRestaurantGoogleHandoff(command, reason: "place_provider_unavailable")
+        }
         let places = PlaceProximityOrdering().nearestFirst(
             response.places.filter { $0.category == .restaurant },
             from: location
         )
         guard !places.isEmpty else {
-            throw CanonicalCapabilityExecutionError.unavailable("no_restaurants_found")
+            return try exactRestaurantGoogleHandoff(command, reason: "no_restaurants_found")
         }
         let request = RestaurantSearchRequest(
             maximumDistanceMeters: 10_000,
@@ -869,9 +905,39 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             ))
         }
 
-        let fallback = try restaurantFallbackResult(offers: Array(offers), partySize: partySize, interval: interval)
+        let fallback = try restaurantFallbackResult(
+            offers: Array(offers), partySize: partySize, interval: interval,
+            originalRequest: command.originalText
+        )
         currentContext.replacePlaceResults(fallback, places: Array(places.prefix(8)))
+        if fallback.actions.count == 1,
+           fallback.actions[0].id == "restaurant-exact-google-fallback",
+           let destination = fallback.actions[0].destination {
+            LocalVoiceDiagnosticReport.shared.record(
+                "provider_handoff_selected",
+                "provider=google.search mechanism=exact_restaurant_fallback destination=\(destination.absoluteString)"
+            )
+            return .handoff(.init(query: command.originalText, destination: destination, kind: .webSearch))
+        }
         return .result(fallback)
+    }
+
+    private func exactRestaurantGoogleHandoff(
+        _ command: StructuredCommand,
+        reason: String
+    ) throws -> CapabilityExecutionOutcome {
+        let original = command.originalText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !original.isEmpty else { throw CanonicalCapabilityExecutionError.missingParameter("restaurant_query") }
+        var components = URLComponents(string: "https://www.google.com/search")
+        components?.queryItems = [.init(name: "q", value: "\(original) офіційне бронювання столика")]
+        guard let destination = components?.url else {
+            throw CanonicalCapabilityExecutionError.unavailable("restaurant_fallback_destination_invalid")
+        }
+        LocalVoiceDiagnosticReport.shared.record(
+            "provider_handoff_selected",
+            "provider=google.search mechanism=exact_restaurant_fallback reason=\(reason) destination=\(destination.absoluteString)"
+        )
+        return .handoff(.init(query: original, destination: destination, kind: .webSearch))
     }
 
     private func bookRestaurant(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
@@ -928,7 +994,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private func restaurantFallbackResult(
         offers: [RestaurantOffer],
         partySize: Int,
-        interval: DateInterval
+        interval: DateInterval,
+        originalRequest: String
     ) throws -> DeterministicResult {
         var actions: [ResultAction] = []
         for offer in offers.prefix(5) {
@@ -942,6 +1009,23 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 actions.append(.init(id: offer.id, title: "Маршрут", kind: .navigate, destination: url))
             case .confirmed:
                 break
+            }
+        }
+        if actions.isEmpty {
+            let restaurant = offers.first?.place.name
+            let query = [originalRequest, restaurant, "офіційне бронювання столика"]
+                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .joined(separator: " ")
+            var components = URLComponents(string: "https://www.google.com/search")
+            components?.queryItems = [.init(name: "q", value: query)]
+            if let destination = components?.url {
+                actions.append(.init(
+                    id: "restaurant-exact-google-fallback",
+                    title: "Знайти офіційне бронювання",
+                    kind: .open,
+                    destination: destination
+                ))
             }
         }
         let facts = offers.prefix(5).enumerated().map { index, offer in
@@ -1074,6 +1158,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             return .handoff(.init(query: url.host ?? rawURL, destination: url, kind: .system))
         }
         let target = (command.entities["app"] ?? "").folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        if target == "voice-memos" || target == "voice memos" || target == "диктофон" {
+            throw CanonicalCapabilityExecutionError.systemRestricted("voice_memos_has_no_public_app_launch_or_recording_api")
+        }
         if ["файли", "файлы", "files"].contains(target) { return .presentation(.documents) }
         if ["камера", "camera"].contains(target) { return .presentation(.camera) }
         if ["календар", "календарь", "calendar"].contains(target) {
@@ -1280,7 +1367,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 return .presentation(.contactAccess(query: name, command: command))
             }
             throw CanonicalCapabilityExecutionError.unavailable("contact_not_found")
-        case let .ambiguous(values): throw CanonicalCapabilityExecutionError.ambiguous(values.map(\.displayName))
+        case let .ambiguous(values): throw CanonicalCapabilityExecutionError.ambiguousContacts(values)
         case let .resolved(value):
             recordSelectedTarget(
                 identifier: "contact:" + value.identifier,
@@ -1320,7 +1407,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             case .notFound:
                 throw CanonicalCapabilityExecutionError.unavailable("email_contact_not_found")
             case let .ambiguous(values):
-                throw CanonicalCapabilityExecutionError.ambiguous(values.map(\.displayName))
+                throw CanonicalCapabilityExecutionError.ambiguousContacts(values)
             case let .resolved(value):
                 recordSelectedTarget(identifier: "contact:" + value.identifier, service: "email", phoneCount: value.phoneNumbers.count, emailCount: value.emailAddresses.count)
                 guard !value.emailAddresses.isEmpty else {
@@ -1378,7 +1465,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             case .notFound:
                 throw CanonicalCapabilityExecutionError.unavailable("message_contact_not_found")
             case let .ambiguous(values):
-                throw CanonicalCapabilityExecutionError.ambiguous(values.map(\.displayName))
+                throw CanonicalCapabilityExecutionError.ambiguousContacts(values)
             case let .resolved(value):
                 recordSelectedTarget(identifier: "contact:" + value.identifier, service: service, phoneCount: value.phoneNumbers.count, emailCount: value.emailAddresses.count)
                 guard value.phoneNumbers.count == 1, let number = value.phoneNumbers.first else {
@@ -1433,6 +1520,15 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         if service == "whatsapp" {
             guard let url = URL(string: "https://wa.me/\(digits)") else { throw CanonicalCapabilityExecutionError.unavailable("invalid_whatsapp_handoff") }
             return url
+        }
+        if service == "viber" {
+            throw CanonicalCapabilityExecutionError.systemRestricted("viber_contact_call_has_no_verified_public_handoff")
+        }
+        if service == "telegram" || service == "signal" {
+            throw CanonicalCapabilityExecutionError.systemRestricted("named_messenger_contact_call_has_no_verified_public_handoff")
+        }
+        guard service == nil || service == "telephone" else {
+            throw CanonicalCapabilityExecutionError.unavailable("unsupported_call_service")
         }
         guard let url = URL(string: "tel:\(number.hasPrefix("+") ? "+" : "")\(digits)") else { throw CanonicalCapabilityExecutionError.unavailable("invalid_phone_handoff") }
         return url

@@ -11,3 +11,5 @@ xcuserdata/
 .env.*
 !.env.example
 Secrets.xcconfig
+__pycache__/
+*.pyc

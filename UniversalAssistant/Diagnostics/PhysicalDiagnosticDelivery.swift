@@ -107,7 +107,7 @@ struct URLSessionDiagnosticTransport: DiagnosticHTTPTransport {
     func post<Request: Encodable, Response: Decodable>(_ path: String, body: Request, response: Response.Type) async throws -> Response {
         let destination = baseURL.appending(path: path)
         guard destination.scheme == "https", destination.host == "178.105.32.46" else { throw PhysicalDiagnosticDeliveryError.invalidEndpoint }
-        var request = URLRequest(url: destination, timeoutInterval: 12)
+        var request = URLRequest(url: destination, timeoutInterval: 30)
         request.httpMethod = "POST"; request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder.diagnostic.encode(body)
         let (data, urlResponse) = try await URLSession.shared.data(for: request)
@@ -274,6 +274,43 @@ actor PhysicalDiagnosticDelivery {
     func pendingCount(now: Date = .now) -> Int { localStore.loadPending(now: now).count }
     func pendingAttempts(now: Date = .now) -> [Int] { localStore.loadPending(now: now).map(\.attempts) }
 
+    /// The same production App Attest boundary used by diagnostics also
+    /// authenticates purpose-bound AI requests. Provider credentials never
+    /// cross this boundary into the app.
+    func postAttested<Payload: Codable & Sendable, Response: Decodable>(
+        operation: String,
+        path: String,
+        payload: Payload,
+        response: Response.Type
+    ) async throws -> Response {
+        let keyID = try await ensureAttestedKey()
+        let challenge: ChallengeResponse = try await transport.post(
+            "v1/app-attest/challenge",
+            body: ChallengeRequest(operation: operation),
+            response: ChallengeResponse.self
+        )
+        let client = GenericAssertionClientData(
+            challengeID: challenge.challengeID,
+            challenge: challenge.challenge,
+            operation: operation,
+            payload: payload
+        )
+        let clientData = try JSONEncoder.diagnostic.encode(client)
+        let assertion = try await attest.generateAssertion(
+            keyID,
+            clientDataHash: Data(SHA256.hash(data: clientData))
+        )
+        return try await transport.post(
+            path,
+            body: AssertionEnvelope(
+                keyID: keyID,
+                assertion: assertion.base64EncodedString(),
+                clientData: clientData.base64EncodedString()
+            ),
+            response: response
+        )
+    }
+
     private func scheduleRetry(for queue: [DiagnosticQueuedUpload], now: Date) {
         retryTask?.cancel()
         guard let next = queue
@@ -356,6 +393,13 @@ actor PhysicalDiagnosticDelivery {
         } catch { }
     }
 
+}
+
+private struct GenericAssertionClientData<Payload: Codable & Sendable>: Codable, Sendable {
+    let challengeID: UUID
+    let challenge: String
+    let operation: String
+    let payload: Payload
 }
 
 extension JSONEncoder {

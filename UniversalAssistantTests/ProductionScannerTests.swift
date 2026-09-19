@@ -57,12 +57,16 @@ struct ProductionScannerTests {
         #expect(try ScannerProductionRouter().route(.init(payload: "4006381333931", symbology: .ean13)).actionTitle == "Знайти товар")
     }
 
-    @Test func retailBarcodeActionUsesTruthfulProviderBoundary() throws {
+    @Test func retailBarcodeActionContinuesWithExactGTINFallback() throws {
         let model = AssistantViewModel(compactResultDuration: .seconds(60))
         let result = try ScannerProductionRouter().route(.init(payload: "4006381333931", symbology: .ean13))
         model.performScannerAction(result)
-        guard case let .failure(message) = model.resultState else { Issue.record("Expected truthful provider boundary"); return }
-        #expect(message.message.contains("провайдер"))
+        guard case let .webHandoff(handoff) = model.resultState else { Issue.record("Expected exact GTIN continuation"); return }
+        #expect(handoff.destination.host == "www.google.com")
+        #expect(handoff.destination.path == "/search")
+        let query = URLComponents(url: handoff.destination, resolvingAgainstBaseURL: false)?
+            .queryItems?.first(where: { $0.name == "q" })?.value
+        #expect(query == "GTIN 4006381333931")
     }
 
     @Test func plainQRUsesExplicitSafeCopyAction() throws {

@@ -40,7 +40,6 @@ struct UniversalDeviceCommandRouterTests {
         let expected: [(String, String)] = [
             ("Whats", "whatsapp"),
             ("Telegr", "telegram"),
-            ("Vibe", "viber"),
             ("Spotif", "spotify")
         ]
         let resolver = DeviceApplicationResolver(applications: LaunchDeviceApplications.verified)
@@ -51,6 +50,10 @@ struct UniversalDeviceCommandRouterTests {
             }
             #expect(app.id == identifier)
         }
+        #expect(DeviceApplicationResolver(applications: LaunchDeviceApplications.verified).resolve(spokenName: "Vibe") == .unsupported)
+        let recognizedViber = LanguageUnderstandingBlock().parse("Open Vibe")
+        #expect(recognizedViber.intent == .open)
+        #expect(recognizedViber.entities["app"] == "viber")
 
         let capture = DeviceApplicationOpenCapture()
         let model = ProductionAssistantComposition.makeModel(

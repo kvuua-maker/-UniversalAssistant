@@ -109,9 +109,12 @@ struct ProductionMessagingRoutingTests {
             contacts: MessageContactResolverStub(.ambiguous(choices)),
             personalSearchSources: []
         )
-        await #expect(throws: CanonicalCapabilityExecutionError.ambiguous(["Олена", "Олена Робота"])) {
-            try await ambiguous.execute(LocalCommandEngine().parse("Надішли повідомлення Олені"))
-        }
+        do {
+            _ = try await ambiguous.execute(LocalCommandEngine().parse("Надішли повідомлення Олені"))
+            Issue.record("Expected contact disambiguation")
+        } catch let CanonicalCapabilityExecutionError.ambiguousContacts(values) {
+            #expect(Set(values.map(\.identifier)) == ["1", "2"])
+        } catch { Issue.record("Unexpected error: \(error)") }
     }
 }
 

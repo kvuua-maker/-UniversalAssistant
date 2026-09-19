@@ -125,9 +125,12 @@ struct ContactsRequestLifecycleTests {
             ContactCandidate(identifier: "b", displayName: "Ірина Склад", phoneNumbers: ["2222222"])
         ]
         let ambiguous = ProductionCanonicalCapabilityExecutor(contacts: LimitedContactResolverStub(state: .authorized, named: .ambiguous(choices)), personalSearchSources: [])
-        await #expect(throws: CanonicalCapabilityExecutionError.ambiguous(["Ірина Сервіс", "Ірина Склад"])) {
-            try await ambiguous.execute(LocalCommandEngine().parse("Покажи контакт Ірини"))
-        }
+        do {
+            _ = try await ambiguous.execute(LocalCommandEngine().parse("Покажи контакт Ірини"))
+            Issue.record("Expected contact disambiguation")
+        } catch let CanonicalCapabilityExecutionError.ambiguousContacts(values) {
+            #expect(Set(values.map(\.identifier)) == ["a", "b"])
+        } catch { Issue.record("Unexpected error: \(error)") }
     }
 
     @Test @MainActor func pickerResumeIsGenerationOwnedAndEmptySelectionIsTerminal() async throws {

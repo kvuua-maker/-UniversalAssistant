@@ -233,10 +233,17 @@ struct PhotoSemanticSearchEngine: Sendable {
                     completion.finish(await evaluate(candidates: candidates, terms: terms, limit: limit))
                 }
                 completion.setWork(work)
-                Task(priority: .background) {
+                // A low-priority deadline can be starved by concurrent Vision
+                // work and turn a bounded request into the full loader delay.
+                // Run the lightweight clock at the request's priority; it only
+                // sleeps, cancels and resolves the one-shot completion.
+                Task(priority: .userInitiated) {
                     do { try await Task.sleep(for: timeout) }
                     catch { completion.finish([], cancelWork: true); return }
                     work.cancel()
+                    // Give cooperative PhotoKit/Vision work one bounded turn to
+                    // observe cancellation before the caller receives timeout.
+                    // A non-cooperative loader can delay this by at most 20 ms.
                     try? await Task.sleep(for: .milliseconds(20))
                     completion.finish([])
                 }

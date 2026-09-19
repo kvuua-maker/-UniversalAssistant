@@ -340,12 +340,12 @@ final class PhysicalDiagnosticLocalStore: @unchecked Sendable {
         lock.withLock {
             ensureDirectoriesLocked()
             pruneAudioLocked()
-            return audioDirectory.appendingPathComponent("\(requestID.uuidString.lowercased()).caf")
+            return audioDirectory.appendingPathComponent("\(requestID.uuidString.lowercased()).wav")
         }
     }
 
     func diagnosticAudioRelativePath(for requestID: UUID) -> String {
-        "audio/\(requestID.uuidString.lowercased()).caf"
+        "audio/\(requestID.uuidString.lowercased()).wav"
     }
     func diagnosticAudioURL(relativePath: String) -> URL? {
         lock.withLock { validatedAudioURLLocked(relativePath: relativePath) }

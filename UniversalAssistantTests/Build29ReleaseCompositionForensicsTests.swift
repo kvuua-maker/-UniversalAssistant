@@ -782,10 +782,11 @@ struct Build29ReleaseExternalProviderBoundaryTests {
         #expect(parsedLoyalty.entities["provider_domain"] == "loyalty_benefits")
         model.input = loyalty
         model.submit()
-        for _ in 0..<100 { if case .failure = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
-        guard case let .failure(failure) = model.resultState else { Issue.record("Loyalty dependency did not remain truthful"); return }
-        #expect(failure.message.contains("провайдер"))
-        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+        for _ in 0..<100 { if case .webHandoff = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .webHandoff(fallback) = model.resultState else { Issue.record("Loyalty request did not reach the exact last-resort search"); return }
+        #expect(fallback.query == loyalty)
+        #expect(fallback.destination.host == "www.google.com")
+        #expect(fallback.destination.path == "/search")
     }
 
     @Test func absentCommercialProvidersPreserveRequestsInDeliberateBrowserFallback() async throws {
@@ -794,13 +795,13 @@ struct Build29ReleaseExternalProviderBoundaryTests {
             ("Покажи свіжі економічні новини за сьогодні", .deliberateWeb),
             ("Дізнайся поточне котирування акцій виробника напівпровідників", .deliberateWeb),
             ("Збери кошик для овочевого супу з доставкою", .officialProvider),
-            ("Порівняй доступні поїздки таксі до музею", .providerRequired),
+            ("Порівняй доступні поїздки таксі до музею", .deliberateWeb),
             ("Підбери готель у Кракові на дві ночі", .officialProvider),
             ("Знайди квитки на нічний потяг до Варшави", .officialProvider),
             ("Відстеж міжнародне відправлення за номером", .clarification),
-            ("Покажи офіційний муніципальний сервіс для реєстрації", .providerRequired),
+            ("Покажи офіційний муніципальний сервіс для реєстрації", .deliberateWeb),
             ("Знайди вакансії дизайнера з віддаленою роботою", .officialProvider),
-            ("Покажи доступні персональні знижки програми лояльності", .providerRequired)
+            ("Покажи доступні персональні знижки програми лояльності", .deliberateWeb)
         ]
         var opened: [URL] = []
         let model = ProductionAssistantComposition.makeModel(

@@ -168,6 +168,9 @@ struct CanonicalTemporalAnalyzer: Sendable {
             (1, ["неділ", "воскрес", "sunday"])
         ]
         let words = text.lowercased()
+            .replacingOccurrences(of: "'", with: "")
+            .replacingOccurrences(of: "’", with: "")
+            .replacingOccurrences(of: "ʼ", with: "")
             .split(whereSeparator: { !$0.isLetter && !$0.isNumber })
             .map(String.init)
         guard let weekday = weekdays.first(where: { entry in
