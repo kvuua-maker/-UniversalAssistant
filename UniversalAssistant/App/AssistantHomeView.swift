@@ -92,6 +92,16 @@ struct AssistantHomeView: View {
                 LiveCodeScannerView(onResult: model.handleScannedCode, onUnavailable: model.handleScannerUnavailable)
             case .documents:
                 AuthorizedDocumentPicker { _ in model.dismissCapabilityPresentation() }
+            case let .pdfSourcePicker(_, text):
+                PDFCreationSourcePickerView(
+                    onText: { model.selectPDFCreationSource(.text, suggestedText: text) },
+                    onPhoto: { model.selectPDFCreationSource(.photo, suggestedText: nil) },
+                    onFile: { model.selectPDFCreationSource(.document, suggestedText: nil) }
+                )
+            case let .pdfTextInput(text):
+                PDFTextCreationView(initialText: text ?? "", onCreate: model.createPDFFromText)
+            case .pdfPhotoPicker:
+                SystemPhotoLibraryPicker(onSelection: model.handleSelectedPDFPhoto)
             case let .pdfWorkflow(operation, text):
                 AuthorizedDocumentPicker { model.handleSelectedPDFDocuments($0, operation: operation, text: text) }
             case let .share(value):
@@ -142,6 +152,48 @@ struct AssistantHomeView: View {
                     Text("request_unavailable")
                 }
             }
+        }
+    }
+}
+
+private struct PDFCreationSourcePickerView: View {
+    let onText: () -> Void
+    let onPhoto: () -> Void
+    let onFile: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Button(action: onText) { Label("Текст", systemImage: "text.alignleft") }
+                Button(action: onPhoto) { Label("Фото", systemImage: "photo") }
+                Button(action: onFile) { Label("Файл", systemImage: "doc") }
+            }
+            .navigationTitle("Створити PDF")
+        }
+    }
+}
+
+private struct PDFTextCreationView: View {
+    @State private var text: String
+    let onCreate: (String) -> Void
+
+    init(initialText: String, onCreate: @escaping (String) -> Void) {
+        _text = State(initialValue: initialText)
+        self.onCreate = onCreate
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                TextEditor(text: $text)
+                    .padding(8)
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(.secondary))
+                Button("Створити PDF") { onCreate(text) }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .padding()
+            .navigationTitle("Текст PDF")
         }
     }
 }

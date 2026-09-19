@@ -7,7 +7,8 @@ import Contacts
 import ContactsUI
 
 enum DocumentScanOutputMode: String, Equatable, Sendable { case recognizedText, pdf }
-enum PDFWorkflowOperation: String, Equatable, Sendable { case read, merge, split, rotate, compress, highlight, redact }
+enum PDFWorkflowOperation: String, Equatable, Sendable { case create, read, merge, split, rotate, compress, highlight, redact }
+enum PDFCreationSource: String, Equatable, Sendable { case choose, text, photo, document }
 
 enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case camera
@@ -32,6 +33,9 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case audioFile(URL)
     case documentFile(URL)
     case documentFiles([URL])
+    case pdfSourcePicker(PDFCreationSource, text: String?)
+    case pdfTextInput(String?)
+    case pdfPhotoPicker
     case pdfWorkflow(PDFWorkflowOperation, text: String?)
 
     var id: String {
@@ -58,6 +62,9 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
         case .audioFile: "audio-file"
         case .documentFile: "document-file"
         case .documentFiles: "document-files"
+        case .pdfSourcePicker: "pdf-source-picker"
+        case .pdfTextInput: "pdf-text-input"
+        case .pdfPhotoPicker: "pdf-photo-picker"
         case .pdfWorkflow: "pdf-workflow"
         }
     }
@@ -363,7 +370,22 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 return .presentation(.pdfWorkflow(operation, text: command.entities["pdf_text"]))
             }
             if command.entities["pdf_creation_requested"] == "true" {
-                throw CanonicalCapabilityExecutionError.missingParameter("pdf_source")
+                let source = PDFCreationSource(rawValue: command.entities["pdf_source_mode"] ?? "choose") ?? .choose
+                let shared = currentContext.freshShared()
+                if source == .text {
+                    let value = shared?.kind == .text ? shared?.value : currentContext.freshAnswer()
+                    return .presentation(.pdfTextInput(value))
+                }
+                if source == .document {
+                    if shared?.kind == .document, let path = shared?.value,
+                       FileManager.default.fileExists(atPath: path) {
+                        let output = try createPDFDocument(from: URL(fileURLWithPath: path))
+                        currentContext.replaceShared(kind: .document, value: output.path)
+                        return .presentation(.documentFile(output))
+                    }
+                    return .presentation(.pdfWorkflow(.create, text: nil))
+                }
+                return .presentation(.pdfSourcePicker(.choose, text: shared?.kind == .text ? shared?.value : currentContext.freshAnswer()))
             }
             return .presentation(.documents)
         case .cameraCapture:
@@ -619,7 +641,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             switch value {
             case .message, .email, .share, .documents, .contactImport, .photoAsset, .photoOCR, .photoShare, .audioFile, .documentFile, .documentFiles:
                 return .init(id: step.id, label: command.intent.rawValue, value: value.id, state: .verified, source: "UniversalAssistant", observedAt: .now, priority: 100)
-            case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .contactAccess, .contactCard, .translationTarget, .translation, .photoLibrary, .audioRoutes, .pdfWorkflow:
+            case .camera, .ocrCamera, .ocrDocuments, .scanDocument, .scanner, .contactAccess, .contactCard, .translationTarget, .translation, .photoLibrary, .audioRoutes, .pdfSourcePicker, .pdfTextInput, .pdfPhotoPicker, .pdfWorkflow:
                 throw CoordinationOperationError.confirmationRequired
             }
         case .suspended:
@@ -1429,10 +1451,29 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
 
         if service == MessengerKind.telegram.rawValue {
             let username = rawRecipient.flatMap(Self.explicitMessengerUsername)
-            if let username {
-                recordSelectedTarget(identifier: "messenger:telegram:" + username.lowercased(), service: service, phoneCount: 0, emailCount: 0)
+            var telegramRecipient = username
+            if telegramRecipient == nil, let rawRecipient, !rawRecipient.isEmpty {
+                let directDigits = rawRecipient.filter(\.isNumber)
+                if directDigits.count >= 7 {
+                    telegramRecipient = rawRecipient
+                } else {
+                    try await contacts.requestAccessIfNeeded()
+                    switch try await contacts.resolve(name: rawRecipient) {
+                    case .notFound: throw CanonicalCapabilityExecutionError.unavailable("telegram_contact_not_found")
+                    case let .ambiguous(values): throw CanonicalCapabilityExecutionError.ambiguousContacts(values)
+                    case let .resolved(value):
+                        guard value.phoneNumbers.count == 1, let number = value.phoneNumbers.first else {
+                            throw CanonicalCapabilityExecutionError.ambiguous(value.phoneNumbers)
+                        }
+                        telegramRecipient = number
+                        recordSelectedTarget(identifier: "contact:" + value.identifier, service: service, phoneCount: value.phoneNumbers.count, emailCount: value.emailAddresses.count)
+                    }
+                }
             }
-            switch try MessengerHandoffPlanner().plan(messenger: .telegram, recipient: username, body: body) {
+            if let telegramRecipient {
+                recordSelectedTarget(identifier: "messenger:telegram:" + telegramRecipient.lowercased(), service: service, phoneCount: telegramRecipient.filter(\.isNumber).count >= 7 ? 1 : 0, emailCount: 0)
+            }
+            switch try MessengerHandoffPlanner().plan(messenger: .telegram, recipient: telegramRecipient, body: body) {
             case let .verifiedHandoff(url): return .handoff(.init(query: command.originalText, destination: url, kind: .system))
             case let .unavailable(reason): throw CanonicalCapabilityExecutionError.unavailable(reason)
             case .systemComposer: throw CanonicalCapabilityExecutionError.unavailable("telegram_handoff_invalid")
@@ -1583,6 +1624,21 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .fr: "La reconnaissance musicale nécessite une capacité ShazamKit autorisée pour cette app."
         default: "Music recognition requires a ShazamKit capability authorized for this app."
         }
+    }
+
+    private func createPDFDocument(from source: URL) throws -> URL {
+        let accessed = source.startAccessingSecurityScopedResource()
+        defer { if accessed { source.stopAccessingSecurityScopedResource() } }
+        let data = try Data(contentsOf: source)
+        let output = try OnDevicePDFProcessor().convertedDocument(data)
+        let directory = try FileManager.default.url(
+            for: .applicationSupportDirectory, in: .userDomainMask,
+            appropriateFor: nil, create: true
+        ).appending(path: "UniversalAssistant/PDF", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let destination = directory.appending(path: "PDF-Result-\(UUID().uuidString).pdf")
+        try output.write(to: destination, options: .atomic)
+        return destination
     }
 
     private func required(_ value: String?, _ key: String) throws -> String {

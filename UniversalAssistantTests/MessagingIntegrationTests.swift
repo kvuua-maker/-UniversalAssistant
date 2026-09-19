@@ -19,8 +19,15 @@ import Testing
         #expect(URLComponents(url: whatsapp, resolvingAgainstBaseURL: false)?.queryItems?.first?.value == "A & B")
         guard case let .verifiedHandoff(telegram) = try planner.plan(messenger: .telegram, recipient: "@durov", body: "Hello") else { Issue.record("expected Telegram handoff"); return }
         #expect(telegram.scheme == "tg")
+        guard case let .verifiedHandoff(telegramPhone) = try planner.plan(messenger: .telegram, recipient: "+380 67 123 45 67", body: "Hello") else { Issue.record("expected Telegram phone handoff"); return }
+        #expect(telegramPhone.scheme == "tg")
+        let telegramQuery = URLComponents(url: telegramPhone, resolvingAgainstBaseURL: false)?.queryItems
+        #expect(telegramQuery?.first(where: { $0.name == "phone" })?.value == "+380671234567")
+        #expect(telegramQuery?.first(where: { $0.name == "text" })?.value == "Hello")
         guard case let .verifiedHandoff(viber) = try planner.plan(messenger: .viber, recipient: nil, body: "Hello") else { Issue.record("expected Viber handoff"); return }
         #expect(viber.scheme == "viber")
+        guard case let .verifiedHandoff(viberRoot) = try planner.plan(messenger: .viber, recipient: nil, body: nil) else { Issue.record("expected Viber root handoff"); return }
+        #expect(viberRoot.absoluteString == "viber://")
     }
 
     @Test func signalAndInvalidRecipientAreTruthful() throws {

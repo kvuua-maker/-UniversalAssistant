@@ -1785,10 +1785,10 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             // “повідомлення/message” describes the action/object, not an
             // explicitly selected provider. Unqualified messages default to
             // Apple Messages later in the typed semantic contract.
-            .init(value: "messages", displayName: "messages", aliases: ["messages", "смс", "sms", "imessage"]),
-            .init(value: "whatsapp", displayName: "whatsapp", aliases: ["whatsapp", "whats", "what's", "вотсап", "ватсап", "вотс", "ватс"]),
-            .init(value: "telegram", displayName: "telegram", aliases: ["telegram", "телеграм"]),
-            .init(value: "viber", displayName: "viber", aliases: ["viber", "вайбер", "вібер"]),
+            .init(value: "messages", displayName: "messages", aliases: CanonicalSpeechEntityRegistry.communicationAliases["messages"]!),
+            .init(value: "whatsapp", displayName: "whatsapp", aliases: CanonicalSpeechEntityRegistry.communicationAliases["whatsapp"]!),
+            .init(value: "telegram", displayName: "telegram", aliases: CanonicalSpeechEntityRegistry.communicationAliases["telegram"]!),
+            .init(value: "viber", displayName: "viber", aliases: CanonicalSpeechEntityRegistry.communicationAliases["viber"]!),
             .init(value: "signal", displayName: "signal", aliases: ["signal", "сигнал"]),
             .init(value: "email", displayName: "email", aliases: ["email", "mail", "пошта", "почта"])
         ]

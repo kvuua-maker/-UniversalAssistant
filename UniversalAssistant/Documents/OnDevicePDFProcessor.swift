@@ -86,6 +86,34 @@ struct OnDevicePDFProcessor {
         }
     }
 
+    func textPDF(_ text: String) throws -> Data {
+        let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { throw PDFProcessingError.emptyDocument }
+        let bounds = CGRect(x: 0, y: 0, width: 612, height: 792)
+        return UIGraphicsPDFRenderer(bounds: bounds).pdfData { context in
+            context.beginPage()
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.lineBreakMode = .byWordWrapping
+            (value as NSString).draw(
+                in: bounds.insetBy(dx: 42, dy: 42),
+                withAttributes: [
+                    .font: UIFont.systemFont(ofSize: 14),
+                    .foregroundColor: UIColor.label,
+                    .paragraphStyle: paragraph
+                ]
+            )
+        }
+    }
+
+    func convertedDocument(_ data: Data) throws -> Data {
+        if let document = PDFDocument(data: data), document.pageCount > 0 { return data }
+        if let image = UIImage(data: data) { return try searchablePDF(images: [image], recognizedText: [""]) }
+        if let text = String(data: data, encoding: .utf8), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return try textPDF(text)
+        }
+        throw PDFProcessingError.invalidPDF
+    }
+
     func cropped(_ image: UIImage, normalizedRect: CGRect) throws -> UIImage {
         guard normalizedRect.minX >= 0, normalizedRect.minY >= 0,
               normalizedRect.maxX <= 1, normalizedRect.maxY <= 1,

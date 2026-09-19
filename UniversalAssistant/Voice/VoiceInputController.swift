@@ -1228,10 +1228,7 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
             return [application.id, spokenID]
                 + preferredSpokenAlias(from: application.aliases, excluding: application.id)
         }
-        let services = [
-            "Messages", "повідомлення", "SMS", "WhatsApp", "Ватсап",
-            "Telegram", "Телеграм", "Viber", "Вайбер", "Signal"
-        ]
+        let services = CanonicalSpeechEntityRegistry.speechVocabulary + ["повідомлення", "Signal"]
         // App/channel names are short and most vulnerable to disappearing from
         // Apple Speech finals. Reserve their place before the larger provider
         // and catalogue lists; request-scoped values are still prepended below.
@@ -1248,7 +1245,7 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
             "Voice Memos", "Wi-Fi", "Bluetooth", "Google", "Google Search", "Google Maps", "Google Places",
             "ChoiceQR", "RestOn", "Glovo", "Bolt Food", "Дія", "Diia", "Seiko", "Apple", "iPhone"
         ]
-        return unique(canonicalEntityVocabulary + capabilityNames + canonicalFunctionVocabulary)
+        return unique(canonicalEntityVocabulary + CanonicalSpeechEntityRegistry.speechVocabulary + capabilityNames + canonicalFunctionVocabulary)
     }
 
     private static var canonicalSecondaryAliasVocabulary: [String] {
@@ -1299,14 +1296,15 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
             }
         }
         if includeCanonical {
-            // Reserve primary names, generalized spoken brand/app forms and
-            // the small cross-capability verb set. Lower-priority provider
-            // aliases fill only remaining capacity instead of evicting the
-            // commands those entities are meant to qualify.
-            let reserved = unique(canonicalEntityVocabulary + essentialFunctionVocabulary)
-            let dynamicLimit = max(0, maximumContextualStringCount - reserved.count)
-            append(additional.prefix(dynamicLimit))
-            append(reserved)
+            // A session's actual entities are stronger than the global
+            // inventory. Keep a bounded dynamic prefix, then reserve the
+            // vulnerable app/channel terms and core command vocabulary. The
+            // full inventory remains in `masterVocabulary`; Apple receives
+            // only the relevant bounded subset.
+            append(additional.prefix(20))
+            append(CanonicalSpeechEntityRegistry.speechVocabulary)
+            append(essentialFunctionVocabulary)
+            append(canonicalEntityVocabulary)
             append(canonicalSecondaryAliasVocabulary)
             append(canonicalFunctionVocabulary)
         } else {
@@ -1530,7 +1528,7 @@ final class VoiceEndOfSpeechFinalizer {
 @MainActor
 @Observable
 final class VoiceInputController: VoiceInputControlling {
-    let engineIdentifier = "groq-whisper-large-v3+apple-speech-fallback"
+    let engineIdentifier = "apple-speech-fast-path+groq-whisper-large-v3-recovery"
     private(set) var state: VoiceInputState = .idle
     private(set) var transcript = ""
     private let capture: VoiceAudioCaptureLifecycle
@@ -1544,8 +1542,8 @@ final class VoiceInputController: VoiceInputControlling {
     // start() suspends for permissions; a newer mic tap can supersede it.
     // One token owns every resource and callback for one Speech/audio session.
     private var activeSessionID: UUID?
-    private let endOfSpeechFinalizer: VoiceEndOfSpeechFinalizer
     private let speechActivity = VoiceSpeechActivityTracker()
+    private let silenceWindowSeconds: TimeInterval
     private var isFinalizingRecognition = false
     @ObservationIgnored private var audioEvents: AudioSessionEventMonitor?
     @ObservationIgnored private var eventHandler: (@MainActor @Sendable (VoiceInputEvent) -> Void)?
@@ -1561,7 +1559,7 @@ final class VoiceInputController: VoiceInputControlling {
 
     init(
         captureBackend: (any VoiceAudioCaptureBackend)? = nil,
-        endOfSpeechDelay: Duration = .milliseconds(2_400),
+        endOfSpeechDelay: Duration = .milliseconds(850),
         authorization: (@Sendable () async -> Bool)? = nil,
         contextualVocabulary: @escaping @Sendable () async -> [String] = { [] },
         cloudTranscriber: any CloudVoiceTranscribing = GroqCloudVoiceTranscriber()
@@ -1576,7 +1574,9 @@ final class VoiceInputController: VoiceInputControlling {
         }
         self.contextualVocabulary = contextualVocabulary
         self.cloudTranscriber = cloudTranscriber
-        endOfSpeechFinalizer = VoiceEndOfSpeechFinalizer(delay: endOfSpeechDelay)
+        let components = endOfSpeechDelay.components
+        silenceWindowSeconds = min(1.2, max(0.55,
+            Double(components.seconds) + Double(components.attoseconds) / 1_000_000_000_000_000_000))
         audioEvents = AudioSessionEventMonitor(
             onInterruption: { [weak self] in self?.handleAudioInterruptionBegan() },
             onRouteChange: { [weak self] evidence in self?.handleAudioRouteChanged(evidence) })
@@ -1709,7 +1709,6 @@ final class VoiceInputController: VoiceInputControlling {
         cloudFinalizationTask = nil
         cloudSilenceMonitorTask?.cancel()
         cloudSilenceMonitorTask = nil
-        endOfSpeechFinalizer.cancel()
         isFinalizingRecognition = false
         LocalVoiceDiagnosticReport.shared.record("stop_invoked", "reason=\(reason.rawValue)")
         let hadTask = task != nil
@@ -1802,16 +1801,6 @@ final class VoiceInputController: VoiceInputControlling {
             // command submission.
             eventHandler?(.transcript(deliveredTranscript, isFinal: false))
             LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_ui", "length=\(deliveredTranscript.count) final=false")
-            if !isFinal, !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                let speechActivity = speechActivity
-                endOfSpeechFinalizer.receivedPartial(
-                    shouldDeferForVoiceActivity: {
-                        speechActivity.hasRecentVoiceActivity(within: 1.25)
-                    }
-                ) { [weak self] in
-                    self?.finishAfterEndOfSpeech(sessionID: sessionID)
-                }
-            }
         }
         if hasError {
             LocalVoiceDiagnosticReport.shared.record("apple_recognition_failed", "cloud_primary_continues=true")
@@ -1833,6 +1822,17 @@ final class VoiceInputController: VoiceInputControlling {
         request?.endAudio()
         capture.stop()
         let audioURL = LocalVoiceDiagnosticReport.shared.finishCommandAudioRecording(reason: .recognitionFinal)
+        let localAssessment = VoiceDeterministicCommandAssessment(text: appleFallback)
+        if localAssessment.isResolvedDeterministic,
+           let final = VoiceAuthoritativeTranscriptSelector.select(groq: nil, appleFallback: appleFallback) {
+            LocalVoiceDiagnosticReport.shared.record(
+                "deterministic_voice_fast_path",
+                "intent=\(localAssessment.command.intent.rawValue) cloud_wait=false"
+            )
+            LocalVoiceDiagnosticReport.shared.discardTransientCommandAudioIfNeeded(audioURL)
+            commit(final, sessionID: sessionID)
+            return
+        }
         setState(.transcribing)
         let transcriber = cloudTranscriber
         let context = activeContextualVocabulary
@@ -1860,20 +1860,23 @@ final class VoiceInputController: VoiceInputControlling {
                 if self.owns(sessionID) { self.stop(reason: .recognitionError, ownedBy: sessionID) }
                 return
             }
-            self.transcript = final.text
-            LocalVoiceDiagnosticReport.shared.recordVoiceText(
-                "FINAL_TRANSCRIPT",
-                text: final.text,
-                details: "source=\(final.source.rawValue)"
-            )
-            LocalVoiceDiagnosticReport.shared.record("final_transcript_source", "source=\(final.source.rawValue)")
-            self.eventHandler?(.transcript(final.text, isFinal: true))
-            LocalVoiceDiagnosticReport.shared.record(
-                "transcript_delivered_to_ui",
-                "length=\(final.text.count) final=true source=\(final.source.rawValue)"
-            )
-            self.completeFinalizedSession(sessionID: sessionID)
+            self.commit(final, sessionID: sessionID)
         }
+    }
+
+    private func commit(_ final: FinalVoiceTranscript, sessionID: UUID) {
+        guard owns(sessionID) else { return }
+        transcript = final.text
+        LocalVoiceDiagnosticReport.shared.recordVoiceText(
+            "FINAL_TRANSCRIPT", text: final.text, details: "source=\(final.source.rawValue)"
+        )
+        LocalVoiceDiagnosticReport.shared.record("final_transcript_source", "source=\(final.source.rawValue)")
+        eventHandler?(.transcript(final.text, isFinal: true))
+        LocalVoiceDiagnosticReport.shared.record(
+            "transcript_delivered_to_ui",
+            "length=\(final.text.count) final=true source=\(final.source.rawValue)"
+        )
+        completeFinalizedSession(sessionID: sessionID)
     }
 
     private func completeFinalizedSession(sessionID: UUID) {
@@ -1882,7 +1885,6 @@ final class VoiceInputController: VoiceInputControlling {
         cloudFinalizationTask = nil
         cloudSilenceMonitorTask?.cancel()
         cloudSilenceMonitorTask = nil
-        endOfSpeechFinalizer.cancel()
         requestSink?.deactivate(); requestSink = nil
         task?.cancel(); task = nil
         request = nil
@@ -1890,24 +1892,19 @@ final class VoiceInputController: VoiceInputControlling {
         setState(.idle)
     }
 
-    private func finishAfterEndOfSpeech(sessionID: UUID) {
-        guard owns(sessionID), state == .listening, !isFinalizingRecognition else { return }
-        LocalVoiceDiagnosticReport.shared.record("end_of_speech_detected", "cloud_primary=true")
-        finalizeAuthoritativeTranscript(sessionID: sessionID, appleFallback: transcript)
-    }
-
     private func startCloudSilenceMonitor(sessionID: UUID) {
         cloudSilenceMonitorTask?.cancel()
         let speechActivity = speechActivity
+        let silenceWindowSeconds = silenceWindowSeconds
         cloudSilenceMonitorTask = Task { @MainActor [weak self] in
             let started = ContinuousClock.now
             var voiceDetected = false
             while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(250))
+                try? await Task.sleep(for: .milliseconds(100))
                 guard !Task.isCancelled, let self, self.owns(sessionID), self.state == .listening else { return }
-                if speechActivity.hasRecentVoiceActivity(within: 0.75) { voiceDetected = true }
+                if speechActivity.hasRecentVoiceActivity(within: silenceWindowSeconds) { voiceDetected = true }
                 let elapsed = started.duration(to: .now)
-                if (voiceDetected && !speechActivity.hasRecentVoiceActivity(within: 1.6)) || elapsed >= .seconds(45) {
+                if (voiceDetected && !speechActivity.hasRecentVoiceActivity(within: silenceWindowSeconds)) || elapsed >= .seconds(45) {
                     self.finalizeAuthoritativeTranscript(sessionID: sessionID, appleFallback: self.transcript)
                     return
                 }

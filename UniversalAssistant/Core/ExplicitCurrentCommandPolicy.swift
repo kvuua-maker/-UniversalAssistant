@@ -19,6 +19,17 @@ enum ExplicitCurrentCommandPolicy {
         let asksToOpen = currentTokens.contains { token in
             openRoots.contains(where: token.hasPrefix)
         }
+        let appActionRoots = openRoots + ["запуст", "launch", "go"]
+        if let application = CanonicalSpeechEntityRegistry.applicationID(in: command.originalText),
+           currentTokens.contains(where: { token in appActionRoots.contains(where: token.hasPrefix) }) {
+            intent = .open
+            entities["app"] = application
+            entities["requested_action"] = "open"
+            entities["explicit_slot_precedence"] = "current_command"
+            entities.removeValue(forKey: "clarification_options")
+            entities.removeValue(forKey: "clarification_role")
+            needsClarification = false
+        }
         let namesApplicationSettings = currentTokens.contains("universalassistant") ||
             currentTokens.contains(where: { $0.hasPrefix("застосунк") || $0.hasPrefix("додатк") || $0.hasPrefix("програм") })
         let namesGlobalSystemPane = currentTokens.contains("bluetooth") ||
@@ -52,7 +63,7 @@ enum ExplicitCurrentCommandPolicy {
             }
         }
 
-        if command.intent == .contactCall {
+        if intent == .contactCall {
             let explicitChannel = explicitCommunicationChannel(in: command.originalText)
             if let explicitChannel {
                 entities["call_service"] = explicitChannel
@@ -82,14 +93,14 @@ enum ExplicitCurrentCommandPolicy {
                     needsClarification = false
                 }
             }
-        } else if command.intent == .messageCompose,
+        } else if intent == .messageCompose,
                   let channel = explicitCommunicationChannel(in: command.originalText) {
             entities["message_service"] = channel
             entities["explicit_channel"] = channel
             entities["explicit_slot_precedence"] = "current_command"
         }
 
-        if command.intent == .weather,
+        if intent == .weather,
            let location = explicitWeatherLocation(in: command.originalText) {
             entities["location"] = location
             entities.removeValue(forKey: "near_current_location")
@@ -97,7 +108,7 @@ enum ExplicitCurrentCommandPolicy {
             entities["explicit_slot_precedence"] = "current_command"
         }
 
-        if command.intent == .mediaSearch {
+        if intent == .mediaSearch {
             let tokens = tokenize(command.originalText)
             let playRoots = ["увімк", "включ", "програ", "відтвор", "play", "listen"]
             if tokens.contains(where: { token in playRoots.contains(where: token.hasPrefix) }) {
@@ -105,20 +116,46 @@ enum ExplicitCurrentCommandPolicy {
             }
         }
 
-        if command.intent == .fileSearch {
+        do {
             let tokens = tokenize(command.originalText)
-            let createRoots = ["створ", "зроб", "сформ", "згенер", "create", "make", "generate"]
+            let createRoots = [
+                "створ", "зроб", "сформ", "згенер", "збереж", "перетвор",
+                "create", "make", "generate", "save", "convert"
+            ]
             let asksForPDF = tokens.contains("pdf")
-            let asksToCreate = tokens.contains { token in
-                createRoots.contains(where: token.hasPrefix)
-            }
+            let asksToCreate = tokens.contains { token in createRoots.contains(where: token.hasPrefix) }
             if asksForPDF && asksToCreate {
+                intent = .fileSearch
                 entities["query"] = "pdf"
                 entities["file_type"] = "public.pdf"
                 entities["pdf_creation_requested"] = "true"
-                entities["pdf_source_required"] = "true"
+                let referencesText = currentTokens.contains("текст") || currentTokens.contains("text")
+                let referencesCurrentObject = currentTokens.contains(where: {
+                    $0.hasPrefix("це") || $0.hasPrefix("цьо") || $0 == "this"
+                })
+                let referencesDocument = currentTokens.contains(where: {
+                    $0.hasPrefix("документ") || $0.hasPrefix("файл") || $0 == "document" || $0 == "file"
+                }) && referencesCurrentObject
+                entities["pdf_source_mode"] = referencesText ? "text" : (referencesDocument ? "document" : "choose")
                 entities.removeValue(forKey: "capture_mode")
+                needsClarification = false
             }
+        }
+
+        // A clipped device imperative is structurally incomplete, not an
+        // informational query. It must clarify instead of leaking to Google.
+        let incompleteActionRoots = ["відк", "покаж", "перейд", "переид", "запуст", "подзвон", "зателефон", "набер", "напиш"]
+        let fillerTokens: Set<String> = ["у", "в", "до", "через", "мені", "мне", "to", "in"]
+        let structurallyIncomplete = currentTokens.first.map { first in
+            incompleteActionRoots.contains(where: first.hasPrefix) &&
+                currentTokens.dropFirst().allSatisfy(fillerTokens.contains)
+        } ?? false
+        if structurallyIncomplete,
+           CanonicalSpeechEntityRegistry.applicationID(in: command.originalText) == nil {
+            intent = .open
+            entities.removeValue(forKey: "query")
+            entities["incomplete_system_command"] = "true"
+            needsClarification = true
         }
 
         // Fuzzy catalogue recovery may help detect a family, but it must never
@@ -152,20 +189,9 @@ enum ExplicitCurrentCommandPolicy {
     }
 
     private static func explicitCommunicationChannel(in original: String) -> String? {
+        if let channel = CanonicalSpeechEntityRegistry.communicationChannel(in: original) { return channel }
         let tokens = Set(tokenize(original))
-        let named: [(String, Set<String>)] = [
-            ("whatsapp", ["whatsapp", "whats", "вотсап", "ватсап", "вотс", "ватс"]),
-            ("viber", ["viber", "вайбер", "вібер"]),
-            ("telegram", ["telegram", "телеграм"]),
-            ("signal", ["signal", "сигнал"]),
-            ("email", ["email", "mail", "пошта", "пошту", "почта", "почту"]),
-            // A generic “message/повідомлення” states the action, not a
-            // provider. Only an explicitly named Apple channel is authoritative.
-            ("messages", ["messages", "imessage", "sms", "смс"])
-        ]
-        if let match = named.first(where: { !$0.1.isDisjoint(with: tokens) }) {
-            return match.0
-        }
+        if !Set(["signal", "сигнал"]).isDisjoint(with: tokens) { return "signal" }
         let telephoneRoots = ["телефон", "телефоном", "звичайний", "мобільний", "мобильный", "phone", "cellular"]
         if tokens.contains(where: { token in telephoneRoots.contains(where: token.hasPrefix) }) {
             return "telephone"

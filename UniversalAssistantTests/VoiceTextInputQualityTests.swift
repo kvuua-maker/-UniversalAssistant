@@ -5,9 +5,9 @@ import Testing
 struct VoiceTextInputQualityTests {
     private let engine = LocalCommandEngine()
 
-    @Test @MainActor func productionVoiceEngineUsesGroqPrimaryWithAppleSpeechFallback() {
+    @Test @MainActor func productionVoiceEngineUsesAppleFastPathWithGroqRecovery() {
         let model = ProductionAssistantComposition.makeModel()
-        #expect(model.voiceInputEngineIdentifier == "groq-whisper-large-v3+apple-speech-fallback")
+        #expect(model.voiceInputEngineIdentifier == "apple-speech-fast-path+groq-whisper-large-v3-recovery")
     }
 
     @Test func speechRequestUsesSupportedQualityConfiguration() {
@@ -37,8 +37,11 @@ struct VoiceTextInputQualityTests {
         let configuration = VoiceRecognitionRequestConfiguration(additionalVocabulary: dynamic)
         #expect(configuration.contextualVocabulary.count <= VoiceRecognitionRequestConfiguration.maximumContextualStringCount)
         #expect(configuration.contextualVocabulary.first == dynamic.first)
-        for provider in OfficialPublicProviderHandoffRegistry.records {
-            #expect(configuration.contextualVocabulary.contains(provider.displayName))
+        #expect(configuration.contextualVocabulary.contains(dynamic[19]))
+        #expect(!configuration.contextualVocabulary.contains(dynamic[20]))
+        let folded = Set(configuration.contextualVocabulary.map { $0.lowercased() })
+        for priority in ["viber", "telegram", "whatsapp", "spotify", "pdf", "qr"] {
+            #expect(folded.contains(priority), Comment(rawValue: priority))
         }
         #expect(configuration.contextualVocabulary.contains("Балдинини"))
     }

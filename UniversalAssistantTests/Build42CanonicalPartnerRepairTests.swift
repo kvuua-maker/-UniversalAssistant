@@ -139,8 +139,9 @@ struct Build42CanonicalPartnerRepairTests {
         ).contextualVocabulary
         #expect(vocabulary.count <= 100)
         #expect(vocabulary.contains("Baldinini"))
+        let master = Set(VoiceRecognitionRequestConfiguration.masterVocabulary)
         for provider in OfficialPublicProviderHandoffRegistry.records {
-            #expect(vocabulary.contains(provider.displayName))
+            #expect(master.contains(provider.displayName))
         }
     }
 

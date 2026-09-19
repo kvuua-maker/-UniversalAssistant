@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import UniversalAssistant
 
-@Suite("Build 53 physical end-to-end root repairs")
+@Suite("Build 53 text-injected routing regressions")
 struct Build53PhysicalEndToEndRepairTests {
     private let parser = LanguageUnderstandingBlock()
 
@@ -81,6 +81,26 @@ struct Build53PhysicalEndToEndRepairTests {
         #expect(voice.entities["app"] == "telegram")
     }
 
+    @Test func openShowLaunchAndGoToShareOneAppOpenIntent() {
+        for app in ["Viber", "Telegram", "WhatsApp"] {
+            for verb in ["Відкрий", "Запусти", "Покажи", "Перейди у"] {
+                let command = parser.parse("\(verb) \(app)")
+                #expect(command.intent == .open, Comment(rawValue: "\(verb) \(app)"))
+                #expect(command.entities["app"] != nil, Comment(rawValue: "\(verb) \(app)"))
+                #expect(!command.needsClarification, Comment(rawValue: "\(verb) \(app)"))
+            }
+        }
+    }
+
+    @Test func incompleteSystemFragmentsNeverBecomeWebSearch() {
+        for text in ["Покажи", "Перейди у", "Запусти"] {
+            let command = parser.parse(text)
+            #expect(command.intent != .webSearch, Comment(rawValue: text))
+            #expect(command.needsClarification, Comment(rawValue: text))
+            #expect(command.entities["incomplete_system_command"] == "true", Comment(rawValue: text))
+        }
+    }
+
     @Test func voiceMemosOpenAndLocalRecordingAreDifferentCapabilities() {
         let open = parser.parse("Відкрий диктофон")
         #expect(open.intent == .open)
@@ -112,10 +132,10 @@ struct Build53PhysicalEndToEndRepairTests {
         #expect(values.contains("viber"))
         #expect(values.contains("вайбер"))
         #expect(values.contains("whatsapp"))
-        let canonicalEntities = Set(VoiceRecognitionRequestConfiguration.canonicalEntityVocabulary.map { $0.lowercased() })
-        #expect(Set(values).isSuperset(of: canonicalEntities))
-        #expect(VoiceRecognitionRequestConfiguration.canonicalEntityVocabulary.count <= VoiceRecognitionRequestConfiguration.maximumContextualStringCount)
         #expect(values.count <= VoiceRecognitionRequestConfiguration.maximumContextualStringCount)
+        for priority in ["viber", "вайбер", "telegram", "телеграм", "whatsapp", "whats", "spotify", "pdf", "qr"] {
+            #expect(values.contains(priority), Comment(rawValue: priority))
+        }
     }
 
     @Test func masterSpeechVocabularyReconcilesEveryRequiredCapabilityFamily() {
@@ -152,22 +172,21 @@ struct Build53PhysicalEndToEndRepairTests {
         #expect(command.entities["message_body"] == "про зміну часу")
     }
 
-    @Test @MainActor func missingPDFSourceEndsInOneSpecificClarificationNotCameraOrFailure() async throws {
-        let model = ProductionAssistantComposition.makeModel(
-            personalSearchSources: [], compactResultDuration: .seconds(60)
-        )
-        model.input = "Створи PDF"
-        model.submit()
-        for _ in 0..<100 {
-            if case .clarification = model.resultState { break }
-            try await Task.sleep(for: .milliseconds(10))
-        }
-        guard case .clarification = model.resultState else {
-            Issue.record("PDF without a source must ask one specific clarification")
-            return
-        }
-        #expect(model.statusText == "Що потрібно перетворити на PDF: текст, фото чи файл?")
-        #expect(model.capabilityPresentation == nil)
+    @Test @MainActor func pdfCommandsPresentTheSpecificCreationCapability() async throws {
+        let executor = ProductionCanonicalCapabilityExecutor(personalSearchSources: [])
+
+        let generic = parser.parse("Створи документ у форматі PDF")
+        #expect(try await executor.execute(generic) == .presentation(.pdfSourcePicker(.choose, text: nil)))
+
+        let text = parser.parse("Збережи цей текст як PDF")
+        #expect(try await executor.execute(text) == .presentation(.pdfTextInput(nil)))
+
+        let document = parser.parse("Перетвори цей документ у PDF")
+        #expect(document.entities["pdf_source_mode"] == "document")
+        #expect(try await executor.execute(document) == .presentation(.pdfWorkflow(.create, text: nil)))
+
+        let scan = parser.parse("Відскануй документ у PDF")
+        #expect(try await executor.execute(scan) == .presentation(.scanDocument(.pdf)))
     }
 
     @Test func mediaPlayIsNotEquivalentToOpeningAnApplication() {

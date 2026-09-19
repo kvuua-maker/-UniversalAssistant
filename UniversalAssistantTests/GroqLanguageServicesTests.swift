@@ -4,14 +4,41 @@ import Testing
 
 @Suite("Groq language services boundary")
 struct GroqLanguageServicesTests {
-    @Test func groqTranscriptWinsAndAppleIsTheOnlyFallback() {
+    @Test func transcriptSelectionUsesCompleteStructuredEvidence() {
         #expect(VoiceAuthoritativeTranscriptSelector.select(
             groq: "  Відкрий Telegram  ", appleFallback: "Відкрий"
         ) == .init(text: "Відкрий Telegram", source: .groq))
         #expect(VoiceAuthoritativeTranscriptSelector.select(
+            groq: "Перейди у", appleFallback: "Перейди у Telegram"
+        ) == .init(text: "Перейди у Telegram", source: .appleFallback))
+        #expect(VoiceAuthoritativeTranscriptSelector.select(
+            groq: "Запусти Viber", appleFallback: "Запусти"
+        ) == .init(text: "Запусти Viber", source: .groq))
+        #expect(VoiceAuthoritativeTranscriptSelector.select(
             groq: nil, appleFallback: "  Відкрий Viber "
         ) == .init(text: "Відкрий Viber", source: .appleFallback))
         #expect(VoiceAuthoritativeTranscriptSelector.select(groq: "", appleFallback: "") == nil)
+    }
+
+    @Test func conflictingMessengerEvidenceNeverGuessesAProvider() {
+        let result = VoiceAuthoritativeTranscriptSelector.select(
+            groq: "Подзвони мамі через WhatsApp",
+            appleFallback: "Подзвони мамі через Viber"
+        )
+        #expect(result?.text == "Подзвони мамі через")
+        #expect(VoiceDeterministicCommandAssessment(text: result?.text ?? "").isResolvedDeterministic == false)
+    }
+
+    @Test func resolvedDeterministicCommandsDoNotRequireSemanticAI() {
+        for text in [
+            "Відкрий камеру", "Покажи календар", "Запусти Spotify",
+            "Відкрий Telegram", "Перейди у Viber", "Котра зараз година?"
+        ] {
+            #expect(VoiceDeterministicCommandAssessment(text: text).isResolvedDeterministic, Comment(rawValue: text))
+        }
+        for text in ["Покажи", "Перейди у", "Запусти"] {
+            #expect(!VoiceDeterministicCommandAssessment(text: text).isResolvedDeterministic, Comment(rawValue: text))
+        }
     }
 
     @Test func semanticModelCannotReplaceExplicitProviderOrBrand() async throws {
@@ -43,6 +70,23 @@ struct GroqLanguageServicesTests {
         #expect(command.entities["call_service"] == "viber")
         #expect(command.entities["call_service"] != "whatsapp")
         #expect(CanonicalRoutingPolicy().decide(command).lane == .appleSystem)
+    }
+
+    @Test func semanticModelCannotInventConsequentialSlots() async throws {
+        let engine = FixedGroqSemanticEngine(frame: .init(
+            requestID: UUID(), intent: CommandIntent.open.rawValue, action: "open", channel: "whatsapp",
+            provider: "amazon", app: "whatsapp", contact: "мама", entity: nil,
+            brand: "Prada", product: nil, city: "Одеса", date: nil, time: nil,
+            quantity: nil, mediaAction: nil, query: nil, ambiguous: false,
+            model: "openai/gpt-oss-20b"
+        ))
+        let command = try await GroqSemanticCommandResolver(engine: engine)
+            .resolveCommand("Відкрий Telegram", language: .uk)
+        #expect(command.entities["app"] == "telegram")
+        #expect(command.entities["message_service"] == nil)
+        #expect(command.entities["provider_id"] == nil)
+        #expect(command.entities["location"] == nil)
+        #expect(command.constraints.brand == nil)
     }
 
     @Test func neverAISecretTextIsNotSentToGroq() async {

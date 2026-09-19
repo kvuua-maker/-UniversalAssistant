@@ -1,5 +1,77 @@
 import Foundation
 
+/// One production registry for spoken application and communication names.
+/// Aliases are accepted only when they occur in current ASR evidence; they are
+/// never unconditional transcript replacements.
+enum CanonicalSpeechEntityRegistry {
+    static let applicationAliases: [String: Set<String>] = [
+        "whatsapp": ["whatsapp", "whats", "wats", "ватсап", "вотсап", "ватс", "вац"],
+        "viber": ["viber", "вайбер", "вібер"],
+        "telegram": ["telegram", "телеграм", "телега"],
+        "spotify": ["spotify", "спотіфай", "спотифай"],
+        "youtube": ["youtube", "ютуб"],
+        "apple-music": ["apple music", "епл мюзік", "эппл мьюзик"],
+        "mail": ["mail", "пошта", "почта"],
+        "google-maps": ["google maps", "гугл мапи", "гугл карты"]
+    ]
+
+    static let communicationAliases: [String: Set<String>] = [
+        "whatsapp": applicationAliases["whatsapp"]!,
+        "viber": applicationAliases["viber"]!,
+        "telegram": applicationAliases["telegram"]!,
+        "messages": ["messages", "imessage", "sms", "смс"],
+        "email": ["email", "mail", "пошта", "пошту", "почта", "почту"],
+        "telephone": ["phone", "cellular", "телефон", "телефоном", "мобільний", "мобильный"]
+    ]
+
+    /// Context-only acoustic evidence. These values improve ASR hypotheses but
+    /// are not resolver aliases, so a noisy fragment cannot cause an action.
+    static let acousticContextOnly = [
+        "Baldinini", "Pierre Cardin", "бані", "баді", "Buddy", "Bady",
+        "QR", "QR-код", "Q Club", "Q-клуб", "Quad", "OCR", "PDF",
+        "розпізнай", "розпізнає", "відскануй", "відсканував", "проскануй",
+        "про скануй", "оцифруй", "обчисли", "відкрий", "запусти", "покажи",
+        "перейди", "збільш"
+    ]
+
+    static var speechVocabulary: [String] {
+        let aliases = applicationAliases.values.flatMap(Array.init)
+            + communicationAliases.values.flatMap(Array.init)
+        return Array(Set(aliases + acousticContextOnly)).sorted()
+    }
+
+    static func applicationID(in text: String) -> String? {
+        exactValue(in: text, registry: applicationAliases)
+    }
+
+    static func communicationChannel(in text: String) -> String? {
+        exactValue(in: text, registry: communicationAliases)
+    }
+
+    static func aliases(for applicationID: String) -> Set<String> {
+        applicationAliases[applicationID] ?? [applicationID]
+    }
+
+    private static func exactValue(in text: String, registry: [String: Set<String>]) -> String? {
+        let normalized = " " + normalize(text) + " "
+        let matches = registry.compactMap { id, aliases -> (String, Int)? in
+            aliases.map(normalize).filter { !$0.isEmpty && normalized.contains(" \($0) ") }
+                .map(\.count).max().map { (id, $0) }
+        }.sorted { lhs, rhs in lhs.1 > rhs.1 }
+        guard let first = matches.first,
+              matches.dropFirst().first?.1 != first.1 else { return nil }
+        return first.0
+    }
+
+    private static func normalize(_ value: String) -> String {
+        value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "uk_UA"))
+            .lowercased()
+            .replacingOccurrences(of: #"[^\p{L}\p{N}]+"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
 struct DeviceApplicationDescriptor: Equatable, Sendable {
     let id: String
     let aliases: Set<String>
@@ -99,13 +171,13 @@ struct UniversalDeviceCommandRouter: Sendable {
 enum LaunchDeviceApplications {
     static let verified: [DeviceApplicationDescriptor] = [
         .init(id: "apple-website", aliases: ["apple", "епл"], launchURL: URL(string: "https://www.apple.com/ua/")!, exactContext: nil),
-        .init(id: "spotify", aliases: ["spotify", "спотіфай", "спотифай"], launchURL: URL(string: "spotify://")!, exactContext: nil),
-        .init(id: "apple-music", aliases: ["apple music", "епл мюзік", "эппл мьюзик"], launchURL: URL(string: "https://music.apple.com")!, exactContext: nil),
+        .init(id: "spotify", aliases: CanonicalSpeechEntityRegistry.aliases(for: "spotify"), launchURL: URL(string: "spotify://")!, exactContext: nil),
+        .init(id: "apple-music", aliases: CanonicalSpeechEntityRegistry.aliases(for: "apple-music"), launchURL: URL(string: "https://music.apple.com")!, exactContext: nil),
         // WhatsApp documents this public app-opening scheme. Keeping it in the
         // verified registry lets the existing scoped resolver recover clipped
         // app names without a transcript-specific substitution.
-        .init(id: "whatsapp", aliases: ["whatsapp"], launchURL: URL(string: "whatsapp://app")!, exactContext: nil),
-        .init(id: "telegram", aliases: ["telegram", "телеграм", "телега"],
+        .init(id: "whatsapp", aliases: CanonicalSpeechEntityRegistry.aliases(for: "whatsapp"), launchURL: URL(string: "whatsapp://app")!, exactContext: nil),
+        .init(id: "telegram", aliases: CanonicalSpeechEntityRegistry.aliases(for: "telegram"),
               launchURL: URL(string: "tg://")!, exactContext: { value in
                   var components = URLComponents(string: "tg://resolve")
                   components?.queryItems = [.init(name: "domain", value: value)]
@@ -113,11 +185,11 @@ enum LaunchDeviceApplications {
               }),
         // A root launch carries no unsupported contact/page parameters and
         // therefore avoids Viber's "page unavailable" intermediate screen.
-        .init(id: "viber", aliases: ["viber", "вайбер", "вібер"], launchURL: URL(string: "viber://")!, exactContext: nil),
-        .init(id: "youtube", aliases: ["youtube", "ютуб"], launchURL: URL(string: "https://www.youtube.com")!, exactContext: nil),
+        .init(id: "viber", aliases: CanonicalSpeechEntityRegistry.aliases(for: "viber"), launchURL: URL(string: "viber://")!, exactContext: nil),
+        .init(id: "youtube", aliases: CanonicalSpeechEntityRegistry.aliases(for: "youtube"), launchURL: URL(string: "https://www.youtube.com")!, exactContext: nil),
         .init(id: "app-store", aliases: ["app store", "ап стор", "магазин застосунків"], launchURL: URL(string: "https://apps.apple.com")!, exactContext: nil),
-        .init(id: "mail", aliases: ["mail", "пошта", "почта"], launchURL: URL(string: "mailto:")!, exactContext: nil),
-        .init(id: "google-maps", aliases: ["google maps", "гугл мапи", "гугл карты"],
+        .init(id: "mail", aliases: CanonicalSpeechEntityRegistry.aliases(for: "mail"), launchURL: URL(string: "mailto:")!, exactContext: nil),
+        .init(id: "google-maps", aliases: CanonicalSpeechEntityRegistry.aliases(for: "google-maps"),
               launchURL: URL(string: "https://www.google.com/maps")!, exactContext: { query in
                   var components = URLComponents(string: "https://www.google.com/maps/search/")
                   components?.queryItems = [.init(name: "api", value: "1"), .init(name: "query", value: query)]

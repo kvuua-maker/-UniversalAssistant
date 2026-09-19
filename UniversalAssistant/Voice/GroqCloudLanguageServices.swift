@@ -21,10 +21,88 @@ struct FinalVoiceTranscript: Equatable, Sendable {
 enum VoiceAuthoritativeTranscriptSelector {
     static func select(groq: String?, appleFallback: String) -> FinalVoiceTranscript? {
         let cloud = groq?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if !cloud.isEmpty { return .init(text: cloud, source: .groq) }
         let apple = appleFallback.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !apple.isEmpty else { return nil }
+        if cloud.isEmpty { return apple.isEmpty ? nil : .init(text: apple, source: .appleFallback) }
+        if apple.isEmpty { return .init(text: cloud, source: .groq) }
+
+        let cloudEvidence = VoiceDeterministicCommandAssessment(text: cloud)
+        let appleEvidence = VoiceDeterministicCommandAssessment(text: apple)
+        if cloudEvidence.conflicts(with: appleEvidence) {
+            let common = commonPrefix(cloud, apple)
+            return common.isEmpty ? nil : .init(text: common, source: .appleFallback)
+        }
+        if appleEvidence.score > cloudEvidence.score {
+            return .init(text: apple, source: .appleFallback)
+        }
+        if cloudEvidence.score > appleEvidence.score {
+            return .init(text: cloud, source: .groq)
+        }
+        // Equal structured evidence prefers the candidate that preserved more
+        // spoken material; an equal-length Apple final avoids a network result
+        // replacing equivalent on-device evidence.
+        if cloud.split(whereSeparator: \.isWhitespace).count > apple.split(whereSeparator: \.isWhitespace).count {
+            return .init(text: cloud, source: .groq)
+        }
         return .init(text: apple, source: .appleFallback)
+    }
+
+    private static func commonPrefix(_ lhs: String, _ rhs: String) -> String {
+        let left = lhs.split(whereSeparator: \.isWhitespace).map(String.init)
+        let right = rhs.split(whereSeparator: \.isWhitespace).map(String.init)
+        var output: [String] = []
+        for (a, b) in zip(left, right) {
+            guard a.compare(b, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame else { break }
+            output.append(a)
+        }
+        return output.joined(separator: " ")
+    }
+}
+
+struct VoiceDeterministicCommandAssessment: Sendable {
+    let command: StructuredCommand
+    let application: String?
+    let channel: String?
+    let score: Int
+
+    init(text: String) {
+        command = ExplicitCurrentCommandPolicy.apply(to: LanguageUnderstandingBlock().parse(text))
+        application = CanonicalSpeechEntityRegistry.applicationID(in: text)
+        channel = CanonicalSpeechEntityRegistry.communicationChannel(in: text)
+        var value = 0
+        if command.intent != .unknown && command.intent != .webSearch { value += 80 }
+        if !command.needsClarification { value += 30 }
+        if application != nil { value += 45 }
+        if channel != nil { value += 45 }
+        if command.constraints.brand != nil { value += 30 }
+        if command.entities["explicit_location"] == "true" { value += 20 }
+        if command.entities["contact"] != nil || command.entities["recipient"] != nil { value += 15 }
+        value += min(20, text.split(whereSeparator: \.isWhitespace).count)
+        score = value
+    }
+
+    var isResolvedDeterministic: Bool {
+        guard !command.needsClarification, command.intent != .unknown, command.intent != .webSearch else { return false }
+        switch command.intent {
+        case .open, .appAction:
+            return command.entities["app"] != nil || application != nil
+        case .contactCall:
+            return command.entities["contact"] != nil || command.entities["phone_number"] != nil
+        case .messageCompose:
+            return command.entities["recipient"] != nil || command.entities["contact"] != nil
+        case .localUtility, .calendarQuery, .cameraCapture, .settings, .deviceAction,
+             .reminderQuery, .audioRecord, .fileSearch:
+            return true
+        default:
+            return false
+        }
+    }
+
+    func conflicts(with other: Self) -> Bool {
+        if let application, let otherApplication = other.application, application != otherApplication { return true }
+        if let channel, let otherChannel = other.channel, channel != otherChannel { return true }
+        if let brand = command.constraints.brand, let otherBrand = other.command.constraints.brand,
+           brand.caseInsensitiveCompare(otherBrand) != .orderedSame { return true }
+        return false
     }
 }
 
@@ -110,18 +188,22 @@ struct GroqSemanticCommandResolver: SemanticCommandResolving {
 
     func resolveCommand(_ text: String, language: CommandLanguage) async throws -> StructuredCommand {
         let frame = try await generic.semanticFrame(for: text)
+        let currentEvidence = ExplicitCurrentCommandPolicy.apply(to: LanguageUnderstandingBlock().parse(text))
         guard let intent = CommandIntent(rawValue: frame.intent), intent != .unknown else {
             throw GenericDiscoveryError.invalidIntent
         }
         var entities: [String: String] = [:]
         if let action = frame.action { entities["action"] = action }
-        if let app = frame.app { entities["app"] = app }
-        if let contact = frame.contact {
+        if let app = CanonicalSpeechEntityRegistry.applicationID(in: text) { entities["app"] = app }
+        if let contact = currentEvidence.entities[intent == .messageCompose ? "recipient" : "contact"] {
             entities[intent == .messageCompose ? "recipient" : "contact"] = contact
         }
         if let entity = frame.entity { entities["query"] = entity }
         if let product = frame.product { entities["query"] = product }
-        if let city = frame.city { entities["location"] = city; entities["explicit_location"] = "true" }
+        if currentEvidence.entities["explicit_location"] == "true",
+           let city = currentEvidence.entities["location"] {
+            entities["location"] = city; entities["explicit_location"] = "true"
+        }
         if let date = frame.date { entities["date_expression"] = date }
         if let time = frame.time { entities["time_expression"] = time }
         if let quantity = frame.quantity {
@@ -129,16 +211,17 @@ struct GroqSemanticCommandResolver: SemanticCommandResolving {
         }
         if let mediaAction = frame.mediaAction { entities["media_action"] = mediaAction }
         if let query = frame.query, entities["query"] == nil { entities["query"] = query }
-        if let provider = Self.explicitProvider(in: text) ?? frame.provider {
+        if let provider = Self.explicitProvider(in: text) {
             entities["explicit_provider_id"] = provider
             entities["provider_id"] = provider
         }
-        if let channel = Self.explicitChannel(in: text) ?? frame.channel {
+        if [.contactCall, .messageCompose].contains(intent),
+           let channel = Self.explicitChannel(in: text) {
             entities[intent == .contactCall ? "call_service" : "message_service"] = channel
             entities["explicit_channel"] = channel
         }
         var constraints = CommandConstraints()
-        if let brand = Self.explicitBrand(in: text) ?? frame.brand {
+        if let brand = Self.explicitBrand(in: text) {
             constraints.brand = brand
             constraints.hardConstraintKeys.insert("brand")
             entities["brand"] = brand
@@ -179,15 +262,7 @@ struct GroqSemanticCommandResolver: SemanticCommandResolving {
     }
 
     private static func explicitChannel(in text: String) -> String? {
-        let normalized = text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "uk_UA"))
-        let values: [(String, [String])] = [
-            ("whatsapp", ["whatsapp", "ватсап", "вотсап"]),
-            ("viber", ["viber", "вайбер", "вібер"]),
-            ("telegram", ["telegram", "телеграм"]),
-            ("email", ["email", "пошта", "почта"]),
-            ("telephone", ["телефон", "phone", "cellular"])
-        ]
-        return values.first { $0.1.contains(where: normalized.contains) }?.0
+        CanonicalSpeechEntityRegistry.communicationChannel(in: text)
     }
 }
 
@@ -232,18 +307,14 @@ struct GroqGenericIntentResolver: GenericAIIntentResolver {
         result.quantity = frame.quantity
         // Model output can enrich an unresolved command, but it cannot replace
         // a provider or brand explicitly present in the current user text.
-        result.brandOrProvider = Self.explicitProvider(in: text)
-            ?? Self.explicitBrand(in: text)
-            ?? frame.provider
-            ?? frame.brand
+        result.brandOrProvider = Self.explicitProvider(in: text) ?? Self.explicitBrand(in: text)
         result.requestedAction = ["open", "show", "find", "search", nil].contains(frame.action) ? "open" : frame.action
         result.requiredFreshness = ["jobs", "events", "local_service", "restaurant"].contains(domain) ? 86_400 : 604_800
         result.metadata = [
             "semantic_model": frame.model,
-            "explicit_channel": frame.channel,
-            "explicit_provider": frame.provider,
-            "explicit_app": frame.app,
-            "explicit_city": frame.city,
+            "explicit_channel": CanonicalSpeechEntityRegistry.communicationChannel(in: text),
+            "explicit_provider": Self.explicitProvider(in: text),
+            "explicit_app": CanonicalSpeechEntityRegistry.applicationID(in: text),
             "explicit_date": frame.date,
             "explicit_time": frame.time,
             "media_action": frame.mediaAction

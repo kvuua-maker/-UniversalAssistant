@@ -1110,6 +1110,45 @@ final class AssistantViewModel {
         if accessed { url.stopAccessingSecurityScopedResource() }
         processOCR(image, provenance: .document)
     }
+    func selectPDFCreationSource(_ source: PDFCreationSource, suggestedText: String?) {
+        switch source {
+        case .text: capabilityPresentation = .pdfTextInput(suggestedText)
+        case .photo: capabilityPresentation = .pdfPhotoPicker
+        case .document: capabilityPresentation = .pdfWorkflow(.create, text: nil)
+        case .choose: capabilityPresentation = .pdfSourcePicker(.choose, text: suggestedText)
+        }
+    }
+    func createPDFFromText(_ text: String) {
+        do {
+            let data = try OnDevicePDFProcessor().textPDF(text)
+            let url = try persistPDF(data)
+            currentContext.replaceShared(kind: .document, value: url.path)
+            capabilityPresentation = .documentFile(url)
+            resultState = .idle; statusText = AppText.value("ready")
+            LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=document_pdf source=text")
+        } catch {
+            presentFailure(message: AppText.value("request_unavailable"))
+        }
+    }
+    func handleSelectedPDFPhoto(_ identifier: String?) {
+        guard let identifier else { dismissCapabilityPresentation(); return }
+        capabilityPresentation = nil
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let imageData = try await PhotoKitAssetImageLoader().imageData(localIdentifier: identifier)
+                guard let image = UIImage(data: imageData) else { throw PDFProcessingError.invalidPDF }
+                let data = try OnDevicePDFProcessor().searchablePDF(images: [image], recognizedText: [""])
+                let url = try persistPDF(data)
+                currentContext.replaceShared(kind: .document, value: url.path)
+                capabilityPresentation = .documentFile(url)
+                resultState = .idle; statusText = AppText.value("ready")
+                LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=document_pdf source=photo")
+            } catch {
+                presentFailure(message: AppText.value("request_unavailable"))
+            }
+        }
+    }
     func handleSelectedPDFDocuments(_ urls: [URL], operation: PDFWorkflowOperation, text: String?) {
         capabilityPresentation = nil
         guard !urls.isEmpty else {
@@ -1132,6 +1171,7 @@ final class AssistantViewModel {
             }
             let outputs: [Data]
             switch operation {
+            case .create: outputs = [try processor.convertedDocument(data[0])]
             case .merge: outputs = [try processor.merge(data)]
             case .split:
                 let count = try processor.pageCount(data[0])
@@ -1166,6 +1206,16 @@ final class AssistantViewModel {
             LocalVoiceDiagnosticReport.shared.recordTerminal(.error)
             deliverCompletedDiagnosticSession()
         }
+    }
+    private func persistPDF(_ data: Data) throws -> URL {
+        let base = try FileManager.default.url(
+            for: .applicationSupportDirectory, in: .userDomainMask,
+            appropriateFor: nil, create: true
+        ).appending(path: "UniversalAssistant/PDF", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        let url = base.appending(path: "PDF-Result-\(UUID().uuidString).pdf")
+        try data.write(to: url, options: .atomic)
+        return url
     }
     func handleScannedOCRDocument(_ pages: [UIImage]) { handleScannedDocument(pages, mode: .recognizedText) }
     func handleScannedDocument(_ pages: [UIImage], mode: DocumentScanOutputMode) {

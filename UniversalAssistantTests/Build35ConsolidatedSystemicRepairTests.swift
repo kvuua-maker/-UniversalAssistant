@@ -105,9 +105,18 @@ struct Build35ConsolidatedSystemicRepairTests {
         let folded = Set(configuration.contextualVocabulary.map {
             $0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
         })
+        #expect(configuration.contextualVocabulary.contains("Контакт 19"))
+        #expect(!configuration.contextualVocabulary.contains("Контакт 20"))
+        for phrase in CanonicalSpeechEntityRegistry.speechVocabulary + ["QR-код", "OCR", "PDF"] {
+            let key = phrase.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            #expect(folded.contains(key), "Priority Speech entity was evicted: \(phrase)")
+        }
+        let master = Set(VoiceRecognitionRequestConfiguration.masterVocabulary.map {
+            $0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        })
         for phrase in VoiceRecognitionRequestConfiguration.canonicalEntityVocabulary {
             let key = phrase.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-            #expect(folded.contains(key), "Canonical Speech entity was evicted: \(phrase)")
+            #expect(master.contains(key), "Canonical Speech inventory omitted: \(phrase)")
         }
     }
 
