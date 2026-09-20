@@ -24,6 +24,7 @@ final class AssistantViewModel {
     private let commandEngine: any CommandParsing
     private let interactionEngine: any InteractionDeciding
     private let semanticCommandResolver: (any SemanticCommandResolving)?
+    private let contacts: any ContactResolving
     private let capabilityExecutor: any CanonicalCapabilityExecuting
     private let productionRouter: SingleCorridorRouter
     private let productionCorridor: ProductionExecutionRoomOrchestrator
@@ -46,6 +47,7 @@ final class AssistantViewModel {
     private var weatherExecutionTask: Task<Void, Never>?
     private var eventKitExecutionTask: Task<Void, Never>?
     private var genericDiscoveryTask: Task<Void, Never>?
+    private var messageRoleCompletionTask: Task<Void, Never>?
     private var capabilityContinuation: CanonicalCapabilityContinuation?
     private var capabilityPresentationGeneration: UInt64?
     private var capabilityPresentationCommandID: UUID?
@@ -59,7 +61,11 @@ final class AssistantViewModel {
     private var voiceSubmitPerformed = false
     private var pendingConfirmation: (command: StructuredCommand, summary: ResultSummary, generation: UInt64)?
     private var pendingCanonicalSelection: (command: StructuredCommand, summary: ResultSummary, generation: UInt64, role: String, choices: [String], identifiers: [String: String])?
+    private var pendingCanonicalClarification: (command: StructuredCommand, summary: ResultSummary, generation: UInt64, role: String)?
     var voiceInputEngineIdentifier: String { voiceInput.engineIdentifier }
+    var isVoiceOrbAvailable: Bool {
+        voiceInputEnabled && ![.denied, .speechDenied, .unavailable].contains(voiceInput.state)
+    }
 
     init(
         commandEngine: any CommandParsing = LanguageUnderstandingBlock(),
@@ -68,6 +74,7 @@ final class AssistantViewModel {
         webSearchHandoff: ControlledWebSearchHandoff = ControlledWebSearchHandoff(),
         genericDiscovery: GenericUnknownRequestCoordinator? = nil,
         semanticCommandResolver: (any SemanticCommandResolving)? = nil,
+        contacts: any ContactResolving = LocalContactResolver(),
         eventKitExecutor: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
         capabilityExecutor: (any CanonicalCapabilityExecuting)? = nil,
         configuredRestaurantReservationProviderIDs: Set<String> = [],
@@ -86,6 +93,7 @@ final class AssistantViewModel {
         self.commandEngine = commandEngine
         self.interactionEngine = interactionEngine
         self.semanticCommandResolver = semanticCommandResolver
+        self.contacts = contacts
         self.productionRouter = SingleCorridorRouter(capabilities: .init(
             configuredRestaurantReservationProviderIDs: configuredRestaurantReservationProviderIDs
         ))
@@ -278,6 +286,8 @@ final class AssistantViewModel {
     }
 
     func submit() {
+        if consumePendingSelectionReplyIfPossible(input) { return }
+        if resumePendingClarificationIfPossible(input) { return }
         let isVoiceSubmission = voiceDraftSourceText != nil
         let voiceEvidence = voiceDraftSourceText == input ? pendingVoiceRecognitionEvidence : nil
         pendingVoiceRecognitionEvidence = nil
@@ -300,6 +310,7 @@ final class AssistantViewModel {
         weatherExecutionTask?.cancel()
         eventKitExecutionTask?.cancel()
         genericDiscoveryTask?.cancel()
+        messageRoleCompletionTask?.cancel()
         // A newly submitted command supersedes any UI-bound continuation.
         // Late picker/scanner/OCR callbacks therefore cannot resume an obsolete request.
         capabilityContinuation = nil
@@ -308,6 +319,7 @@ final class AssistantViewModel {
         capabilityPresentation = nil
         pendingConfirmation = nil
         pendingCanonicalSelection = nil
+        pendingCanonicalClarification = nil
         weatherExecutionInFlight = false
         eventKitExecutionInFlight = false
         capabilityExecutionInFlight = false
@@ -356,6 +368,24 @@ final class AssistantViewModel {
         } else {
             commandEngine.parse(requestEnvelope.originalText)
         }
+        if Self.requiresContactAwareMessageCompletion(command) {
+            input = ""
+            messageRoleCompletionTask?.cancel()
+            messageRoleCompletionTask = Task { [weak self] in
+                guard let self else { return }
+                try? await contacts.requestAccessIfNeeded()
+                let vocabulary = await contacts.contextualVocabulary(limit: 120)
+                guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
+                let enriched = Self.completingMessageRoles(command, contactVocabulary: vocabulary)
+                finishResolvedCommand(enriched, requestGeneration: requestGeneration)
+            }
+            return
+        }
+        finishResolvedCommand(command, requestGeneration: requestGeneration)
+    }
+
+    private func finishResolvedCommand(_ command: StructuredCommand, requestGeneration: UInt64) {
+        guard activeRequestGeneration == requestGeneration else { return }
         LocalVoiceDiagnosticReport.shared.recordNormalizedTranscript(command.normalizedText)
         LocalVoiceDiagnosticReport.shared.record("language_detection", "language=\(command.language.rawValue)")
         LocalVoiceDiagnosticReport.shared.record("morphology", "status=completed")
@@ -398,6 +428,146 @@ final class AssistantViewModel {
             return
         }
         dispatchResolvedCommand(command, requestGeneration: requestGeneration)
+    }
+
+    private func consumePendingSelectionReplyIfPossible(_ reply: String) -> Bool {
+        guard let pending = pendingCanonicalSelection,
+              pending.generation == activeRequestGeneration,
+              !reply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        let candidates = pending.choices.map { choice in
+            let shortName = choice.split(separator: "·", maxSplits: 1).first.map(String.init)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? choice
+            return ScopedEntityCandidate(value: choice, displayName: choice, aliases: [choice, shortName])
+        }
+        let resolver = ContextScopedEntityResolver(candidates: candidates)
+        guard case let .resolved(choice) = resolver.resolve(reply) else {
+            input = ""
+            voiceDraftSourceText = nil
+            pendingVoiceRecognitionEvidence = nil
+            requireAction(prompt: AppText.value("clarification_needed"), choices: pending.choices)
+            return true
+        }
+        input = ""
+        voiceDraftSourceText = nil
+        pendingVoiceRecognitionEvidence = nil
+        resolveActionRequiredChoice(choice)
+        return true
+    }
+
+    private func resumePendingClarificationIfPossible(_ reply: String) -> Bool {
+        guard let pending = pendingCanonicalClarification,
+              pending.generation == activeRequestGeneration else { return false }
+        let trimmedReply = reply.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedReply.isEmpty else { return true }
+        let combinedText = pending.command.originalText + " " + trimmedReply
+        let resolved = commandEngine.parse(combinedText)
+        guard pending.command.intent == .unknown || resolved.intent == pending.command.intent else {
+            input = ""
+            voiceDraftSourceText = nil
+            pendingVoiceRecognitionEvidence = nil
+            presentClarification(message: AppText.value("clarification_needed"), summary: pending.summary)
+            return true
+        }
+        let protectedKeys = [
+            "message_service", "call_service", "provider", "explicit_provider",
+            "brand", "app", "explicit_location"
+        ]
+        var entities = resolved.entities
+        for key in protectedKeys {
+            if let original = pending.command.entities[key] {
+                if let replacement = entities[key],
+                   CanonicalMorphology.comparableText(replacement) != CanonicalMorphology.comparableText(original) {
+                    input = ""
+                    voiceDraftSourceText = nil
+                    pendingVoiceRecognitionEvidence = nil
+                    presentClarification(message: AppText.value("clarification_needed"), summary: pending.summary)
+                    return true
+                }
+                entities[key] = original
+            }
+        }
+        activeRequestGeneration &+= 1
+        let generation = activeRequestGeneration
+        pendingCanonicalClarification = nil
+        input = ""
+        voiceDraftSourceText = nil
+        pendingVoiceRecognitionEvidence = nil
+        resumeInteractiveDiagnosticContinuation(generation: generation)
+        let resumed = StructuredCommand(
+            id: pending.command.id,
+            originalText: combinedText,
+            normalizedText: resolved.normalizedText,
+            language: resolved.language,
+            intent: resolved.intent,
+            entities: entities,
+            constraints: resolved.constraints,
+            risk: resolved.risk,
+            needsClarification: resolved.needsClarification
+        )
+        if Self.requiresContactAwareMessageCompletion(resumed) {
+            messageRoleCompletionTask?.cancel()
+            messageRoleCompletionTask = Task { [weak self] in
+                guard let self else { return }
+                try? await contacts.requestAccessIfNeeded()
+                let vocabulary = await contacts.contextualVocabulary(limit: 120)
+                guard !Task.isCancelled, activeRequestGeneration == generation else { return }
+                finishResolvedCommand(
+                    Self.completingMessageRoles(resumed, contactVocabulary: vocabulary),
+                    requestGeneration: generation
+                )
+            }
+        } else {
+            finishResolvedCommand(resumed, requestGeneration: generation)
+        }
+        return true
+    }
+
+    private static func requiresContactAwareMessageCompletion(_ command: StructuredCommand) -> Bool {
+        guard command.intent == .messageCompose else { return false }
+        let recipientWords = command.entities["recipient"]?.split(whereSeparator: \.isWhitespace).count ?? 0
+        return recipientWords > 1 || command.entities["message_body"] == nil
+    }
+
+    private static func completingMessageRoles(
+        _ command: StructuredCommand,
+        contactVocabulary: [String]
+    ) -> StructuredCommand {
+        guard let roles = CanonicalMessageRoleAnalyzer.analyzeContactAware(
+            command.originalText,
+            explicitService: command.entities["message_service"],
+            contactVocabulary: contactVocabulary
+        ) else { return command }
+        var entities = command.entities
+        if let recipient = roles.recipient {
+            entities["recipient"] = recipient
+        } else if let body = roles.body,
+                  let currentRecipient = entities["recipient"],
+                  CanonicalMorphology.comparableText(currentRecipient) == CanonicalMorphology.comparableText(body) {
+            // A colon introduces content. If the structural first pass copied
+            // that same content into RECIPIENT, the contact-aware completion
+            // removes only the duplicated role; it does not guess a person.
+            entities.removeValue(forKey: "recipient")
+        }
+        if let body = roles.body { entities["message_body"] = body }
+        let needsClarification: Bool
+        if !roles.ambiguousRecipients.isEmpty {
+            entities["clarification_role"] = "recipient"
+            entities["clarification_options"] = roles.ambiguousRecipients.joined(separator: "|")
+            needsClarification = true
+        } else {
+            needsClarification = command.needsClarification
+        }
+        return .init(
+            id: command.id,
+            originalText: command.originalText,
+            normalizedText: command.normalizedText,
+            language: command.language,
+            intent: command.intent,
+            entities: entities,
+            constraints: command.constraints,
+            risk: command.risk,
+            needsClarification: needsClarification
+        )
     }
 
     private func resolveSemanticCommand(
@@ -472,10 +642,18 @@ final class AssistantViewModel {
             return
         }
         if command.needsClarification {
+            pendingCanonicalClarification = (
+                command,
+                summary,
+                requestGeneration,
+                command.entities["clarification_role"] ?? "target"
+            )
+            LocalVoiceDiagnosticReport.shared.suspendForInteractiveContinuation(
+                "canonical-clarification",
+                generation: requestGeneration
+            )
             resultState = .clarification(summary)
             statusText = AppText.value("clarification_needed")
-            LocalVoiceDiagnosticReport.shared.recordTerminal(.clarification)
-            deliverCompletedDiagnosticSession()
             return
         }
         if interactionDecision?.pattern == .confirmation {
@@ -660,8 +838,8 @@ final class AssistantViewModel {
                 currentContext.replaceAnswer(result.primaryAnswer)
                 resultState = .deterministic(result)
             case let .handoff(result):
-                if result.kind == .system || result.kind == .navigation ||
-                    (result.kind == .provider && !result.requiresExplicitUserActivation) {
+                if (result.kind == .system || result.kind == .navigation || result.kind == .provider) &&
+                    !result.requiresExplicitUserActivation {
                     if await openSystemHandoffObserved(result.destination) {
                         resultState = .idle
                     } else {
@@ -1028,8 +1206,8 @@ final class AssistantViewModel {
                     resultState = .deterministic(value)
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=compound_result")
                 case let .handoff(value):
-                    if value.kind == .system || value.kind == .navigation ||
-                        (value.kind == .provider && !value.requiresExplicitUserActivation) {
+                    if (value.kind == .system || value.kind == .navigation || value.kind == .provider) &&
+                        !value.requiresExplicitUserActivation {
                         guard await openSystemHandoffObserved(value.destination) else {
                             throw CanonicalCapabilityExecutionError.unavailable("exact_handoff_rejected")
                         }

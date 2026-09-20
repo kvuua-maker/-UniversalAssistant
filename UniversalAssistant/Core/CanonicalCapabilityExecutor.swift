@@ -1449,8 +1449,36 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         }
         if service == MessengerKind.viber.rawValue || service == MessengerKind.signal.rawValue {
             let messenger: MessengerKind = service == MessengerKind.viber.rawValue ? .viber : .signal
+            var resolvedRecipientNotice: String?
+            if messenger == .viber, let rawRecipient, !rawRecipient.isEmpty {
+                try await contacts.requestAccessIfNeeded()
+                switch try await contacts.resolve(name: rawRecipient) {
+                case .notFound:
+                    throw CanonicalCapabilityExecutionError.unavailable("viber_contact_not_found")
+                case let .ambiguous(values):
+                    throw CanonicalCapabilityExecutionError.ambiguousContacts(values)
+                case let .resolved(value):
+                    resolvedRecipientNotice = value.displayName
+                    recordSelectedTarget(
+                        identifier: "contact:" + value.identifier,
+                        service: service,
+                        phoneCount: value.phoneNumbers.count,
+                        emailCount: value.emailAddresses.count
+                    )
+                }
+            }
             switch try MessengerHandoffPlanner().plan(messenger: messenger, recipient: nil, body: body) {
-            case let .verifiedHandoff(url): return .handoff(.init(query: command.originalText, destination: url, kind: .system))
+            case let .verifiedHandoff(url):
+                if messenger == .viber, let recipient = resolvedRecipientNotice {
+                    let notice = "Viber не дозволяє UniversalAssistant напряму вибрати особистий контакт. Відкрийте Viber з готовим текстом і виберіть «\(recipient)»."
+                    return .handoff(.init(
+                        query: notice,
+                        destination: url,
+                        kind: .system,
+                        requiresExplicitUserActivation: true
+                    ))
+                }
+                return .handoff(.init(query: command.originalText, destination: url, kind: .system))
             case let .unavailable(reason): throw CanonicalCapabilityExecutionError.unavailable(reason)
             case .systemComposer: throw CanonicalCapabilityExecutionError.unavailable("messenger_handoff_invalid")
             }

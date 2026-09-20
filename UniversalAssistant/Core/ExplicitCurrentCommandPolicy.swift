@@ -25,9 +25,12 @@ enum CanonicalCurrentCommandRoleNormalizer {
         let requestsCameraCapture = currentTokens.contains(where: {
             $0.hasPrefix("фотографув") || $0.hasPrefix("сфотограф") || $0.hasPrefix("знім") || $0 == "capture"
         })
+        let hasPhotoQueryRoles = command.entities["photo_query_kind"] != nil ||
+            command.entities["photo_location_query"] != nil || command.entities["photo_date_filter"] == "true"
         if let application = CanonicalSpeechEntityRegistry.applicationID(in: command.originalText),
            currentTokens.contains(where: { token in appActionRoots.contains(where: token.hasPrefix) }),
-           !(application == "camera" && requestsCameraCapture) {
+           !(application == "camera" && requestsCameraCapture),
+           !(application == "photos" && hasPhotoQueryRoles) {
             intent = .open
             entities["app"] = application
             entities["requested_action"] = "open"

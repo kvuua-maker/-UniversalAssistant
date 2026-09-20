@@ -65,6 +65,100 @@ struct VoiceRecognitionEvidence: Equatable, Sendable {
     }
 }
 
+enum VoiceUtteranceEndpointClass: String, Equatable, Sendable {
+    case closedAtomic
+    case extendable
+    case incompleteCritical
+    case noSpeech
+}
+
+enum VoiceUtteranceEndpointDecision: Equatable, Sendable {
+    case continueListening(VoiceUtteranceEndpointClass)
+    case finalize(VoiceUtteranceEndpointClass)
+}
+
+/// A bounded endpoint detector. It never parses into a competing command and
+/// never routes; it only distinguishes an executable prefix from a completed
+/// spoken utterance using the already-resolved local command evidence.
+struct VoiceUtteranceEndpointPolicy: Sendable {
+    let baseSilenceSeconds: TimeInterval
+    let continuationGraceSeconds: TimeInterval
+    let minimumTranscriptStabilitySeconds: TimeInterval
+
+    init(
+        baseSilenceSeconds: TimeInterval = 0.85,
+        continuationGraceSeconds: TimeInterval = 1.25,
+        minimumTranscriptStabilitySeconds: TimeInterval = 0.25
+    ) {
+        self.baseSilenceSeconds = baseSilenceSeconds
+        self.continuationGraceSeconds = continuationGraceSeconds
+        self.minimumTranscriptStabilitySeconds = minimumTranscriptStabilitySeconds
+    }
+
+    func classify(
+        transcript: String,
+        assessment: VoiceDeterministicCommandAssessment?,
+        evidence: VoiceRecognitionEvidence?
+    ) -> VoiceUtteranceEndpointClass {
+        guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return .noSpeech }
+        guard let assessment, assessment.isResolvedDeterministic,
+              !assessment.command.needsClarification else { return .incompleteCritical }
+
+        switch assessment.command.intent {
+        case .messageCompose, .contactCall,
+             .productSearch, .fashionDiscovery, .groceryBasket,
+             .placeSearch, .serviceSearch, .restaurantSearch, .reservation,
+             .ticketSearch, .ticketPurchaseHandoff, .hotelSearch, .travelPlan,
+             .calendarCreate, .reminderCreate, .routeAwareSearch:
+            return .extendable
+        case .open, .appAction:
+            return assessment.application != nil || assessment.command.entities["app"] != nil
+                ? .closedAtomic : .incompleteCritical
+        case .cameraCapture:
+            let codeWasHeard = evidenceCandidates(evidence).contains { candidate in
+                let value = candidate.lowercased()
+                return value.contains("qr") || value.contains("штрих") || value.contains("barcode")
+            }
+            if codeWasHeard, assessment.command.entities["capture_mode"] != "code_scan" {
+                return .incompleteCritical
+            }
+            return .closedAtomic
+        default:
+            return .closedAtomic
+        }
+    }
+
+    func decide(
+        transcript: String,
+        assessment: VoiceDeterministicCommandAssessment?,
+        evidence: VoiceRecognitionEvidence?,
+        secondsSinceVoice: TimeInterval?,
+        secondsSinceTranscriptMutation: TimeInterval,
+        hardLimitReached: Bool = false
+    ) -> VoiceUtteranceEndpointDecision {
+        let endpointClass = classify(transcript: transcript, assessment: assessment, evidence: evidence)
+        if hardLimitReached { return .finalize(endpointClass) }
+        guard let silence = secondsSinceVoice else { return .continueListening(.noSpeech) }
+        let stable = secondsSinceTranscriptMutation >= minimumTranscriptStabilitySeconds
+        let requiredSilence: TimeInterval = switch endpointClass {
+        case .closedAtomic: baseSilenceSeconds
+        case .extendable, .incompleteCritical: baseSilenceSeconds + continuationGraceSeconds
+        case .noSpeech: .infinity
+        }
+        return stable && silence >= requiredSilence
+            ? .finalize(endpointClass)
+            : .continueListening(endpointClass)
+    }
+
+    private func evidenceCandidates(_ evidence: VoiceRecognitionEvidence?) -> [String] {
+        guard let evidence else { return [] }
+        return [evidence.primaryTranscript]
+            + evidence.alternativeTranscripts
+            + evidence.segmentAlternativeTranscripts
+            + evidence.partialTranscriptHistory.suffix(4)
+    }
+}
+
 /// Converts Apple's segment-scoped alternatives into bounded whole-command
 /// hypotheses. It only substitutes text returned by Speech at Apple's exact
 /// UTF-16 range; it never invents a word or an entity mapping.
@@ -1187,6 +1281,20 @@ final class VoiceSpeechActivityTracker: @unchecked Sendable {
         guard let lastVoiceUptime else { return false }
         return ProcessInfo.processInfo.systemUptime - lastVoiceUptime <= interval
     }
+
+    func secondsSinceLastVoice(now: TimeInterval = ProcessInfo.processInfo.systemUptime) -> TimeInterval? {
+        lock.lock()
+        let value = lastVoiceUptime
+        lock.unlock()
+        return value.map { max(0, now - $0) }
+    }
+
+    func lastVoiceActivityUptime() -> TimeInterval? {
+        lock.lock()
+        let value = lastVoiceUptime
+        lock.unlock()
+        return value
+    }
 }
 
 
@@ -1544,6 +1652,7 @@ final class VoiceInputController: VoiceInputControlling {
     private var activeSessionID: UUID?
     private let speechActivity = VoiceSpeechActivityTracker()
     private let silenceWindowSeconds: TimeInterval
+    private let endpointPolicy: VoiceUtteranceEndpointPolicy
     private var isFinalizingRecognition = false
     @ObservationIgnored private var audioEvents: AudioSessionEventMonitor?
     @ObservationIgnored private var eventHandler: (@MainActor @Sendable (VoiceInputEvent) -> Void)?
@@ -1557,6 +1666,10 @@ final class VoiceInputController: VoiceInputControlling {
     @ObservationIgnored private var activeContextualVocabulary: [String] = []
     @ObservationIgnored private var cloudFinalizationTask: Task<Void, Never>?
     @ObservationIgnored private var cloudSilenceMonitorTask: Task<Void, Never>?
+    @ObservationIgnored private var lastTranscriptMutationUptime = ProcessInfo.processInfo.systemUptime
+    @ObservationIgnored private var appleRecognitionTerminatedEarly = false
+    @ObservationIgnored private var appleTerminationUptime: TimeInterval?
+    @ObservationIgnored private var speechResumedAfterAppleTermination = false
 
     init(
         captureBackend: (any VoiceAudioCaptureBackend)? = nil,
@@ -1578,6 +1691,7 @@ final class VoiceInputController: VoiceInputControlling {
         let components = endOfSpeechDelay.components
         silenceWindowSeconds = min(1.2, max(0.55,
             Double(components.seconds) + Double(components.attoseconds) / 1_000_000_000_000_000_000))
+        endpointPolicy = VoiceUtteranceEndpointPolicy(baseSilenceSeconds: silenceWindowSeconds)
         audioEvents = AudioSessionEventMonitor(
             onInterruption: { [weak self] in self?.handleAudioInterruptionBegan() },
             onRouteChange: { [weak self] evidence in self?.handleAudioRouteChanged(evidence) })
@@ -1596,6 +1710,10 @@ final class VoiceInputController: VoiceInputControlling {
         finalResultCount = 0
         isFinalizingRecognition = false
         speechActivity.reset()
+        lastTranscriptMutationUptime = ProcessInfo.processInfo.systemUptime
+        appleRecognitionTerminatedEarly = false
+        appleTerminationUptime = nil
+        speechResumedAfterAppleTermination = false
         LocalVoiceDiagnosticReport.shared.record("VOICE_SESSION_CREATED", "voice_session_id=\(sessionID.uuidString.lowercased())")
         LocalVoiceDiagnosticReport.shared.record("SOURCE", "source=voice")
         LocalVoiceDiagnosticReport.shared.record("mic_tap", "source=home")
@@ -1781,6 +1899,9 @@ final class VoiceInputController: VoiceInputControlling {
                 : nil
             let deliveredTranscript = stabilized?.text ?? VoiceTranscriptStabilizer.normalizedForDisplay(transcript)
             if deliverAsFinal { stabilizedAppleFinal = deliveredTranscript }
+            if deliveredTranscript != self.transcript {
+                lastTranscriptMutationUptime = ProcessInfo.processInfo.systemUptime
+            }
             self.transcript = deliveredTranscript
             // Persist the recognizer's final evidence before handing it to the
             // semantic pipeline. If downstream parsing terminates the process,
@@ -1806,14 +1927,41 @@ final class VoiceInputController: VoiceInputControlling {
             LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_ui", "length=\(deliveredTranscript.count) final=false")
         }
         if hasError {
-            LocalVoiceDiagnosticReport.shared.record("apple_recognition_failed", "cloud_primary_continues=true")
-            finalizeAuthoritativeTranscript(sessionID: sessionID, appleFallback: self.transcript)
+            LocalVoiceDiagnosticReport.shared.record("apple_recognition_failed", "raw_capture_continues=true")
+            retireAppleRecognitionBeforeEndpoint(reason: "error", requiresCloudRecovery: true)
         }
         else if isFinal {
             LocalVoiceDiagnosticReport.shared.record("recognition_task_finished", "reason=final_result")
             let appleFinal = stabilizedAppleFinal ?? transcript.map(VoiceTranscriptStabilizer.normalizedForDisplay) ?? self.transcript
-            finalizeAuthoritativeTranscript(sessionID: sessionID, appleFallback: appleFinal)
+            if appleFinal != self.transcript {
+                self.transcript = appleFinal
+                lastTranscriptMutationUptime = ProcessInfo.processInfo.systemUptime
+            }
+            let endpointClass = endpointPolicy.classify(
+                transcript: appleFinal,
+                assessment: VoiceDeterministicCommandAssessment(text: appleFinal),
+                evidence: latestRecognitionEvidence
+            )
+            retireAppleRecognitionBeforeEndpoint(
+                reason: "final_result",
+                requiresCloudRecovery: endpointClass != .closedAtomic
+            )
         }
+    }
+
+    private func retireAppleRecognitionBeforeEndpoint(reason: String, requiresCloudRecovery: Bool) {
+        guard request != nil || task != nil || requestSink != nil else { return }
+        appleRecognitionTerminatedEarly = appleRecognitionTerminatedEarly || requiresCloudRecovery
+        appleTerminationUptime = ProcessInfo.processInfo.systemUptime
+        requestSink?.deactivate()
+        requestSink = nil
+        request?.endAudio()
+        request = nil
+        task = nil
+        LocalVoiceDiagnosticReport.shared.record(
+            "apple_recognition_retired_before_endpoint",
+            "reason=\(reason) raw_capture_alive=true"
+        )
     }
 
     private func finalizeAuthoritativeTranscript(sessionID: UUID, appleFallback: String) {
@@ -1827,7 +1975,7 @@ final class VoiceInputController: VoiceInputControlling {
         let audioURL = LocalVoiceDiagnosticReport.shared.finishCommandAudioRecording(reason: .recognitionFinal)
         let localAssessment = VoiceDeterministicCommandAssessment(text: appleFallback)
         if localAssessment.isResolvedDeterministic,
-           !hasMissingCriticalRole(localAssessment, evidence: latestRecognitionEvidence),
+           !requiresCloudRecovery(localAssessment, evidence: latestRecognitionEvidence),
            let final = VoiceAuthoritativeTranscriptSelector.select(groq: nil, appleFallback: appleFallback) {
             LocalVoiceDiagnosticReport.shared.record(
                 "deterministic_voice_fast_path",
@@ -1897,6 +2045,25 @@ final class VoiceInputController: VoiceInputControlling {
         }
     }
 
+    private func requiresCloudRecovery(
+        _ assessment: VoiceDeterministicCommandAssessment,
+        evidence: VoiceRecognitionEvidence?
+    ) -> Bool {
+        if appleRecognitionTerminatedEarly || speechResumedAfterAppleTermination { return true }
+        if hasMissingCriticalRole(assessment, evidence: evidence) { return true }
+        if assessment.command.intent == .messageCompose {
+            let hasBody = assessment.command.entities["message_body"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            let hasExplicitChannel = assessment.channel != nil ||
+                CanonicalSpeechEntityRegistry.communicationChannel(in: assessment.command.originalText) != nil
+            if !hasBody && !hasExplicitChannel { return true }
+        }
+        if let confidence = evidence?.averageSegmentConfidence, confidence < 0.5,
+           assessment.application != nil || assessment.channel != nil || assessment.command.constraints.brand != nil {
+            return true
+        }
+        return false
+    }
+
     private func commit(_ final: FinalVoiceTranscript, sessionID: UUID) {
         guard owns(sessionID) else { return }
         transcript = final.text
@@ -1928,16 +2095,36 @@ final class VoiceInputController: VoiceInputControlling {
     private func startCloudSilenceMonitor(sessionID: UUID) {
         cloudSilenceMonitorTask?.cancel()
         let speechActivity = speechActivity
-        let silenceWindowSeconds = silenceWindowSeconds
         cloudSilenceMonitorTask = Task { @MainActor [weak self] in
             let started = ContinuousClock.now
             var voiceDetected = false
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(100))
                 guard !Task.isCancelled, let self, self.owns(sessionID), self.state == .listening else { return }
-                if speechActivity.hasRecentVoiceActivity(within: silenceWindowSeconds) { voiceDetected = true }
+                let now = ProcessInfo.processInfo.systemUptime
+                if let lastVoice = speechActivity.lastVoiceActivityUptime() {
+                    voiceDetected = true
+                    if let appleTerminationUptime = self.appleTerminationUptime,
+                       lastVoice > appleTerminationUptime {
+                        self.speechResumedAfterAppleTermination = true
+                    }
+                }
                 let elapsed = started.duration(to: .now)
-                if (voiceDetected && !speechActivity.hasRecentVoiceActivity(within: silenceWindowSeconds)) || elapsed >= .seconds(45) {
+                guard voiceDetected || elapsed >= .seconds(45) else { continue }
+                let assessment = self.transcript.isEmpty ? nil : VoiceDeterministicCommandAssessment(text: self.transcript)
+                let decision = self.endpointPolicy.decide(
+                    transcript: self.transcript,
+                    assessment: assessment,
+                    evidence: self.latestRecognitionEvidence,
+                    secondsSinceVoice: speechActivity.secondsSinceLastVoice(now: now),
+                    secondsSinceTranscriptMutation: max(0, now - self.lastTranscriptMutationUptime),
+                    hardLimitReached: elapsed >= .seconds(45)
+                )
+                if case let .finalize(endpointClass) = decision {
+                    LocalVoiceDiagnosticReport.shared.record(
+                        "voice_endpoint_confirmed",
+                        "class=\(endpointClass.rawValue) apple_terminated_early=\(self.appleRecognitionTerminatedEarly) resumed_after_apple=\(self.speechResumedAfterAppleTermination)"
+                    )
                     self.finalizeAuthoritativeTranscript(sessionID: sessionID, appleFallback: self.transcript)
                     return
                 }

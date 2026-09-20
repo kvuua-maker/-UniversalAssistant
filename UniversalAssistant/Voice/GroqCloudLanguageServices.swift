@@ -115,6 +115,7 @@ struct VoiceDeterministicCommandAssessment: Sendable {
         if application != nil { value += 45 }
         if channel != nil { value += 45 }
         if command.constraints.brand != nil { value += 30 }
+        value += Self.canonicalExplicitEntityCount(in: text) * 25
         if command.entities["explicit_location"] == "true" { value += 20 }
         if command.entities["contact"] != nil || command.entities["recipient"] != nil { value += 15 }
         value += min(20, text.split(whereSeparator: \.isWhitespace).count)
@@ -148,6 +149,28 @@ struct VoiceDeterministicCommandAssessment: Sendable {
         let tokens = text.lowercased().split { !$0.isLetter }.map(String.init)
         return tokens.contains(where: { ["через", "via", "using"].contains($0) }) ||
             CanonicalSpeechEntityRegistry.communicationChannel(in: text) != nil
+    }
+
+    /// Scores only canonical names/aliases that are actually present in this
+    /// transcript. It never promotes acoustic context fragments into entities.
+    private static func canonicalExplicitEntityCount(in text: String) -> Int {
+        let normalized = " " + comparablePhrase(text) + " "
+        return CanonicalCatalogEntityRegistry.candidates.reduce(into: 0) { count, candidate in
+            let evidence = candidate.aliases.union([candidate.displayName])
+            if evidence.contains(where: {
+                let alias = comparablePhrase($0)
+                return !alias.isEmpty && normalized.contains(" \(alias) ")
+            }) {
+                count += 1
+            }
+        }
+    }
+
+    private static func comparablePhrase(_ value: String) -> String {
+        value.split { !$0.isLetter && !$0.isNumber }
+            .map { CanonicalMorphology.comparableText(String($0)) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
     }
 
     private static func hasTemporalRole(_ command: StructuredCommand) -> Bool {

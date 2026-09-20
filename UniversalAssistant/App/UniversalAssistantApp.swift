@@ -56,6 +56,7 @@ enum ProductionAssistantComposition {
             commandEngine: languageUnderstanding, weatherExecutor: weather,
             genericDiscovery: productionGenericDiscovery,
             semanticCommandResolver: genericDiscovery == nil ? GroqSemanticCommandResolver() : nil,
+            contacts: contacts,
             eventKitExecutor: eventKit,
             capabilityExecutor: executor,
             configuredRestaurantReservationProviderIDs: Set(restaurantProviders.map(\.providerID)),

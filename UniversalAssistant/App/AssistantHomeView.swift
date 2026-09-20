@@ -181,10 +181,7 @@ struct AssistantHomeView: View {
     }
 
     private var showsOrb: Bool {
-        switch model.resultState {
-        case .idle, .processing, .recognized: true
-        default: false
-        }
+        model.isVoiceOrbAvailable
     }
 }
 

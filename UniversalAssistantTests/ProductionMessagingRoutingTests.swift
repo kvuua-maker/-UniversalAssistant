@@ -8,6 +8,10 @@ private actor MessageContactResolverStub: ContactResolving {
     func requestAccessIfNeeded() async throws {}
     func resolve(name: String) async throws -> ContactResolution { resolution }
     func resolve(exactIdentifier identifier: String) async throws -> ContactResolution { resolution }
+    func contextualVocabulary(limit: Int) async -> [String] {
+        guard case let .resolved(value) = resolution else { return [] }
+        return Array(([value.displayName] + value.aliases).prefix(limit))
+    }
 }
 
 @Suite("Production messaging routing")
@@ -41,6 +45,92 @@ struct ProductionMessagingRoutingTests {
             Issue.record("Expected WhatsApp handoff"); return
         }
         #expect(result.destination.absoluteString == "https://wa.me/380671112233")
+    }
+
+    @Test func whatsAppFreeWordOrderPreservesExactContactAndBody() async throws {
+        let mother = ContactCandidate(
+            identifier: "mother", displayName: "Мама",
+            phoneNumbers: ["+380 67 111 22 33"], aliases: ["мама", "мамі"]
+        )
+        let executor = ProductionCanonicalCapabilityExecutor(
+            contacts: MessageContactResolverStub(.resolved(mother)), personalSearchSources: []
+        )
+        let roles = CanonicalMessageRoleAnalyzer.analyzeContactAware(
+            "У WhatsApp напиши мамі привіт",
+            explicitService: "whatsapp",
+            contactVocabulary: ["мама", "мамі"]
+        )
+        let command = StructuredCommand(
+            originalText: "У WhatsApp напиши мамі привіт",
+            normalizedText: "у whatsapp напиши мамі привіт",
+            language: .uk,
+            intent: .messageCompose,
+            entities: [
+                "message_service": "whatsapp",
+                "recipient": roles?.recipient ?? "",
+                "message_body": roles?.body ?? ""
+            ]
+        )
+        guard case let .handoff(result) = try await executor.execute(command) else {
+            Issue.record("Expected WhatsApp handoff"); return
+        }
+        #expect(result.destination.host == "wa.me")
+        #expect(result.destination.path.contains("380671112233"))
+        #expect(URLComponents(url: result.destination, resolvingAgainstBaseURL: false)?
+            .queryItems?.first(where: { $0.name == "text" })?.value == "привіт")
+    }
+
+    @Test func viberRecipientUsesVerifiedForwardChooserWithoutEncodingContact() async throws {
+        let mother = ContactCandidate(
+            identifier: "mother", displayName: "Мама",
+            phoneNumbers: ["+380 67 111 22 33"], aliases: ["мама", "мамі"]
+        )
+        let executor = ProductionCanonicalCapabilityExecutor(
+            contacts: MessageContactResolverStub(.resolved(mother)), personalSearchSources: []
+        )
+        let command = StructuredCommand(
+            originalText: "Напиши мамі повідомлення у Viber, я буду пізніше",
+            normalizedText: "напиши мамі повідомлення у viber я буду пізніше",
+            language: .uk,
+            intent: .messageCompose,
+            entities: [
+                "message_service": "viber",
+                "recipient": "мамі",
+                "message_body": "я буду пізніше"
+            ]
+        )
+        guard case let .handoff(result) = try await executor.execute(command) else {
+            Issue.record("Expected Viber forward handoff"); return
+        }
+        #expect(result.destination.scheme == "viber")
+        #expect(result.destination.host == "forward")
+        #expect(!result.destination.absoluteString.contains("380"))
+        #expect(result.requiresExplicitUserActivation)
+        #expect(result.query.contains("Мама"))
+        #expect(URLComponents(url: result.destination, resolvingAgainstBaseURL: false)?
+            .queryItems?.first(where: { $0.name == "text" })?.value == "я буду пізніше")
+    }
+
+    @Test func viberAmbiguousContactClarifiesBeforeAnyHandoff() async {
+        let values = [
+            ContactCandidate(identifier: "home", displayName: "Мама", phoneNumbers: ["1111111"]),
+            ContactCandidate(identifier: "work", displayName: "Мама", phoneNumbers: ["2222222"])
+        ]
+        let executor = ProductionCanonicalCapabilityExecutor(
+            contacts: MessageContactResolverStub(.ambiguous(values)), personalSearchSources: []
+        )
+        let command = StructuredCommand(
+            originalText: "Напиши мамі у Viber привіт",
+            normalizedText: "напиши мамі у viber привіт",
+            language: .uk, intent: .messageCompose,
+            entities: ["message_service": "viber", "recipient": "мамі", "message_body": "привіт"]
+        )
+        do {
+            _ = try await executor.execute(command)
+            Issue.record("Expected contact clarification")
+        } catch let CanonicalCapabilityExecutionError.ambiguousContacts(choices) {
+            #expect(choices.count == 2)
+        } catch { Issue.record("Unexpected error: \(error)") }
     }
 
     @Test func explicitEmailResolvesTheSameContactDomainAndPopulatesRecipient() async throws {

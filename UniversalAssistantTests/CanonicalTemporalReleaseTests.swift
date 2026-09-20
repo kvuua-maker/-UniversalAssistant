@@ -180,14 +180,20 @@ struct Build31TemporalReleaseTests {
         #expect({ if case .webHandoff = model.resultState { return false }; return true }())
         #expect(model.statusText != AppText.value("processing"))
 
-        model.input = "Розділи дев'яносто шість на вісім, потім результат додай до п'яти"
-        model.submit()
-        try await wait { if case .deterministic = model.resultState { return true }; return false }
-        guard case let .deterministic(arithmeticResult) = model.resultState else {
+        // A pending clarification now owns the next reply. Use an independent
+        // request corridor to prove arithmetic routing rather than treating an
+        // unrelated intent jump as an answer to the alarm clarification.
+        let arithmeticModel = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60)
+        )
+        arithmeticModel.input = "Розділи дев'яносто шість на вісім, потім результат додай до п'яти"
+        arithmeticModel.submit()
+        try await wait { if case .deterministic = arithmeticModel.resultState { return true }; return false }
+        guard case let .deterministic(arithmeticResult) = arithmeticModel.resultState else {
             Issue.record("Compound arithmetic did not reach the local Release executor")
             return
         }
         #expect(arithmeticResult.primaryAnswer == "17")
-        #expect({ if case .webHandoff = model.resultState { return false }; return true }())
+        #expect({ if case .webHandoff = arithmeticModel.resultState { return false }; return true }())
     }
 }

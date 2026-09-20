@@ -293,9 +293,14 @@ actor LocalContactResolver: ContactResolving {
         }
         do {
             let values = try await query.accessibleContacts(limit: min(limit, 100), timeout: .seconds(1))
-            let names = values.map(\.displayName).filter { !$0.isEmpty }
+            var seen: Set<String> = []
+            let names = values.flatMap { [$0.displayName] + $0.aliases }.filter { value in
+                let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return false }
+                return seen.insert(CanonicalMorphology.comparableText(trimmed)).inserted
+            }.prefix(limit)
             LocalVoiceDiagnosticReport.shared.record("contacts_context_vocabulary", "count=\(names.count)")
-            return names
+            return Array(names)
         } catch {
             LocalVoiceDiagnosticReport.shared.record("contacts_context_vocabulary", "count=0 status=unavailable")
             return []

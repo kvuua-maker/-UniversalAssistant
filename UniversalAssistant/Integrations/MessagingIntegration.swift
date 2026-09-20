@@ -29,7 +29,7 @@ struct MessengerHandoffPlanner: Sendable {
         .init(messenger: .telegram, supported: [.openChat, .compose, .deepLink], userConfirmationRequired: true,
               limitation: "Public username/share links; no consumer history access or silent send."),
         .init(messenger: .viber, supported: [.compose, .deepLink], userConfirmationRequired: true,
-              limitation: "Public share handoff; no consumer history access or silent send."),
+              limitation: "Verified consumer viber://forward share chooser only; no public direct personal-contact addressing, history access, or silent send."),
         .init(messenger: .signal, supported: [], userConfirmationRequired: true,
               limitation: "No verified public consumer automation contract is claimed; use system share/compose when user selects Signal.")
     ]

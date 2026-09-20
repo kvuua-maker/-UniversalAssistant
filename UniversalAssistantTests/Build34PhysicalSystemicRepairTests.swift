@@ -182,6 +182,7 @@ struct Build34PhysicalSystemicSemanticTests {
         #expect(library.lastCriteria()?.dateRange != nil)
 
         let place = parser.parse("Покажи фото з Чернівців")
+        #expect(place.intent == .photoSearch, Comment(rawValue: String(describing: place)))
         #expect(place.entities["photo_query_kind"] == "metadata")
         #expect(place.entities["photo_location_query"] == "Чернівців")
         _ = try await executor.execute(place)

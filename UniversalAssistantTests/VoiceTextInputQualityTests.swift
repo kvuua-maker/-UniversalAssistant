@@ -10,6 +10,103 @@ struct VoiceTextInputQualityTests {
         #expect(model.voiceInputEngineIdentifier == "apple-speech-fast-path+groq-whisper-large-v3-recovery")
     }
 
+    @Test func extendableMessageSurvivesNaturalNineHundredMillisecondPause() {
+        let policy = VoiceUtteranceEndpointPolicy()
+        let assessment = VoiceDeterministicCommandAssessment(text: "Напиши мамі")
+        #expect(policy.classify(transcript: "Напиши мамі", assessment: assessment, evidence: nil) == .extendable)
+        #expect(policy.decide(
+            transcript: "Напиши мамі",
+            assessment: assessment,
+            evidence: nil,
+            secondsSinceVoice: 0.9,
+            secondsSinceTranscriptMutation: 0.9
+        ) == .continueListening(.extendable))
+        #expect(policy.decide(
+            transcript: "Напиши мамі",
+            assessment: assessment,
+            evidence: nil,
+            secondsSinceVoice: 2.2,
+            secondsSinceTranscriptMutation: 2.2
+        ) == .finalize(.extendable))
+    }
+
+    @Test func atomicAppOpenKeepsBaseFastEndpoint() {
+        let policy = VoiceUtteranceEndpointPolicy()
+        for text in ["Відкрий камеру", "Відкрий Telegram"] {
+            let assessment = VoiceDeterministicCommandAssessment(text: text)
+            #expect(policy.classify(transcript: text, assessment: assessment, evidence: nil) == .closedAtomic)
+            #expect(policy.decide(
+                transcript: text,
+                assessment: assessment,
+                evidence: nil,
+                secondsSinceVoice: 0.9,
+                secondsSinceTranscriptMutation: 0.9
+            ) == .finalize(.closedAtomic))
+        }
+    }
+
+    @Test func incompleteAppPrefixCannotFinalizeAtBaseSilence() {
+        let policy = VoiceUtteranceEndpointPolicy()
+        let assessment = VoiceDeterministicCommandAssessment(text: "Відкрий")
+        #expect(policy.decide(
+            transcript: "Відкрий",
+            assessment: assessment,
+            evidence: nil,
+            secondsSinceVoice: 0.9,
+            secondsSinceTranscriptMutation: 0.9
+        ) == .continueListening(.incompleteCritical))
+    }
+
+    @Test func authoritativeTranscriptUsesRealCloudEntityEvidenceWithoutUnsafeAlias() {
+        let telegram = VoiceAuthoritativeTranscriptSelector.select(
+            groq: "Напиши мамі у Telegram що я запізнюся",
+            appleFallback: "Напиши мамі"
+        )
+        #expect(telegram?.text.contains("Telegram") == true)
+        #expect(telegram?.source == .groq)
+
+        let karabas = VoiceAuthoritativeTranscriptSelector.select(
+            groq: "Знайди квитки KARABAS у Львові",
+            appleFallback: "Знайди квитки Каба у Львові"
+        )
+        #expect(karabas?.text.contains("KARABAS") == true)
+        let unsupportedNoise = VoiceAuthoritativeTranscriptSelector.select(groq: nil, appleFallback: "Каба")
+        #expect(unsupportedNoise?.text == "Каба")
+    }
+
+    @Test("Contact-aware free word order", arguments: [
+        ("Напиши мамі привіт у WhatsApp", "привіт"),
+        ("Напиши привіт мамі у WhatsApp", "привіт"),
+        ("Напиши повідомлення Привіт мамі у WhatsApp", "Привіт"),
+        ("У WhatsApp напиши мамі привіт", "привіт")
+    ])
+    func contactAwareRoleGrammarSeparatesRecipientBodyAndService(_ text: String, _ body: String) {
+        let roles = CanonicalMessageRoleAnalyzer.analyzeContactAware(
+            text,
+            explicitService: "whatsapp",
+            contactVocabulary: ["мама"]
+        )
+        #expect(roles?.recipient?.lowercased() == "мамі")
+        #expect(roles?.body == body)
+        #expect(roles?.ambiguousRecipients.isEmpty == true)
+    }
+
+    @Test func contactAwareColonAndContentBoundaryRemainCompatible() {
+        let colon = CanonicalMessageRoleAnalyzer.analyzeContactAware(
+            "Напиши мамі повідомлення: привіт",
+            contactVocabulary: ["мама"]
+        )
+        #expect(colon?.recipient == "мамі")
+        #expect(colon?.body == "привіт")
+        let content = CanonicalMessageRoleAnalyzer.analyzeContactAware(
+            "Напиши мамі у WhatsApp, що я буду пізніше",
+            explicitService: "whatsapp",
+            contactVocabulary: ["мама"]
+        )
+        #expect(content?.recipient == "мамі")
+        #expect(content?.body == "я буду пізніше")
+    }
+
     @Test func speechRequestUsesSupportedQualityConfiguration() {
         let request = SFSpeechAudioBufferRecognitionRequest()
         let configuration = VoiceRecognitionRequestConfiguration(additionalVocabulary: ["Test Entity", "Test Entity", "Three word entity"])

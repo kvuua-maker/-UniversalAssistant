@@ -26,7 +26,9 @@ struct CompactResultCard: View {
             WeatherResultCard(snapshot: snapshot, onReportIssue: onReportIssue)
         case .webHandoff(let result):
             VStack(alignment: .leading, spacing: 10) {
-                if result.kind != .system { Text(result.query).font(.subheadline).foregroundStyle(.secondary).lineLimit(3) }
+                if result.kind != .system || result.requiresExplicitUserActivation {
+                    Text(result.query).font(.subheadline).foregroundStyle(.secondary).lineLimit(4)
+                }
                 Link(handoffAction(result.kind), destination: result.destination).buttonStyle(.borderedProminent)
                     .accessibilityIdentifier("assistant.web-search.open")
             }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))

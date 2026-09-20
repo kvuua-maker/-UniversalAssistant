@@ -3,6 +3,40 @@ import Testing
 @testable import UniversalAssistant
 
 @MainActor
+private final class ResultStateVoiceStub: VoiceInputControlling {
+    let engineIdentifier = "result-state-voice-stub"
+    var state: VoiceInputState
+    var transcript = ""
+    init(state: VoiceInputState = .idle) { self.state = state }
+    func start(locale: Locale) async { state = .listening }
+    func stop(reason: VoiceStopReason) { state = .idle }
+    func setEventHandler(_ handler: @escaping @MainActor @Sendable (VoiceInputEvent) -> Void) {}
+}
+
+@MainActor
+private final class ContinuationExecutorStub: CanonicalCapabilityExecuting {
+    private(set) var commands: [StructuredCommand] = []
+    func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        commands.append(command)
+        return .result(try DeterministicResultComposer().compose(primaryAnswer: "completed", facts: []))
+    }
+}
+
+@MainActor
+private final class SelectionExecutorStub: CanonicalCapabilityExecuting {
+    private(set) var commands: [StructuredCommand] = []
+    private let choices = [
+        ContactCandidate(identifier: "one", displayName: "Олена", phoneNumbers: ["1111111"]),
+        ContactCandidate(identifier: "two", displayName: "Олена Робота", phoneNumbers: ["2222222"])
+    ]
+    func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        commands.append(command)
+        if commands.count == 1 { throw CanonicalCapabilityExecutionError.ambiguousContacts(choices) }
+        return .result(try DeterministicResultComposer().compose(primaryAnswer: "completed", facts: []))
+    }
+}
+
+@MainActor
 struct AssistantResultStateTests {
     @Test func parserOnlyCommandDoesNotMasqueradeAsSuccessfulExecution() async throws {
         let model = AssistantViewModel()
@@ -60,6 +94,53 @@ struct AssistantResultStateTests {
         let summary = ResultSummary(request: "Trip options", intent: .travelPlan, risk: .informational)
         model.presentExpanded(summary)
         #expect(model.resultState == .expanded(summary))
+    }
+
+    @Test func voiceOrbRemainsAvailableAcrossInteractiveAndResultStates() {
+        let voice = ResultStateVoiceStub()
+        let model = AssistantViewModel(voiceInput: voice)
+        #expect(model.isVoiceOrbAvailable)
+        model.beginProcessing()
+        #expect(model.isVoiceOrbAvailable)
+        model.requireAction(prompt: "Оберіть", choices: ["A", "B"])
+        #expect(model.isVoiceOrbAvailable)
+        model.presentFailure(message: "Помилка", recoveryAction: "Повторіть")
+        #expect(model.isVoiceOrbAvailable)
+        model.presentExpanded(.init(request: "result", intent: .help, risk: .informational))
+        #expect(model.isVoiceOrbAvailable)
+        voice.state = .denied
+        #expect(!model.isVoiceOrbAvailable)
+    }
+
+    @Test func clarificationReplyCompletesOriginalCommandBeforeSingleExecution() async throws {
+        let executor = ContinuationExecutorStub()
+        let model = AssistantViewModel(capabilityExecutor: executor)
+        model.input = "Відкрий"
+        model.submit()
+        try await waitUntil { if case .clarification = model.resultState { true } else { false } }
+        #expect(executor.commands.isEmpty)
+
+        model.input = "Spotify"
+        model.submit()
+        try await waitUntil { executor.commands.count == 1 }
+        #expect(executor.commands.count == 1)
+        #expect(executor.commands.first?.id != nil)
+        #expect(executor.commands.first?.intent == .open)
+        #expect(executor.commands.first?.originalText.contains("Spotify") == true)
+    }
+
+    @Test func spokenExistingChoiceUsesSameSelectionBinderWithoutNewIntent() async throws {
+        let executor = SelectionExecutorStub()
+        let model = AssistantViewModel(capabilityExecutor: executor)
+        model.input = "Покажи контакт Олена"
+        model.submit()
+        try await waitUntil { if case .actionRequired = model.resultState { true } else { false } }
+        model.input = "Олена Робота"
+        model.submit()
+        try await waitUntil { executor.commands.count == 2 }
+        #expect(executor.commands.count == 2)
+        #expect(executor.commands[1].intent == executor.commands[0].intent)
+        #expect(executor.commands[1].entities["contact_identifier"] == "two")
     }
 
     @Test func novelInformationalWordingUsesTypedWebHandoffInsteadOfAcknowledgement() async throws {
