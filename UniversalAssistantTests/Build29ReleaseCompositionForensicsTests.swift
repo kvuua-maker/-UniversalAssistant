@@ -510,10 +510,10 @@ struct Build29ReleaseRootLocationRouteTests {
         let model = model { opened.append($0) }
         model.input = "Яка клініка розташована найближче до мене?"
         model.submit()
-        for _ in 0..<100 { if case .placeResults = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
-        guard case let .placeResults(nearbyPlaces) = model.resultState else { Issue.record("Nearby did not reach internal place results"); return }
-        #expect(nearbyPlaces.first?.id == "near")
-        #expect(opened.isEmpty)
+        for _ in 0..<100 { if !opened.isEmpty { break }; try await Task.sleep(for: .milliseconds(10)) }
+        #expect(opened.first?.host == "www.google.com")
+        #expect(opened.first?.path == "/maps/search")
+        opened.removeAll()
 
         model.input = "Визнач моє теперішнє місцезнаходження"
         model.submit()
@@ -571,16 +571,10 @@ struct Build29ReleaseRootLocationRouteTests {
         ], opened: { opened.append($0) })
         model.input = "Хотілося б випити теплого напою десь поряд"
         model.submit()
-        for _ in 0..<100 {
-            if case .placeResults = model.resultState { break }
-            try await Task.sleep(for: .milliseconds(10))
-        }
-        guard case let .placeResults(nearby) = model.resultState else {
-            Issue.record("Indirect nearby proposition did not return internal places")
-            return
-        }
-        #expect(nearby.first?.id == "near")
-        #expect(opened.isEmpty)
+        for _ in 0..<100 { if !opened.isEmpty { break }; try await Task.sleep(for: .milliseconds(10)) }
+        #expect(opened.first?.host == "www.google.com")
+        #expect(opened.first?.path == "/maps/search")
+        opened.removeAll()
 
         model.input = "Мені необхідно потрапити до виставкового павільйону"
         model.submit()
@@ -1135,16 +1129,18 @@ struct Build29ReleaseRemainingGapTests {
     }
 
     @Test func semanticPhotoUsesConfidenceAndFailsClosedThroughReleaseRoot() async throws {
-        let asset = PhotoAssetReference(localIdentifier: "document-photo", creationDate: .now, coordinate: nil, album: nil)
-        let library = Build29PhotoLibraryBoundary(assets: [asset])
-        let strong = ProductionAssistantComposition.makeModel(photos: library, photoSemanticLoader: Build29PhotoLoaderBoundary(), photoSemanticLabeler: Build29PhotoLabelBoundary(confidence: 0.92), personalSearchSources: [], compactResultDuration: .seconds(60))
+        let strongAsset = PhotoAssetReference(localIdentifier: "document-photo-strong", creationDate: .now, coordinate: nil, album: nil)
+        let weakAsset = PhotoAssetReference(localIdentifier: "document-photo-weak", creationDate: .now, coordinate: nil, album: nil)
+        let strongLibrary = Build29PhotoLibraryBoundary(assets: [strongAsset])
+        let weakLibrary = Build29PhotoLibraryBoundary(assets: [weakAsset])
+        let strong = ProductionAssistantComposition.makeModel(photos: strongLibrary, photoSemanticLoader: Build29PhotoLoaderBoundary(), photoSemanticLabeler: Build29PhotoLabelBoundary(confidence: 0.92), personalSearchSources: [], compactResultDuration: .seconds(60))
         strong.input = "Знайди у моїх знімках паперовий документ"
         strong.submit()
         try await wait { if case .deterministic = strong.resultState { return true }; return false }
         guard case let .deterministic(result) = strong.resultState else { return }
-        #expect(result.actions.first?.id == "photos:document-photo")
+        #expect(result.actions.first?.id == "photos:document-photo-strong")
 
-        let weak = ProductionAssistantComposition.makeModel(photos: library, photoSemanticLoader: Build29PhotoLoaderBoundary(), photoSemanticLabeler: Build29PhotoLabelBoundary(confidence: 0.31), personalSearchSources: [], compactResultDuration: .seconds(60))
+        let weak = ProductionAssistantComposition.makeModel(photos: weakLibrary, photoSemanticLoader: Build29PhotoLoaderBoundary(), photoSemanticLabeler: Build29PhotoLabelBoundary(confidence: 0.31), personalSearchSources: [], compactResultDuration: .seconds(60))
         weak.input = "Знайди у фото паперовий документ"
         weak.submit()
         try await wait { weak.capabilityPresentation == .photoLibrary }
@@ -1152,7 +1148,7 @@ struct Build29ReleaseRemainingGapTests {
 
         // A content-bearing SHOW formulation must use semantic classification;
         // it may not silently fall back to the latest private asset.
-        let weakShow = ProductionAssistantComposition.makeModel(photos: library, photoSemanticLoader: Build29PhotoLoaderBoundary(), photoSemanticLabeler: Build29PhotoLabelBoundary(confidence: 0.31), personalSearchSources: [], compactResultDuration: .seconds(60))
+        let weakShow = ProductionAssistantComposition.makeModel(photos: weakLibrary, photoSemanticLoader: Build29PhotoLoaderBoundary(), photoSemanticLabeler: Build29PhotoLabelBoundary(confidence: 0.31), personalSearchSources: [], compactResultDuration: .seconds(60))
         weakShow.input = "Покажи серед світлин паперовий документ"
         weakShow.submit()
         try await wait { weakShow.capabilityPresentation == .photoLibrary }

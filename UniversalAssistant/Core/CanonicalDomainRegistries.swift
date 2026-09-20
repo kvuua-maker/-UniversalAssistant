@@ -104,6 +104,8 @@ struct CanonicalProductCategoryDescriptor: Sendable {
 enum CanonicalProductCategoryRegistry {
     static let records: [CanonicalProductCategoryDescriptor] = [
         record("sneakers", "кросівки", ["кросівки", "кросовки", "sneakers", "trainers"]),
+        record("slippers", "домашні тапочки", ["тапочки", "капці", "шльопанці", "slippers", "house shoes"]),
+        record("boots", "черевики", ["черевики", "ботинки", "чоботи", "boots"]),
         record("shoes", "взуття", ["взуття", "обувь", "shoes"]),
         record("shirt", "сорочка", ["сорочка", "рубашка", "shirt"]),
         record("tshirt", "футболка", ["футболка", "t shirt", "t-shirt"]),
@@ -118,7 +120,16 @@ enum CanonicalProductCategoryRegistry {
         record("phone", "телефон", ["смартфон", "телефон", "phone", "smartphone"]),
         record("laptop", "ноутбук", ["ноутбук", "laptop"]),
         record("furniture", "меблі", ["меблі", "мебель", "furniture"]),
-        record("groceries", "продукти", ["продукти", "їжа", "groceries", "food"])
+        record("groceries", "продукти", ["продукти", "їжа", "groceries", "food"]),
+        record("cheese", "сир", ["сир", "cheese"]),
+        record("oil", "олія", ["олія", "масло", "oil", "olive oil", "оливкова олія"]),
+        record("milk", "молоко", ["молоко", "milk"]),
+        record("yogurt", "йогурт", ["йогурт", "yogurt"]),
+        record("beverage", "напої", ["напій", "напої", "beverage", "drink"]),
+        record("pasta", "макарони", ["макарони", "паста", "pasta"]),
+        record("cereal", "крупи", ["крупа", "крупи", "cereal", "grain"]),
+        record("canned", "консерви", ["консерви", "canned food"]),
+        record("snack", "снеки", ["снек", "снеки", "snack", "chips"])
     ]
 
     static func match(in text: String) -> CanonicalProductCategoryDescriptor? {
@@ -142,7 +153,7 @@ enum CanonicalOpenWorldBrandExtractor {
     static func explicitBrandPhrase(in original: String, knownCategory: CanonicalProductCategoryDescriptor?) -> String? {
         guard ["куп", "придб", "замов", "buy", "find", "знайд"].contains(where: CanonicalMorphology.comparableText(original).contains) else { return nil }
         var value = original.replacingOccurrences(
-            of: #"^\s*(?:купи(?:ти)?|придбай|замов|знайди|buy|find|order)\s+"#,
+            of: #"^\s*(?:(?:де|where)\s+(?:поруч|nearby)\s+)?(?:купи(?:ти)?|придбай|замов|знайди|buy|find|order)\s+"#,
             with: "", options: [.regularExpression, .caseInsensitive]
         )
         if let category = knownCategory {
@@ -162,6 +173,7 @@ enum CanonicalDomainIntegrityPolicy {
         var intent = command.intent
         var entities = command.entities
         var constraints = command.constraints
+        var needsClarification = command.needsClarification
         let comparable = CanonicalMorphology.comparableText(command.originalText)
         let tokens = command.originalText.split(whereSeparator: { !$0.isLetter && !$0.isNumber })
             .flatMap { CanonicalMorphology.forms(for: String($0)) }
@@ -171,6 +183,105 @@ enum CanonicalDomainIntegrityPolicy {
         let parcelEvidence = hasTokenEvidence(["посилк", "відправлен", "трек", "shipment", "parcel", "package", "tracking"])
         let purchaseEvidence = hasTokenEvidence(["куп", "придб", "замов", "buy", "purchase", "order"])
         let productCategory = CanonicalProductCategoryRegistry.match(in: command.originalText)
+        let jobEvidence = hasTokenEvidence(["робот", "ваканс", "працевлаш", "job", "vacanc"])
+        let englishTokens = Set(command.originalText.lowercased().split(whereSeparator: { !$0.isLetter }).map(String.init))
+        let bookEvidence = hasTokenEvidence(["книг", "книж", "читат", "автор"]) ||
+            !englishTokens.isDisjoint(with: ["book", "novel", "read"])
+        let safetyEvidence = hasTokenEvidence(["тривог", "небезпек", "alert", "alarm"]) &&
+            hasTokenEvidence(["повітр", "неб", "air", "sky", "civil"])
+        let officialEvidence = hasTokenEvidence(["офіційн", "официальн", "official", "dealer", "дилер"])
+        let automotiveBrand = CanonicalAutomotiveEntityExtractor.brandAndModel(in: command.originalText)
+        let providerRoleMarker = hasTokenEvidence([
+            "маркетплейс", "магазин", "сайт", "через", "marketplace", "store", "site", "via"
+        ]) || command.originalText.split(whereSeparator: { !$0.isLetter }).contains {
+            ["на", "у", "в", "on", "at", "from"].contains(CanonicalMorphology.comparableText(String($0)))
+        }
+        let exactProviders = OfficialPublicProviderHandoffRegistry.records.filter {
+            isExact($0, in: command.originalText)
+        }
+        let isPersonalOrCommunication = [.contactLookup, .contactCall, .messageCompose].contains(intent)
+        if exactProviders.count == 1, let provider = exactProviders.first, !isPersonalOrCommunication,
+           providerRoleMarker || [.productSearch, .fashionDiscovery, .groceryBasket, .hotelSearch,
+                                  .serviceSearch, .ticketSearch, .ticketPurchaseHandoff,
+                                  .parcelTrack].contains(intent) || jobEvidence || parcelEvidence {
+            entities["catalog_entity_id"] = provider.id
+            if provider.domain == .grocery { entities["retailer"] = provider.displayName }
+            else { entities["provider"] = provider.displayName }
+            switch provider.domain {
+            case .marketplace:
+                intent = .productSearch; entities["provider_domain"] = "product_catalog"
+            case .grocery:
+                intent = .groceryBasket; entities["provider_domain"] = "grocery_delivery"
+            case .lodging:
+                intent = .hotelSearch; entities["provider_domain"] = "lodging"
+            case .carRental:
+                intent = .serviceSearch; entities["provider_domain"] = "car_rental"
+            case .events, .cinema:
+                intent = .ticketSearch; entities["provider_domain"] = "tickets"
+            case .transport:
+                intent = .ticketSearch; entities["provider_domain"] = "transport_tickets"
+            case .jobs:
+                intent = .productSearch; entities["provider_domain"] = "jobs"
+            case .parcel:
+                intent = .parcelTrack; entities["provider_domain"] = "parcel_tracking"
+            }
+            needsClarification = false
+        }
+
+        // Mixed-catalog fuzzy output is not authoritative. A provider may
+        // survive only when its exact alias is present in the current text and
+        // its domain is compatible with the command's structural evidence.
+        if let catalogID = entities["catalog_entity_id"],
+           let provider = OfficialPublicProviderHandoffRegistry.records.first(where: { $0.id == catalogID }),
+           !CanonicalDomainIntegrityPolicy.isExact(provider, in: command.originalText),
+           !isScopedProviderRecovery(provider, entities: entities, intent: intent, hasRoleMarker: providerRoleMarker) {
+            entities.removeValue(forKey: "catalog_entity_id")
+            entities.removeValue(forKey: "provider")
+            entities.removeValue(forKey: "retailer")
+            if !jobEvidence && !parcelEvidence { entities.removeValue(forKey: "provider_domain") }
+        }
+
+        if safetyEvidence {
+            intent = .webSearch
+            entities = [
+                "provider_domain": "current_safety",
+                "current_safety": "air_alert",
+                "protected_system_command": "true",
+                "direct_url": "https://map.ukrainealarm.com/",
+                "query": command.originalText
+            ]
+            constraints = .init()
+        } else if bookEvidence && !jobEvidence {
+            intent = .webSearch
+            entities.removeValue(forKey: "catalog_entity_id")
+            entities.removeValue(forKey: "provider")
+            entities.removeValue(forKey: "retailer")
+            entities["provider_domain"] = "books"
+            entities["query"] = command.originalText
+            entities["book_query"] = CanonicalBookQueryExtractor.title(in: command.originalText)
+        } else if let automotiveBrand, officialEvidence {
+            intent = .placeSearch
+            entities.removeValue(forKey: "catalog_entity_id")
+            entities.removeValue(forKey: "provider")
+            entities.removeValue(forKey: "retailer")
+            entities["provider_domain"] = "automotive_dealer"
+            entities["place_category"] = PlaceCategory.shop.rawValue
+            entities["automotive_brand"] = automotiveBrand
+            entities["query"] = "official \(automotiveBrand) dealer showroom"
+            entities["near_current_location"] = "true"
+            constraints.brand = automotiveBrand
+            constraints.hardConstraintKeys.insert("brand")
+        } else if let automotiveBrand, purchaseEvidence {
+            intent = .productSearch
+            entities.removeValue(forKey: "catalog_entity_id")
+            entities.removeValue(forKey: "provider")
+            entities.removeValue(forKey: "retailer")
+            entities["provider_domain"] = "product_catalog"
+            entities["brand"] = automotiveBrand
+            entities["query"] = automotiveBrand
+            constraints.brand = automotiveBrand
+            constraints.hardConstraintKeys.insert("brand")
+        }
 
         if intent == .parcelTrack && !parcelEvidence && (purchaseEvidence || productCategory != nil) {
             intent = .productSearch
@@ -189,8 +300,30 @@ enum CanonicalDomainIntegrityPolicy {
             intent = .productSearch
             entities["product_category"] = productCategory.id
             entities["product"] = productCategory.canonicalName
+            entities["query"] = CanonicalProductQueryBuilder.query(
+                for: .init(
+                    id: command.id, originalText: command.originalText,
+                    normalizedText: command.normalizedText, language: command.language,
+                    intent: .productSearch, entities: ["query": command.originalText],
+                    constraints: command.constraints, risk: command.risk,
+                    needsClarification: false
+                ),
+                selectedProviderOrBrand: entities["retailer"] ?? entities["provider"]
+            )
             constraints.category = productCategory.canonicalName
             constraints.hardConstraintKeys.insert("category")
+        }
+        let proximityEvidence = ["поруч", "біля мене", "nearby", "near me"].contains(where: comparable.contains)
+        if purchaseEvidence, proximityEvidence, let productCategory {
+            intent = .placeSearch
+            entities.removeValue(forKey: "provider_domain")
+            entities["place_category"] = PlaceCategory.shop.rawValue
+            entities["query"] = productCategory.canonicalName
+            entities["near_current_location"] = "true"
+            entities.removeValue(forKey: "brand")
+            entities.removeValue(forKey: "open_world_brand")
+            constraints.brand = nil
+            constraints.hardConstraintKeys.remove("brand")
         }
         if [.productSearch, .fashionDiscovery].contains(intent), constraints.brand == nil,
            let brand = CanonicalOpenWorldBrandExtractor.explicitBrandPhrase(in: command.originalText, knownCategory: productCategory) {
@@ -212,7 +345,20 @@ enum CanonicalDomainIntegrityPolicy {
                 entities["fuel_constraint"] = fuel.rawValue
             }
         }
-        let jobEvidence = hasTokenEvidence(["робот", "ваканс", "працевлаш", "job", "vacanc"])
+        // If a booking request names no establishment and is still missing
+        // booking roles, selecting the physical restaurant is the useful next
+        // action. A fully specified availability request remains a reservation
+        // so an injected live reservation provider can execute it directly.
+        if intent == .reservation, needsClarification,
+           isGenericRestaurantSubject(entities["restaurant_query"]) {
+            intent = .placeSearch
+            entities["place_category"] = PlaceCategory.restaurant.rawValue
+            entities["query"] = CanonicalPlaceCategoryRegistry.record(for: .restaurant)?.searchTerm ?? "restaurant"
+            entities["near_current_location"] = entities["location"] == nil ? "true" : entities["near_current_location"]
+            entities.removeValue(forKey: "clarification_options")
+            entities.removeValue(forKey: "clarification_role")
+            needsClarification = false
+        }
         if jobEvidence {
             intent = .productSearch
             entities["provider_domain"] = "jobs"
@@ -230,9 +376,97 @@ enum CanonicalDomainIntegrityPolicy {
                 entities.removeValue(forKey: "catalog_entity_id")
             }
         }
+        if !jobEvidence, entities["provider_domain"] == "jobs" {
+            entities.removeValue(forKey: "provider_domain")
+            entities.removeValue(forKey: "provider")
+            if entities["catalog_entity_id"]?.hasPrefix("jobs.") == true {
+                entities.removeValue(forKey: "catalog_entity_id")
+            }
+        }
+        if !parcelEvidence, entities["provider_domain"] == "parcel_tracking" {
+            entities.removeValue(forKey: "provider_domain")
+            entities.removeValue(forKey: "provider")
+            if entities["catalog_entity_id"]?.hasPrefix("parcel.") == true {
+                entities.removeValue(forKey: "catalog_entity_id")
+            }
+        }
         return .init(id: command.id, originalText: command.originalText, normalizedText: command.normalizedText,
                      language: command.language, intent: intent, entities: entities, constraints: constraints,
-                     risk: command.risk, needsClarification: command.needsClarification)
+                     risk: command.risk, needsClarification: needsClarification)
+    }
+
+    private static func isGenericRestaurantSubject(_ value: String?) -> Bool {
+        guard let value else { return true }
+        let tokens = CanonicalMorphology.comparableText(value)
+            .split(whereSeparator: { !$0.isLetter }).map(String.init)
+        guard !tokens.isEmpty else { return true }
+        let controlStems = ["ресторан", "заклад", "столик", "restaurant", "table"]
+        return tokens.allSatisfy { token in controlStems.contains(where: token.hasPrefix) }
+    }
+
+    private static func isExact(_ provider: OfficialPublicProviderHandoff, in text: String) -> Bool {
+        let comparable = " " + tokenComparable(text) + " "
+        return provider.aliases.union([provider.displayName]).contains { alias in
+            let value = tokenComparable(alias)
+            return !value.isEmpty && comparable.contains(" \(value) ")
+        }
+    }
+
+    private static func isScopedProviderRecovery(
+        _ provider: OfficialPublicProviderHandoff,
+        entities: [String: String],
+        intent: CommandIntent,
+        hasRoleMarker: Bool
+    ) -> Bool {
+        let domain = entities["provider_domain"]
+        let compatible: Bool = switch provider.domain {
+        case .marketplace: [.productSearch, .fashionDiscovery].contains(intent) && domain == "product_catalog"
+        case .grocery: intent == .groceryBasket && domain == "grocery_delivery"
+        case .lodging: intent == .hotelSearch && domain == "lodging"
+        case .carRental: intent == .serviceSearch && domain == "car_rental"
+        case .events, .cinema: [.ticketSearch, .ticketPurchaseHandoff].contains(intent) && domain == "tickets"
+        case .transport: [.ticketSearch, .ticketPurchaseHandoff].contains(intent) && domain == "transport_tickets"
+        case .jobs: intent == .productSearch && domain == "jobs"
+        case .parcel: intent == .parcelTrack && domain == "parcel_tracking"
+        }
+        guard compatible else { return false }
+        let mechanism = entities["catalog_match_mechanism"]
+        if mechanism == "morphology" { return true }
+        let confidence = Double(entities["catalog_match_confidence"] ?? "") ?? 0
+        return hasRoleMarker && mechanism == "phonetic" && confidence >= 0.72
+    }
+
+    private static func tokenComparable(_ value: String) -> String {
+        value.split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+            .map { CanonicalMorphology.comparableText(String($0)) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+}
+
+enum CanonicalAutomotiveEntityExtractor {
+    static func brandAndModel(in text: String) -> String? {
+        let patterns = [
+            #"\b(BMW(?:\s+[A-Z0-9][A-Z0-9 .-]{0,20})?)\b"#,
+            #"\b(Mercedes(?:-Benz)?(?:\s+[A-Z0-9][A-Z0-9 .-]{0,20})?)\b"#,
+            #"\b(Rolls(?:-|\s)Royce(?:\s+[A-Z0-9][A-Z0-9 .-]{0,20})?)\b"#
+        ]
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+                  let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+                  let range = Range(match.range(at: 1), in: text) else { continue }
+            return String(text[range]).trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        }
+        return nil
+    }
+}
+
+enum CanonicalBookQueryExtractor {
+    static func title(in text: String) -> String {
+        text.replacingOccurrences(
+            of: #"^\s*(?:знайд\p{L}*|відкрий|покажи|де\s+читати|читати|find|read)\s+(?:книг\p{L}*\s+)?"#,
+            with: "", options: [.regularExpression, .caseInsensitive]
+        ).trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
     }
 }
 

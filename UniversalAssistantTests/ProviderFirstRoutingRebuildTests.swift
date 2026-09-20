@@ -208,11 +208,11 @@ struct ProviderFirstRoutingRebuildTests {
             currentLocation: ProviderFirstLocationSource(location), personalSearchSources: []
         )
         let input = command(.placeSearch, ["query": "кава", "near_current_location": "true"])
-        guard case let .placeResults(values) = try await executor.execute(input),
-              let first = values.first else {
-            Issue.record("Nearby discovery must return internal place results"); return
+        guard case let .handoff(handoff) = try await executor.execute(input) else {
+            Issue.record("Nearby discovery must open the free Google Maps search"); return
         }
-        #expect(first.id == "near")
+        #expect(handoff.destination.host == "www.google.com")
+        #expect(handoff.destination.path == "/maps/search")
     }
 
     @Test func contactLookupUsesTheOfficialExistingContactCardBoundary() async throws {

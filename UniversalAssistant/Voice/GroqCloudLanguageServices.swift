@@ -222,7 +222,10 @@ struct VoiceCommandCompletenessPolicy: Sendable {
             return body?.isEmpty == false && explicitChannel != nil ? .complete : .extendable
         case .contactCall:
             let target = command.entities["contact"] ?? command.entities["phone_number"]
-            return target == nil ? .missingCriticalRole : .extendable
+            guard target != nil else { return .missingCriticalRole }
+            return command.entities["call_service"] != nil || assessment.channel != nil ? .complete : .extendable
+        case .emergency:
+            return command.entities["phone_number"] != nil ? .complete : .missingCriticalRole
         case .photoSearch:
             let kind = command.entities["photo_query_kind"]
             if ["all", "recent"].contains(kind) { return .complete }

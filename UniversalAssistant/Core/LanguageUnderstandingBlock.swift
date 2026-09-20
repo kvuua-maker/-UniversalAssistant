@@ -680,6 +680,20 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         default: nil
         }
         let domain = inferredDomain ?? intentDomain
+        let tokenComparable: (String) -> String = { value in
+            value.split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+                .map { CanonicalMorphology.comparableText(String($0)) }
+                .filter { !$0.isEmpty }.joined(separator: " ")
+        }
+        let comparableHypothesis = " " + tokenComparable(hypothesis) + " "
+        let exactProviders = catalogCandidates.filter { candidate in
+            guard candidate.value.kind == .provider || candidate.value.kind == .retailer else { return false }
+            return candidate.aliases.union([candidate.displayName]).contains { alias in
+                let value = tokenComparable(alias)
+                return !value.isEmpty && comparableHypothesis.contains(" \(value) ")
+            }
+        }
+        if !exactProviders.isEmpty { return exactProviders }
         if let domain {
             let domains: Set<OfficialPublicProviderDomain> = inferred?.domain == "tickets"
                 ? [.events, .cinema]
@@ -701,7 +715,34 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 }
             }
         }
-        return catalogCandidates
+        // A mixed global pool can turn arbitrary speech into the nearest
+        // retailer, parcel carrier, job source, or brand. Without an already
+        // established compatible domain, fuzzy catalog promotion is forbidden.
+        let providerMarkers: Set<String> = [
+            "на", "у", "в", "через", "від", "from", "on", "at", "via",
+            "маркетплейс", "магазин", "сайт", "marketplace", "store", "site"
+        ]
+        let hasScopedProviderRole = document.tokens.contains { providerMarkers.contains($0.normalized) }
+        switch intent {
+        case .productSearch, .fashionDiscovery:
+            return catalogCandidates.filter { candidate in
+                if candidate.value.kind == .brand || candidate.value.kind == .product { return true }
+                guard hasScopedProviderRole else { return false }
+                return OfficialPublicProviderHandoffRegistry.records.contains {
+                    $0.id == candidate.value.id && [.marketplace, .grocery].contains($0.domain)
+                }
+            }
+        case .groceryBasket:
+            return catalogCandidates.filter { candidate in
+                if candidate.value.kind == .product { return true }
+                guard candidate.value.kind == .provider || candidate.value.kind == .retailer else { return false }
+                return OfficialPublicProviderHandoffRegistry.records.contains {
+                    $0.id == candidate.value.id && $0.domain == .grocery
+                }
+            }
+        default:
+            return []
+        }
     }
 
     /// Resolve only the typed provider/service slot immediately following a
@@ -1515,6 +1556,10 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             }
         }
         if !exactProviders.isEmpty {
+            if exactProviders.count == 1, let only = exactProviders.first {
+                return ContextScopedEntityResolver(candidates: exactProviders)
+                    .resolveWithEvidence(only.displayName)
+            }
             return bestScopedResolution(in: document.tokens, candidates: exactProviders)
         }
         let providerMarkers: Set<String> = [

@@ -149,7 +149,7 @@ struct AssistantHomeView: View {
             case .photoLibrary:
                 SystemPhotoLibraryPicker(onSelection: model.handleSelectedPhotoLibraryAsset)
             case .audioRoutes:
-                AudioDevicesView(records: [])
+                AudioRouteSelectionView()
             case let .photoAsset(identifier):
                 PhotoAssetPresentationView(localIdentifier: identifier, onOCR: model.handlePhotoOCRImage)
             case let .photoOCR(identifier):

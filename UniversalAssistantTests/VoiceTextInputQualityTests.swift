@@ -74,6 +74,31 @@ struct VoiceTextInputQualityTests {
         #expect(VoiceCommandCompletenessPolicy().status(for: .init(command: absent)) != .complete)
     }
 
+    @Test func build59CompleteRealAppleAlternativeBeatsClippedPrimaryWithoutSynthesis() {
+        let evidence = VoiceRecognitionEvidence(
+            primaryTranscript: "Відкрий",
+            alternativeTranscripts: ["Відкрий Telegram"],
+            segmentAlternativeTranscripts: ["Telegram"],
+            partialTranscriptHistory: ["Відкрий", "Відкрий Telegram"],
+            segmentAlternativeCount: 1,
+            averageSegmentConfidence: 0.86
+        )
+        let selected = VoiceTranscriptStabilizer.stabilize(evidence, contextualVocabulary: ["Telegram"])
+        #expect(selected.text == "Відкрий Telegram")
+        let command = LanguageUnderstandingBlock().parse(selected.text, speechEvidence: evidence)
+        #expect(command.entities["app"] == "telegram")
+        #expect(VoiceCommandCompletenessPolicy().status(for: .init(command: command)) == .complete)
+
+        let missing = VoiceRecognitionEvidence(
+            primaryTranscript: "Відкрий",
+            alternativeTranscripts: [],
+            segmentAlternativeCount: 0,
+            averageSegmentConfidence: nil
+        )
+        #expect(VoiceTranscriptStabilizer.stabilize(missing, contextualVocabulary: []).text == "Відкрий")
+        #expect(LanguageUnderstandingBlock().parse("Відкрий", speechEvidence: missing).entities["app"] == nil)
+    }
+
     @Test func incompleteAppPrefixCannotFinalizeAtBaseSilence() {
         let policy = VoiceUtteranceEndpointPolicy()
         let assessment = VoiceDeterministicCommandAssessment(text: "Відкрий")

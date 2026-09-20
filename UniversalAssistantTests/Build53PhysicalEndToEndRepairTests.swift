@@ -50,10 +50,10 @@ struct Build53PhysicalEndToEndRepairTests {
     @Test @MainActor func explicitBrandReachesOnlyItsOfficialExactDestination() async throws {
         let command = parser.parse("Купи сорочку Pierre Cardin")
         let executor = ProductionCanonicalCapabilityExecutor(personalSearchSources: [])
-        guard case let .result(result) = try await executor.execute(command),
-              let destination = result.actions.first?.destination else {
-            Issue.record("Expected official brand source card"); return
+        guard case let .handoff(handoff) = try await executor.execute(command) else {
+            Issue.record("Expected direct official brand handoff"); return
         }
+        let destination = handoff.destination
         #expect(destination.host == "pierrecardin.com")
         #expect(destination.path == "/en/search")
         #expect(destination.absoluteString.localizedCaseInsensitiveContains("prada") == false)

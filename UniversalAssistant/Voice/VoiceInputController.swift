@@ -259,6 +259,22 @@ enum VoiceTranscriptStabilizer {
             return .init(text: "", source: .primary)
         }
         let candidates = uniqueCandidates(evidence, excluding: primary)
+        // Prefer a semantically complete, non-conflicting hypothesis before
+        // deciding that Speech failed. Every candidate below is text actually
+        // emitted by Apple; no registry token is inserted or synthesized.
+        let semanticCandidates = [Candidate(text: primary, source: .primary)] + candidates
+        let complete = semanticCandidates.compactMap { candidate -> (Candidate, VoiceDeterministicCommandAssessment)? in
+            let assessment = VoiceDeterministicCommandAssessment(text: candidate.text)
+            return VoiceCommandCompletenessPolicy().status(for: assessment) == .complete
+                ? (candidate, assessment) : nil
+        }
+        let signatures = Set(complete.map { semanticSignature($0.1) })
+        if signatures.count == 1, let best = complete.max(by: {
+            if $0.1.score == $1.1.score { return sourcePriority($0.0.source) < sourcePriority($1.0.source) }
+            return $0.1.score < $1.1.score
+        }) {
+            return .init(text: best.0.text, source: best.0.source)
+        }
         let primaryTokens = tokens(primary)
         let vocabulary = contextualVocabulary
             .map(normalizedForComparison)
@@ -365,6 +381,16 @@ enum VoiceTranscriptStabilizer {
         case .segmentAlternative: 2
         case .partialHistory: 1
         }
+    }
+
+    private static func semanticSignature(_ assessment: VoiceDeterministicCommandAssessment) -> String {
+        [
+            assessment.command.intent.rawValue,
+            assessment.application ?? assessment.command.entities["app"] ?? "",
+            assessment.channel ?? assessment.command.entities["message_service"] ?? assessment.command.entities["call_service"] ?? "",
+            assessment.command.entities["contact"] ?? assessment.command.entities["recipient"] ?? "",
+            assessment.command.entities["photo_query_kind"] ?? ""
+        ].joined(separator: "|")
     }
 }
 
@@ -1942,14 +1968,11 @@ final class VoiceInputController: VoiceInputControlling {
                 self.transcript = appleFinal
                 lastTranscriptMutationUptime = ProcessInfo.processInfo.systemUptime
             }
-            let endpointClass = endpointPolicy.classify(
-                transcript: appleFinal,
-                assessment: VoiceDeterministicCommandAssessment(text: appleFinal),
-                evidence: latestRecognitionEvidence
-            )
             retireAppleRecognitionBeforeEndpoint(
                 reason: "final_result",
-                requiresCloudRecovery: endpointClass != .closedAtomic
+                // A final result is not an acoustic failure. Completeness is
+                // evaluated across all accumulated Apple evidence later.
+                requiresCloudRecovery: false
             )
         }
     }
@@ -1979,18 +2002,25 @@ final class VoiceInputController: VoiceInputControlling {
         capture.stop()
         let audioURL = LocalVoiceDiagnosticReport.shared.finishCommandAudioRecording(reason: .recognitionFinal)
         let localAssessment = VoiceDeterministicCommandAssessment(text: appleFallback)
-        if localAssessment.isResolvedDeterministic,
+        LocalVoiceDiagnosticReport.shared.record(
+            "selected_apple_hypothesis_source",
+            "source=\(appleHypothesisSource(for: appleFallback))"
+        )
+        if fastPathEligibleAfterConfirmedEndpoint(localAssessment, evidence: latestRecognitionEvidence),
            !requiresCloudRecovery(localAssessment, evidence: latestRecognitionEvidence),
            let final = VoiceAuthoritativeTranscriptSelector.select(groq: nil, appleFallback: appleFallback) {
             LocalVoiceDiagnosticReport.shared.record(
                 "deterministic_voice_fast_path",
                 "intent=\(localAssessment.command.intent.rawValue) cloud_wait=false"
             )
+            LocalVoiceDiagnosticReport.shared.record("cloud_recovery_used", "value=false")
+            LocalVoiceDiagnosticReport.shared.record("semantic_cloud_used", "value=false")
             LocalVoiceDiagnosticReport.shared.discardTransientCommandAudioIfNeeded(audioURL)
             commit(final, sessionID: sessionID)
             return
         }
         setState(.transcribing)
+        LocalVoiceDiagnosticReport.shared.record("cloud_recovery_used", "value=true")
         let transcriber = cloudTranscriber
         let context = activeContextualVocabulary
         cloudFinalizationTask = Task { @MainActor [weak self] in
@@ -2029,6 +2059,22 @@ final class VoiceInputController: VoiceInputControlling {
         }
     }
 
+    private func appleHypothesisSource(for text: String) -> String {
+        guard let evidence = latestRecognitionEvidence else { return "live_primary" }
+        let normalized = VoiceTranscriptStabilizer.normalizedForDisplay(text)
+        if VoiceTranscriptStabilizer.normalizedForDisplay(evidence.primaryTranscript) == normalized { return "primary" }
+        if evidence.alternativeTranscripts.contains(where: { VoiceTranscriptStabilizer.normalizedForDisplay($0) == normalized }) {
+            return "whole_alternative"
+        }
+        if evidence.segmentAlternativeTranscripts.contains(where: { VoiceTranscriptStabilizer.normalizedForDisplay($0) == normalized }) {
+            return "segment_alternative"
+        }
+        if evidence.partialTranscriptHistory.contains(where: { VoiceTranscriptStabilizer.normalizedForDisplay($0) == normalized }) {
+            return "stable_partial"
+        }
+        return "bounded_apple_evidence"
+    }
+
     private func hasMissingCriticalRole(
         _ assessment: VoiceDeterministicCommandAssessment,
         evidence: VoiceRecognitionEvidence?
@@ -2037,8 +2083,16 @@ final class VoiceInputController: VoiceInputControlling {
         let candidates = evidence.alternativeTranscripts + evidence.segmentAlternativeTranscripts + evidence.partialTranscriptHistory.suffix(4)
         switch assessment.command.intent {
         case .contactCall, .messageCompose:
-            let evidenceHasChannel = candidates.contains { CanonicalSpeechEntityRegistry.communicationChannel(in: $0) != nil }
+            let channels = Set(candidates.compactMap(CanonicalSpeechEntityRegistry.communicationChannel(in:)))
+            if let current = assessment.channel, !channels.isEmpty,
+               channels.union([current]).count > 1 { return true }
+            let evidenceHasChannel = !channels.isEmpty
             return evidenceHasChannel && assessment.channel == nil
+        case .open, .appAction:
+            let applications = Set(candidates.compactMap(CanonicalSpeechEntityRegistry.applicationID(in:)))
+            if let current = assessment.application, !applications.isEmpty,
+               applications.union([current]).count > 1 { return true }
+            return !applications.isEmpty && assessment.application == nil
         case .cameraCapture:
             let evidenceHasCodeRole = candidates.contains {
                 let value = $0.lowercased()
@@ -2056,17 +2110,28 @@ final class VoiceInputController: VoiceInputControlling {
     ) -> Bool {
         if appleRecognitionTerminatedEarly || speechResumedAfterAppleTermination { return true }
         if hasMissingCriticalRole(assessment, evidence: evidence) { return true }
-        if assessment.command.intent == .messageCompose {
-            let hasBody = assessment.command.entities["message_body"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-            let hasExplicitChannel = assessment.channel != nil ||
-                CanonicalSpeechEntityRegistry.communicationChannel(in: assessment.command.originalText) != nil
-            if !hasBody && !hasExplicitChannel { return true }
-        }
         if let confidence = evidence?.averageSegmentConfidence, confidence < 0.5,
            assessment.application != nil || assessment.channel != nil || assessment.command.constraints.brand != nil {
             return true
         }
         return false
+    }
+
+    private func fastPathEligibleAfterConfirmedEndpoint(
+        _ assessment: VoiceDeterministicCommandAssessment,
+        evidence: VoiceRecognitionEvidence?
+    ) -> Bool {
+        if assessment.isResolvedDeterministic { return true }
+        switch assessment.command.intent {
+        case .contactCall:
+            return assessment.command.entities["contact"] != nil || assessment.command.entities["phone_number"] != nil
+        case .messageCompose:
+            return assessment.command.entities["recipient"] != nil || assessment.command.entities["contact"] != nil
+        case .emergency:
+            return assessment.command.entities["phone_number"] != nil
+        default:
+            return false
+        }
     }
 
     private func commit(_ final: FinalVoiceTranscript, sessionID: UUID) {
@@ -2076,6 +2141,7 @@ final class VoiceInputController: VoiceInputControlling {
             "FINAL_TRANSCRIPT", text: final.text, details: "source=\(final.source.rawValue)"
         )
         LocalVoiceDiagnosticReport.shared.record("final_transcript_source", "source=\(final.source.rawValue)")
+        LocalVoiceDiagnosticReport.shared.record("final_transcript_ready", "source=\(final.source.rawValue)")
         eventHandler?(.transcript(final.text, isFinal: true))
         LocalVoiceDiagnosticReport.shared.record(
             "transcript_delivered_to_ui",
@@ -2130,6 +2196,7 @@ final class VoiceInputController: VoiceInputControlling {
                         "voice_endpoint_confirmed",
                         "class=\(endpointClass.rawValue) apple_terminated_early=\(self.appleRecognitionTerminatedEarly) resumed_after_apple=\(self.speechResumedAfterAppleTermination)"
                     )
+                    LocalVoiceDiagnosticReport.shared.record("speech_endpoint_confirmed", "class=\(endpointClass.rawValue)")
                     self.finalizeAuthoritativeTranscript(sessionID: sessionID, appleFallback: self.transcript)
                     return
                 }

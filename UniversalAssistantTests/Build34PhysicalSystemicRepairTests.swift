@@ -233,8 +233,8 @@ struct Build34PhysicalSystemicSemanticTests {
                 #expect(decision.providerID == "market.prom")
                 #expect(decision.allowsMultipleResults == false)
             } else if hasOfficialPublicRoute {
-                #expect(decision.lane == .localDiscovery)
-                #expect(decision.providerID == "google.maps.url")
+                #expect(decision.lane == .specialized)
+                #expect(decision.providerID == nil)
                 #expect(decision.allowsMultipleResults == false)
             } else {
                 #expect(decision.lane == .providerBoundary)

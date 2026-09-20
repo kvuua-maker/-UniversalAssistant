@@ -44,7 +44,7 @@ enum UkrainianJobSourceRegistry {
       mechanism: "public_https_handoff", publicDiscoveryAllowed: true, authenticatedAPI: false),
     .init(
       id: "dcz", name: "Державна служба зайнятості",
-      url: URL(string: "https://dcz.gov.ua/userSearch/vacancy")!,
+      url: URL(string: "https://dcz.gov.ua/job")!,
       mechanism: "official_public_handoff", publicDiscoveryAllowed: true, authenticatedAPI: false),
     .init(
       id: "djinni", name: "Djinni", url: URL(string: "https://djinni.co/jobs/")!,

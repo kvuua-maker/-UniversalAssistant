@@ -121,6 +121,14 @@ extension ProductionCanonicalCapabilityExecutor {
             guard let city = command.entities["location"] ?? command.entities["destination"] else { return nil }
             return KarabasOfficialCityRoute.destination(for: city, command: command)
         }
+        if !provider.preservesQuery,
+           [.grocery, .marketplace, .jobs, .lodging].contains(provider.domain),
+           !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           let host = provider.officialEvidence.host {
+            var components = URLComponents(string: "https://www.google.com/search")!
+            components.queryItems = [.init(name: "q", value: "site:\(host) \(query)")]
+            return components.url
+        }
         guard let destination = provider.destination(query: query) else { return nil }
         guard provider.id == "lodging.booking",
               var components = URLComponents(url: destination, resolvingAgainstBaseURL: false) else { return destination }
@@ -204,10 +212,11 @@ extension ProductionCanonicalCapabilityExecutor {
         let domain = command.entities["provider_domain"]
         let preferred: String? = switch domain {
         case "lodging", "car_rental": command.entities["location"] ?? command.entities["destination"]
+        case "grocery_delivery": command.entities["query"] ?? command.entities["product"]
         default: command.entities["product"] ?? command.entities["query"]
         }
         var parts = [CanonicalProductQueryBuilder.query(for: command, selectedProviderOrBrand: selectedProviderOrBrand)]
-        if ["lodging", "car_rental"].contains(domain), let preferred { parts = [preferred] }
+        if ["lodging", "car_rental", "grocery_delivery"].contains(domain), let preferred { parts = [preferred] }
         let constraints: [String?] = [
             command.constraints.brand,
             command.constraints.category,

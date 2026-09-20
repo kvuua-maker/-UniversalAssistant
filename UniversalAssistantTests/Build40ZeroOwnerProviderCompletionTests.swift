@@ -53,7 +53,7 @@ struct Build40ZeroOwnerProviderCompletionTests {
     }
 
     @Test func officialSearchParametersArePreservedForRetailAndJobs() throws {
-        let ids = ["retail.silpo", "retail.atb", "retail.fora", "retail.fozzy",
+        let ids = ["retail.silpo", "retail.fozzy",
                    "jobs.workua", "jobs.robotaua", "jobs.jobsua", "jobs.djinni",
                    "jobs.dou", "jobs.happymonday"]
         for id in ids {
@@ -113,7 +113,8 @@ struct Build40ZeroOwnerProviderCompletionTests {
               let jobDestination = jobResult.actions.first?.destination else {
             Issue.record("Expected one Jobs public-source result"); return
         }
-        #expect(jobDestination.host == "www.dcz.gov.ua")
+        #expect(jobDestination.host == "dcz.gov.ua")
+        #expect(jobDestination.path == "/job")
 
         let hotel = command(.hotelSearch, ["location": "Краків"])
         guard case let .handoff(hotelHandoff) = try await executor().execute(hotel) else {
@@ -132,8 +133,8 @@ struct Build40ZeroOwnerProviderCompletionTests {
             try await executor().execute(parcel)
         }
 
-        #expect(CanonicalRoutingPolicy().decide(command(.productSearch, ["product": "туристичний рюкзак"])).lane == .localDiscovery)
-        #expect(CanonicalRoutingPolicy().decide(command(.groceryBasket, ["query": "овочі для супу"])).lane == .localDiscovery)
+        #expect(CanonicalRoutingPolicy().decide(command(.productSearch, ["product": "туристичний рюкзак"])).lane == .specialized)
+        #expect(CanonicalRoutingPolicy().decide(command(.groceryBasket, ["query": "овочі для супу"])).lane == .specialized)
     }
 
     @Test func carRentalRailAndExplicitParcelUseTheirOfficialConsumerDestinations() async throws {

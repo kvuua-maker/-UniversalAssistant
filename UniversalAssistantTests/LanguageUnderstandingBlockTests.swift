@@ -5,6 +5,89 @@ import UIKit
 
 @Suite("Build 31 authoritative language understanding")
 struct LanguageUnderstandingBlockTests {
+    @Test func build59MixedCatalogCannotPromoteAcrossDomains() {
+        let block = LanguageUnderstandingBlock()
+
+        let slippers = block.parse("Купити домашні тапочки")
+        #expect(slippers.intent == .productSearch)
+        #expect(slippers.entities["provider_domain"] != "jobs")
+        #expect(slippers.entities["catalog_entity_id"]?.hasPrefix("jobs.") != true)
+
+        let sneakers = block.parse("Купити кросівки 41 розміру")
+        #expect(sneakers.intent == .productSearch)
+        #expect(sneakers.intent != .parcelTrack)
+        #expect(sneakers.entities["provider_domain"] != "parcel_tracking")
+
+        let book = block.parse("Знайди книгу Острів скарбів")
+        #expect(book.entities["provider_domain"] == "books")
+        #expect(book.entities["provider_domain"] != "jobs")
+
+        let safety = block.parse("Де зараз небезпека в небі")
+        #expect(safety.entities["provider_domain"] == "current_safety")
+        #expect(safety.entities["direct_url"] == "https://map.ukrainealarm.com/")
+        #expect(safety.entities["catalog_entity_id"] == nil)
+    }
+
+    @Test func build59AutomotiveEntitiesRemainOpenWorldPhysicalDealerQueries() {
+        for (text, expected) in [
+            ("Купити автомобіль BMW 7 серії офіційно", "BMW 7"),
+            ("Купити офіційно Mercedes-Benz", "Mercedes-Benz"),
+            ("Купити Rolls-Royce офіційно", "Rolls-Royce")
+        ] {
+            let command = LanguageUnderstandingBlock().parse(text)
+            #expect(command.intent == .placeSearch)
+            #expect(command.entities["provider_domain"] == "automotive_dealer")
+            #expect(command.entities["automotive_brand"]?.localizedCaseInsensitiveContains(expected) == true)
+            #expect(!["Zara", "Fozzy", "Ukrposhta"].contains(command.entities["provider"] ?? ""))
+        }
+    }
+
+    @Test func build59NearbyAndFuelUseOneFreeGoogleMapsBuilder() {
+        let block = LanguageUnderstandingBlock()
+        for text in ["Знайди каву поруч", "Знайди АЗС поруч", "Знайди кілька супермаркетів поруч", "Знайди аптеку поруч"] {
+            let command = block.parse(text)
+            let destination = GoogleMapsSearchHandoff().destination(for: command)
+            #expect(command.intent == .placeSearch)
+            #expect(GoogleMapsSearchHandoff().shouldOpenImmediately(command))
+            #expect(destination?.host == "www.google.com")
+            #expect(destination?.path == "/maps/search")
+        }
+        let octane = block.parse("Знайди заправку поруч з 98")
+        #expect(octane.entities["fuel_constraint"] == FuelConstraint.octane98.rawValue)
+        #expect(GoogleMapsSearchHandoff().destination(for: octane)?.absoluteString.contains("A-98") == true)
+        let lpg = block.parse("Знайди заправку поруч з газом")
+        #expect(lpg.entities["fuel_constraint"] == FuelConstraint.lpg.rawValue)
+        #expect(GoogleMapsSearchHandoff().destination(for: lpg)?.absoluteString.localizedCaseInsensitiveContains("LPG") == true)
+    }
+
+    @Test func build59PendingContinuationPolicyLetsIndependentCommandsWin() {
+        let parser = LanguageUnderstandingBlock()
+        let policy = PendingContinuationCompatibilityPolicy()
+        #expect(!policy.shouldConsumeClarification(
+            reply: "Купити квиток в театр Київ",
+            standalone: parser.parse("Купити квиток в театр Київ"),
+            role: "restaurant_date_time"
+        ))
+        #expect(!policy.shouldConsumeClarification(
+            reply: "Відкрий Telegram",
+            standalone: parser.parse("Відкрий Telegram"),
+            role: "party_size"
+        ))
+        #expect(policy.shouldConsumeClarification(
+            reply: "о 19:00",
+            standalone: parser.parse("о 19:00"),
+            role: "restaurant_date_time"
+        ))
+    }
+
+    @Test func build59UnnamedRestaurantBookingSelectsNearbyRestaurantWithoutGenericClarification() {
+        let command = LanguageUnderstandingBlock().parse("Забронювати столик у ресторані сьогодні")
+        #expect(command.intent == .placeSearch)
+        #expect(command.entities["place_category"] == PlaceCategory.restaurant.rawValue)
+        #expect(!command.needsClarification)
+        #expect(GoogleMapsSearchHandoff().shouldOpenImmediately(command))
+    }
+
     @Test func build58DomainIntegrityKeepsProductsOutOfParcelAndBrandsOpenWorld() {
         let block = LanguageUnderstandingBlock()
 

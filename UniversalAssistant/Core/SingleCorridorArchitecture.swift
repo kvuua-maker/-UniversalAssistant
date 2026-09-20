@@ -133,9 +133,20 @@ struct SingleCorridorRouter: Sendable {
 
     func planCompound(container: StructuredCommand, atomicCommands: [StructuredCommand]) -> RoutePlan {
         precondition(container.intent == .multiStep)
-        let atomicPlans = atomicCommands
-            .filter { $0.intent != .unknown && $0.intent != .multiStep }
-            .map(planAtomic)
+        let eligible = atomicCommands.filter { $0.intent != .unknown && $0.intent != .multiStep }
+        let atomicPlans = eligible.enumerated().map { index, command in
+            let nextDependsOnSelection = index + 1 < eligible.count &&
+                [.navigation, .routeSearch, .routeAwareSearch, .transportRoute].contains(eligible[index + 1].intent) &&
+                [.placeSearch, .restaurantSearch, .serviceSearch].contains(command.intent)
+            guard nextDependsOnSelection else { return planAtomic(command) }
+            var entities = command.entities
+            entities["compound_dependency_required"] = "true"
+            return planAtomic(.init(
+                id: command.id, originalText: command.originalText, normalizedText: command.normalizedText,
+                language: command.language, intent: command.intent, entities: entities,
+                constraints: command.constraints, risk: command.risk, needsClarification: command.needsClarification
+            ))
+        }
         return .init(
             command: container, room: .compound, primaryMechanism: "pre_routed_dependency_graph",
             providerID: nil, terminalStrategy: atomicPlans.isEmpty ? .clarify : .compound,

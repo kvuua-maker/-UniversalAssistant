@@ -19,7 +19,7 @@ struct AssistantSettingsView: View {
         List {
             Section("AI / Mode") {
                 LabeledContent("Base Mode", value: "On")
-                LabeledContent("Connected AI", value: "Off")
+                LabeledContent("AI-відновлення", value: "Опційне, автоматичне")
             }
             Section("Language") { Text(Locale.current.localizedString(forIdentifier: Locale.current.identifier) ?? Locale.current.identifier) }
             Section("Appearance") {

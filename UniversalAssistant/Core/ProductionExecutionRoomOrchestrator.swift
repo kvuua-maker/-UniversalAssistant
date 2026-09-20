@@ -95,6 +95,16 @@ final class ProductionExecutionRoomOrchestrator {
 
     private func exactWeb(_ plan: RoutePlan) -> ProductionTerminalOutcome {
         let command = plan.command
+        if let raw = command.entities["direct_url"],
+           let destination = URL(string: raw),
+           ["https", "http"].contains(destination.scheme?.lowercased() ?? ""),
+           destination.host != nil {
+            return .exactWeb(.init(
+                query: command.entities["query"] ?? command.originalText,
+                destination: destination,
+                kind: .provider
+            ))
+        }
         var query = command.originalText.trimmingCharacters(in: .whitespacesAndNewlines)
         if let providerID = plan.providerID,
            let provider = OfficialPublicProviderHandoffRegistry.records.first(where: { $0.id == providerID }) {

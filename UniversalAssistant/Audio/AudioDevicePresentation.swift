@@ -58,4 +58,27 @@ struct AudioDevicesView: View {
         }
     }
 }
+
+/// The system route picker is the only public authoritative UI for choosing
+/// current AirPlay/system audio outputs. It does not pretend that a generic BLE
+/// scan can enumerate or pair A2DP accessories.
+struct AudioRouteSelectionView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "airplayaudio")
+                .font(.system(size: 44, weight: .semibold))
+                .foregroundStyle(.tint)
+            Text("Вибрати аудіовихід")
+                .font(.title2.bold())
+            Text("iPhone покаже доступні системні та AirPlay-аудіовиходи.")
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+            SystemAudioRoutePicker()
+                .frame(width: 64, height: 52)
+                .accessibilityLabel("Вибрати аудіовихід")
+        }
+        .padding(28)
+        .navigationTitle("Вибрати аудіовихід")
+    }
+}
 #endif

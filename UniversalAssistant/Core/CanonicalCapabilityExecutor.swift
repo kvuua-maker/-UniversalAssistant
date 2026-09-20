@@ -258,7 +258,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         fx: any CurrentFXProviding = RegionalCurrentFXProvider(),
         restaurantProviders: [any ReservationProvider] = [],
         alarmExecute: (  (SystemQuickAction) async throws -> String)? = nil,
-        photoSearchTimeout: Duration = .seconds(3),
+        photoSearchTimeout: Duration = .milliseconds(750),
         personalSearchSources: [any PersonalSearchSource] = [ContactsPersonalSearchSource(), PhotosPersonalSearchSource(), LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())],
         affiliateConfigurations: [String: AffiliateRoutingConfiguration] = [:]
     ) {
@@ -741,6 +741,11 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     }
 
     private func places(_ command: StructuredCommand, allowsMultiple: Bool = false) async throws -> CapabilityExecutionOutcome {
+        let maps = GoogleMapsSearchHandoff()
+        if maps.shouldOpenImmediately(command), let destination = maps.destination(for: command) {
+            LocalVoiceDiagnosticReport.shared.record("first_visible_result_or_handoff", "room=location mechanism=google_maps_url")
+            return .handoff(.init(query: command.originalText, destination: destination, kind: .navigation))
+        }
         let location: ValidatedLocation
         if let area = command.entities["location"], !area.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             location = try await locationResolver.resolve(area)
@@ -786,6 +791,14 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         _ command: StructuredCommand,
         routingDecision: CanonicalRoutingDecision
     ) async throws -> CapabilityExecutionOutcome {
+        let directAction = ["куп", "buy", "відк", "open", "перейд", "go to"]
+            .contains(where: command.normalizedText.contains)
+        if directAction, routingDecision.lane == .officialBrand {
+            return try officialBrandHandoff(command)
+        }
+        if directAction, routingDecision.providerID != nil {
+            return try officialPublicProviderHandoff(command, routingDecision: routingDecision)
+        }
         let category = command.entities["product_category"]
             ?? CanonicalProductCategoryRegistry.match(in: command.normalizedText)?.canonicalName
             ?? command.entities["query"]
@@ -849,16 +862,28 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             LocalVoiceDiagnosticReport.shared.record("first_verified_result_ready", "room=jobs count=\(values.count)")
             return .jobResults(values)
         } catch {
-            var components = URLComponents(string: "https://www.dcz.gov.ua/userSearch/vacancy")!
-            components.queryItems = [.init(name: "search", value: [subject, locality].compactMap { $0 }.joined(separator: " "))]
-            guard let url = components.url else { throw CanonicalCapabilityExecutionError.unavailable("jobs_public_source_invalid") }
-            return .result(try result("Офіційний пошук вакансій", facts: [], actions: [
-                .init(id: command.id.uuidString, title: "Відкрити вакансії ДСЗ", kind: .open, destination: url)
-            ]))
+            let query = [subject, locality].compactMap { $0 }.joined(separator: " ")
+            let sources: [(String, String, URL)] = [
+                ("jobs.dcz", "Державна служба зайнятості", URL(string: "https://dcz.gov.ua/job")!),
+                ("jobs.workua", "Work.ua", siteSearch(host: "work.ua", query: query)),
+                ("jobs.robotaua", "robota.ua", siteSearch(host: "robota.ua", query: query)),
+                ("jobs.jobsua", "Jobs.ua", siteSearch(host: "jobs.ua", query: query)),
+                ("jobs.djinni", "Djinni", siteSearch(host: "djinni.co", query: query)),
+                ("jobs.dou", "DOU Jobs", siteSearch(host: "jobs.dou.ua", query: query)),
+                ("jobs.happymonday", "Happy Monday", siteSearch(host: "happymonday.ua", query: query))
+            ]
+            return .result(try result("Пошук вакансій", facts: [], actions: sources.map {
+                .init(id: $0.0, title: $0.1, kind: .open, destination: $0.2)
+            }))
         }
     }
 
     private func localServices(_ command: StructuredCommand, allowsMultiple: Bool = false) async throws -> CapabilityExecutionOutcome {
+        let maps = GoogleMapsSearchHandoff()
+        if maps.shouldOpenImmediately(command), let destination = maps.destination(for: command) {
+            LocalVoiceDiagnosticReport.shared.record("first_visible_result_or_handoff", "room=services mechanism=google_maps_url")
+            return .handoff(.init(query: command.originalText, destination: destination, kind: .navigation))
+        }
         // Validate the typed service role before requesting CoreLocation. An
         // unresolved external service must terminate at its provider boundary,
         // not wait for location permission that cannot make the request valid.
@@ -1350,7 +1375,18 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private func metadataPhotoResult(
         _ assets: [PhotoAssetReference], command: StructuredCommand, title: String
     ) throws -> CapabilityExecutionOutcome {
-        guard !assets.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("photos_no_metadata_match") }
+        guard !assets.isEmpty else {
+            let locationQuery = command.entities["photo_location_query"]
+            let message: String
+            if photos.authorization() == .limited {
+                message = "Серед фото, доступних UniversalAssistant, збігів не знайдено. Додайте потрібні фото через керування обмеженим доступом iOS."
+            } else if let locationQuery {
+                message = "Серед доступних фото не знайдено знімків із GPS-метаданими поблизу «\(locationQuery)»."
+            } else {
+                message = "За вказаною датою фотографій не знайдено."
+            }
+            return .result(try result(message, facts: []))
+        }
         let facts = assets.enumerated().map { index, asset in
             ResultFact(id: "photos:" + asset.localIdentifier, label: "Фото \(index + 1)",
                        value: asset.creationDate?.formatted() ?? "Фото", state: .verified,
@@ -1742,6 +1778,12 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         return .result(try result(answer, facts: [], actions: [
             .init(id: "exact-map-search", title: "Продовжити пошук на карті", kind: .open, destination: destination)
         ]))
+    }
+
+    private func siteSearch(host: String, query: String) -> URL {
+        var components = URLComponents(string: "https://www.google.com/search")!
+        components.queryItems = [.init(name: "q", value: "site:\(host) \(query)")]
+        return components.url!
     }
 
     private func placeCategory(in text: String) -> PlaceCategory? {

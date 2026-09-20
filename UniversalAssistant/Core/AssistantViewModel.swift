@@ -4,6 +4,52 @@ import Observation
 import OSLog
 import UIKit
 
+/// Decides ownership before any pending continuation consumes fresh input.
+/// It does not parse or route: it only compares the already parsed standalone
+/// candidate with the narrowly missing role/visible choices.
+struct PendingContinuationCompatibilityPolicy: Sendable {
+    func shouldConsumeSelection(reply: String, standalone: StructuredCommand, choices: [String]) -> Bool {
+        let candidates = choices.map {
+            ScopedEntityCandidate(value: $0, displayName: $0, aliases: [$0, $0.split(separator: "·", maxSplits: 1).first.map(String.init) ?? $0])
+        }
+        if case .resolved = ContextScopedEntityResolver(candidates: candidates).resolve(reply) { return true }
+        return !isIndependent(standalone) && isNarrowReply(reply)
+    }
+
+    func shouldConsumeClarification(reply: String, standalone: StructuredCommand, role: String) -> Bool {
+        guard !isIndependent(standalone) else { return false }
+        let normalized = CanonicalMorphology.comparableText(reply)
+        switch role {
+        case "time", "restaurant_date_time", "temporal":
+            return normalized.range(of: #"\b(?:[01]?\d|2[0-3])[:.]?[0-5]\d\b"#, options: .regularExpression) != nil || isNarrowReply(reply)
+        case "party_size", "quantity":
+            return normalized.range(of: #"\b\d{1,2}\b"#, options: .regularExpression) != nil || isNarrowReply(reply)
+        case "recipient", "message_body", "service_channel", "application":
+            return isNarrowReply(reply)
+        default:
+            return isNarrowReply(reply)
+        }
+    }
+
+    private func isIndependent(_ command: StructuredCommand) -> Bool {
+        guard command.intent != .unknown, command.intent != .contextualSelection else { return false }
+        if command.intent == .show, command.entities["context_reference"] != nil { return false }
+        let actionRoots = ["відк", "знайд", "куп", "напиш", "подзвон", "набери", "покаж", "створ", "заброн", "перейд", "увімк", "включ", "open", "find", "buy", "call", "message", "show"]
+        return actionRoots.contains(where: command.normalizedText.contains) ||
+            [.emergency, .weather, .ticketSearch, .ticketPurchaseHandoff, .photoSearch].contains(command.intent)
+    }
+
+    private func isNarrowReply(_ reply: String) -> Bool {
+        let tokens = reply.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        guard !tokens.isEmpty, tokens.count <= 5 else { return false }
+        let actionRoots = ["відк", "знайд", "куп", "напиш", "подзвон", "набери", "покаж", "створ", "заброн", "open", "find", "buy", "call", "show"]
+        return !tokens.contains { token in
+            let value = CanonicalMorphology.comparableText(token)
+            return actionRoots.contains(where: value.hasPrefix)
+        }
+    }
+}
+
 @MainActor
 @Observable
 final class AssistantViewModel {
@@ -286,10 +332,22 @@ final class AssistantViewModel {
     }
 
     func submit() {
-        if consumePendingSelectionReplyIfPossible(input) { return }
-        if resumePendingClarificationIfPossible(input) { return }
         let isVoiceSubmission = voiceDraftSourceText != nil
         let voiceEvidence = voiceDraftSourceText == input ? pendingVoiceRecognitionEvidence : nil
+        let standaloneCommand = if let parser = commandEngine as? any EvidenceAwareCommandParsing {
+            parser.parse(input, speechEvidence: voiceEvidence)
+        } else {
+            commandEngine.parse(input)
+        }
+        let continuationPolicy = PendingContinuationCompatibilityPolicy()
+        if let pending = pendingCanonicalSelection,
+           pending.generation == activeRequestGeneration,
+           continuationPolicy.shouldConsumeSelection(reply: input, standalone: standaloneCommand, choices: pending.choices),
+           consumePendingSelectionReplyIfPossible(input) { return }
+        if let pending = pendingCanonicalClarification,
+           pending.generation == activeRequestGeneration,
+           continuationPolicy.shouldConsumeClarification(reply: input, standalone: standaloneCommand, role: pending.role),
+           resumePendingClarificationIfPossible(input) { return }
         pendingVoiceRecognitionEvidence = nil
         if voiceDraftSourceText != nil {
             LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_router", "length=\(input.count)")
@@ -335,6 +393,7 @@ final class AssistantViewModel {
             groqTranscript: nil,
             language: .automatic
         )
+        LocalVoiceDiagnosticReport.shared.record("canonical_request_envelope", "request_id=\(requestEnvelope.requestID.uuidString)")
         LocalVoiceDiagnosticReport.shared.recordSubmittedInputIfNeeded(submittedInput)
         if let target = translationFollowUpTarget(submittedInput), let translation = currentContext.freshTranslation() {
             input = ""
@@ -363,11 +422,7 @@ final class AssistantViewModel {
             deliverCompletedDiagnosticSession()
             return
         }
-        let command = if let parser = commandEngine as? any EvidenceAwareCommandParsing {
-            parser.parse(requestEnvelope.originalText, speechEvidence: voiceEvidence)
-        } else {
-            commandEngine.parse(requestEnvelope.originalText)
-        }
+        let command = standaloneCommand
         if Self.requiresContactAwareMessageCompletion(command) {
             input = ""
             messageRoleCompletionTask?.cancel()
@@ -387,6 +442,7 @@ final class AssistantViewModel {
     private func finishResolvedCommand(_ command: StructuredCommand, requestGeneration: UInt64) {
         guard activeRequestGeneration == requestGeneration else { return }
         LocalVoiceDiagnosticReport.shared.recordNormalizedTranscript(command.normalizedText)
+        LocalVoiceDiagnosticReport.shared.record("canonical_command_ready", "intent=\(command.intent.rawValue)")
         LocalVoiceDiagnosticReport.shared.record("language_detection", "language=\(command.language.rawValue)")
         LocalVoiceDiagnosticReport.shared.record("morphology", "status=completed")
         let structuredNumberCount = command.entities.keys.filter {
@@ -420,6 +476,7 @@ final class AssistantViewModel {
         if command.intent == .unknown, !command.needsClarification,
            command.entities["clarification_options"] == nil {
             LocalVoiceDiagnosticReport.shared.record("semantic_engine_selection", "engine=groq reason=deterministic_unresolved")
+            LocalVoiceDiagnosticReport.shared.record("semantic_cloud_used", "value=true")
             resolveSemanticCommand(
                 original: command,
                 summary: summary,
@@ -427,6 +484,7 @@ final class AssistantViewModel {
             )
             return
         }
+        LocalVoiceDiagnosticReport.shared.record("semantic_cloud_used", "value=false")
         dispatchResolvedCommand(command, requestGeneration: requestGeneration)
     }
 
@@ -877,11 +935,13 @@ final class AssistantViewModel {
 
     private func executeFrozenCommand(_ command: StructuredCommand, requestGeneration: UInt64) {
         let plan = frozenPlan(for: command)
+        LocalVoiceDiagnosticReport.shared.record("route_plan_ready", "room=\(plan.room.rawValue) route_count=1")
         resultState = .processing
         statusText = AppText.value("processing")
         capabilityExecutionInFlight = true
         capabilityExecutionTask = Task { [weak self] in
             guard let self else { return }
+            LocalVoiceDiagnosticReport.shared.record("room_started", "room=\(plan.room.rawValue)")
             let outcome = await productionCorridor.execute(plan)
             guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
             await render(outcome, command: command, generation: requestGeneration)

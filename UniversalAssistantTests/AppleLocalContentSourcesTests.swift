@@ -3,6 +3,14 @@ import Testing
 @testable import UniversalAssistant
 
 @Suite("Authorized local content sources") struct AppleLocalContentSourcesTests {
+    private actor CountingSemanticLabeler: PhotoSemanticLabeling {
+        private(set) var calls = 0
+        func labels(imageData: Data) async throws -> [PhotoSemanticLabel] {
+            calls += 1
+            return [.init(name: "automobile", confidence: 0.92)]
+        }
+        func count() -> Int { calls }
+    }
     private struct PhotoLibraryStub: PhotoLibrarySearching {
         let access: LocalSearchAccess
         let assets: [PhotoAssetReference]
@@ -74,6 +82,21 @@ import Testing
             ])
         )
         #expect(await engine.search("dog", limit: 5) == [second])
+    }
+
+    @Test func semanticPhotoIndexReusesThumbnailClassificationAcrossQueries() async {
+        let asset = PhotoAssetReference(localIdentifier: "indexed-car", creationDate: .now, coordinate: nil, album: nil)
+        let labeler = CountingSemanticLabeler()
+        let store = FileManager.default.temporaryDirectory.appendingPathComponent("ua-photo-index-\(UUID().uuidString).json")
+        let engine = PhotoSemanticSearchEngine(
+            library: PhotoLibraryStub(access: .permitted, assets: [asset]),
+            loader: ImageLoaderStub(dataByIdentifier: ["indexed-car": Data("thumbnail".utf8)]),
+            labeler: labeler,
+            index: PhotoSemanticIndex(storeURL: store)
+        )
+        #expect(await engine.search("авто") == [asset])
+        #expect(await engine.search("автомобіль") == [asset])
+        #expect(await labeler.count() == 1)
     }
 
     @Test func semanticPhotoSearchFailsClosedForDeniedAndUnreadableAssets() async {

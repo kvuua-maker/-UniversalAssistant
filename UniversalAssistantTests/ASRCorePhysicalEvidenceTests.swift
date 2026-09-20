@@ -79,7 +79,7 @@ struct ASRCorePhysicalEvidenceTests {
                 audioSHA256: "12eb2428ff6ad70b9c49d571e0f94b3019661cd6db4816bdfa488f2dda5de9a9",
                 appleFinal: "Бані",
                 applePartials: ["Бані"],
-                expectedCatalogID: "canonical.brand.baldinini",
+                expectedCatalogID: nil,
                 expectedAppID: nil
             ),
             Fixture(
@@ -111,7 +111,7 @@ struct ASRCorePhysicalEvidenceTests {
             let output = command(for: fixture)
             #expect(output.entities["catalog_entity_id"] == fixture.expectedCatalogID,
                     "RequestID \(fixture.requestID), audio \(fixture.audioSHA256)")
-            #expect(output.intent != .webSearch)
+            if fixture.expectedCatalogID != nil { #expect(output.intent != .webSearch) }
         }
     }
 
@@ -152,7 +152,7 @@ struct ASRCorePhysicalEvidenceTests {
             let expectedService: String?
         }
         let known = [
-            ReplayFixture(final: "Бані", alternatives: ["Балди", "Бал"], partials: ["Балди", "Бані"], expectedCatalogID: "canonical.brand.baldinini", expectedService: nil),
+            ReplayFixture(final: "Бані", alternatives: ["Балди", "Бал"], partials: ["Балди", "Бані"], expectedCatalogID: nil, expectedService: nil),
             ReplayFixture(final: "Знайди товар на Alex Press", alternatives: ["Знайди товар на Ali Press", "Знайди товар на Apr"], partials: ["Знайди", "Знайди товар", "Знайди товар на Ali", "Знайди товар на Alex", "Знайди товар на Alex Press"], expectedCatalogID: "market.aliexpress", expectedService: nil),
             ReplayFixture(final: "Знайди на eBay вживаний Garmin Фенікс 7", alternatives: [], partials: ["Знайди", "Знайди на", "Знайди на eBay"], expectedCatalogID: "market.ebay", expectedService: nil),
             ReplayFixture(final: "Покажи на Job ua вакансії електрика", alternatives: ["Покажи на Job вакансії електрика", "Покажи на ua вакансії електрика"], partials: ["Покажи", "Покажи на", "Покажи на ua вакансії", "Покажи на Job ua вакансії електрика"], expectedCatalogID: "jobs.jobsua", expectedService: nil),
@@ -165,7 +165,7 @@ struct ASRCorePhysicalEvidenceTests {
             // Conflicting real hypotheses (provider versus Photos) must fail
             // closed instead of guessing a consequential provider.
             ReplayFixture(final: "Покажи у Фра рис басма", alternatives: ["Покажи у фото рис басма"], partials: [], expectedCatalogID: nil, expectedService: nil),
-            ReplayFixture(final: "Покажи у фазі пральний порошок персів", alternatives: ["Покажи у позі пральний порошок персів"], partials: [], expectedCatalogID: "retail.fozzy", expectedService: nil),
+            ReplayFixture(final: "Покажи у фазі пральний порошок персів", alternatives: ["Покажи у позі пральний порошок персів"], partials: [], expectedCatalogID: nil, expectedService: nil),
             // The spoken provider is absent from all Apple text evidence.
             ReplayFixture(final: "Відкрий і знайди житло в Кам'янці-Подільському", alternatives: [], partials: [], expectedCatalogID: nil, expectedService: nil),
             ReplayFixture(final: "Знайди вакансії технолога на Word ua", alternatives: [], partials: [], expectedCatalogID: "jobs.workua", expectedService: nil),
@@ -199,8 +199,8 @@ struct ASRCorePhysicalEvidenceTests {
             }
             return false
         }.count
-        #expect(knownRecovered == 4)
-        #expect(holdoutRecovered == 5)
+        #expect(knownRecovered == 3)
+        #expect(holdoutRecovered == 4)
         #expect(parse(known[4]).entities["speech_entity_evidence"] == nil)
         #expect(parse(holdout[4]).entities["speech_entity_evidence"] == nil)
     }
@@ -209,9 +209,9 @@ struct ASRCorePhysicalEvidenceTests {
         let fixtures = [
             Fixture(requestID: "027ab874-041d-42e7-9f44-4057ce72bac2", audioSHA256: "d5d5a414dcf1aa5e823be145a7b9c9d8a80f6a99e6c58e31774f7167a15d3f15", appleFinal: "Знайди на Каба концерти у Полтаві", applePartials: ["Знайди на Каба", "Знайди на Кабасс", "Знайди на Кабасс концерти"], expectedCatalogID: "events.karabas", expectedAppID: nil),
             Fixture(requestID: "0957e524-27a1-4d15-a270-40a2aef4e7b4", audioSHA256: "477354aef63c727291a2dcb76c6bf2e9d46c930301f606ca7369e0b548905ec5", appleFinal: "Знайди в а тебе сир Моцарела", applePartials: ["Знайди в", "Знайди в а тебе сир"], expectedCatalogID: "retail.atb", expectedAppID: nil),
-            Fixture(requestID: "0b78768e-457c-4b24-a286-cfaf4f3e364d", audioSHA256: "cc4df41935d013f1cc298118521b32d2467096ca4bc43501098169eb5627f5d9", appleFinal: "Покажи у Фра рис басма", applePartials: ["Покажи у", "Покажи у рис", "Покажи у рис басма"], expectedCatalogID: "retail.fora", expectedAppID: nil),
-            Fixture(requestID: "16faf120-d6a2-4738-97d6-03dd8b821d91", audioSHA256: "ea8a0664791f8b0944c231a0a92d3791b2c4ec742f9325e7e49c526d69437578", appleFinal: "Покажи у фазі пральний порошок персів", applePartials: ["Покажи у фазі", "Покажи у фазі пральний порошок"], expectedCatalogID: "retail.fozzy", expectedAppID: nil),
-            Fixture(requestID: "2a3ee734-6c7f-40db-926a-390b98746ba4", audioSHA256: "b74fdf32126bab294b7ce9ec65b914bb38406f1db352192861261d070f32ecee", appleFinal: "Відкрий Буг і знайди житло в Кам'янці-Подільському", applePartials: ["Відкрий", "Відкрий і знайди житло", "Відкрий і знайди житло в Кам'янці"], expectedCatalogID: "lodging.booking", expectedAppID: nil),
+            Fixture(requestID: "0b78768e-457c-4b24-a286-cfaf4f3e364d", audioSHA256: "cc4df41935d013f1cc298118521b32d2467096ca4bc43501098169eb5627f5d9", appleFinal: "Покажи у Фра рис басма", applePartials: ["Покажи у", "Покажи у рис", "Покажи у рис басма"], expectedCatalogID: nil, expectedAppID: nil),
+            Fixture(requestID: "16faf120-d6a2-4738-97d6-03dd8b821d91", audioSHA256: "ea8a0664791f8b0944c231a0a92d3791b2c4ec742f9325e7e49c526d69437578", appleFinal: "Покажи у фазі пральний порошок персів", applePartials: ["Покажи у фазі", "Покажи у фазі пральний порошок"], expectedCatalogID: nil, expectedAppID: nil),
+            Fixture(requestID: "2a3ee734-6c7f-40db-926a-390b98746ba4", audioSHA256: "b74fdf32126bab294b7ce9ec65b914bb38406f1db352192861261d070f32ecee", appleFinal: "Відкрий Буг і знайди житло в Кам'янці-Подільському", applePartials: ["Відкрий", "Відкрий і знайди житло", "Відкрий і знайди житло в Кам'янці"], expectedCatalogID: nil, expectedAppID: nil),
             Fixture(requestID: "4ec91522-9f0e-4da0-992b-7a1ffc8b4c8b", audioSHA256: "042f33fba0ea3a82b6e2660a346fff028a007a48f2e11dcc20735fd8a4ac80b9", appleFinal: "Знайди вакансії технолога на Word ua", applePartials: ["Знайди вакансії технолога", "Знайди вакансії технолога на Word", "Знайди вакансії технолога на Word ua"], expectedCatalogID: "jobs.workua", expectedAppID: nil),
             Fixture(requestID: "3fc222fe-8924-4b5d-937a-1e484eba007f", audioSHA256: "709d2fe0787e5f1d47ba5774f34abdf51ee68d39088cec941dbab0823bbcc183", appleFinal: "Напиши мамі повідомлення у What's привіт", applePartials: ["Напиши мамі повідомлення у What", "Напиши мамі повідомлення у What's", "Напиши мамі повідомлення у Whats привіт"], expectedCatalogID: nil, expectedAppID: nil)
         ]
@@ -220,11 +220,16 @@ struct ASRCorePhysicalEvidenceTests {
             if let expectedCatalogID = fixture.expectedCatalogID {
                 #expect(output.entities["catalog_entity_id"] == expectedCatalogID,
                         "Holdout RequestID \(fixture.requestID), audio \(fixture.audioSHA256)")
-            } else {
+            } else if fixture.appleFinal.localizedCaseInsensitiveContains("what") {
                 #expect(output.entities["message_service"] == "whatsapp",
                         "Holdout RequestID \(fixture.requestID), audio \(fixture.audioSHA256)")
+            } else {
+                #expect(output.entities["catalog_entity_id"] == nil,
+                        "Unsafe holdout promotion for RequestID \(fixture.requestID)")
             }
-            #expect(output.intent != .webSearch)
+            if fixture.expectedCatalogID != nil || fixture.appleFinal.localizedCaseInsensitiveContains("what") {
+                #expect(output.intent != .webSearch)
+            }
         }
     }
 

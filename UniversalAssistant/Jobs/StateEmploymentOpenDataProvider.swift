@@ -11,6 +11,7 @@ actor StateEmploymentOpenDataProvider: JobDiscoveryProvider {
     private let cacheURL: URL
     private let refreshInterval: TimeInterval
     private var memory: Snapshot?
+    private var refreshInFlight = false
 
     struct Snapshot: Codable, Sendable {
         let datasetID: String
@@ -39,9 +40,34 @@ actor StateEmploymentOpenDataProvider: JobDiscoveryProvider {
     }
 
     private func currentSnapshot(now: Date = .now) async throws -> Snapshot {
-        if let memory, now.timeIntervalSince(memory.fetchedAt) < refreshInterval { return memory }
         if memory == nil, let cached = loadCache() { memory = cached }
-        if let memory, now.timeIntervalSince(memory.fetchedAt) < refreshInterval { return memory }
+        if let memory {
+            if now.timeIntervalSince(memory.fetchedAt) >= refreshInterval {
+                refreshInBackground()
+            }
+            // A valid normalized cache is the interactive search source. A
+            // refresh must never put the full CKAN/XML download in front of a
+            // user's job query.
+            return memory
+        }
+        return try await refreshSnapshot(now: now)
+    }
+
+    private func refreshInBackground() {
+        guard !refreshInFlight else { return }
+        refreshInFlight = true
+        Task { [weak self] in
+            guard let self else { return }
+            _ = try? await self.refreshSnapshot(now: .now)
+            await self.finishRefresh()
+        }
+    }
+
+    private func finishRefresh() {
+        refreshInFlight = false
+    }
+
+    private func refreshSnapshot(now: Date) async throws -> Snapshot {
         do {
             let datasetID = (try? await resolveDatasetID()) ?? Self.datasetID
             let resource = try await latestResource(datasetID: datasetID)

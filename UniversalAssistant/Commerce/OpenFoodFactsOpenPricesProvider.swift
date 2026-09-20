@@ -81,8 +81,17 @@ struct OpenFoodFactsOpenPricesProvider: RetailProvider {
     }
 
     private static func isPackagedFood(_ text: String) -> Bool {
-        let value = text.lowercased()
-        return ["grocery", "groceries", "food", "продукт", "їжа", "напій", "бакалія"].contains(where: value.contains)
+        let value = CanonicalMorphology.comparableText(text)
+        let foodRoots = [
+            "grocery", "groceries", "food", "продукт", "їжа", "напій", "бакалія",
+            "сир", "cheese", "олія", "oil", "молок", "milk", "йогурт", "yogurt",
+            "beverage", "drink", "макарон", "pasta", "круп", "cereal", "grain",
+            "консерв", "canned", "снек", "snack", "chips"
+        ]
+        return foodRoots.contains(where: value.contains) ||
+            CanonicalProductCategoryRegistry.match(in: text).map {
+                ["groceries", "cheese", "oil", "milk", "yogurt", "beverage", "pasta", "cereal", "canned", "snack"].contains($0.id)
+            } == true
     }
 
     private static let dayFormatter: DateFormatter = {
