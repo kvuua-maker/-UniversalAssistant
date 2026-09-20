@@ -660,7 +660,7 @@ final class AssistantViewModel {
             requireConfirmation(command, summary: summary, generation: requestGeneration)
             return
         }
-        let plan = productionRouter.plan(command)
+        let plan = frozenPlan(for: command)
         LocalVoiceDiagnosticReport.shared.record(
             "system_first_decision",
             "selected=\(plan.routingDecision.lane == .appleSystem) capability=\(command.intent.rawValue)"
@@ -837,6 +837,12 @@ final class AssistantViewModel {
             case let .result(result):
                 currentContext.replaceAnswer(result.primaryAnswer)
                 resultState = .deterministic(result)
+            case let .placeResults(places):
+                resultState = .placeResults(places)
+            case let .commerceResults(offers):
+                resultState = .commerceResults(offers)
+            case let .jobResults(jobs):
+                resultState = .jobResults(jobs)
             case let .handoff(result):
                 if (result.kind == .system || result.kind == .navigation || result.kind == .provider) &&
                     !result.requiresExplicitUserActivation {
@@ -870,7 +876,7 @@ final class AssistantViewModel {
     }
 
     private func executeFrozenCommand(_ command: StructuredCommand, requestGeneration: UInt64) {
-        let plan = productionRouter.plan(command)
+        let plan = frozenPlan(for: command)
         resultState = .processing
         statusText = AppText.value("processing")
         capabilityExecutionInFlight = true
@@ -882,6 +888,17 @@ final class AssistantViewModel {
             capabilityExecutionInFlight = false
             deliverCompletedDiagnosticSession()
         }
+    }
+
+    private func frozenPlan(for command: StructuredCommand) -> RoutePlan {
+        guard command.intent == .multiStep else { return productionRouter.plan(command) }
+        // Compound clauses are resolved at the authoritative resolution
+        // boundary. The router receives immutable atomic commands and the
+        // coordinator never reparses while executing.
+        let atomic = CompoundCommandClauses.split(command.originalText)
+            .map(commandEngine.parse)
+            .filter { $0.intent != .unknown && $0.intent != .multiStep }
+        return productionRouter.planCompound(container: command, atomicCommands: atomic)
     }
 
     private func truthfulSystemRestrictionMessage(_ reason: String) -> String {
@@ -1205,6 +1222,15 @@ final class AssistantViewModel {
                 case let .result(value):
                     resultState = .deterministic(value)
                     LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=compound_result")
+                case let .placeResults(values):
+                    resultState = .placeResults(values)
+                    LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=compound_places")
+                case let .commerceResults(values):
+                    resultState = .commerceResults(values)
+                    LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=compound_commerce")
+                case let .jobResults(values):
+                    resultState = .jobResults(values)
+                    LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=compound_jobs")
                 case let .handoff(value):
                     if (value.kind == .system || value.kind == .navigation || value.kind == .provider) &&
                         !value.requiresExplicitUserActivation {

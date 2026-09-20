@@ -5,6 +5,52 @@ import UIKit
 
 @Suite("Build 31 authoritative language understanding")
 struct LanguageUnderstandingBlockTests {
+    @Test func build58DomainIntegrityKeepsProductsOutOfParcelAndBrandsOpenWorld() {
+        let block = LanguageUnderstandingBlock()
+
+        let sneakers = block.parse("Купити кросівки 41 розміру")
+        #expect(sneakers.intent == .productSearch)
+        #expect(sneakers.intent != .parcelTrack)
+        #expect(sneakers.entities["product_category"] == "sneakers")
+        #expect(sneakers.constraints.size == "41")
+
+        let shirt = block.parse("Купити футболку")
+        #expect([.productSearch, .fashionDiscovery].contains(shirt.intent))
+        #expect(shirt.intent != .parcelTrack)
+
+        let brand = block.parse("Купити Dolce & Gabbana")
+        #expect(brand.intent == .productSearch)
+        #expect(brand.entities["brand"] == "Dolce & Gabbana")
+        #expect(brand.entities["brand"] != "Baldinini")
+
+        let parcel = block.parse("Відстеж посилку Укрпошти")
+        #expect(parcel.intent == .parcelTrack)
+    }
+
+    @Test func build58SharedPlaceAndJobsSemanticsResolveBeforeRouting() {
+        let block = LanguageUnderstandingBlock()
+        #expect(CanonicalPlaceCategoryRegistry.match(in: "Знайди заправку поруч з 98")?.category == .fuel)
+        let nearby = block.parse("Знайди АЗС поруч")
+        #expect(nearby.intent == .placeSearch)
+        #expect(nearby.entities["place_category"] == PlaceCategory.fuel.rawValue)
+        #expect(nearby.entities["near_current_location"] == "true")
+
+        let octane = block.parse("Знайди заправку поруч з 98")
+        #expect(octane.intent == .placeSearch)
+        #expect(octane.entities["place_category"] == PlaceCategory.fuel.rawValue)
+        #expect(octane.entities["fuel_constraint"] == FuelConstraint.octane98.rawValue)
+        let gas = block.parse("Знайди заправку поруч з газом")
+        #expect(gas.intent == .placeSearch)
+        #expect(gas.entities["place_category"] == PlaceCategory.fuel.rawValue)
+        #expect(gas.entities["fuel_constraint"] == FuelConstraint.lpg.rawValue)
+
+        let jobs = block.parse("Знайди роботу водієм у Києві від 50000")
+        let plan = SingleCorridorRouter().plan(jobs)
+        #expect(plan.room == .jobsDelivery)
+        #expect(jobs.entities["location"] == "Київ")
+        #expect(jobs.entities["salary_minimum"] == "50000")
+    }
+
     @Test func unicodeTokensAndStructuredNumbersRetainEvidence() {
         let original = "  Порахуй—12,5% від 5 600  "
         let document = LanguageUnderstandingBlock.document(original)

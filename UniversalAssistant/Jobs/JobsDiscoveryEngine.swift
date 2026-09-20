@@ -3,7 +3,7 @@ import Foundation
 enum JobResultTier: String, Codable, Sendable {
   case directEmployer, verifiedCommercial, externalFallback
 }
-struct JobDiscoveryResult: Identifiable, Equatable, Sendable {
+struct JobDiscoveryResult: Identifiable, Equatable, Codable, Sendable {
   let id: String
   let title: String
   let employer: String
@@ -61,8 +61,8 @@ enum UkrainianJobSourceRegistry {
 enum JobDiscoveryError: Error, Equatable { case invalidIntent, noVerifiedResults }
 struct JobDiscoveryEngine: Sendable {
   let providers: [any JobDiscoveryProvider]
-  func search(_ intent: GenericIntent, minimumPreferredResults: Int = 3) async throws
-    -> DeterministicResult
+  func searchResults(_ intent: GenericIntent, minimumPreferredResults: Int = 3) async throws
+    -> [JobDiscoveryResult]
   {
     guard intent.domain == "jobs", intent.risk == .informational else {
       throw JobDiscoveryError.invalidIntent
@@ -70,11 +70,17 @@ struct JobDiscoveryEngine: Sendable {
     let preferredProviders = providers.filter { $0.tier != .externalFallback }
     let preferred = await fetch(preferredProviders, intent)
     let eligiblePreferred = normalize(preferred, intent: intent)
-    let external =
-      eligiblePreferred.count >= minimumPreferredResults
+    let external = eligiblePreferred.count >= minimumPreferredResults
       ? [] : await fetch(providers.filter { $0.tier == .externalFallback }, intent)
     let results = Array(normalize(eligiblePreferred + external, intent: intent).prefix(10))
     guard !results.isEmpty else { throw JobDiscoveryError.noVerifiedResults }
+    return results
+  }
+
+  func search(_ intent: GenericIntent, minimumPreferredResults: Int = 3) async throws
+    -> DeterministicResult
+  {
+    let results = try await searchResults(intent, minimumPreferredResults: minimumPreferredResults)
     let facts = results.map { result in
       let salary = formattedSalary(result)
       return ResultFact(

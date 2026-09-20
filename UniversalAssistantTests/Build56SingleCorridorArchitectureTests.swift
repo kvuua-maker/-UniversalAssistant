@@ -28,6 +28,39 @@ struct Build56SingleCorridorArchitectureTests {
         #expect(counter.value == 1)
     }
 
+    @Test func build58ChangedPhysicalFamiliesStillRouteExactlyOnce() {
+        let counter = LockedRouteCounter()
+        let router = SingleCorridorRouter(decisionObserved: { _ in counter.increment() })
+        let block = LanguageUnderstandingBlock()
+        let commands = [
+            "Відкрий Viber", "Відкрий Telegram", "Відкрий всі фото",
+            "Купити кросівки 41 розміру", "Знайди АЗС поруч",
+            "Знайди роботу водієм у Києві від 50000"
+        ]
+        for text in commands { _ = router.plan(block.parse(text)) }
+        #expect(counter.value == commands.count)
+    }
+
+    @Test func productionRoomsDoNotOwnParserOrRouterFallbacks() throws {
+        let testsURL = URL(fileURLWithPath: #filePath)
+        let root = testsURL.deletingLastPathComponent().deletingLastPathComponent()
+        let forbidden = [
+            "UniversalAssistant/Core/CanonicalCapabilityExecutor.swift",
+            "UniversalAssistant/Core/ProductionMultiStepCoordinator.swift",
+            "UniversalAssistant/Commerce/OfficialPublicProviderHandoffExecutor.swift"
+        ]
+        for path in forbidden {
+            let source = try String(contentsOf: root.appendingPathComponent(path), encoding: .utf8)
+            let shippedSource = source.replacingOccurrences(
+                of: #"#if DEBUG[\s\S]*?#endif"#,
+                with: "", options: .regularExpression
+            )
+            #expect(!shippedSource.contains("SingleCorridorRouter().plan("), "Nested router ownership in \(path)")
+        }
+        let coordinator = try String(contentsOf: root.appendingPathComponent("UniversalAssistant/Core/ProductionMultiStepCoordinator.swift"), encoding: .utf8)
+        #expect(!coordinator.contains("LanguageUnderstandingBlock()"))
+    }
+
     @Test func explicitChannelsAndProtectedSystemStayFrozen() {
         let parser = LanguageUnderstandingBlock()
         let router = SingleCorridorRouter()

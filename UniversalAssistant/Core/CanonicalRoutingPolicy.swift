@@ -72,15 +72,15 @@ struct CanonicalRoutingPolicy: Sendable {
                 return .init(lane: .explicitProvider, providerID: "market.prom",
                              reason: "unnamed_online_grocery_ukraine_first", allowsMultipleResults: comparisonRequested(command))
             }
-            return .init(lane: .localDiscovery, providerID: "google.maps.url",
-                         reason: "unnamed_physical_retail_is_local_first", allowsMultipleResults: comparisonRequested(command))
+            return .init(lane: .specialized, providerID: nil,
+                         reason: "unnamed_grocery_uses_commerce_engine", allowsMultipleResults: comparisonRequested(command))
         case .productSearch, .fashionDiscovery:
             if onlineRequested(command) {
                 return .init(lane: .explicitProvider, providerID: "market.prom",
                              reason: "unnamed_online_product_ukraine_first", allowsMultipleResults: comparisonRequested(command))
             }
-            return .init(lane: .localDiscovery, providerID: "google.maps.url",
-                         reason: "unnamed_physical_product_is_local_first", allowsMultipleResults: comparisonRequested(command))
+            return .init(lane: .specialized, providerID: nil,
+                         reason: "unnamed_product_uses_commerce_engine", allowsMultipleResults: comparisonRequested(command))
         case .hotelSearch:
             return .init(lane: .accommodation, providerID: "lodging.booking",
                          reason: "booking_primary_accommodation", allowsMultipleResults: comparisonRequested(command))

@@ -120,19 +120,29 @@ struct SingleCorridorRouter: Sendable {
 
     func plan(_ command: StructuredCommand) -> RoutePlan {
         if command.intent == .multiStep {
-            let atomicPlans = CompoundCommandClauses.split(command.originalText)
-                .map { LanguageUnderstandingBlock().parse($0) }
-                .filter { $0.intent != .unknown && $0.intent != .multiStep }
-                .map(planAtomic)
             return .init(
                 command: command, room: .compound, primaryMechanism: "pre_routed_dependency_graph",
-                providerID: nil, terminalStrategy: atomicPlans.isEmpty ? .clarify : .compound,
-                routingDecision: .init(lane: atomicPlans.isEmpty ? .clarification : .specialized,
-                                       providerID: nil, reason: "compound_container_not_rerouted",
-                                       allowsMultipleResults: false), atomicPlans: atomicPlans
+                providerID: nil, terminalStrategy: .clarify,
+                routingDecision: .init(lane: .clarification, providerID: nil,
+                                       reason: "compound_requires_pre_resolved_atomic_commands",
+                                       allowsMultipleResults: false), atomicPlans: []
             )
         }
         return planAtomic(command)
+    }
+
+    func planCompound(container: StructuredCommand, atomicCommands: [StructuredCommand]) -> RoutePlan {
+        precondition(container.intent == .multiStep)
+        let atomicPlans = atomicCommands
+            .filter { $0.intent != .unknown && $0.intent != .multiStep }
+            .map(planAtomic)
+        return .init(
+            command: container, room: .compound, primaryMechanism: "pre_routed_dependency_graph",
+            providerID: nil, terminalStrategy: atomicPlans.isEmpty ? .clarify : .compound,
+            routingDecision: .init(lane: atomicPlans.isEmpty ? .clarification : .specialized,
+                                   providerID: nil, reason: "compound_atomic_commands_pre_resolved",
+                                   allowsMultipleResults: false), atomicPlans: atomicPlans
+        )
     }
 
     private func planAtomic(_ command: StructuredCommand) -> RoutePlan {
@@ -153,6 +163,9 @@ struct SingleCorridorRouter: Sendable {
 
     private func room(for command: StructuredCommand, decision: CanonicalRoutingDecision) -> ExecutionRoom {
         if command.intent == .multiStep { return .compound }
+        if command.entities["provider_domain"] == "jobs" || decision.lane == .jobs {
+            return .jobsDelivery
+        }
         if command.intent == .productSearch,
            command.entities["identity_strength"] == "exact",
            command.entities["gtin"] != nil {

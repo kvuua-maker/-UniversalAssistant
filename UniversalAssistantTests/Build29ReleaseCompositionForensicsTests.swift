@@ -510,11 +510,10 @@ struct Build29ReleaseRootLocationRouteTests {
         let model = model { opened.append($0) }
         model.input = "Яка клініка розташована найближче до мене?"
         model.submit()
-        for _ in 0..<100 { if opened.count == 1 { break }; try await Task.sleep(for: .milliseconds(10)) }
-        guard let nearbyDestination = opened.first else { Issue.record("Nearby did not reach exact Google Maps destination"); return }
-        #expect(nearbyDestination.host == "www.google.com")
-        #expect(nearbyDestination.path == "/maps/search")
-        #expect(nearbyDestination.absoluteString.contains("50.4510000,30.5210000"))
+        for _ in 0..<100 { if case .placeResults = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .placeResults(nearbyPlaces) = model.resultState else { Issue.record("Nearby did not reach internal place results"); return }
+        #expect(nearbyPlaces.first?.id == "near")
+        #expect(opened.isEmpty)
 
         model.input = "Визнач моє теперішнє місцезнаходження"
         model.submit()
@@ -537,9 +536,9 @@ struct Build29ReleaseRootLocationRouteTests {
 
         model.input = "Побудуй шлях до центральної бібліотеки"
         model.submit()
-        for _ in 0..<100 { if opened.count == 2 { break }; try await Task.sleep(for: .milliseconds(10)) }
-        guard opened.count == 2 else { Issue.record("Navigation did not open its exact destination"); return }
-        #expect(opened[1].host?.contains("maps.apple.com") == true)
+        for _ in 0..<100 { if opened.count == 1 { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard opened.count == 1 else { Issue.record("Navigation did not open its exact destination"); return }
+        #expect(opened[0].host?.contains("maps.apple.com") == true)
 
         model.input = "Скільки триватиме дорога до виставкового центру?"
         model.submit()
@@ -549,9 +548,9 @@ struct Build29ReleaseRootLocationRouteTests {
 
         model.input = "Як дістатися громадським транспортом до ботанічного саду?"
         model.submit()
-        for _ in 0..<100 { if opened.count == 3 { break }; try await Task.sleep(for: .milliseconds(10)) }
-        guard opened.count == 3 else { Issue.record("Transit route did not open its exact destination"); return }
-        #expect(opened[2].absoluteString.contains("dirflg=r") == true)
+        for _ in 0..<100 { if opened.count == 2 { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard opened.count == 2 else { Issue.record("Transit route did not open its exact destination"); return }
+        #expect(opened[1].absoluteString.contains("dirflg=r") == true)
 
         model.input = "Знайди клініку вздовж цього маршруту"
         model.submit()
@@ -573,27 +572,27 @@ struct Build29ReleaseRootLocationRouteTests {
         model.input = "Хотілося б випити теплого напою десь поряд"
         model.submit()
         for _ in 0..<100 {
-            if opened.count == 1 { break }
+            if case .placeResults = model.resultState { break }
             try await Task.sleep(for: .milliseconds(10))
         }
-        guard let nearby = opened.first else {
-            Issue.record("Indirect nearby proposition did not open an exact place")
+        guard case let .placeResults(nearby) = model.resultState else {
+            Issue.record("Indirect nearby proposition did not return internal places")
             return
         }
-        #expect(nearby.host == "www.google.com")
-        #expect(nearby.absoluteString.contains("50.4510000,30.5210000"))
+        #expect(nearby.first?.id == "near")
+        #expect(opened.isEmpty)
 
         model.input = "Мені необхідно потрапити до виставкового павільйону"
         model.submit()
         for _ in 0..<100 {
-            if opened.count == 2 { break }
+            if opened.count == 1 { break }
             try await Task.sleep(for: .milliseconds(10))
         }
-        guard opened.count == 2 else {
+        guard opened.count == 1 else {
             Issue.record("Indirect movement proposition did not open its navigation destination")
             return
         }
-        #expect(opened[1].host?.contains("maps.apple.com") == true)
+        #expect(opened[0].host?.contains("maps.apple.com") == true)
     }
 }
 
@@ -717,14 +716,16 @@ struct Build29ReleaseExternalProviderBoundaryTests {
         model.input = request
         model.submit()
         for _ in 0..<150 {
-            if !opened.isEmpty { break }
+            if case .deterministic = model.resultState { break }
             try await Task.sleep(for: .milliseconds(10))
         }
 
-        guard let destination = opened.first else {
-            Issue.record("Verified catalog entity did not reach official provider handoffs")
+        guard case let .deterministic(result) = model.resultState,
+              let destination = result.actions.first?.destination else {
+            Issue.record("Verified catalog entity did not reach its exact official source card")
             return
         }
+        #expect(opened.isEmpty)
         #expect(destination.host == "www.gucci.com")
         #expect(destination.path.contains("search"))
         #expect({ if case .webHandoff = model.resultState { return false }; return true }())
@@ -746,6 +747,7 @@ struct Build29ReleaseExternalProviderBoundaryTests {
         var opened: [URL] = []
         let model = ProductionAssistantComposition.makeModel(
             placeSearch: .init(providers: [Build29ReleasePlaceBoundary(values: [productPlace])]),
+            commerceSearch: .init(providers: []),
             currentLocation: Build29ReleaseLocationBoundary(origin), personalSearchSources: [],
             compactResultDuration: .seconds(60), genericDiscovery: discovery,
             systemHandoffOpen: { opened.append($0) }
@@ -758,11 +760,21 @@ struct Build29ReleaseExternalProviderBoundaryTests {
         #expect(general.destination.path == "/search")
 
         model.input = "Підбери водостійкий туристичний рюкзак до 4200 гривень"
+        let productCommand = LanguageUnderstandingBlock().parse(model.input)
+        #expect(productCommand.intent == .productSearch)
+        #expect(productCommand.entities["provider_domain"] == "product_catalog")
+        let productPlan = SingleCorridorRouter().plan(productCommand)
+        #expect(productPlan.room == .commerce)
+        #expect(productPlan.terminalStrategy == .execute)
         model.submit()
-        for _ in 0..<100 { if !opened.isEmpty { break }; try await Task.sleep(for: .milliseconds(10)) }
-        guard let destination = opened.first else { Issue.record("Local-first product route was not reached"); return }
-        #expect(destination.host == "www.google.com")
-        #expect(destination.path == "/maps/search")
+        for _ in 0..<300 { if case .deterministic = model.resultState { break }; try await Task.sleep(for: .milliseconds(10)) }
+        guard case let .deterministic(product) = model.resultState,
+              let destination = product.actions.first?.destination else {
+            Issue.record("Commerce source card was not reached; entities=\(productCommand.entities); state=\(String(describing: model.resultState))")
+            return
+        }
+        #expect(opened.isEmpty)
+        #expect(destination.host == "prom.ua")
     }
 
 @Test func unseenProviderDomainsRemainTypedAtTheTruthfulReleaseBoundary() async throws {
@@ -805,6 +817,7 @@ struct Build29ReleaseExternalProviderBoundaryTests {
         ]
         var opened: [URL] = []
         let model = ProductionAssistantComposition.makeModel(
+            commerceSearch: .init(providers: []), jobsDiscovery: .init(providers: []),
             personalSearchSources: [], compactResultDuration: .seconds(60),
             systemHandoffOpen: { opened.append($0) }
         )
@@ -816,6 +829,8 @@ struct Build29ReleaseExternalProviderBoundaryTests {
             for _ in 0..<100 {
                 if case .webHandoff = model.resultState { break }
                 if case .deterministic = model.resultState { break }
+                if case .commerceResults = model.resultState { break }
+                if case .jobResults = model.resultState { break }
                 if case .failure = model.resultState { break }
                 if case .clarification = model.resultState { break }
                 if opened.count > openedBefore { break }
@@ -832,6 +847,12 @@ struct Build29ReleaseExternalProviderBoundaryTests {
             case .officialProvider:
                 if opened.count == openedBefore + 1 {
                     #expect(opened.last?.host?.contains("google") != true)
+                } else if case let .deterministic(result) = model.resultState {
+                    #expect(result.actions.first?.destination != nil)
+                } else if case let .commerceResults(values) = model.resultState {
+                    #expect(!values.isEmpty)
+                } else if case let .jobResults(values) = model.resultState {
+                    #expect(!values.isEmpty)
                 } else {
                     Issue.record("Official provider route was not reached: \(request); intent=\(parsed.intent.rawValue); entities=\(parsed.entities); state=\(String(describing: model.resultState))")
                 }

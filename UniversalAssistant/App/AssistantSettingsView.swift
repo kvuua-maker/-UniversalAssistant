@@ -13,6 +13,7 @@ struct AssistantSettingsView: View {
     @State private var diagnosticExport: DiagnosticExportItem?
     @State private var diagnosticExportError: String?
     @State private var detailedDiagnostics = LocalVoiceDiagnosticReport.shared.detailedDiagnosticsEnabled
+    @State private var silpoConnection = SilpoConnectionModel()
 
     var body: some View {
         List {
@@ -71,6 +72,19 @@ struct AssistantSettingsView: View {
                 if let url = URL(string: UIApplication.openSettingsURLString) { Link("iPhone Permissions", destination: url) }
             }
             Section("Підключити сервіси") {
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Сільпо").font(.headline)
+                        Text(silpoConnection.connected ? "Офіційний MCP підключено" : "OAuth 2.1 + PKCE; пароль не передається UniversalAssistant")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if silpoConnection.busy { ProgressView() }
+                    else if silpoConnection.connected { Button("Відключити") { silpoConnection.disconnect() } }
+                    else { Button("Підключити") { silpoConnection.connect() } }
+                }
+                .accessibilityIdentifier("settings.connected-service.silpo")
+                if let message = silpoConnection.message { Text(message).font(.footnote).foregroundStyle(.secondary) }
                 ForEach(ConnectableServiceRegistry.records) { service in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
@@ -94,6 +108,7 @@ struct AssistantSettingsView: View {
             preferences = model.presentationPreferences
             detailedDiagnostics = LocalVoiceDiagnosticReport.shared.detailedDiagnosticsEnabled
             refreshDiagnostics()
+            silpoConnection.refresh()
         }
         .sheet(item: $diagnosticExport) { item in
             SystemShareSheet(items: [item.url])

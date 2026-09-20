@@ -101,8 +101,10 @@ extension ApplePersonalSearchSourcesTests {
             photoSearchTimeout: .milliseconds(20),
             personalSearchSources: []
         )
+        let command = LanguageUnderstandingBlock().parse("Покажи недавній знімок")
+        #expect(command.entities["photo_query_kind"] == "recent")
         do {
-            _ = try await executor.execute(LocalCommandEngine().parse("Покажи недавній знімок"))
+            _ = try await executor.execute(command)
             Issue.record("Expected bounded PhotoKit timeout")
         } catch let error as CanonicalCapabilityExecutionError {
             #expect(error == .unavailable("photos_search_timeout"))

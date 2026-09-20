@@ -1012,7 +1012,9 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
     }
 
     private func photoQueryEntities(frame: CanonicalSemanticFrame, original: String) -> [String: String] {
-        if frame.modifiers.contains("latest") || frame.modifiers.contains("penultimate") {
+        let comparable = CanonicalMorphology.comparableText(original)
+        if frame.modifiers.contains("latest") || frame.modifiers.contains("penultimate") ||
+            ["недав", "recent"].contains(where: comparable.contains) {
             return ["photo_query_kind": "recent", "query": "recent"]
         }
         if frame.modifiers.contains("all") {
@@ -1048,7 +1050,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             let value = original[range].trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
             let last = value.lowercased().split(separator: " ").last.map(String.init) ?? ""
             if ["ою", "ею", "ом", "ем", "ами", "ями"].contains(where: last.hasSuffix) { return nil }
-            if !value.isEmpty { return String(value) }
+            if !value.isEmpty { return CanonicalLocalityNormalizer.normalize(String(value)) }
         }
         return nil
     }

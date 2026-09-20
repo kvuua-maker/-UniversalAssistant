@@ -184,7 +184,7 @@ struct Build34PhysicalSystemicSemanticTests {
         let place = parser.parse("Покажи фото з Чернівців")
         #expect(place.intent == .photoSearch, Comment(rawValue: String(describing: place)))
         #expect(place.entities["photo_query_kind"] == "metadata")
-        #expect(place.entities["photo_location_query"] == "Чернівців")
+        #expect(place.entities["photo_location_query"] == "Чернівці")
         _ = try await executor.execute(place)
         #expect(library.lastCriteria()?.coordinate?.latitude == 48.2915)
         #expect(library.lastCriteria()?.radiusMeters == 50_000)
@@ -302,15 +302,15 @@ struct Build34PhysicalSystemicSemanticTests {
         direct.input = directText
         direct.submit()
         for _ in 0..<100 {
-            if !directDestinations.isEmpty { break }
+            if case .placeResults = direct.resultState { break }
             try await Task.sleep(for: .milliseconds(10))
         }
-        guard let directDestination = directDestinations.first else {
+        guard case let .placeResults(directPlaces) = direct.resultState else {
             Issue.record("Explicit car rental did not reach Release boundary; command=\(directCommand); state=\(direct.resultState); status=\(direct.statusText)")
             return
         }
-        #expect(directDestination.host == "www.google.com")
-        #expect(directDestination.path == "/maps/search")
+        #expect(directPlaces.map(\.id) == ["rental-agency"])
+        #expect(directDestinations.isEmpty)
 
         var continuedDestinations: [URL] = []
         let continued = ProductionAssistantComposition.makeModel(
@@ -328,11 +328,14 @@ struct Build34PhysicalSystemicSemanticTests {
         }
         continued.resolveActionRequiredChoice("Оренда автомобіля")
         for _ in 0..<100 {
-            if !continuedDestinations.isEmpty { break }
+            if case .placeResults = continued.resultState { break }
             try await Task.sleep(for: .milliseconds(10))
         }
-        #expect(continuedDestinations.count == 1)
-        #expect(continuedDestinations.first?.host == "www.google.com")
+        guard case let .placeResults(continuedPlaces) = continued.resultState else {
+            Issue.record("Continued rental request did not return internal places"); return
+        }
+        #expect(continuedPlaces.map(\.id) == ["rental-agency"])
+        #expect(continuedDestinations.isEmpty)
         #expect({ if case .webHandoff = continued.resultState { return false }; return true }())
     }
 

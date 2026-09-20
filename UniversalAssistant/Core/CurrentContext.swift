@@ -10,7 +10,7 @@ struct ContextProvenance: Equatable, Codable, Sendable {
 }
 
 struct ContextEntity: Equatable, Codable, Sendable {
-    enum Kind: String, Codable, Sendable { case person, place, product, store, event, appointment, route, photo, providerResult }
+    enum Kind: String, Codable, Sendable { case person, place, product, store, job, event, appointment, route, photo, providerResult }
     let id: String
     let kind: Kind
     let displayName: String
@@ -251,9 +251,34 @@ final class CurrentContextStore {
             guard let place = byID[fact.id] else { return nil }
             let provenance = ContextProvenance(source: fact.source ?? place.source, objectID: place.id,
                                                observedAt: fact.observedAt ?? place.timestamp, expiresAt: expires)
-            return .init(id: place.id, kind: .place, displayName: place.name, phoneNumber: nil,
+            return .init(id: place.id, kind: .place, displayName: place.name, phoneNumber: place.phone,
                          provenance: provenance, latitude: place.latitude, longitude: place.longitude,
                          actionID: actions[place.id]?.id, openReference: actions[place.id]?.destination?.absoluteString)
+        }
+        context.update(now: now, lifetime: lifetime, results: entities)
+        consumedActionIDs.removeAll()
+    }
+    func replaceCommerceResults(_ offers: [CommerceOfferPresentation], now: Date = .now, lifetime: TimeInterval = 300) {
+        let expires = now.addingTimeInterval(lifetime)
+        let entities = offers.prefix(20).map { presentation in
+            let offer = presentation.offer
+            let provenance = ContextProvenance(source: offer.providerID, objectID: offer.id,
+                                               observedAt: offer.sourceTimestamp, expiresAt: expires)
+            return ContextEntity(id: offer.id, kind: .product, displayName: presentation.title,
+                                 phoneNumber: nil, provenance: provenance, actionID: offer.id,
+                                 openReference: offer.exactPurchaseURL.absoluteString)
+        }
+        context.update(now: now, lifetime: lifetime, results: entities)
+        consumedActionIDs.removeAll()
+    }
+    func replaceJobResults(_ jobs: [JobDiscoveryResult], now: Date = .now, lifetime: TimeInterval = 300) {
+        let expires = now.addingTimeInterval(lifetime)
+        let entities = jobs.prefix(20).map { job in
+            let provenance = ContextProvenance(source: job.sourceName, objectID: job.id,
+                                               observedAt: job.observedAt, expiresAt: expires)
+            return ContextEntity(id: job.id, kind: .job, displayName: job.title,
+                                 phoneNumber: nil, provenance: provenance, actionID: job.id,
+                                 openReference: job.sourceURL.absoluteString)
         }
         context.update(now: now, lifetime: lifetime, results: entities)
         consumedActionIDs.removeAll()

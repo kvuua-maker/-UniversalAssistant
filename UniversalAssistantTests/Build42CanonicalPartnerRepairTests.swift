@@ -166,16 +166,15 @@ struct Build42CanonicalPartnerRepairTests {
             personalSearchSources: [],
             affiliateConfigurations: ["market.ebay": configuration]
         )
-        guard case let .handoff(handoff) = try await executor.execute(command) else {
-            Issue.record("Expected provider handoff")
+        guard case let .result(result) = try await executor.execute(command),
+              let destination = result.actions.first?.destination else {
+            Issue.record("Expected provider source card")
             return
         }
-        let items = URLComponents(url: handoff.destination, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let items = URLComponents(url: destination, resolvingAgainstBaseURL: false)?.queryItems ?? []
         #expect(items.first(where: { $0.name == "_nkw" })?.value == "Seiko")
         #expect(items.first(where: { $0.name == "campid" })?.value == "approved-campaign")
         #expect(items.first(where: { $0.name == "customid" })?.value == command.id.uuidString.lowercased())
-        #expect(handoff.kind == .provider)
-        #expect(!handoff.requiresExplicitUserActivation)
     }
 
     @Test func build40SemanticCollisionFamiliesUseTypedRoles() {

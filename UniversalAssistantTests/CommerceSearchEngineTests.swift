@@ -38,6 +38,17 @@ private func searchOffer(provider: String, sourceTimestamp: Date = .now) -> Norm
 }
 
 @Suite("Commerce search pipeline") struct CommerceSearchEngineTests {
+    @Test func silpoOAuthUsesPKCEAndRejectsCallbackStateMismatch() throws {
+        let verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+        #expect(SilpoOAuthSecurity.pkceChallenge(for: verifier) == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
+        let valid = URL(string: "universalassistant://oauth/silpo?code=authorization-code&state=expected")!
+        #expect(try SilpoOAuthSecurity.authorizationCode(from: valid, expectedState: "expected") == "authorization-code")
+        let invalid = URL(string: "universalassistant://oauth/silpo?code=authorization-code&state=attacker")!
+        #expect(throws: SilpoConnectionError.invalidCallback) {
+            try SilpoOAuthSecurity.authorizationCode(from: invalid, expectedState: "expected")
+        }
+    }
+
     @Test func identicalConcurrentRequestsShareOneProviderCall() async throws {
         let probe = ProviderProbe()
         let engine = CommerceSearchEngine(providers: [SearchProviderStub(providerID: "one", probe: probe, delay: .milliseconds(30))])

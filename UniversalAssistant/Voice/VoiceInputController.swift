@@ -101,16 +101,19 @@ struct VoiceUtteranceEndpointPolicy: Sendable {
         evidence: VoiceRecognitionEvidence?
     ) -> VoiceUtteranceEndpointClass {
         guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return .noSpeech }
-        guard let assessment, assessment.isResolvedDeterministic,
-              !assessment.command.needsClarification else { return .incompleteCritical }
+        guard let assessment else { return .incompleteCritical }
+        let completeness = VoiceCommandCompletenessPolicy().status(for: assessment)
+        if completeness == .missingCriticalRole || completeness == .conflicting { return .incompleteCritical }
+        if completeness == .noSpeech { return .noSpeech }
 
         switch assessment.command.intent {
-        case .messageCompose, .contactCall,
-             .productSearch, .fashionDiscovery, .groceryBasket,
-             .placeSearch, .serviceSearch, .restaurantSearch, .reservation,
+        case .messageCompose, .contactCall, .reservation,
              .ticketSearch, .ticketPurchaseHandoff, .hotelSearch, .travelPlan,
              .calendarCreate, .reminderCreate, .routeAwareSearch:
-            return .extendable
+            return completeness == .complete ? .closedAtomic : .extendable
+        case .productSearch, .fashionDiscovery, .groceryBasket,
+             .placeSearch, .serviceSearch, .restaurantSearch, .photoSearch:
+            return completeness == .complete ? .closedAtomic : .extendable
         case .open, .appAction:
             return assessment.application != nil || assessment.command.entities["app"] != nil
                 ? .closedAtomic : .incompleteCritical
@@ -1353,7 +1356,9 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
             "Voice Memos", "Wi-Fi", "Bluetooth", "Google", "Google Search", "Google Maps", "Google Places",
             "ChoiceQR", "RestOn", "Glovo", "Bolt Food", "Дія", "Diia", "Seiko", "Apple", "iPhone"
         ]
-        return unique(canonicalEntityVocabulary + CanonicalSpeechEntityRegistry.speechVocabulary + capabilityNames + canonicalFunctionVocabulary)
+        return unique(canonicalEntityVocabulary + CanonicalSpeechEntityRegistry.speechVocabulary + capabilityNames +
+                      CanonicalPlaceCategoryRegistry.speechVocabulary + CanonicalProductCategoryRegistry.speechVocabulary +
+                      canonicalFunctionVocabulary)
     }
 
     private static var canonicalSecondaryAliasVocabulary: [String] {
@@ -1375,7 +1380,7 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
             "відскануй", "проскануй", "розпізнай", "оцифруй", "обчисли", "збільш",
             "знайди", "покажи", "проклади", "подзвони", "набери", "повідомлення",
             "переклади", "ліхтарик", "PDF", "QR"
-        ]
+        ] + CanonicalPlaceCategoryRegistry.speechVocabulary + CanonicalProductCategoryRegistry.speechVocabulary
     }
 
     static var canonicalVocabulary: [String] {

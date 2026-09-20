@@ -28,6 +28,8 @@ struct Place: Identifiable, Equatable, Codable, Sendable {
     let timestamp: Date
     let verification: PlaceVerification
     var confidence: Double? = nil
+    var fuelCapabilities: Set<FuelConstraint> = []
+    var attribution: String? = nil
 
     func freshness(now: Date = .now, recentFor: TimeInterval = 900) -> PlaceFreshness {
         let age = now.timeIntervalSince(timestamp)
@@ -44,6 +46,7 @@ struct PlaceQuery: Equatable, Sendable {
     let location: ValidatedLocation
     var radiusMeters: Double = 5_000
     var limit: Int = 20
+    var fuelConstraint: FuelConstraint? = nil
 
     func validated() throws -> Self {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw PlaceProviderError.invalidQuery }
@@ -87,6 +90,9 @@ struct PlaceDeduplicator: Sendable {
         return sqrt(x * x + y * y) * .pi / 180 * 6_371_000
     }
     private func richer(_ a: Place, _ b: Place) -> Place {
+        if a.fuelCapabilities.isEmpty != b.fuelCapabilities.isEmpty {
+            return a.fuelCapabilities.isEmpty ? b : a
+        }
         let score: (Place) -> Int = { [$0.address, $0.phone, $0.officialWebsite?.absoluteString, $0.openingHours].compactMap { $0 }.count }
         return score(b) > score(a) ? b : a
     }

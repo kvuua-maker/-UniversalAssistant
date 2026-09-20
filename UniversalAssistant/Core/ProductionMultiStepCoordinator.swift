@@ -112,20 +112,46 @@ final class ProductionStepOperationMap {
 @MainActor
 final class ProductionMultiStepCoordinator {
     private let operationFactory: ProductionStepOperationFactory
-    private let commandParser: any CommandParsing
     private var completedCommandIDs: Set<UUID> = []
 
     init(
-        parser: any CommandParsing = LanguageUnderstandingBlock(),
         operationFactory: @escaping ProductionStepOperationFactory
     ) {
-        self.commandParser = parser
         self.operationFactory = operationFactory
     }
 
+    /// Production accepts only a frozen compound RoutePlan. Parsing and all
+    /// route ownership decisions have already completed upstream.
+    func execute(_ routePlan: RoutePlan) async throws -> DeterministicResult {
+        guard routePlan.room == .compound, !routePlan.atomicPlans.isEmpty else {
+            throw CanonicalCapabilityExecutionError.missingParameter("compound_plans")
+        }
+        let steps = routePlan.atomicPlans.enumerated().map { index, atomic in
+            ExecutionPlanStep(
+                id: String(format: "step-%02d-%@", index + 1, atomic.command.intent.rawValue),
+                capability: .typedCommand,
+                dependencies: index == 0 ? [] : [String(format: "step-%02d-%@", index, routePlan.atomicPlans[index - 1].command.intent.rawValue)],
+                command: atomic.command
+            )
+        }
+        let plan = DeterministicExecutionPlan(
+            commandID: routePlan.command.id, intent: .multiStep, constraints: [], steps: steps,
+            completionStepID: steps.last!.id, aiInvocationCount: 0
+        )
+        return try await executeFrozen(command: routePlan.command, plan: plan)
+    }
+
+#if DEBUG
+    /// Test-only compatibility for isolated legacy coordinator tests. The
+    /// shipped Production corridor never invokes this overload.
     func execute(_ command: StructuredCommand) async throws -> DeterministicResult {
+        let plan = try DeterministicExecutionPlanBuilder().plan(for: command)
+        return try await executeFrozen(command: command, plan: plan)
+    }
+#endif
+
+    private func executeFrozen(command: StructuredCommand, plan: DeterministicExecutionPlan) async throws -> DeterministicResult {
         guard !completedCommandIDs.contains(command.id) else { throw CanonicalCapabilityExecutionError.unavailable("duplicate_multi_step_command") }
-        let plan = try DeterministicExecutionPlanBuilder(parser: commandParser).plan(for: command)
         let operations = operationFactory(command, plan)
         let report = try await DeterministicPlanExecutor(maximumConcurrency: 3).execute(plan, operations: operations)
         completedCommandIDs.insert(command.id)

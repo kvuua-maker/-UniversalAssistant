@@ -10,9 +10,9 @@ extension ProductionCanonicalCapabilityExecutor {
 
     func officialPublicProviderHandoff(
         _ command: StructuredCommand,
-        routingDecision: CanonicalRoutingDecision? = nil
+        routingDecision: CanonicalRoutingDecision
     ) throws -> CapabilityExecutionOutcome {
-        let policy = routingDecision ?? SingleCorridorRouter().plan(command).routingDecision
+        let policy = routingDecision
         let domains = officialProviderDomains(for: command)
         var candidates = domains.flatMap(OfficialPublicProviderHandoffRegistry.records(in:))
         if let policyID = policy.providerID,

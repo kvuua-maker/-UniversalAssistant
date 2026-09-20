@@ -25,6 +25,11 @@ struct CommerceOfferCard: View {
 
             badgeRow
             priceBlock
+            if isHistoricalPriceEvidence {
+                Text("Історичне спостереження ціни · \(offer.sourceTimestamp.formatted(date: .abbreviated, time: .omitted))")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
 
             HStack(spacing: 12) {
                 Label(availabilityKey, systemImage: availabilitySymbol)
@@ -40,7 +45,7 @@ struct CommerceOfferCard: View {
             }
 
             Button(action: onPurchase) {
-                Text("commerce_buy_at_seller")
+                Text(isHistoricalPriceEvidence ? "Відкрити джерело" : AppText.value("commerce_buy_at_seller"))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
@@ -140,6 +145,7 @@ struct CommerceOfferCard: View {
     }
 
     private var availabilitySymbol: String { offer.availability == .inStock ? "checkmark.circle.fill" : "questionmark.circle" }
+    private var isHistoricalPriceEvidence: Bool { offer.providerID == "open-food-facts-open-prices" }
     private var deliveryKey: LocalizedStringKey? {
         switch offer.deliversToUkraine {
         case true: "commerce_delivers_ukraine"

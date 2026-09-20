@@ -20,7 +20,7 @@ struct CompactResultCard: View {
             }
             .padding(16)
             .accessibilityIdentifier("assistant.processing")
-        case .recognized(let summary):
+        case .recognized:
             EmptyView()
         case .weather(let snapshot):
             WeatherResultCard(snapshot: snapshot, onReportIssue: onReportIssue)
@@ -71,6 +71,14 @@ struct CompactResultCard: View {
                 ForEach(result.warnings, id: \.self) { Text($0).font(.caption).foregroundStyle(.secondary) }
             }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .accessibilityIdentifier("assistant.deterministic-result")
+        case .placeResults(let places):
+            PlaceResultsView(places: places)
+        case .commerceResults(let offers):
+            CommerceResultsView(presentations: offers, isComplete: true) { offer in
+                onResultAction(.init(id: offer.id, title: "Відкрити продавця", kind: .purchaseHandoff, destination: offer.exactPurchaseURL))
+            }
+        case .jobResults(let jobs):
+            JobsResultsView(jobs: jobs)
         case .eventKit(let result):
             HStack(alignment: .top, spacing: 14) {
                 Image(systemName: result.kind == .calendar ? "calendar" : "checkmark.circle.fill")

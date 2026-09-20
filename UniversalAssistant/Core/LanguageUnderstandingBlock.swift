@@ -1102,7 +1102,9 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
             risk: intent == .emergency ? .emergency : legacy.risk,
             needsClarification: needsClarification || intent == .unknown
         )
-        return CanonicalCurrentCommandRoleNormalizer.apply(to: parsed)
+        return CanonicalDomainIntegrityPolicy.apply(
+            to: CanonicalCurrentCommandRoleNormalizer.apply(to: parsed)
+        )
     }
 
     /// A local-utility recognizer may observe digits or separators inside a

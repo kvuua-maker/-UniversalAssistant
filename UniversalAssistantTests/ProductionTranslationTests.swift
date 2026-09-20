@@ -83,6 +83,9 @@ struct ProductionTranslationTests {
     }
 
     @Test func unseenDocumentOCRCompoundResumesWithObservedTextAtHomeBoundary() async throws {
+        let resolved = LanguageUnderstandingBlock().parse("Оцифруй цей документ, потім переклади німецькою")
+        #expect(resolved.intent == .multiStep)
+        #expect(CompoundCommandClauses.split(resolved.originalText).count == 2)
         let model = AssistantViewModel(ocrProcessor: CompoundOCRProcessor(), compactResultDuration: .seconds(60))
         model.input = "Оцифруй цей документ, потім переклади німецькою"
         model.submit()

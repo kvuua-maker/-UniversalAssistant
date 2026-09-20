@@ -14,7 +14,9 @@ enum ProductionAssistantComposition {
         podcasts: ApplePodcastSearchProvider = .init(),
         mediaOverride: MediaIntegrationEngine? = nil,
         locationResolver: ManualLocationContextResolver = .init(),
-        placeSearch: PlaceSearchEngine = .init(providers: [MapKitPlaceProvider()]),
+        placeSearch: PlaceSearchEngine = .init(providers: [MapKitPlaceProvider(), OSMFuelPOIProvider()]),
+        commerceSearch: CommerceSearchEngine = .init(providers: [SilpoRetailProvider(), OpenFoodFactsOpenPricesProvider()]),
+        jobsDiscovery: JobDiscoveryEngine = .init(providers: [StateEmploymentOpenDataProvider()]),
         currentLocation: any CurrentLocationResolving = AppleCurrentLocationResolver(),
         reverseLocation: any ReverseLocationGeocoding = AppleReverseLocationGeocoder(),
         routeProvider: any RouteProvider = MapKitRouteProvider(),
@@ -45,6 +47,7 @@ enum ProductionAssistantComposition {
         })
         let executor = ProductionCanonicalCapabilityExecutor(
             contacts: contacts, photos: photos, photoSemanticLoader: photoSemanticLoader, photoSemanticLabeler: photoSemanticLabeler, podcasts: podcasts, mediaOverride: mediaOverride, locationResolver: locationResolver, placeSearch: placeSearch,
+            commerceSearch: commerceSearch, jobsDiscovery: jobsDiscovery,
             currentLocation: currentLocation, reverseLocation: reverseLocation, currentContext: context, routeProvider: routeProvider,
             eventKit: eventKit, recorder: recorder,
             publicDeviceExecute: publicDeviceExecute, clipboardRead: clipboardRead, fx: fx,

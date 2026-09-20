@@ -33,6 +33,25 @@ private func jobsIntent() throws -> GenericIntent {
 }
 @Suite("Jobs discovery and native result")
 struct JobsDiscoveryEngineTests {
+  @Test func stateEmploymentXMLParsesRealFieldsWithoutInventingVacancyData() throws {
+    let xml = """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <jobs><job id="job-1"><name>Водій</name><region>Київ</region>
+    <link>https://example.test/state/job-1</link>
+    <description><![CDATA[Назва підприємства: ТОВ Перевізник
+    Заробітна плата (усього): 50000
+    Характер виконуваної роботи: Постійний]]></description></job></jobs>
+    """
+    let date = Date(timeIntervalSince1970: 1_700_000_000)
+    let jobs = StateEmploymentXMLParser.parse(Data(xml.utf8), sourceDate: date)
+    #expect(jobs.count == 1)
+    #expect(jobs.first?.title == "Водій")
+    #expect(jobs.first?.locality == "Київ")
+    #expect(jobs.first?.salaryMinimum == 50_000)
+    #expect(jobs.first?.sourceName == "Державна служба зайнятості")
+    #expect(jobs.first?.observedAt == date)
+  }
+
   @Test func ourJobsSatisfyRequestWithoutCallingExternalFallback() async throws {
     let direct = JobsProviderProbe(
       id: "direct", tier: .directEmployer,

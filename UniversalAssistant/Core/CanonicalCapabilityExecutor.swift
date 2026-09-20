@@ -72,6 +72,9 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
 
 enum CapabilityExecutionOutcome: Equatable, Sendable {
     case result(DeterministicResult)
+    case placeResults([Place])
+    case commerceResults([CommerceOfferPresentation])
+    case jobResults([JobDiscoveryResult])
     case handoff(WebHandoffResult)
     case presentation(CapabilityPresentation)
     case suspended(CapabilityPresentation, CanonicalCapabilityContinuation)
@@ -179,15 +182,19 @@ private final class PhotoSearchDeadlineCompletion: @unchecked Sendable {
 
 @MainActor
 protocol CanonicalCapabilityExecuting: AnyObject {
-    func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome
     func execute(_ plan: RoutePlan) async throws -> CapabilityExecutionOutcome
+#if DEBUG
+    func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome
+#endif
     func resume(_ continuation: CanonicalCapabilityContinuation, with output: CanonicalDependencyOutput) async throws -> CapabilityExecutionOutcome
 }
 
 extension CanonicalCapabilityExecuting {
+#if DEBUG
     func execute(_ plan: RoutePlan) async throws -> CapabilityExecutionOutcome {
         try await execute(plan.command)
     }
+#endif
     func resume(_ continuation: CanonicalCapabilityContinuation, with output: CanonicalDependencyOutput) async throws -> CapabilityExecutionOutcome {
         throw CanonicalCapabilityExecutionError.unavailable("compound_continuation_unsupported")
     }
@@ -204,6 +211,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private let media: MediaIntegrationEngine?
     private let locationResolver: ManualLocationContextResolver
     private let placeSearch: PlaceSearchEngine
+    private let commerceSearch: CommerceSearchEngine
+    private let jobsDiscovery: JobDiscoveryEngine
     private let navigation = NavigationHandoff()
     private let currentLocation: any CurrentLocationResolving
     private let personalSearch: UniversalPersonalSearchEngine
@@ -236,6 +245,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         mediaOverride: MediaIntegrationEngine? = nil,
         locationResolver: ManualLocationContextResolver = .init(),
         placeSearch: PlaceSearchEngine = .init(providers: [MapKitPlaceProvider()]),
+        commerceSearch: CommerceSearchEngine = .init(providers: [SilpoRetailProvider(), OpenFoodFactsOpenPricesProvider()]),
+        jobsDiscovery: JobDiscoveryEngine = .init(providers: [StateEmploymentOpenDataProvider()]),
         currentLocation: any CurrentLocationResolving = AppleCurrentLocationResolver(),
         reverseLocation: any ReverseLocationGeocoding = AppleReverseLocationGeocoder(),
         currentContext: CurrentContextStore = CurrentContextStore(),
@@ -259,6 +270,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.podcasts = podcasts
         self.locationResolver = locationResolver
         self.placeSearch = placeSearch
+        self.commerceSearch = commerceSearch
+        self.jobsDiscovery = jobsDiscovery
         self.currentLocation = currentLocation
         self.personalSearch = UniversalPersonalSearchEngine(sources: personalSearchSources)
         self.currentContext = currentContext
@@ -281,9 +294,18 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
 #endif
     }
 
+#if DEBUG
+    /// Isolated test compatibility only. Release execution always receives a
+    /// frozen RoutePlan from the single production router.
     func execute(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
-        try await execute(SingleCorridorRouter().plan(command))
+        if command.intent == .multiStep {
+            let atomic = CompoundCommandClauses.split(command.originalText)
+                .map { LanguageUnderstandingBlock().parse($0) }
+            return try await execute(SingleCorridorRouter().planCompound(container: command, atomicCommands: atomic))
+        }
+        return try await execute(SingleCorridorRouter().plan(command))
     }
+#endif
 
     func execute(_ plan: RoutePlan) async throws -> CapabilityExecutionOutcome {
         let command = plan.command
@@ -301,6 +323,14 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             if command.intent == .multiStep {
                 guard !plan.atomicPlans.isEmpty else { throw CanonicalCapabilityExecutionError.missingParameter("compound_steps") }
                 return try await executeFrozenCompound(plan.atomicPlans, aggregate: [], dependencyOutput: nil)
+            }
+            if plan.room == .commerce,
+               [.productSearch, .fashionDiscovery, .groceryBasket].contains(command.intent) {
+                return try await commerce(command, routingDecision: routingDecision)
+            }
+            if plan.room == .jobsDelivery,
+               command.entities["provider_domain"] == "jobs" || routingDecision.lane == .jobs {
+                return try await jobs(command)
             }
             let outcome = try await executeUnobserved(command, routingDecision: routingDecision)
             if let diagnosticBoundary {
@@ -525,7 +555,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 )
                 return try await route(routed, mode: .transit)
             }
-            return try officialPublicProviderHandoff(command)
+            return try officialPublicProviderHandoff(command, routingDecision: routingDecision)
         case .productSearch, .fashionDiscovery:
             if routingDecision.lane == .officialBrand { return try officialBrandHandoff(command) }
             if routingDecision.lane == .localDiscovery { return try await places(command, allowsMultiple: routingDecision.allowsMultipleResults) }
@@ -592,6 +622,22 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             let output = [.placeSearch, .restaurantSearch, .serviceSearch].contains(command.intent)
                 ? currentContext.selectFirstResult().map(CanonicalDependencyOutput.selectedEntity) : nil
             return try await executeFrozenCompound(remaining, aggregate: aggregate + [fact], dependencyOutput: output)
+        case let .placeResults(values):
+            if remaining.isEmpty { return .placeResults(values) }
+            let fact = ResultFact(id: command.id.uuidString, label: "Знайдено місця", value: String(values.count),
+                                  state: .verified, source: "Location room", observedAt: .now, priority: 100 - aggregate.count)
+            let output = currentContext.selectFirstResult().map(CanonicalDependencyOutput.selectedEntity)
+            return try await executeFrozenCompound(remaining, aggregate: aggregate + [fact], dependencyOutput: output)
+        case let .commerceResults(values):
+            if remaining.isEmpty { return .commerceResults(values) }
+            let fact = ResultFact(id: command.id.uuidString, label: "Знайдено пропозиції", value: String(values.count),
+                                  state: .verified, source: "Commerce room", observedAt: .now, priority: 100 - aggregate.count)
+            return try await executeFrozenCompound(remaining, aggregate: aggregate + [fact], dependencyOutput: nil)
+        case let .jobResults(values):
+            if remaining.isEmpty { return .jobResults(values) }
+            let fact = ResultFact(id: command.id.uuidString, label: "Знайдено вакансії", value: String(values.count),
+                                  state: .verified, source: "Jobs room", observedAt: .now, priority: 100 - aggregate.count)
+            return try await executeFrozenCompound(remaining, aggregate: aggregate + [fact], dependencyOutput: nil)
         case let .handoff(value):
             if remaining.isEmpty { return .handoff(value) }
             let fact = ResultFact(id: command.id.uuidString, label: command.intent.rawValue,
@@ -702,11 +748,12 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             location = try await currentLocation.resolveCurrent(for: .nearbySearch)
         }
         let category = placeCategory(in: command.normalizedText)
+        let fuelConstraint = command.entities["fuel_constraint"].flatMap(FuelConstraint.init(rawValue:))
         let searchText = placeSearchText(for: command, category: category)
         let nearbyRadiusMeters = 5_000.0
         let response = try await placeSearch.search(.init(
             text: searchText, category: category, location: location,
-            radiusMeters: nearbyRadiusMeters, limit: 5
+            radiusMeters: nearbyRadiusMeters, limit: 8, fuelConstraint: fuelConstraint
         ))
         let proximityRequested = command.entities["near_current_location"] == "true" ||
             ["поруч", "поблиз", "неподал", "поряд", "рядом", "nearby", "nearest", "closest"]
@@ -720,8 +767,10 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let places = proximityRequested
             ? distanceOrdered.filter { ($0.distanceMeters ?? .greatestFiniteMagnitude) <= nearbyRadiusMeters }
             : distanceOrdered
-        guard !places.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_places_found") }
-        let selectedPlaces = Array(places.prefix(allowsMultiple ? 5 : 1))
+        guard !places.isEmpty else {
+            return try exactMapSearchResult(query: command.originalText, answer: "Поблизу не знайдено підтверджених місць")
+        }
+        let selectedPlaces = Array(places.prefix(allowsMultiple ? 8 : 5))
         let output = try result(allowsMultiple ? "Знайдено місця" : selectedPlaces[0].name, facts: selectedPlaces.enumerated().map { index, place in
             ResultFact(id: place.id, label: place.name, value: place.address ?? place.category.rawValue, state: .verified, source: place.source, observedAt: place.timestamp, priority: 100 - index)
         }, actions: selectedPlaces.compactMap { place in
@@ -729,13 +778,84 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             return ResultAction(id: place.id, title: "Відкрити в Google Maps", kind: .navigate, destination: destination)
         })
         currentContext.replacePlaceResults(output, places: selectedPlaces)
-        guard !allowsMultiple, let destination = output.actions.first?.destination else { return .result(output) }
-        LocalVoiceDiagnosticReport.shared.record(
-            "provider_handoff_selected",
-            "provider=google.maps.url mechanism=exact_maps_url source=\(selectedPlaces[0].source) " +
-                "place_id=\(selectedPlaces[0].providerID ?? "unavailable") destination=\(destination.absoluteString)"
+        LocalVoiceDiagnosticReport.shared.record("first_verified_result_ready", "room=location count=\(selectedPlaces.count)")
+        return .placeResults(selectedPlaces)
+    }
+
+    private func commerce(
+        _ command: StructuredCommand,
+        routingDecision: CanonicalRoutingDecision
+    ) async throws -> CapabilityExecutionOutcome {
+        let category = command.entities["product_category"]
+            ?? CanonicalProductCategoryRegistry.match(in: command.normalizedText)?.canonicalName
+            ?? command.entities["query"]
+            ?? command.originalText
+        var variant = ProductVariant()
+        variant.size = command.entities["product_size"] ?? command.constraints.size
+        variant.color = command.entities["color"] ?? command.constraints.color
+        let identity = ProductIdentity(
+            brand: command.entities["brand"], model: command.entities["model"], productType: category,
+            sku: command.entities["sku"], gtin: command.entities["barcode"], variant: variant
         )
-        return .handoff(.init(query: selectedPlaces[0].name, destination: destination, kind: .navigation))
+        if let response = try? await commerceSearch.search(.init(identity: identity, region: "UA", limit: 12)),
+           !response.offers.isEmpty {
+            let presentations = CommerceOfferPresentation.make(from: response.offers)
+            currentContext.replaceCommerceResults(presentations)
+            LocalVoiceDiagnosticReport.shared.record("first_verified_result_ready", "room=commerce count=\(presentations.count)")
+            return .commerceResults(presentations)
+        }
+
+        let source: WebHandoffResult
+        if routingDecision.lane == .officialBrand {
+            guard case let .handoff(value) = try officialBrandHandoff(command) else {
+                throw CanonicalCapabilityExecutionError.unavailable("official_brand_source_missing")
+            }
+            source = value
+        } else if routingDecision.providerID != nil {
+            guard case let .handoff(value) = try officialPublicProviderHandoff(command, routingDecision: routingDecision) else {
+                throw CanonicalCapabilityExecutionError.unavailable("official_commerce_source_missing")
+            }
+            source = value
+        } else {
+            let query = [command.entities["brand"], category, variant.size, variant.color]
+                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }.joined(separator: " ")
+            var components = URLComponents(string: "https://prom.ua/ua/search")!
+            components.queryItems = [.init(name: "search_term", value: query)]
+            guard let destination = components.url else { throw CanonicalCapabilityExecutionError.unavailable("commerce_source_url_invalid") }
+            source = .init(query: query, destination: destination, kind: .provider, requiresExplicitUserActivation: true)
+        }
+        let output = try result("Точне джерело товарів", facts: [
+            .init(id: command.id.uuidString, label: source.query,
+                  value: source.destination.host ?? source.destination.absoluteString, state: .verified,
+                  source: source.destination.host ?? "official source", observedAt: .now, priority: 100)
+        ], actions: [.init(id: command.id.uuidString, title: "Відкрити результати", kind: .purchaseHandoff, destination: source.destination)])
+        return .result(output)
+    }
+
+    private func jobs(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        let subject = command.entities["job_role"] ?? CanonicalJobsRoleExtractor.role(in: command.originalText)
+        let locality: String? = command.entities["location"] ?? CanonicalJobsRoleExtractor.locality(in: command.originalText)
+        let salaryText = command.entities["salary_minimum"] ?? CanonicalJobsRoleExtractor.minimumSalary(in: command.originalText)
+        let minimum: Decimal? = salaryText.flatMap { Decimal(string: $0, locale: Locale(identifier: "en_US_POSIX")) }
+        let intent = GenericIntent(
+            domain: "jobs", subject: subject, goal: "find_job",
+            location: locality.map { GenericLocationConstraint(locality: $0, nearCurrentLocation: false) },
+            money: minimum.map { GenericMoneyConstraint(minimum: $0, maximum: nil, currency: "UAH") },
+            requiredFreshness: 14 * 24 * 60 * 60, requestedAction: "open", risk: .informational
+        )
+        do {
+            let values = try await jobsDiscovery.searchResults(intent)
+            currentContext.replaceJobResults(values)
+            LocalVoiceDiagnosticReport.shared.record("first_verified_result_ready", "room=jobs count=\(values.count)")
+            return .jobResults(values)
+        } catch {
+            var components = URLComponents(string: "https://www.dcz.gov.ua/userSearch/vacancy")!
+            components.queryItems = [.init(name: "search", value: [subject, locality].compactMap { $0 }.joined(separator: " "))]
+            guard let url = components.url else { throw CanonicalCapabilityExecutionError.unavailable("jobs_public_source_invalid") }
+            return .result(try result("Офіційний пошук вакансій", facts: [], actions: [
+                .init(id: command.id.uuidString, title: "Відкрити вакансії ДСЗ", kind: .open, destination: url)
+            ]))
+        }
     }
 
     private func localServices(_ command: StructuredCommand, allowsMultiple: Bool = false) async throws -> CapabilityExecutionOutcome {
@@ -772,27 +892,27 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             "local_service_proximity_applied",
             "location_source=\(locationSource) input_count=\(response.places.count) output_count=\(places.count) nearest_m_bucket=\(nearestBucket) radius_m=\(Int(request.radiusMeters))"
         )
-        guard !places.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_local_services_found") }
-
-        let handoffs = places.prefix(allowsMultiple ? 8 : 1).compactMap { place -> (Place, URL)? in
-            googleMapsExactPlaceURL(place).map { (place, $0) }
+        guard !places.isEmpty else {
+            return try exactMapSearchResult(query: command.originalText, answer: "Поблизу не знайдено підтверджених сервісів")
         }
-        guard !handoffs.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("no_legitimate_service_handoff") }
-        let facts = handoffs.enumerated().map { index, value in
+
+        let selectedPlaces = Array(places.prefix(allowsMultiple ? 8 : 5))
+        let facts = selectedPlaces.enumerated().map { index, place in
             ResultFact(
-                id: value.0.id, label: value.0.name,
-                value: value.0.address ?? value.0.category.rawValue,
-                state: .verified, source: value.0.source,
-                observedAt: value.0.timestamp, priority: 100 - index
+                id: place.id, label: place.name,
+                value: place.address ?? place.category.rawValue,
+                state: .verified, source: place.source,
+                observedAt: place.timestamp, priority: 100 - index
             )
         }
-        let actions = handoffs.map { place, destination in
-            ResultAction(id: place.id, title: "Відкрити в Google Maps", kind: .navigate, destination: destination)
+        let actions = selectedPlaces.compactMap { place -> ResultAction? in
+            guard let destination = googleMapsExactPlaceURL(place) else { return nil }
+            return ResultAction(id: place.id, title: "Відкрити в Google Maps", kind: .navigate, destination: destination)
         }
-        let output = try result(allowsMultiple ? "Знайдено відповідні місцеві сервіси" : handoffs[0].0.name, facts: facts, actions: actions)
-        currentContext.replacePlaceResults(output, places: handoffs.map(\.0))
-        guard !allowsMultiple, let destination = actions.first?.destination else { return .result(output) }
-        return .handoff(.init(query: handoffs[0].0.name, destination: destination, kind: .navigation))
+        let output = try result("Знайдено відповідні місцеві сервіси", facts: facts, actions: actions)
+        currentContext.replacePlaceResults(output, places: selectedPlaces)
+        LocalVoiceDiagnosticReport.shared.record("first_verified_result_ready", "room=services count=\(selectedPlaces.count)")
+        return .placeResults(selectedPlaces)
     }
 
     private func restaurantReservation(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
@@ -1174,7 +1294,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                     completion.finish(.values(await photos.search(criteria, limit: limit)))
                 }
                 completion.setWork(work)
-                Task.detached(priority: .background) { [photoSearchTimeout] in
+                Task.detached(priority: .high) { [photoSearchTimeout] in
                     do { try await Task.sleep(for: photoSearchTimeout) }
                     catch { completion.finish(.cancelled, cancelWork: true); return }
                     completion.finish(.timedOut, cancelWork: true)
@@ -1191,7 +1311,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     }
 
     private func photoDateRange(_ command: StructuredCommand, now: Date = .now) -> Range<Date>? {
-        guard command.entities["photo_date_filter"] == "true",
+        guard command.entities["photo_date_filter"] == "true" else { return nil }
+        if let explicit = explicitHistoricalPhotoDay(in: command.originalText, now: now) { return explicit }
+        guard
               case let .resolved(resolved) = NaturalDateTimeResolver().resolve(
                 command, locale: Locale(identifier: command.language == .ru ? "ru_RU" : "uk_UA"),
                 timeZone: .autoupdatingCurrent, relativeTo: now
@@ -1200,6 +1322,28 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         calendar.timeZone = .autoupdatingCurrent
         let start = calendar.startOfDay(for: resolved.instant)
         guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return nil }
+        return start..<end
+    }
+
+    /// Photo day/month queries are metadata filters, not future scheduling.
+    /// An omitted year therefore always means the current calendar year.
+    private func explicitHistoricalPhotoDay(in text: String, now: Date) -> Range<Date>? {
+        let monthRoots: [(String, Int)] = [
+            ("січ", 1), ("январ", 1), ("лют", 2), ("феврал", 2), ("берез", 3), ("март", 3),
+            ("квіт", 4), ("апрел", 4), ("трав", 5), ("мая", 5), ("черв", 6), ("июн", 6),
+            ("лип", 7), ("июл", 7), ("серп", 8), ("август", 8), ("верес", 9), ("сентябр", 9),
+            ("жовт", 10), ("октябр", 10), ("листоп", 11), ("ноябр", 11), ("груд", 12), ("декабр", 12)
+        ]
+        guard let regex = try? NSRegularExpression(pattern: #"\b([0-3]?\d)\s+([\p{L}]+)\b"#, options: [.caseInsensitive]),
+              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              let dayRange = Range(match.range(at: 1), in: text), let day = Int(text[dayRange]),
+              let monthRange = Range(match.range(at: 2), in: text) else { return nil }
+        let monthText = CanonicalMorphology.comparableText(String(text[monthRange]))
+        guard let month = monthRoots.first(where: { monthText.hasPrefix($0.0) })?.1 else { return nil }
+        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = .autoupdatingCurrent
+        let year = calendar.component(.year, from: now)
+        guard let start = calendar.date(from: .init(year: year, month: month, day: day)),
+              let end = calendar.date(byAdding: .day, value: 1, to: start) else { return nil }
         return start..<end
     }
 
@@ -1589,14 +1733,19 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         return components?.url
     }
 
+    private func exactMapSearchResult(query: String, answer: String) throws -> CapabilityExecutionOutcome {
+        var components = URLComponents(string: "https://www.google.com/maps/search/")
+        components?.queryItems = [.init(name: "api", value: "1"), .init(name: "query", value: query)]
+        guard let destination = components?.url else {
+            throw CanonicalCapabilityExecutionError.unavailable("exact_map_search_invalid")
+        }
+        return .result(try result(answer, facts: [], actions: [
+            .init(id: "exact-map-search", title: "Продовжити пошук на карті", kind: .open, destination: destination)
+        ]))
+    }
+
     private func placeCategory(in text: String) -> PlaceCategory? {
-        if ["кав", "кафе", "кофе", "coffee", "cafe"].contains(where: text.contains) { return .cafe }
-        if ["ресторан", "restaurant"].contains(where: text.contains) { return .restaurant }
-        if ["супермаркет", "supermarket", "grocer"].contains(where: text.contains) { return .supermarket }
-        if ["аптек", "pharmacy", "drugstore"].contains(where: text.contains) { return .pharmacy }
-        if ["заправ", "азс", "fuel", "gas station", "petrol"].contains(where: text.contains) { return .fuel }
-        if ["магазин", "store", "shop"].contains(where: text.contains) { return .shop }
-        return nil
+        CanonicalPlaceCategoryRegistry.match(in: text)?.category
     }
 
     private func placeSearchText(for command: StructuredCommand, category: PlaceCategory?) -> String {

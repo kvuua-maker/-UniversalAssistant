@@ -72,4 +72,46 @@ struct PlaceSearchEngineTests {
         #expect(URLComponents(url: result.primaryAction!, resolvingAgainstBaseURL: false)?.queryItems?
             .contains { $0.name == "dirflg" && $0.value == "w" } == true)
     }
+
+    @Test func osmFuelEvidenceStrictlyFiltersOctaneAndLPGWithoutFabrication() async throws {
+        let snapshot = OSMFuelSnapshot(
+            generatedAt: .now,
+            sourceURL: URL(string: "https://download.geofabrik.de/europe/ukraine.html")!,
+            license: "© OpenStreetMap contributors · ODbL 1.0",
+            stations: [
+                .init(id: "98", name: "Verified 98", operatorName: nil, latitude: 50.451, longitude: 30.521,
+                      address: nil, phone: nil, website: nil, openingHours: nil, fuels: [.octane98]),
+                .init(id: "lpg", name: "Verified LPG", operatorName: nil, latitude: 50.452, longitude: 30.522,
+                      address: nil, phone: nil, website: nil, openingHours: nil, fuels: [.lpg]),
+                .init(id: "unknown", name: "Unknown", operatorName: nil, latitude: 50.453, longitude: 30.523,
+                      address: nil, phone: nil, website: nil, openingHours: nil, fuels: [])
+            ]
+        )
+        let provider = OSMFuelPOIProvider(snapshot: snapshot)
+        let octane = try await provider.search(.init(text: "fuel station", category: .fuel, location: location,
+                                                     radiusMeters: 5_000, fuelConstraint: .octane98))
+        #expect(octane.map(\.name) == ["Verified 98"])
+        #expect(octane.allSatisfy { $0.fuelCapabilities.contains(.octane98) })
+
+        let lpg = try await provider.search(.init(text: "fuel station", category: .fuel, location: location,
+                                                  radiusMeters: 5_000, fuelConstraint: .lpg))
+        #expect(lpg.map(\.name) == ["Verified LPG"])
+        #expect(!lpg.contains(where: { $0.name == "Unknown" }))
+    }
+
+    @Test func strictFuelConstraintExcludesGeneralMapResultWithoutFuelEvidence() async throws {
+        let general = Place(id: "map", providerID: "map", name: "АЗС без даних про пальне", category: .fuel,
+                            latitude: 50.451, longitude: 30.521, source: "MapKit", timestamp: .now,
+                            verification: .providerReturned)
+        var verified = Place(id: "osm", providerID: "osm", name: "АЗС з доказом A-98", category: .fuel,
+                             latitude: 50.452, longitude: 30.522, source: "OpenStreetMap", timestamp: .now,
+                             verification: .providerReturned)
+        verified.fuelCapabilities = [.octane98]
+        let response = try await PlaceSearchEngine(providers: [
+            FixturePlaceProvider(providerID: "mapkit", values: [general]),
+            FixturePlaceProvider(providerID: "osm", values: [verified])
+        ]).search(.init(text: "fuel station", category: .fuel, location: location,
+                       radiusMeters: 5_000, fuelConstraint: .octane98))
+        #expect(response.places.map(\.id) == ["osm"])
+    }
 }

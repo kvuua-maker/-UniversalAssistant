@@ -31,8 +31,15 @@ actor PlaceSearchEngine {
             case .failure(let provider, let reason): failures.append(.init(providerID: provider, reason: reason))
             }
         }
+        let deduplicated = deduplicator.deduplicate(places)
+        // A general POI match is not evidence for a requested fuel grade.
+        // Strict fuel queries may surface only records whose source explicitly
+        // declares that capability (currently the bounded OSM snapshot).
+        let evidenced = query.fuelConstraint.map { fuel in
+            deduplicated.filter { $0.fuelCapabilities.contains(fuel) }
+        } ?? deduplicated
         return .init(
-            places: ranker.rank(deduplicator.deduplicate(places), query: query),
+            places: ranker.rank(evidenced, query: query),
             failures: failures.sorted { $0.providerID < $1.providerID }
         )
     }

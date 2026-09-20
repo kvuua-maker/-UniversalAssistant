@@ -45,6 +45,35 @@ struct VoiceTextInputQualityTests {
         }
     }
 
+    @Test func completeLocalPhotoAndPlaceCommandsDoNotRequireCloudRecovery() {
+        for text in [
+            "Відкрий всі фото",
+            "Відкрий фото за 15 вересня",
+            "Відкрий фото із Одеси",
+            "Знайди АЗС поруч"
+        ] {
+            let assessment = VoiceDeterministicCommandAssessment(text: text)
+            #expect(assessment.isResolvedDeterministic, "Cloud recovery remained mandatory for \(text)")
+            #expect(VoiceCommandCompletenessPolicy().status(for: assessment) == .complete)
+        }
+    }
+
+    @Test func appCanBeRecoveredOnlyFromRealAppleEvidence() {
+        let recovered = VoiceRecognitionEvidence(
+            primaryTranscript: "Відкрий",
+            alternativeTranscripts: ["Відкрий Viber"],
+            segmentAlternativeCount: 1,
+            averageSegmentConfidence: 0.82
+        )
+        let command = LanguageUnderstandingBlock().parse("Відкрий", speechEvidence: recovered)
+        #expect(command.entities["app"] == "viber")
+        #expect(VoiceCommandCompletenessPolicy().status(for: .init(command: command)) == .complete)
+
+        let absent = LanguageUnderstandingBlock().parse("Відкрий")
+        #expect(absent.entities["app"] == nil)
+        #expect(VoiceCommandCompletenessPolicy().status(for: .init(command: absent)) != .complete)
+    }
+
     @Test func incompleteAppPrefixCannotFinalizeAtBaseSilence() {
         let policy = VoiceUtteranceEndpointPolicy()
         let assessment = VoiceDeterministicCommandAssessment(text: "Відкрий")

@@ -50,13 +50,14 @@ struct Build53PhysicalEndToEndRepairTests {
     @Test @MainActor func explicitBrandReachesOnlyItsOfficialExactDestination() async throws {
         let command = parser.parse("Купи сорочку Pierre Cardin")
         let executor = ProductionCanonicalCapabilityExecutor(personalSearchSources: [])
-        guard case let .handoff(handoff) = try await executor.execute(command) else {
-            Issue.record("Expected official brand handoff"); return
+        guard case let .result(result) = try await executor.execute(command),
+              let destination = result.actions.first?.destination else {
+            Issue.record("Expected official brand source card"); return
         }
-        #expect(handoff.destination.host == "pierrecardin.com")
-        #expect(handoff.destination.path == "/en/search")
-        #expect(handoff.destination.absoluteString.localizedCaseInsensitiveContains("prada") == false)
-        let query = URLComponents(url: handoff.destination, resolvingAgainstBaseURL: false)?
+        #expect(destination.host == "pierrecardin.com")
+        #expect(destination.path == "/en/search")
+        #expect(destination.absoluteString.localizedCaseInsensitiveContains("prada") == false)
+        let query = URLComponents(url: destination, resolvingAgainstBaseURL: false)?
             .queryItems?.first(where: { $0.name == "q" })?.value ?? ""
         #expect(query.localizedCaseInsensitiveContains("сорочку"))
     }

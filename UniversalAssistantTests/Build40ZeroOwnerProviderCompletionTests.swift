@@ -95,23 +95,25 @@ struct Build40ZeroOwnerProviderCompletionTests {
             intent: .productSearch,
             entities: ["provider": "eBay", "product": "механічна клавіатура"]
         )
-        guard case let .handoff(handoff) = try await executor().execute(command) else {
-            Issue.record("Expected an official provider handoff")
+        guard case let .result(result) = try await executor().execute(command),
+              let destination = result.actions.first?.destination else {
+            Issue.record("Expected an official provider source card")
             return
         }
-        #expect(handoff.kind == .provider)
-        #expect(handoff.destination.host == "www.ebay.com")
-        let query = URLComponents(url: handoff.destination, resolvingAgainstBaseURL: false)?.queryItems?
+        #expect(destination.host == "www.ebay.com")
+        let query = URLComponents(url: destination, resolvingAgainstBaseURL: false)?.queryItems?
             .first(where: { $0.name == "_nkw" })?.value
         #expect(query == "механічна клавіатура")
     }
 
     @Test func productionPolicySelectsOneProviderAndNeverCreatesAnUnrequestedChooser() async throws {
         let jobs = command(.productSearch, ["provider_domain": "jobs", "query": "qa engineer remote"])
-        guard case let .handoff(jobHandoff) = try await executor().execute(jobs) else {
-            Issue.record("Expected one Jobs fallback handoff"); return
+        let jobsExecutor = ProductionCanonicalCapabilityExecutor(jobsDiscovery: .init(providers: []), personalSearchSources: [])
+        guard case let .result(jobResult) = try await jobsExecutor.execute(jobs),
+              let jobDestination = jobResult.actions.first?.destination else {
+            Issue.record("Expected one Jobs public-source result"); return
         }
-        #expect(jobHandoff.destination.host == "www.work.ua")
+        #expect(jobDestination.host == "www.dcz.gov.ua")
 
         let hotel = command(.hotelSearch, ["location": "Краків"])
         guard case let .handoff(hotelHandoff) = try await executor().execute(hotel) else {

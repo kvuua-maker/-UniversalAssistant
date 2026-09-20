@@ -135,13 +135,13 @@ struct ProviderFirstRoutingRebuildTests {
             entities: ["provider": "eBay", "product": "Seiko", "location": "Україна", "delivery_constraint": "delivery"],
             constraints: .init(maximumPrice: 900, currency: "EUR", size: "42", brand: "Seiko")
         )
-        guard case let .handoff(value) = try await executor().execute(input) else {
-            Issue.record("Explicit provider must produce one direct handoff")
+        guard case let .result(result) = try await executor().execute(input),
+              let destination = result.actions.first?.destination else {
+            Issue.record("Explicit provider must produce one exact source card")
             return
         }
-        #expect(value.kind == .provider)
-        #expect(value.destination.host == "www.ebay.com")
-        let query = URLComponents(url: value.destination, resolvingAgainstBaseURL: false)?.queryItems?
+        #expect(destination.host == "www.ebay.com")
+        let query = URLComponents(url: destination, resolvingAgainstBaseURL: false)?.queryItems?
             .first(where: { $0.name == "_nkw" })?.value ?? ""
         #expect(query.localizedCaseInsensitiveContains("Seiko"))
         #expect(query.contains("42"))
@@ -151,11 +151,12 @@ struct ProviderFirstRoutingRebuildTests {
 
     @Test func officialBrandAndBookingUseExactOfficialDestinations() async throws {
         let brand = command(.fashionDiscovery, ["brand": "Baldinini", "product": "нова колекція"])
-        guard case let .handoff(brandHandoff) = try await executor().execute(brand) else {
+        guard case let .result(brandResult) = try await executor().execute(brand),
+              let brandDestination = brandResult.actions.first?.destination else {
             Issue.record("Brand must use its official route"); return
         }
-        #expect(brandHandoff.destination.host == "www.baldinini-shop.com")
-        #expect(brandHandoff.destination.path.contains("search"))
+        #expect(brandDestination.host == "www.baldinini-shop.com")
+        #expect(brandDestination.path.contains("search"))
 
         let hotel = command(.hotelSearch, [
             "location": "Львів", "checkin": "2026-10-10", "checkout": "2026-10-12",
@@ -207,15 +208,11 @@ struct ProviderFirstRoutingRebuildTests {
             currentLocation: ProviderFirstLocationSource(location), personalSearchSources: []
         )
         let input = command(.placeSearch, ["query": "кава", "near_current_location": "true"])
-        guard case let .handoff(value) = try await executor.execute(input) else {
-            Issue.record("One nearby result must open directly"); return
+        guard case let .placeResults(values) = try await executor.execute(input),
+              let first = values.first else {
+            Issue.record("Nearby discovery must return internal place results"); return
         }
-        #expect(value.kind == .navigation)
-        #expect(value.destination.host == "www.google.com")
-        #expect(value.destination.path == "/maps/search")
-        let query = URLComponents(url: value.destination, resolvingAgainstBaseURL: false)?.queryItems?
-            .first(where: { $0.name == "query" })?.value
-        #expect(query == "50.4502000,30.5235000")
+        #expect(first.id == "near")
     }
 
     @Test func contactLookupUsesTheOfficialExistingContactCardBoundary() async throws {

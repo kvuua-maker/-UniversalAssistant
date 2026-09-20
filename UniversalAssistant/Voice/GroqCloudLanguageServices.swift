@@ -122,7 +122,18 @@ struct VoiceDeterministicCommandAssessment: Sendable {
         score = value
     }
 
+    init(command: StructuredCommand) {
+        self.command = command
+        application = command.entities["app"]
+        channel = command.entities["message_service"] ?? command.entities["call_service"]
+        score = command.needsClarification ? 0 : 100
+    }
+
     var isResolvedDeterministic: Bool {
+        VoiceCommandCompletenessPolicy().status(for: self) == .complete
+    }
+
+    fileprivate var legacyResolvedDeterministic: Bool {
         guard !command.needsClarification, command.intent != .unknown, command.intent != .webSearch else { return false }
         switch command.intent {
         case .open, .appAction:
@@ -184,6 +195,66 @@ struct VoiceDeterministicCommandAssessment: Sendable {
         if let brand = command.constraints.brand, let otherBrand = other.command.constraints.brand,
            brand.caseInsensitiveCompare(otherBrand) != .orderedSame { return true }
         return false
+    }
+}
+
+enum VoiceCommandCompleteness: String, Equatable, Sendable {
+    case complete, extendable, missingCriticalRole, conflicting, noSpeech
+}
+
+/// Semantic completeness is intentionally independent from acoustic endpointing.
+/// It consumes the one canonical local candidate and never parses or routes.
+struct VoiceCommandCompletenessPolicy: Sendable {
+    func status(for assessment: VoiceDeterministicCommandAssessment) -> VoiceCommandCompleteness {
+        let command = assessment.command
+        guard !command.originalText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return .noSpeech }
+        switch command.intent {
+        case .open, .appAction:
+            return command.entities["app"] != nil || assessment.application != nil ? .complete : .missingCriticalRole
+        case .unknown, .webSearch:
+            return .missingCriticalRole
+        case .messageCompose:
+            guard !command.needsClarification else { return .conflicting }
+            let recipient = command.entities["recipient"] ?? command.entities["contact"]
+            let body = command.entities["message_body"]
+            let explicitChannel = command.entities["message_service"] ?? assessment.channel
+            if recipient == nil { return .missingCriticalRole }
+            return body?.isEmpty == false && explicitChannel != nil ? .complete : .extendable
+        case .contactCall:
+            let target = command.entities["contact"] ?? command.entities["phone_number"]
+            return target == nil ? .missingCriticalRole : .extendable
+        case .photoSearch:
+            let kind = command.entities["photo_query_kind"]
+            if ["all", "recent"].contains(kind) { return .complete }
+            if kind == "metadata",
+               command.entities["photo_date_filter"] == "true" || command.entities["photo_location_query"] != nil {
+                return .complete
+            }
+            return kind == "semantic" && command.entities["query"]?.isEmpty == false ? .complete : .missingCriticalRole
+        case .placeSearch, .serviceSearch, .restaurantSearch:
+            return command.entities["place_category"] != nil || command.entities["query"]?.isEmpty == false
+                ? .complete : .missingCriticalRole
+        case .productSearch, .fashionDiscovery, .groceryBasket:
+            let product = command.entities["product"] ?? command.entities["query"] ?? command.constraints.brand
+            return product?.isEmpty == false ? .complete : .missingCriticalRole
+        case .calendarCreate:
+            return EventKitCommandArgumentExtractor().extract(command).subject?.isEmpty == false && Self.hasTemporalRole(command)
+                ? .complete : .extendable
+        case .reminderCreate:
+            return EventKitCommandArgumentExtractor().extract(command).subject?.isEmpty == false
+                ? .complete : .extendable
+        case .cameraCapture, .localUtility, .calendarQuery, .settings, .deviceAction,
+             .reminderQuery, .audioRecord, .fileSearch:
+            return .complete
+        default:
+            guard !command.needsClarification else { return .missingCriticalRole }
+            return assessment.legacyResolvedDeterministic ? .complete : .missingCriticalRole
+        }
+    }
+
+    private static func hasTemporalRole(_ command: StructuredCommand) -> Bool {
+        ["relative_day_offset", "relative_interval_seconds", "calendar_day", "weekday", "hour"]
+            .contains(where: { command.entities[$0] != nil })
     }
 }
 
