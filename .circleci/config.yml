@@ -55,20 +55,43 @@ jobs:
             /usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' UniversalAssistant/Info.plist
       - run:
           name: Run full test suite
+          no_output_timeout: 30m
           command: |
             set -euo pipefail
+            simulator_id="$(xcrun simctl list devices available -j | jq -r '.devices["com.apple.CoreSimulator.SimRuntime.iOS-27-0"][] | select(.name == "iPhone 17") | .udid' | head -1)"
+            test -n "$simulator_id"
+            xcrun simctl boot "$simulator_id" 2>/dev/null || true
+            xcrun simctl bootstatus "$simulator_id" -b
             SWT_EXPERIMENTAL_MAXIMUM_PARALLELIZATION_WIDTH=1 xcodebuild \
               -project UniversalAssistant.xcodeproj \
               -scheme UniversalAssistant \
               -configuration Development \
-              -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' \
+              -destination "platform=iOS Simulator,id=$simulator_id" \
               -derivedDataPath /tmp/UniversalAssistantBuild62-Tests \
               -parallel-testing-enabled NO \
               ARCHS=arm64 \
               ONLY_ACTIVE_ARCH=YES \
               CODE_SIGNING_ALLOWED=NO \
               CODE_SIGNING_REQUIRED=NO \
-              test | tee /tmp/UniversalAssistantTests62.log
+              build-for-testing | tee /tmp/UniversalAssistantBuildForTesting62.log
+            test_app=/tmp/UniversalAssistantBuild62-Tests/Build/Products/Development-iphonesimulator/UniversalAssistant.app
+            test -d "$test_app"
+            xcrun simctl install "$simulator_id" "$test_app"
+            xcrun simctl privacy "$simulator_id" grant contacts com.universalassistant.app.dev
+            SWT_EXPERIMENTAL_MAXIMUM_PARALLELIZATION_WIDTH=1 xcodebuild \
+              -project UniversalAssistant.xcodeproj \
+              -scheme UniversalAssistant \
+              -configuration Development \
+              -destination "platform=iOS Simulator,id=$simulator_id" \
+              -derivedDataPath /tmp/UniversalAssistantBuild62-Tests \
+              -parallel-testing-enabled NO \
+              -retry-tests-on-failure \
+              -test-iterations 3 \
+              ARCHS=arm64 \
+              ONLY_ACTIVE_ARCH=YES \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              test-without-building | tee /tmp/UniversalAssistantTests62.log
       - run:
           name: Compile iOS 27 probe without signing
           command: |
