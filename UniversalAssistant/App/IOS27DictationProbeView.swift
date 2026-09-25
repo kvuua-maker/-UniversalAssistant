@@ -60,6 +60,12 @@ struct IOS27DictationProbeView: View {
             }
 
             Section("Runtime") {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("LAST START STAGE").font(.caption).foregroundStyle(.secondary)
+                    Text(controller.lastStartStage)
+                        .font(.headline.monospaced())
+                        .textSelection(.enabled)
+                }
                 if let error = controller.runtimeError {
                     Text(error).foregroundStyle(.red).textSelection(.enabled)
                 } else {
