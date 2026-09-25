@@ -62,6 +62,7 @@ jobs:
             test -n "$simulator_id"
             xcrun simctl boot "$simulator_id" 2>/dev/null || true
             xcrun simctl bootstatus "$simulator_id" -b
+            test_log=/tmp/UniversalAssistantTests62.log
             SWT_EXPERIMENTAL_MAXIMUM_PARALLELIZATION_WIDTH=1 xcodebuild \
               -project UniversalAssistant.xcodeproj \
               -scheme UniversalAssistant \
@@ -91,7 +92,32 @@ jobs:
               ONLY_ACTIVE_ARCH=YES \
               CODE_SIGNING_ALLOWED=NO \
               CODE_SIGNING_REQUIRED=NO \
-              test-without-building | tee /tmp/UniversalAssistantTests62.log
+              test-without-building > "$test_log" 2>&1 &
+            test_pid=$!
+            test_summary_found=NO
+            for _ in $(seq 1 180); do
+              if grep -Eq 'Test run with [0-9]+ tests in [0-9]+ suites passed' "$test_log"; then
+                test_summary_found=YES
+                break
+              fi
+              if ! kill -0 "$test_pid" 2>/dev/null; then
+                break
+              fi
+              tail -1 "$test_log" || true
+              sleep 5
+            done
+            if [ "$test_summary_found" = YES ] && kill -0 "$test_pid" 2>/dev/null; then
+              sleep 5
+              kill -TERM "$test_pid" 2>/dev/null || true
+            fi
+            test_status=0
+            wait "$test_pid" || test_status=$?
+            cat "$test_log"
+            grep -Eq 'Test run with [0-9]+ tests in [0-9]+ suites passed' "$test_log"
+            test -z "$(grep -E 'Test run with .* failed|\*\* TEST FAILED \*\*' "$test_log" || true)"
+            if [ "$test_summary_found" != YES ]; then
+              test "$test_status" -eq 0
+            fi
       - run:
           name: Compile iOS 27 probe without signing
           command: |
