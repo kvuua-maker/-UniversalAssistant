@@ -14,6 +14,7 @@ struct AssistantSettingsView: View {
     @State private var diagnosticExportError: String?
     @State private var detailedDiagnostics = LocalVoiceDiagnosticReport.shared.detailedDiagnosticsEnabled
     @State private var silpoConnection = SilpoConnectionModel()
+    @State private var showingIOS27DictationProbe = false
 
     var body: some View {
         List {
@@ -60,6 +61,10 @@ struct AssistantSettingsView: View {
                     .accessibilityIdentifier("settings.refresh-diagnostics")
                 Button("Експортувати діагностику") { exportDiagnostics() }
                     .accessibilityIdentifier("settings.export-diagnostics")
+                Button("iOS 27 DictationTranscriber Probe") {
+                    showingIOS27DictationProbe = true
+                }
+                .accessibilityIdentifier("settings.ios27-dictation-probe")
                 if let diagnosticExportError {
                     Text(diagnosticExportError).font(.footnote).foregroundStyle(.red)
                 }
@@ -112,6 +117,9 @@ struct AssistantSettingsView: View {
         }
         .sheet(item: $diagnosticExport) { item in
             SystemShareSheet(items: [item.url])
+        }
+        .sheet(isPresented: $showingIOS27DictationProbe) {
+            NavigationStack { IOS27DictationProbeEntryView() }
         }
     }
 

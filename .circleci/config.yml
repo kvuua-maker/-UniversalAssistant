@@ -1,0 +1,157 @@
+version: 2.1
+
+jobs:
+  ios27-dictation-probe-build60:
+    macos:
+      xcode: 27.0.0
+      code_signing:
+        - universalassistant-build60
+    resource_class: m4pro.medium
+    environment:
+      BASELINE_SHA: 89b5a07d38a19c54b58a88285a5b9903314810db
+      ARCHIVE_PATH: /tmp/UniversalAssistant-Build60.xcarchive
+      EXPORT_PATH: /tmp/UniversalAssistant-Build60-Export
+      APP_STORE_ID: "6808699811"
+    steps:
+      - install_signing_bundle
+      - checkout
+      - run:
+          name: Verify experiment isolation
+          command: |
+            set -euo pipefail
+            test "$(git branch --show-current)" = "experiment/ios27-speech-probe"
+            git fetch --no-tags origin main checkpoint/build59-pre-ios27-speech-probe
+            test "$(git rev-parse origin/main)" = "$BASELINE_SHA"
+            test "$(git rev-parse origin/checkpoint/build59-pre-ios27-speech-probe)" = "$BASELINE_SHA"
+            test -z "$(git diff --name-only "$BASELINE_SHA" HEAD -- \
+              UniversalAssistant/Voice/VoiceInputController.swift \
+              UniversalAssistant/Core/AssistantViewModel.swift \
+              UniversalAssistant/Core/LanguageUnderstandingBlock.swift \
+              UniversalAssistant/Voice/GroqCloudLanguageServices.swift)"
+            unexpected="$(git diff --name-only "$BASELINE_SHA" HEAD | grep -Ev '^(\.circleci/(config\.yml|ExportOptions\.plist)|UniversalAssistant\.xcodeproj/project\.pbxproj|UniversalAssistant/App/(AssistantSettingsView|IOS27DictationProbeView)\.swift|UniversalAssistant/Voice/IOS27DictationProbeController\.swift)$' || true)"
+            test -z "$unexpected"
+            test "$(xcodebuild -project UniversalAssistant.xcodeproj -scheme UniversalAssistant -configuration Production -showBuildSettings | awk '/CURRENT_PROJECT_VERSION/ {print $3; exit}')" = "60"
+      - run:
+          name: Verify Xcode 27 Speech SDK
+          command: |
+            set -euo pipefail
+            xcodebuild -version
+            xcodebuild -showsdks
+            test "$(xcodebuild -version | awk '/Xcode/ {split($2,v,"."); print v[1]}')" -ge 27
+            sdk_version="$(xcrun --sdk iphoneos --show-sdk-version)"
+            test "${sdk_version%%.*}" -ge 27
+            sdk_path="$(xcrun --sdk iphoneos --show-sdk-path)"
+            interface="$(find "$sdk_path/System/Library/Frameworks/Speech.framework/Modules/Speech.swiftmodule" -name '*.swiftinterface' | head -1)"
+            test -n "$interface"
+            grep -q 'DictationTranscriber' "$interface"
+            grep -q 'progressiveShortDictation' "$interface"
+            grep -q 'CaptureInputSequenceProvider' "$interface"
+            grep -q 'providerWithSession' "$interface"
+            grep -q 'AnalysisContext' "$interface"
+            grep -q 'assetInstallationRequest' "$interface"
+      - run:
+          name: Compile iOS 27 probe without signing
+          command: |
+            set -euo pipefail
+            xcodebuild \
+              -project UniversalAssistant.xcodeproj \
+              -scheme UniversalAssistant \
+              -configuration Production \
+              -destination generic/platform=iOS \
+              -derivedDataPath /tmp/UniversalAssistantBuild60-DerivedData \
+              'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) IOS27_SPEECH_PROBE' \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              build | tee /tmp/UniversalAssistantBuild60.log
+      - run:
+          name: Archive signed Build 60
+          no_output_timeout: 30m
+          command: |
+            set -euo pipefail
+            xcodebuild \
+              -project UniversalAssistant.xcodeproj \
+              -scheme UniversalAssistant \
+              -configuration Production \
+              -destination generic/platform=iOS \
+              -archivePath "$ARCHIVE_PATH" \
+              'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) IOS27_SPEECH_PROBE' \
+              archive | tee /tmp/UniversalAssistantArchive60.log
+      - run:
+          name: Verify archive and export IPA
+          command: |
+            set -euo pipefail
+            app="$ARCHIVE_PATH/Products/Applications/UniversalAssistant.app"
+            extension="$app/PlugIns/ShareExtension.appex"
+            test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")" = "com.universalassistant.app"
+            test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Info.plist")" = "0.1.0"
+            test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Info.plist")" = "60"
+            test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$extension/Info.plist")" = "com.universalassistant.app.share"
+            codesign --verify --deep --strict "$app"
+            codesign -dv --verbose=4 "$app" 2> /tmp/UniversalAssistantArchiveSignature.txt
+            grep -q 'Authority=Apple Distribution:' /tmp/UniversalAssistantArchiveSignature.txt
+            codesign -d --entitlements :- "$app" > /tmp/UniversalAssistantArchiveAppEntitlements.plist
+            codesign -d --entitlements :- "$extension" > /tmp/UniversalAssistantArchiveShareEntitlements.plist
+            security cms -D -i "$app/embedded.mobileprovision" > /tmp/UniversalAssistantArchiveAppProfile.plist
+            security cms -D -i "$extension/embedded.mobileprovision" > /tmp/UniversalAssistantArchiveShareProfile.plist
+            test "$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' /tmp/UniversalAssistantArchiveAppProfile.plist)" = "9V5XXDXF3N.com.universalassistant.app"
+            test "$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' /tmp/UniversalAssistantArchiveShareProfile.plist)" = "9V5XXDXF3N.com.universalassistant.app.share"
+            xcodebuild -exportArchive \
+              -archivePath "$ARCHIVE_PATH" \
+              -exportPath "$EXPORT_PATH" \
+              -exportOptionsPlist .circleci/ExportOptions.plist | tee /tmp/UniversalAssistantExport60.log
+            ipa="$(find "$EXPORT_PATH" -maxdepth 1 -name '*.ipa' -print -quit)"
+            test -n "$ipa"
+            shasum -a 256 "$ipa" | tee /tmp/UniversalAssistantBuild60.sha256
+            mkdir -p /tmp/UniversalAssistantBuild60Artifact
+            cp "$ipa" /tmp/UniversalAssistantBuild60Artifact/UniversalAssistant-Build60.ipa
+      - run:
+          name: Upload Build 60 and await Apple processing
+          no_output_timeout: 60m
+          command: |
+            set -euo pipefail
+            test -n "${ASC_KEY_ID:-}"
+            test -n "${ASC_ISSUER_ID:-}"
+            test -n "${ASC_PRIVATE_KEY_B64:-}"
+            key_dir="$HOME/.appstoreconnect/private_keys"
+            mkdir -p "$key_dir"
+            printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
+            chmod 600 "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
+            ipa=/tmp/UniversalAssistantBuild60Artifact/UniversalAssistant-Build60.ipa
+            xcrun altool \
+              --upload-package "$ipa" \
+              --type ios \
+              --api-key "$ASC_KEY_ID" \
+              --api-issuer "$ASC_ISSUER_ID" \
+              --wait \
+              --output-format json | tee /tmp/UniversalAssistantUpload60.json
+            xcrun altool \
+              --build-status \
+              --apple-id "$APP_STORE_ID" \
+              --bundle-version 60 \
+              --bundle-short-version-string 0.1.0 \
+              --platform ios \
+              --api-key "$ASC_KEY_ID" \
+              --api-issuer "$ASC_ISSUER_ID" \
+              --wait \
+              --output-format json | tee /tmp/UniversalAssistantBuildStatus60.json
+            grep -Eq 'VALID|PROCESSING|IN_BETA_TESTING' /tmp/UniversalAssistantBuildStatus60.json
+      - store_artifacts:
+          path: /tmp/UniversalAssistantBuild60Artifact
+          destination: UniversalAssistant-Build60
+      - store_artifacts:
+          path: /tmp/UniversalAssistantBuild60.sha256
+          destination: UniversalAssistant-Build60.sha256
+      - store_artifacts:
+          path: /tmp/UniversalAssistantUpload60.json
+          destination: UniversalAssistantUpload60.json
+      - store_artifacts:
+          path: /tmp/UniversalAssistantBuildStatus60.json
+          destination: UniversalAssistantBuildStatus60.json
+
+workflows:
+  build-upload-ios27-dictation-probe:
+    jobs:
+      - ios27-dictation-probe-build60:
+          filters:
+            branches:
+              only: experiment/ios27-speech-probe
