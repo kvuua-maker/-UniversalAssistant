@@ -61,7 +61,7 @@ jobs:
               -project UniversalAssistant.xcodeproj \
               -scheme UniversalAssistant \
               -configuration Development \
-              -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
+              -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' \
               -derivedDataPath /tmp/UniversalAssistantBuild62-Tests \
               CODE_SIGNING_ALLOWED=NO \
               CODE_SIGNING_REQUIRED=NO \
