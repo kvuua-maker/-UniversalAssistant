@@ -89,8 +89,7 @@ final class IOS27DictationProbeController: ObservableObject {
             recordStartStage(.beforeAssetPrepare)
             try await prepareAssets(for: transcriber)
             recordStartStage(.afterAssetPrepare)
-            recordStartStage(.beforePermissions)
-            try await requirePermissions()
+            try await requireMicrophonePermission()
             recordStartStage(.afterPermissions)
             recordStartStage(.beforeCaptureProvider)
             let providerHandle = try await captureWorker.makeProvider(compatibleWith: transcriber)
@@ -201,17 +200,28 @@ final class IOS27DictationProbeController: ObservableObject {
         }
     }
 
-    private func requirePermissions() async throws {
-        let microphone = await AVCaptureDevice.requestAccess(for: .audio)
-        guard microphone else { throw ProbeError.microphonePermissionDenied }
+    private func requireMicrophonePermission() async throws {
+        recordStartStage(.beforeMicrophonePermissionCheck)
 
-        let speech = await withCheckedContinuation { continuation in
-            SFSpeechRecognizer.requestAuthorization { status in
-                continuation.resume(returning: status)
+        switch AVAudioApplication.shared.recordPermission {
+        case .granted:
+            recordStartStage(.microphonePermissionGranted)
+        case .denied:
+            recordStartStage(.microphonePermissionDenied)
+            throw ProbeError.microphonePermissionDenied
+        case .undetermined:
+            recordStartStage(.beforeMicrophonePermissionRequest)
+            let granted = await AVAudioApplication.requestRecordPermission()
+            recordStartStage(.afterMicrophonePermissionRequest)
+            if granted {
+                recordStartStage(.microphonePermissionGranted)
+            } else {
+                recordStartStage(.microphonePermissionDenied)
+                throw ProbeError.microphonePermissionDenied
             }
-        }
-        guard speech == .authorized else {
-            throw ProbeError.speechPermissionDenied(String(describing: speech))
+        @unknown default:
+            recordStartStage(.microphonePermissionDenied)
+            throw ProbeError.microphonePermissionDenied
         }
     }
 
@@ -354,7 +364,11 @@ private final class ProbeCaptureProviderHandle: @unchecked Sendable {
 private enum StartStage: String {
     case beforeAssetPrepare = "before_asset_prepare"
     case afterAssetPrepare = "after_asset_prepare"
-    case beforePermissions = "before_permissions"
+    case beforeMicrophonePermissionCheck = "before_microphone_permission_check"
+    case beforeMicrophonePermissionRequest = "before_microphone_permission_request"
+    case afterMicrophonePermissionRequest = "after_microphone_permission_request"
+    case microphonePermissionGranted = "microphone_permission_granted"
+    case microphonePermissionDenied = "microphone_permission_denied"
     case afterPermissions = "after_permissions"
     case beforeCaptureProvider = "before_capture_provider"
     case afterCaptureProvider = "after_capture_provider"
@@ -369,7 +383,6 @@ private enum ProbeError: LocalizedError {
     case unsupportedUkrainianLocale
     case microphoneUnavailable
     case microphonePermissionDenied
-    case speechPermissionDenied(String)
     case assetsUnsupported
     case assetsNotInstalled(String)
     case captureSessionDidNotStart
@@ -382,8 +395,6 @@ private enum ProbeError: LocalizedError {
             "No microphone capture device is available."
         case .microphonePermissionDenied:
             "Microphone permission was denied."
-        case let .speechPermissionDenied(status):
-            "Speech recognition permission is not authorized: \(status)."
         case .assetsUnsupported:
             "Required DictationTranscriber assets are unsupported."
         case let .assetsNotInstalled(status):
