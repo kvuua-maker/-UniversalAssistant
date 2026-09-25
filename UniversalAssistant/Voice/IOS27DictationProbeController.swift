@@ -93,7 +93,8 @@ final class IOS27DictationProbeController: ObservableObject {
             try await requirePermissions()
             recordStartStage(.afterPermissions)
             recordStartStage(.beforeCaptureProvider)
-            let provider = try await captureWorker.makeProvider(compatibleWith: transcriber)
+            let providerHandle = try await captureWorker.makeProvider(compatibleWith: transcriber)
+            let provider = providerHandle.provider
             recordStartStage(.afterCaptureProvider)
             let context = AnalysisContext()
             context.contextualStrings[.general] = Self.contextualStrings
@@ -314,7 +315,7 @@ private actor ProbeCaptureWorker {
 
     func makeProvider(
         compatibleWith transcriber: DictationTranscriber
-    ) async throws -> CaptureInputSequenceProvider {
+    ) async throws -> ProbeCaptureProviderHandle {
         guard let microphone = AVCaptureDevice.default(for: .audio) else {
             throw ProbeError.microphoneUnavailable
         }
@@ -324,7 +325,7 @@ private actor ProbeCaptureWorker {
             priority: .userInitiated
         )
         captureSession = provider.captureSession
-        return provider
+        return ProbeCaptureProviderHandle(provider: provider)
     }
 
     func startCapture() -> Bool {
@@ -338,6 +339,15 @@ private actor ProbeCaptureWorker {
             captureSession.stopRunning()
         }
         captureSession = nil
+    }
+}
+
+@available(iOS 27.0, *)
+private final class ProbeCaptureProviderHandle: @unchecked Sendable {
+    let provider: CaptureInputSequenceProvider
+
+    init(provider: CaptureInputSequenceProvider) {
+        self.provider = provider
     }
 }
 
