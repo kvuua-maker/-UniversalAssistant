@@ -63,6 +63,8 @@ jobs:
               -configuration Development \
               -destination 'platform=iOS Simulator,name=iPhone 17,OS=27.0' \
               -derivedDataPath /tmp/UniversalAssistantBuild62-Tests \
+              ARCHS=arm64 \
+              ONLY_ACTIVE_ARCH=YES \
               CODE_SIGNING_ALLOWED=NO \
               CODE_SIGNING_REQUIRED=NO \
               test | tee /tmp/UniversalAssistantTests62.log
