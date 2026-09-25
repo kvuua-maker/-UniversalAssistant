@@ -116,25 +116,27 @@ jobs:
             mkdir -p "$key_dir"
             printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
             chmod 600 "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
-            ipa=/tmp/UniversalAssistantBuild60Artifact/UniversalAssistant-Build60.ipa
-            xcrun altool \
-              --upload-package "$ipa" \
-              --type ios \
-              --api-key "$ASC_KEY_ID" \
-              --api-issuer "$ASC_ISSUER_ID" \
-              --wait \
-              --output-format json | tee /tmp/UniversalAssistantUpload60.json
-            xcrun altool \
-              --build-status \
-              --apple-id "$APP_STORE_ID" \
-              --bundle-version 60 \
-              --bundle-short-version-string 0.1.0 \
-              --platform ios \
-              --api-key "$ASC_KEY_ID" \
-              --api-issuer "$ASC_ISSUER_ID" \
-              --wait \
-              --output-format json | tee /tmp/UniversalAssistantBuildStatus60.json
-            grep -Eq 'VALID|PROCESSING|IN_BETA_TESTING' /tmp/UniversalAssistantBuildStatus60.json
+            if [[ -n "${BUILD60_DELIVERY_ID:-}" ]]; then
+              xcrun altool \
+                --build-status \
+                --delivery-id "$BUILD60_DELIVERY_ID" \
+                --api-key "$ASC_KEY_ID" \
+                --api-issuer "$ASC_ISSUER_ID" \
+                --wait \
+                --output-format json | tee /tmp/UniversalAssistantBuildStatus60.json
+              cp /tmp/UniversalAssistantBuildStatus60.json /tmp/UniversalAssistantUpload60.json
+            else
+              ipa=/tmp/UniversalAssistantBuild60Artifact/UniversalAssistant-Build60.ipa
+              xcrun altool \
+                --upload-package "$ipa" \
+                --type ios \
+                --api-key "$ASC_KEY_ID" \
+                --api-issuer "$ASC_ISSUER_ID" \
+                --wait \
+                --output-format json | tee /tmp/UniversalAssistantUpload60.json
+              cp /tmp/UniversalAssistantUpload60.json /tmp/UniversalAssistantBuildStatus60.json
+            fi
+            grep -q '"build-status" : "VALID"' /tmp/UniversalAssistantBuildStatus60.json
       - store_artifacts:
           path: /tmp/UniversalAssistantBuild60Artifact
           destination: UniversalAssistant-Build60
