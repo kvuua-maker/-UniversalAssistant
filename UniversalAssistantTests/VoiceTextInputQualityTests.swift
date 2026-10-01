@@ -7,7 +7,11 @@ struct VoiceTextInputQualityTests {
 
     @Test @MainActor func productionVoiceEngineUsesAppleFastPathWithGroqRecovery() {
         let model = ProductionAssistantComposition.makeModel()
+        #if IOS27_SPEECH_PROBE
+        #expect(model.voiceInputEngineIdentifier == "apple-dictation-ios27+sfspeech-legacy")
+        #else
         #expect(model.voiceInputEngineIdentifier == "apple-speech-fast-path+groq-whisper-large-v3-recovery")
+        #endif
     }
 
     @Test func extendableMessageSurvivesNaturalNineHundredMillisecondPause() {

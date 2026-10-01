@@ -1668,6 +1668,11 @@ final class VoiceEndOfSpeechFinalizer {
 @MainActor
 @Observable
 final class VoiceInputController: VoiceInputControlling {
+    enum BackendSelection {
+        case automatic
+        case legacy
+    }
+
     #if IOS27_SPEECH_PROBE
     let engineIdentifier = "apple-dictation-ios27+sfspeech-legacy"
     #else
@@ -1676,6 +1681,7 @@ final class VoiceInputController: VoiceInputControlling {
     private(set) var state: VoiceInputState = .idle
     private(set) var transcript = ""
     private let capture: VoiceAudioCaptureLifecycle
+    private let backendSelection: BackendSelection
     private let authorization: @Sendable () async -> VoiceAuthorizationOutcome
     private let contextualVocabulary: @Sendable () async -> [String]
     private let cloudTranscriber: any CloudVoiceTranscribing
@@ -1717,12 +1723,14 @@ final class VoiceInputController: VoiceInputControlling {
 
     init(
         captureBackend: (any VoiceAudioCaptureBackend)? = nil,
+        backendSelection: BackendSelection = .automatic,
         endOfSpeechDelay: Duration = .milliseconds(850),
         authorization: (@Sendable () async -> Bool)? = nil,
         contextualVocabulary: @escaping @Sendable () async -> [String] = { [] },
         cloudTranscriber: any CloudVoiceTranscribing = GroqCloudVoiceTranscriber()
     ) {
         capture = VoiceAudioCaptureLifecycle(backend: captureBackend ?? AppleVoiceAudioCaptureBackend())
+        self.backendSelection = backendSelection
         if let authorization {
             self.authorization = {
                 await authorization() ? .authorized(appleSpeechAvailable: true) : .microphoneDenied
@@ -1764,7 +1772,7 @@ final class VoiceInputController: VoiceInputControlling {
         LocalVoiceDiagnosticReport.shared.record("start_listening_invoked")
         setState(.requestingPermission)
         #if IOS27_SPEECH_PROBE
-        if #available(iOS 27.0, *) {
+        if backendSelection == .automatic, #available(iOS 27.0, *) {
             await startIOS27Dictation(sessionID: sessionID)
             return
         }

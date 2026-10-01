@@ -30,7 +30,7 @@ struct VoiceInputSessionOwnershipTests {
     @Test func supersededPermissionContinuationCannotPublishState() async {
         let gate = VoiceAuthorizationGate()
         let capture = IdleVoiceCaptureBackend()
-        let controller = VoiceInputController(captureBackend: capture, authorization: { await gate.wait() })
+        let controller = VoiceInputController(captureBackend: capture, backendSelection: .legacy, authorization: { await gate.wait() })
         var deniedEvents = 0
         controller.setEventHandler { event in
             if event == .state(.denied) { deniedEvents += 1 }
@@ -55,7 +55,7 @@ struct VoiceInputSessionOwnershipTests {
     @Test func explicitStopOwnsStateAfterPendingAuthorizationReturns() async {
         let gate = VoiceAuthorizationGate()
         let capture = IdleVoiceCaptureBackend()
-        let controller = VoiceInputController(captureBackend: capture, authorization: { await gate.wait() })
+        let controller = VoiceInputController(captureBackend: capture, backendSelection: .legacy, authorization: { await gate.wait() })
         var deniedEvents = 0
         controller.setEventHandler { event in
             if event == .state(.denied) { deniedEvents += 1 }
@@ -74,7 +74,7 @@ struct VoiceInputSessionOwnershipTests {
     @Test func secondMicTapCancelsPendingStartInsteadOfCreatingAnotherSession() async {
         let gate = VoiceAuthorizationGate()
         let capture = IdleVoiceCaptureBackend()
-        let controller = VoiceInputController(captureBackend: capture, authorization: { await gate.wait() })
+        let controller = VoiceInputController(captureBackend: capture, backendSelection: .legacy, authorization: { await gate.wait() })
         let model = AssistantViewModel(voiceInput: controller)
 
         model.toggleListening()
@@ -93,7 +93,7 @@ struct VoiceInputSessionOwnershipTests {
     @Test func audioInterruptionInvalidatesPendingSessionAndSuppressesLateAuthorization() async {
         let gate = VoiceAuthorizationGate()
         let capture = IdleVoiceCaptureBackend()
-        let controller = VoiceInputController(captureBackend: capture, authorization: { await gate.wait() })
+        let controller = VoiceInputController(captureBackend: capture, backendSelection: .legacy, authorization: { await gate.wait() })
         let pending = Task { @MainActor in await controller.start() }
         await waitForCount(1, gate: gate)
 
@@ -109,7 +109,7 @@ struct VoiceInputSessionOwnershipTests {
     @Test func sceneTransitionInvalidatesPendingVoiceSession() async {
         let gate = VoiceAuthorizationGate()
         let capture = IdleVoiceCaptureBackend()
-        let controller = VoiceInputController(captureBackend: capture, authorization: { await gate.wait() })
+        let controller = VoiceInputController(captureBackend: capture, backendSelection: .legacy, authorization: { await gate.wait() })
         let model = AssistantViewModel(voiceInput: controller)
         model.toggleListening()
         await waitForCount(1, gate: gate)
@@ -125,7 +125,7 @@ struct VoiceInputSessionOwnershipTests {
     @Test func harmlessRouteChangeDoesNotCancelPermissionOrCreateSecondSession() async {
         let gate = VoiceAuthorizationGate()
         let capture = IdleVoiceCaptureBackend()
-        let controller = VoiceInputController(captureBackend: capture, authorization: { await gate.wait() })
+        let controller = VoiceInputController(captureBackend: capture, backendSelection: .legacy, authorization: { await gate.wait() })
         let pending = Task { @MainActor in await controller.start() }
         await waitForCount(1, gate: gate)
         controller.handleAudioRouteChanged(.init(
