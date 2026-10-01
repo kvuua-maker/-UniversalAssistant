@@ -45,6 +45,21 @@ struct AccessibilityAudioPermissionTests {
         #expect(!report.contains("відкрий календар"))
     }
 
+    @Test @MainActor func ios27AppleTranscriptPreservesExactTextAndSubmitsOnce() {
+        let parser = VoiceSubmitCountingParser()
+        let model = AssistantViewModel(commandEngine: parser)
+        let appleText = "  Купити BMW сьомої серії\n"
+
+        model.handleVoiceEvent(.state(.requestingPermission))
+        model.handleVoiceEvent(.ios27AppleTranscript(appleText, isFinal: false))
+        #expect(model.input == appleText)
+        model.handleVoiceEvent(.ios27AppleTranscript(appleText, isFinal: true))
+        model.handleVoiceEvent(.ios27AppleTranscript(appleText, isFinal: true))
+
+        #expect(parser.submitted == [appleText])
+        #expect(model.visibleVoiceTranscript == appleText)
+    }
+
     @Test @MainActor func typedComposerWaitsForSendAndManualEditCancelsVoiceSubmit() {
         let parser = VoiceSubmitCountingParser()
         LocalVoiceDiagnosticReport.shared.detailedDiagnosticsEnabled = false

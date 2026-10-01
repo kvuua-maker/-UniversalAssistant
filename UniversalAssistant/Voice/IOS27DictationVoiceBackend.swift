@@ -121,6 +121,13 @@ final class IOS27DictationVoiceBackend {
         await stop(sessionID: sessionID)
     }
 
+    func finish() async throws {
+        guard sessionID != nil, let analyzer else { return }
+        await captureWorker.stopCapture()
+        try await analyzer.finalizeAndFinishThroughEndOfInput()
+        await resultsTask?.value
+    }
+
     private func stop(sessionID expectedSessionID: UUID) async {
         guard sessionID == expectedSessionID else { return }
         sessionID = nil
@@ -194,6 +201,10 @@ private actor IOS27DictationCaptureWorker {
         guard let captureSession else { return false }
         captureSession.startRunning()
         return captureSession.isRunning
+    }
+
+    func stopCapture() {
+        if let captureSession, captureSession.isRunning { captureSession.stopRunning() }
     }
 
     func stopAndReset() {

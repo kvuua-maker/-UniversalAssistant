@@ -251,17 +251,31 @@ final class AssistantViewModel {
         case let .recognitionEvidence(evidence):
             pendingVoiceRecognitionEvidence = evidence
         case let .transcript(transcript, isFinal):
+            handleVoiceTranscript(transcript, isFinal: isFinal, preservesAppleText: false)
+        case let .ios27AppleTranscript(transcript, isFinal):
+            handleVoiceTranscript(transcript, isFinal: isFinal, preservesAppleText: true)
+        }
+    }
+
+    private func handleVoiceTranscript(
+        _ transcript: String,
+        isFinal: Bool,
+        preservesAppleText: Bool
+    ) {
             guard voiceAutoSubmitArmed, !voiceSubmitPerformed else {
                 LocalVoiceDiagnosticReport.shared.record("stale_voice_transcript_rejected", "final=\(isFinal)")
                 return
             }
-            let visibleTranscript = VoiceTranscriptStabilizer.normalizedForDisplay(transcript)
+            let visibleTranscript = preservesAppleText
+                ? transcript
+                : VoiceTranscriptStabilizer.normalizedForDisplay(transcript)
+            let nonemptyTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
             input = visibleTranscript
             visibleVoiceTranscript = visibleTranscript
             LocalVoiceDiagnosticReport.shared.recordVoiceText("VISIBLE_TRANSCRIPT", text: visibleTranscript, details: "final=\(isFinal)")
             LocalVoiceDiagnosticReport.shared.record("transcript_delivered_to_view_model", "length=\(transcript.count) final=\(isFinal)")
             Self.voiceLogger.notice("transcript_delivered_to_view_model length=\(transcript.count, privacy: .public) final=\(isFinal, privacy: .public)")
-            if isFinal, !visibleTranscript.isEmpty {
+            if isFinal, !nonemptyTranscript.isEmpty {
                 voiceDraftSourceText = visibleTranscript
                 voiceSubmitPerformed = true
                 voiceAutoSubmitArmed = false
@@ -271,7 +285,6 @@ final class AssistantViewModel {
                 LocalVoiceDiagnosticReport.shared.record("REQUEST_ID", "request_id=\(LocalVoiceDiagnosticReport.shared.currentRequestIdentifier.uuidString.lowercased())")
                 submit()
             }
-        }
     }
 
     /// Called only by the editable composer. Manual input owns the field and
@@ -428,7 +441,6 @@ final class AssistantViewModel {
             messageRoleCompletionTask?.cancel()
             messageRoleCompletionTask = Task { [weak self] in
                 guard let self else { return }
-                try? await contacts.requestAccessIfNeeded()
                 let vocabulary = await contacts.contextualVocabulary(limit: 120)
                 guard !Task.isCancelled, activeRequestGeneration == requestGeneration else { return }
                 let enriched = Self.completingMessageRoles(command, contactVocabulary: vocabulary)
@@ -566,7 +578,6 @@ final class AssistantViewModel {
             messageRoleCompletionTask?.cancel()
             messageRoleCompletionTask = Task { [weak self] in
                 guard let self else { return }
-                try? await contacts.requestAccessIfNeeded()
                 let vocabulary = await contacts.contextualVocabulary(limit: 120)
                 guard !Task.isCancelled, activeRequestGeneration == generation else { return }
                 finishResolvedCommand(

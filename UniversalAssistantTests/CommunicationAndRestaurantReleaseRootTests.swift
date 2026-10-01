@@ -5,11 +5,12 @@ import UIKit
 
 private actor AddedCommunicationContactBoundary: ContactResolving {
     let value: ContactResolution
+    private(set) var accessRequestCount = 0
 
     init(_ value: ContactResolution) { self.value = value }
 
     func authorizationState() async -> ContactAuthorizationState { .authorized }
-    func requestAccessIfNeeded() async throws {}
+    func requestAccessIfNeeded() async throws { accessRequestCount += 1 }
     func resolve(name: String) async throws -> ContactResolution { value }
     func resolve(exactIdentifier identifier: String) async throws -> ContactResolution { value }
 }
@@ -37,7 +38,9 @@ struct CommunicationReleaseRootTests {
         #expect(generic.entities["message_service"] == MessengerKind.messages.rawValue)
         #expect(!generic.needsClarification)
 
+        let messagesContacts = AddedCommunicationContactBoundary(.notFound)
         let messagesModel = ProductionAssistantComposition.makeModel(
+            contacts: messagesContacts,
             personalSearchSources: [], compactResultDuration: .seconds(60)
         )
         messagesModel.input = "Надішли повідомлення"
@@ -49,6 +52,7 @@ struct CommunicationReleaseRootTests {
         }
         #expect(recipients.isEmpty)
         #expect(body == nil)
+        #expect(await messagesContacts.accessRequestCount == 0)
 
         let emailInput = "Напиши email qa.team@example.org: Перевір оновлений звіт"
         let email = LanguageUnderstandingBlock().parse(emailInput)

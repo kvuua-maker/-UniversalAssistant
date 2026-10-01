@@ -24,10 +24,9 @@ jobs:
             test "$(git rev-parse origin/main)" = "$BASELINE_SHA"
             test "$(git rev-parse origin/checkpoint/build59-pre-ios27-speech-probe)" = "$BASELINE_SHA"
             test -z "$(git diff --name-only "$BASELINE_SHA" HEAD -- \
-              UniversalAssistant/Core/AssistantViewModel.swift \
               UniversalAssistant/Core/LanguageUnderstandingBlock.swift \
               UniversalAssistant/Voice/GroqCloudLanguageServices.swift)"
-            unexpected="$(git diff --name-only "$BASELINE_SHA" HEAD | grep -Ev '^(\.circleci/(config\.yml|ExportOptions\.plist)|UniversalAssistant\.xcodeproj/project\.pbxproj|UniversalAssistant/App/(AssistantSettingsView|IOS27DictationProbeView)\.swift|UniversalAssistant/Voice/(IOS27DictationProbeController|IOS27DictationVoiceBackend|VoiceInputController)\.swift)$' || true)"
+            unexpected="$(git diff --name-only "$BASELINE_SHA" HEAD | grep -Ev '^(\.circleci/(config\.yml|ExportOptions\.plist)|UniversalAssistant\.xcodeproj/project\.pbxproj|UniversalAssistant/App/(AssistantSettingsView|IOS27DictationProbeView)\.swift|UniversalAssistant/Core/AssistantViewModel\.swift|UniversalAssistant/Voice/(IOS27DictationProbeController|IOS27DictationVoiceBackend|VoiceInputController)\.swift|UniversalAssistantTests/(AccessibilityAudioPermissionTests|CommunicationAndRestaurantReleaseRootTests)\.swift)$' || true)"
             test -z "$unexpected"
             test "$(xcodebuild -project UniversalAssistant.xcodeproj -scheme UniversalAssistant -configuration Production -showBuildSettings | awk '/CURRENT_PROJECT_VERSION/ {print $3; exit}')" = "63"
       - run:
@@ -75,6 +74,7 @@ jobs:
               -parallel-testing-enabled NO \
               ARCHS=arm64 \
               ONLY_ACTIVE_ARCH=YES \
+              'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) DEBUG DEVELOPMENT IOS27_SPEECH_PROBE' \
               CODE_SIGNING_ALLOWED=NO \
               CODE_SIGNING_REQUIRED=NO \
               build-for-testing | tee /tmp/UniversalAssistantBuildForTesting63.log
@@ -93,32 +93,16 @@ jobs:
               ONLY_ACTIVE_ARCH=YES \
               CODE_SIGNING_ALLOWED=NO \
               CODE_SIGNING_REQUIRED=NO \
-              test-without-building > "$test_log" 2>&1 &
-            test_pid=$!
-            test_summary_found=NO
-            for _ in $(seq 1 180); do
-              if grep -Eq 'Test run with [0-9]+ tests in [0-9]+ suites passed' "$test_log"; then
-                test_summary_found=YES
-                break
-              fi
-              if ! kill -0 "$test_pid" 2>/dev/null; then
-                break
-              fi
-              tail -1 "$test_log" || true
-              sleep 5
-            done
-            if [ "$test_summary_found" = YES ] && kill -0 "$test_pid" 2>/dev/null; then
-              sleep 5
-              kill -TERM "$test_pid" 2>/dev/null || true
-            fi
-            test_status=0
-            wait "$test_pid" || test_status=$?
-            cat "$test_log"
+              -resultBundlePath /tmp/UniversalAssistantTests63.xcresult \
+              test-without-building 2>&1 | tee "$test_log"
             grep -Eq 'Test run with [0-9]+ tests in [0-9]+ suites passed' "$test_log"
             test -z "$(grep -E 'Test run with .* failed|\*\* TEST FAILED \*\*' "$test_log" || true)"
-            if [ "$test_summary_found" != YES ]; then
-              test "$test_status" -eq 0
-            fi
+      - store_artifacts:
+          path: /tmp/UniversalAssistantTests63.log
+          destination: UniversalAssistantTests63.log
+      - store_artifacts:
+          path: /tmp/UniversalAssistantTests63.xcresult
+          destination: UniversalAssistantTests63.xcresult
       - run:
           name: Compile iOS 27 probe without signing
           command: |

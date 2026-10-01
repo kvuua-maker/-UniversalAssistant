@@ -17,6 +17,7 @@ enum VoiceInputEvent: Equatable, Sendable {
     case state(VoiceInputState)
     case recognitionEvidence(VoiceRecognitionEvidence)
     case transcript(String, isFinal: Bool)
+    case ios27AppleTranscript(String, isFinal: Bool)
 }
 
 @MainActor
@@ -1706,7 +1707,12 @@ final class VoiceInputController: VoiceInputControlling {
     @ObservationIgnored private var appleTerminationUptime: TimeInterval?
     @ObservationIgnored private var speechResumedAfterAppleTermination = false
     #if IOS27_SPEECH_PROBE
-    @ObservationIgnored private var ios27Backend: IOS27DictationVoiceBackend?
+    @ObservationIgnored private var ios27BackendStorage: AnyObject?
+    @available(iOS 27.0, *)
+    private var ios27Backend: IOS27DictationVoiceBackend? {
+        get { ios27BackendStorage as? IOS27DictationVoiceBackend }
+        set { ios27BackendStorage = newValue }
+    }
     #endif
 
     init(
@@ -1857,7 +1863,22 @@ final class VoiceInputController: VoiceInputControlling {
 
     func stop(reason: VoiceStopReason = .externalRequest) {
         #if IOS27_SPEECH_PROBE
-        if #available(iOS 27.0, *), ios27Backend != nil {
+        if #available(iOS 27.0, *), let backend = ios27Backend {
+            if reason == .userPressedStop,
+               let sessionID = activeSessionID,
+               state == .listening {
+                setState(.transcribing)
+                Task { @MainActor [weak self] in
+                    do {
+                        try await backend.finish()
+                    } catch {
+                        guard let self, self.owns(sessionID), self.ios27Backend === backend else { return }
+                        self.stop(reason: .recognitionError, ownedBy: sessionID)
+                        self.setState(.failed)
+                    }
+                }
+                return
+            }
             stop(reason: reason, ownedBy: nil)
             return
         }
@@ -1925,7 +1946,7 @@ final class VoiceInputController: VoiceInputControlling {
                 case let .partial(text):
                     self.transcript = text
                     LocalVoiceDiagnosticReport.shared.recordSpeechTranscript(text, isFinal: false)
-                    self.eventHandler?(.transcript(text, isFinal: false))
+                    self.eventHandler?(.ios27AppleTranscript(text, isFinal: false))
                 case let .final(text):
                     guard self.finalResultCount == 0 else { return }
                     self.finalResultCount = 1
@@ -1934,7 +1955,7 @@ final class VoiceInputController: VoiceInputControlling {
                     LocalVoiceDiagnosticReport.shared.recordVoiceText(
                         "FINAL_TRANSCRIPT", text: text, details: "source=apple_dictation_ios27"
                     )
-                    self.eventHandler?(.transcript(text, isFinal: true))
+                    self.eventHandler?(.ios27AppleTranscript(text, isFinal: true))
                     self.activeSessionID = nil
                     self.ios27Backend = nil
                     self.setState(.idle)
