@@ -33,10 +33,7 @@ final class IOS27DictationProbeController: ObservableObject {
     let deviceModel = IOS27DictationProbeController.hardwareModelIdentifier()
 
     private let requestedLocale = Locale(identifier: requestedLocaleIdentifier)
-    private let captureWorker = ProbeCaptureWorker()
-    private var analyzer: SpeechAnalyzer?
-    private var captureProvider: CaptureInputSequenceProvider?
-    private var resultsTask: Task<Void, Never>?
+    private let backend = IOS27DictationVoiceBackend()
     private var startedAt: Date?
     private var finalChunks: [String] = []
 
@@ -85,45 +82,15 @@ final class IOS27DictationProbeController: ObservableObject {
             }
             resolvedLocaleIdentifier = resolved.identifier
 
-            let transcriber = DictationTranscriber(locale: resolved, preset: .progressiveShortDictation)
             recordStartStage(.beforeAssetPrepare)
-            try await prepareAssets(for: transcriber)
+            if let status = await backend.assetStatus() {
+                assetStatus = Self.assetStatusText(status)
+            }
             recordStartStage(.afterAssetPrepare)
-            try await requireMicrophonePermission()
-            recordStartStage(.afterPermissions)
-            recordStartStage(.beforeCaptureProvider)
-            let providerHandle = try await captureWorker.makeProvider(compatibleWith: transcriber)
-            let provider = providerHandle.provider
-            recordStartStage(.afterCaptureProvider)
-            let context = AnalysisContext()
-            context.contextualStrings[.general] = Self.contextualStrings
-
-            let analyzer = SpeechAnalyzer(modules: [transcriber])
-            try await analyzer.setContext(context)
-
-            self.analyzer = analyzer
-            captureProvider = provider
             startedAt = Date()
-            resultsTask = Task { [weak self] in
-                do {
-                    for try await result in transcriber.results {
-                        guard !Task.isCancelled else { return }
-                        self?.consume(result)
-                    }
-                } catch is CancellationError {
-                    return
-                } catch {
-                    self?.record(error, stage: "results")
-                }
-            }
-
             recordStartStage(.beforeAnalyzerStart)
-            try await analyzer.start(inputSequence: provider.analyzerInputs)
+            try await backend.start { [weak self] event in self?.consume(event) }
             recordStartStage(.afterAnalyzerStart)
-            recordStartStage(.beforeCaptureStart)
-            guard await captureWorker.startCapture() else {
-                throw ProbeError.captureSessionDidNotStart
-            }
             recordStartStage(.running)
             isRunning = true
         } catch {
@@ -133,7 +100,6 @@ final class IOS27DictationProbeController: ObservableObject {
     }
 
     func stop() async {
-        guard isRunning || analyzer != nil || captureProvider != nil else { return }
         await stopResources()
     }
 
@@ -156,84 +122,24 @@ final class IOS27DictationProbeController: ObservableObject {
         ].joined(separator: "\n")
     }
 
-    private func prepareAssets(for transcriber: DictationTranscriber) async throws {
-        let modules: [any SpeechModule] = [transcriber]
-        let before = await AssetInventory.status(forModules: modules)
-        assetStatus = Self.assetStatusText(before)
-
-        switch before {
-        case .installed:
-            assetInstallation = "NOT REQUIRED"
-        case .unsupported:
-            assetInstallation = "FAIL: UNSUPPORTED"
-            throw ProbeError.assetsUnsupported
-        case .supported, .downloading:
-            guard let request = try await AssetInventory.assetInstallationRequest(supporting: modules) else {
-                let status = await AssetInventory.status(forModules: modules)
-                assetStatus = Self.assetStatusText(status)
-                guard status == .installed else {
-                    assetInstallation = "FAIL: \(assetStatus)"
-                    throw ProbeError.assetsNotInstalled(assetStatus)
-                }
-                assetInstallation = "PASS"
-                return
-            }
-            do {
-                try await request.downloadAndInstall()
-            } catch {
-                assetInstallation = "FAIL: \(Self.errorText(error))"
-                throw error
-            }
-            let after = await AssetInventory.status(forModules: modules)
-            assetStatus = Self.assetStatusText(after)
-            guard after == .installed else {
-                assetInstallation = "FAIL: \(assetStatus)"
-                throw ProbeError.assetsNotInstalled(assetStatus)
-            }
-            assetInstallation = "PASS"
-            requestedLocaleInstalled = (await DictationTranscriber.installedLocales).contains {
-                Self.sameLocale($0, requestedLocale)
-            }
-        @unknown default:
-            assetInstallation = "FAIL: UNKNOWN STATUS"
-            throw ProbeError.assetsNotInstalled("UNKNOWN STATUS")
+    private func consume(_ event: IOS27DictationVoiceBackend.Event) {
+        let rawText: String
+        let isFinal: Bool
+        switch event {
+        case let .partial(text): rawText = text; isFinal = false
+        case let .final(text): rawText = text; isFinal = true
+        case let .failure(message):
+            runtimeError = message
+            isRunning = false
+            return
         }
-    }
-
-    private func requireMicrophonePermission() async throws {
-        recordStartStage(.beforeMicrophonePermissionCheck)
-
-        switch AVAudioApplication.shared.recordPermission {
-        case .granted:
-            recordStartStage(.microphonePermissionGranted)
-        case .denied:
-            recordStartStage(.microphonePermissionDenied)
-            throw ProbeError.microphonePermissionDenied
-        case .undetermined:
-            recordStartStage(.beforeMicrophonePermissionRequest)
-            let granted = await AVAudioApplication.requestRecordPermission()
-            recordStartStage(.afterMicrophonePermissionRequest)
-            if granted {
-                recordStartStage(.microphonePermissionGranted)
-            } else {
-                recordStartStage(.microphonePermissionDenied)
-                throw ProbeError.microphonePermissionDenied
-            }
-        @unknown default:
-            recordStartStage(.microphonePermissionDenied)
-            throw ProbeError.microphonePermissionDenied
-        }
-    }
-
-    private func consume(_ result: DictationTranscriber.Result) {
-        let rawText = String(result.text.characters)
         guard !rawText.isEmpty else { return }
         let now = Date()
         if firstResultLatencyMilliseconds == nil, let startedAt {
             firstResultLatencyMilliseconds = Self.milliseconds(from: startedAt, to: now)
         }
 
-        if result.isFinal {
+        if isFinal {
             finalChunks.append(rawText)
             finalTranscript = finalChunks.joined(separator: " ")
             liveTranscript = finalTranscript
@@ -246,14 +152,7 @@ final class IOS27DictationProbeController: ObservableObject {
     }
 
     private func stopResources() async {
-        await captureWorker.stopAndReset()
-        if let analyzer {
-            await analyzer.cancelAndFinishNow()
-        }
-        resultsTask?.cancel()
-        resultsTask = nil
-        analyzer = nil
-        captureProvider = nil
+        await backend.stop()
         isRunning = false
     }
 
@@ -316,48 +215,6 @@ final class IOS27DictationProbeController: ObservableObject {
             return UIDevice.current.model
         }
         return String(cString: bytes)
-    }
-}
-
-@available(iOS 27.0, *)
-private actor ProbeCaptureWorker {
-    private var captureSession: AVCaptureSession?
-
-    func makeProvider(
-        compatibleWith transcriber: DictationTranscriber
-    ) async throws -> ProbeCaptureProviderHandle {
-        guard let microphone = AVCaptureDevice.default(for: .audio) else {
-            throw ProbeError.microphoneUnavailable
-        }
-        let provider = try await CaptureInputSequenceProvider.providerWithSession(
-            from: microphone,
-            compatibleWith: [transcriber],
-            priority: .userInitiated
-        )
-        captureSession = provider.captureSession
-        return ProbeCaptureProviderHandle(provider: provider)
-    }
-
-    func startCapture() -> Bool {
-        guard let captureSession else { return false }
-        captureSession.startRunning()
-        return captureSession.isRunning
-    }
-
-    func stopAndReset() {
-        if let captureSession, captureSession.isRunning {
-            captureSession.stopRunning()
-        }
-        captureSession = nil
-    }
-}
-
-@available(iOS 27.0, *)
-private final class ProbeCaptureProviderHandle: @unchecked Sendable {
-    let provider: CaptureInputSequenceProvider
-
-    init(provider: CaptureInputSequenceProvider) {
-        self.provider = provider
     }
 }
 

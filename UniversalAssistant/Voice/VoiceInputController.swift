@@ -1667,7 +1667,11 @@ final class VoiceEndOfSpeechFinalizer {
 @MainActor
 @Observable
 final class VoiceInputController: VoiceInputControlling {
+    #if IOS27_SPEECH_PROBE
+    let engineIdentifier = "apple-dictation-ios27+sfspeech-legacy"
+    #else
     let engineIdentifier = "apple-speech-fast-path+groq-whisper-large-v3-recovery"
+    #endif
     private(set) var state: VoiceInputState = .idle
     private(set) var transcript = ""
     private let capture: VoiceAudioCaptureLifecycle
@@ -1701,6 +1705,9 @@ final class VoiceInputController: VoiceInputControlling {
     @ObservationIgnored private var appleRecognitionTerminatedEarly = false
     @ObservationIgnored private var appleTerminationUptime: TimeInterval?
     @ObservationIgnored private var speechResumedAfterAppleTermination = false
+    #if IOS27_SPEECH_PROBE
+    @ObservationIgnored private var ios27Backend: IOS27DictationVoiceBackend?
+    #endif
 
     init(
         captureBackend: (any VoiceAudioCaptureBackend)? = nil,
@@ -1750,6 +1757,12 @@ final class VoiceInputController: VoiceInputControlling {
         LocalVoiceDiagnosticReport.shared.record("mic_tap", "source=home")
         LocalVoiceDiagnosticReport.shared.record("start_listening_invoked")
         setState(.requestingPermission)
+        #if IOS27_SPEECH_PROBE
+        if #available(iOS 27.0, *) {
+            await startIOS27Dictation(sessionID: sessionID)
+            return
+        }
+        #endif
         let authorization = await authorization()
         guard case let .authorized(appleSpeechAvailable) = authorization else {
             guard owns(sessionID) else { return }
@@ -1843,6 +1856,12 @@ final class VoiceInputController: VoiceInputControlling {
     }
 
     func stop(reason: VoiceStopReason = .externalRequest) {
+        #if IOS27_SPEECH_PROBE
+        if #available(iOS 27.0, *), ios27Backend != nil {
+            stop(reason: reason, ownedBy: nil)
+            return
+        }
+        #endif
         if reason == .userPressedStop, let sessionID = activeSessionID, state == .listening {
             finalizeAuthoritativeTranscript(sessionID: sessionID, appleFallback: transcript)
             return
@@ -1856,6 +1875,12 @@ final class VoiceInputController: VoiceInputControlling {
             return
         }
         activeSessionID = nil
+        #if IOS27_SPEECH_PROBE
+        if #available(iOS 27.0, *), let backend = ios27Backend {
+            ios27Backend = nil
+            Task { @MainActor in await backend.stop() }
+        }
+        #endif
         cloudFinalizationTask?.cancel()
         cloudFinalizationTask = nil
         cloudSilenceMonitorTask?.cancel()
@@ -1883,6 +1908,73 @@ final class VoiceInputController: VoiceInputControlling {
         LocalVoiceDiagnosticReport.shared.record("state_transition", "state=\(String(describing: newState))")
         eventHandler?(.state(newState))
     }
+
+    #if IOS27_SPEECH_PROBE
+    @available(iOS 27.0, *)
+    private func startIOS27Dictation(sessionID: UUID) async {
+        let backend = IOS27DictationVoiceBackend()
+        ios27Backend = backend
+        LocalVoiceDiagnosticReport.shared.record("recognizer_ready", "api=dictation_transcriber locale=uk-UA")
+        LocalVoiceDiagnosticReport.shared.record("APPLE_LOCALE", "locale=uk-UA")
+        LocalVoiceDiagnosticReport.shared.record("cloud_recovery_used", "value=false")
+        LocalVoiceDiagnosticReport.shared.recordBoundaryPre("SPEECH_START", "locale=uk-UA api=dictation_transcriber")
+        do {
+            try await backend.start { [weak self] event in
+                guard let self, self.owns(sessionID), self.ios27Backend === backend else { return }
+                switch event {
+                case let .partial(text):
+                    self.transcript = text
+                    LocalVoiceDiagnosticReport.shared.recordSpeechTranscript(text, isFinal: false)
+                    self.eventHandler?(.transcript(text, isFinal: false))
+                case let .final(text):
+                    guard self.finalResultCount == 0 else { return }
+                    self.finalResultCount = 1
+                    self.transcript = text
+                    LocalVoiceDiagnosticReport.shared.recordSpeechTranscript(text, isFinal: true)
+                    LocalVoiceDiagnosticReport.shared.recordVoiceText(
+                        "FINAL_TRANSCRIPT", text: text, details: "source=apple_dictation_ios27"
+                    )
+                    self.eventHandler?(.transcript(text, isFinal: true))
+                    self.activeSessionID = nil
+                    self.ios27Backend = nil
+                    self.setState(.idle)
+                case .failure:
+                    self.activeSessionID = nil
+                    self.ios27Backend = nil
+                    self.setState(.failed)
+                }
+            }
+            guard owns(sessionID), ios27Backend === backend else {
+                await backend.stop()
+                return
+            }
+            setState(.listening)
+            LocalVoiceDiagnosticReport.shared.recordBoundaryPost(
+                "SPEECH_START", "locale=uk-UA api=dictation_transcriber status=success"
+            )
+        } catch {
+            guard owns(sessionID) else { return }
+            ios27Backend = nil
+            activeSessionID = nil
+            let state: VoiceInputState
+            if let backendError = error as? IOS27DictationVoiceBackend.BackendError {
+                if case .microphonePermissionDenied = backendError {
+                    state = .denied
+                } else {
+                    state = .unavailable
+                }
+            } else if error is CancellationError {
+                state = .idle
+            } else {
+                state = .failed
+            }
+            LocalVoiceDiagnosticReport.shared.record(
+                "voice_start_failed", "api=dictation_transcriber error_type=\(String(describing: type(of: error)))"
+            )
+            setState(state)
+        }
+    }
+    #endif
 
     private func receiveRecognition(sessionID: UUID, transcript: String?, evidence: VoiceRecognitionEvidence?, isFinal: Bool, hasError: Bool, errorDomain: String, errorCode: Int) {
         guard owns(sessionID) else {
