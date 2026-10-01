@@ -48,9 +48,13 @@ jobs:
             grep -q 'providerWithSession' "$interface"
             grep -q 'AnalysisContext' "$interface"
             grep -q 'assetInstallationRequest' "$interface"
-            grep -q 'AVAudioApplication' UniversalAssistant/Voice/IOS27DictationProbeController.swift
-            grep -q 'AVAudioApplication.requestRecordPermission()' UniversalAssistant/Voice/IOS27DictationProbeController.swift
-            test -z "$(grep -n 'SFSpeechRecognizer.requestAuthorization' UniversalAssistant/Voice/IOS27DictationProbeController.swift || true)"
+            grep -q 'AVAudioApplication' UniversalAssistant/Voice/IOS27DictationVoiceBackend.swift
+            grep -q 'AVAudioApplication.requestRecordPermission()' UniversalAssistant/Voice/IOS27DictationVoiceBackend.swift
+            test -z "$(grep -n 'SFSpeechRecognizer.requestAuthorization' UniversalAssistant/Voice/IOS27DictationVoiceBackend.swift || true)"
+            grep -q 'startIOS27Dictation' UniversalAssistant/Voice/VoiceInputController.swift
+            grep -q 'DictationTranscriber(locale: locale, preset: .progressiveShortDictation)' UniversalAssistant/Voice/IOS27DictationVoiceBackend.swift
+            grep -q 'CaptureInputSequenceProvider.providerWithSession' UniversalAssistant/Voice/IOS27DictationVoiceBackend.swift
+            test -z "$(grep -nE 'SFSpeechRecognizer|GroqCloudVoiceTranscriber|VoiceRecognitionCandidateBuilder|VoiceTranscriptStabilizer|VoiceAuthoritativeTranscriptSelector' UniversalAssistant/Voice/IOS27DictationVoiceBackend.swift || true)"
             /usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' UniversalAssistant/Info.plist
       - run:
           name: Run full test suite
@@ -85,8 +89,6 @@ jobs:
               -destination "platform=iOS Simulator,id=$simulator_id" \
               -derivedDataPath /tmp/UniversalAssistantBuild63-Tests \
               -parallel-testing-enabled NO \
-              -retry-tests-on-failure \
-              -test-iterations 3 \
               ARCHS=arm64 \
               ONLY_ACTIVE_ARCH=YES \
               CODE_SIGNING_ALLOWED=NO \
