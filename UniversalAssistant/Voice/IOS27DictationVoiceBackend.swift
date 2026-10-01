@@ -68,11 +68,7 @@ final class IOS27DictationVoiceBackend {
         try await prepareAssets(for: transcriber, locale: locale)
         try await requireMicrophonePermission()
 
-        guard let microphone = AVCaptureDevice.default(for: .audio) else {
-            throw BackendError.microphoneUnavailable
-        }
         let providerHandle = try await captureWorker.makeProvider(
-            microphone: microphone,
             compatibleWith: transcriber
         )
         let provider = providerHandle.provider
@@ -185,9 +181,11 @@ private actor IOS27DictationCaptureWorker {
     private var captureSession: AVCaptureSession?
 
     func makeProvider(
-        microphone: AVCaptureDevice,
         compatibleWith transcriber: DictationTranscriber
     ) async throws -> IOS27DictationCaptureProviderHandle {
+        guard let microphone = AVCaptureDevice.default(for: .audio) else {
+            throw IOS27DictationVoiceBackend.BackendError.microphoneUnavailable
+        }
         let provider = try await CaptureInputSequenceProvider.providerWithSession(
             from: microphone,
             compatibleWith: [transcriber],
