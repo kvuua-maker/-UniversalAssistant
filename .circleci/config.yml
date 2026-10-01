@@ -97,7 +97,7 @@ jobs:
               -only-testing:UniversalAssistantTests/VoiceTextInputQualityTests \
               -resultBundlePath /tmp/UniversalAssistantTargetedTests64.xcresult \
               test-without-building 2>&1 | tee "$targeted_log"
-            grep -Eq 'Test run with [0-9]+ tests in [0-9]+ suites passed' "$targeted_log"
+            grep -Eq 'Test run with [0-9]+ tests in [0-9]+ suites? passed' "$targeted_log"
             test -z "$(grep -E 'Test run with .* failed|\*\* TEST FAILED \*\*' "$targeted_log" || true)"
             SWT_EXPERIMENTAL_MAXIMUM_PARALLELIZATION_WIDTH=1 xcodebuild \
               -project UniversalAssistant.xcodeproj \
