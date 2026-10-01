@@ -26,7 +26,7 @@ jobs:
             test -z "$(git diff --name-only "$BASELINE_SHA" HEAD -- \
               UniversalAssistant/Core/LanguageUnderstandingBlock.swift \
               UniversalAssistant/Voice/GroqCloudLanguageServices.swift)"
-            unexpected="$(git diff --name-only "$BASELINE_SHA" HEAD | grep -Ev '^(\.circleci/(config\.yml|ExportOptions\.plist)|UniversalAssistant\.xcodeproj/project\.pbxproj|UniversalAssistant/App/(AssistantSettingsView|IOS27DictationProbeView)\.swift|UniversalAssistant/Core/AssistantViewModel\.swift|UniversalAssistant/Voice/(IOS27DictationProbeController|IOS27DictationVoiceBackend|VoiceInputController)\.swift|UniversalAssistantTests/(AccessibilityAudioPermissionTests|CommunicationAndRestaurantReleaseRootTests)\.swift)$' || true)"
+            unexpected="$(git diff --name-only "$BASELINE_SHA" HEAD | grep -Ev '^(\.circleci/(config\.yml|ExportOptions\.plist)|UniversalAssistant\.xcodeproj/project\.pbxproj|UniversalAssistant/App/(AssistantSettingsView|IOS27DictationProbeView)\.swift|UniversalAssistant/Core/AssistantViewModel\.swift|UniversalAssistant/Voice/(IOS27DictationProbeController|IOS27DictationVoiceBackend|VoiceInputController)\.swift|UniversalAssistantTests/(AccessibilityAudioPermissionTests|CommunicationAndRestaurantReleaseRootTests|VoiceInputSessionOwnershipTests|VoiceTextInputQualityTests)\.swift)$' || true)"
             test -z "$unexpected"
             test "$(xcodebuild -project UniversalAssistant.xcodeproj -scheme UniversalAssistant -configuration Production -showBuildSettings | awk '/CURRENT_PROJECT_VERSION/ {print $3; exit}')" = "63"
       - run:
