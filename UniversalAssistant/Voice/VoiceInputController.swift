@@ -1673,6 +1673,22 @@ final class VoiceInputController: VoiceInputControlling {
         case legacy
     }
 
+    static let ios27ApplicationContextualVocabulary: [String] = {
+        let applications = LaunchDeviceApplications.verified
+        let officialNames = applications.map {
+            $0.id.replacingOccurrences(of: "-", with: " ")
+        }
+        let aliases = applications.flatMap { application in
+            application.aliases.sorted { lhs, rhs in
+                lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
+            }
+        }
+        return VoiceRecognitionRequestConfiguration.boundedVocabulary(
+            additional: officialNames + aliases,
+            includeCanonical: false
+        )
+    }()
+
     #if IOS27_SPEECH_PROBE
     let engineIdentifier = "apple-dictation-ios27+sfspeech-legacy"
     #else
@@ -1942,13 +1958,17 @@ final class VoiceInputController: VoiceInputControlling {
     @available(iOS 27.0, *)
     private func startIOS27Dictation(sessionID: UUID) async {
         let backend = IOS27DictationVoiceBackend()
+        let contextualStrings = Self.ios27ApplicationContextualVocabulary
         ios27Backend = backend
         LocalVoiceDiagnosticReport.shared.record("recognizer_ready", "api=dictation_transcriber locale=uk-UA")
         LocalVoiceDiagnosticReport.shared.record("APPLE_LOCALE", "locale=uk-UA")
         LocalVoiceDiagnosticReport.shared.record("cloud_recovery_used", "value=false")
+        LocalVoiceDiagnosticReport.shared.record(
+            "dictation_context_prepared", "contextual_string_count=\(contextualStrings.count)"
+        )
         LocalVoiceDiagnosticReport.shared.recordBoundaryPre("SPEECH_START", "locale=uk-UA api=dictation_transcriber")
         do {
-            try await backend.start { [weak self] event in
+            try await backend.start(contextualStrings: contextualStrings) { [weak self] event in
                 guard let self, self.owns(sessionID), self.ios27Backend === backend else { return }
                 switch event {
                 case let .partial(text):
@@ -1978,6 +1998,9 @@ final class VoiceInputController: VoiceInputControlling {
                 return
             }
             setState(.listening)
+            LocalVoiceDiagnosticReport.shared.record(
+                "dictation_context_set", "contextual_string_count=\(contextualStrings.count) status=success"
+            )
             LocalVoiceDiagnosticReport.shared.recordBoundaryPost(
                 "SPEECH_START", "locale=uk-UA api=dictation_transcriber status=success"
             )

@@ -89,7 +89,7 @@ final class IOS27DictationProbeController: ObservableObject {
             recordStartStage(.afterAssetPrepare)
             startedAt = Date()
             recordStartStage(.beforeAnalyzerStart)
-            try await backend.start { [weak self] event in self?.consume(event) }
+            try await backend.start(contextualStrings: Self.contextualStrings) { [weak self] event in self?.consume(event) }
             recordStartStage(.afterAnalyzerStart)
             recordStartStage(.running)
             isRunning = true

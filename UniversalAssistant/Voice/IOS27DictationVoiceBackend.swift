@@ -53,6 +53,7 @@ final class IOS27DictationVoiceBackend {
     }
 
     func start(
+        contextualStrings: [String],
         onEvent: @escaping @MainActor @Sendable (Event) -> Void
     ) async throws {
         await stop()
@@ -73,6 +74,8 @@ final class IOS27DictationVoiceBackend {
         )
         let provider = providerHandle.provider
         let analyzer = SpeechAnalyzer(modules: [transcriber])
+        let context = AnalysisContext()
+        context.contextualStrings[.general] = contextualStrings
         self.analyzer = analyzer
         captureProvider = provider
 
@@ -101,6 +104,8 @@ final class IOS27DictationVoiceBackend {
         }
 
         do {
+            try await analyzer.setContext(context)
+            guard sessionID == newSessionID else { throw CancellationError() }
             try await analyzer.start(inputSequence: provider.analyzerInputs)
             guard sessionID == newSessionID else { throw CancellationError() }
             guard await captureWorker.startCapture() else {

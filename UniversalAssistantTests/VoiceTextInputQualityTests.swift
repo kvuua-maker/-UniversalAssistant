@@ -14,6 +14,20 @@ struct VoiceTextInputQualityTests {
         #endif
     }
 
+    @Test @MainActor func ios27ApplicationContextUsesOnlyBoundedUniqueVerifiedApplicationNames() {
+        let vocabulary = VoiceInputController.ios27ApplicationContextualVocabulary
+        let expectedNames = LaunchDeviceApplications.verified.map {
+            $0.id.replacingOccurrences(of: "-", with: " ")
+        }
+        let comparisonKeys = vocabulary.map {
+            $0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "uk_UA"))
+        }
+
+        #expect(vocabulary.count <= VoiceRecognitionRequestConfiguration.maximumContextualStringCount)
+        #expect(Set(comparisonKeys).count == vocabulary.count)
+        #expect(expectedNames.allSatisfy(vocabulary.contains))
+    }
+
     @Test func extendableMessageSurvivesNaturalNineHundredMillisecondPause() {
         let policy = VoiceUtteranceEndpointPolicy()
         let assessment = VoiceDeterministicCommandAssessment(text: "Напиши мамі")
