@@ -67,6 +67,27 @@ The project source of truth is the complete, indivisible combination of:
 
 All accepted addenda augment the Master Spec and do not remove or weaken it. Every requirement retains an evidence-backed zero-omission status; documentation, interfaces, mocks and external dependencies alone never establish completion. Later explicit supersession rules inside the Master Spec take precedence over earlier conflicting wording, subject to safety, law, current platform/provider truth, privacy and security.
 
+## Accepted-source content integrity notice (2026-10-05)
+
+Entries 13, 14 and 15 above are accepted in ID inventory and SHA-256, but the
+`docs/` copies of those four addenda were verified on 2026-10-05 to be
+**one-line stubs**: every requirement ID and section tag is present while the
+operative body text is replaced by a short paraphrase. The ID counts and hashes
+are accurate; the requirement wording behind them was missing from the
+repository.
+
+- Recovered originals for Privacy and Loyalty are preserved verbatim under
+  `docs/owner_sources/`. Read those files when auditing `PRIVACY-ID` or
+  `LOYALTY-ID` compliance, not the `docs/` stubs.
+- `AUDIO-109…147` and `LIVE-DIAG-001…078` remain `SOURCE_TEXT_REQUIRED`: no true
+  original was available and none was generated.
+- Proof, exact per-ID losses and SHA-256 values: `docs/owner_sources/README_PROVENANCE.md`.
+
+A stub ID inventory is not evidence of implementation. Until the missing
+originals are supplied, status for those IDs must be recorded as
+`SOURCE_TEXT_REQUIRED` rather than as passed, not-applicable or already
+implemented.
+
 Both canonical files were read completely and copied byte-for-byte from the owner-provided attachments on 2026-09-01. Their hashes were verified after persistence.
 
 Repository reconciliation found M0–M4 locally accepted and the implemented M5 service, ride, transport and ticket-engine checkpoints frozen. M5 acceptance was premature because requirement 814 also requires travel/hotel flows, authentication boundaries, safe booking/purchase handoff and partial provider degradation. Work resumes with the first missing atomic block: `M5-HOTEL-SEARCH-CORE`.
