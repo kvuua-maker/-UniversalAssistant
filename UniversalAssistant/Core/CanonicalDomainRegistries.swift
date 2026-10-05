@@ -189,8 +189,7 @@ enum CanonicalDomainIntegrityPolicy {
             !englishTokens.isDisjoint(with: ["book", "novel", "read"])
         let safetyEvidence = hasTokenEvidence(["тривог", "небезпек", "alert", "alarm"]) &&
             hasTokenEvidence(["повітр", "неб", "air", "sky", "civil"])
-        let officialEvidence = hasTokenEvidence(["офіційн", "официальн", "official", "dealer", "дилер"])
-        let automotiveBrand = CanonicalAutomotiveEntityExtractor.brandAndModel(in: command.originalText)
+        let automotive = CanonicalAutomotiveEntityExtractor.domainEvidence(in: command.originalText)
         let providerRoleMarker = hasTokenEvidence([
             "маркетплейс", "магазин", "сайт", "через", "marketplace", "store", "site", "via"
         ]) || command.originalText.split(whereSeparator: { !$0.isLetter }).contains {
@@ -259,28 +258,30 @@ enum CanonicalDomainIntegrityPolicy {
             entities["provider_domain"] = "books"
             entities["query"] = command.originalText
             entities["book_query"] = CanonicalBookQueryExtractor.title(in: command.originalText)
-        } else if let automotiveBrand, officialEvidence {
+        } else if automotive.ownsVehicleDomain, !resolvedServiceDomain(entities["provider_domain"]) {
+            // Automotive domain ownership follows the meaning of the request.
+            // A vehicle the user wants to acquire must never degrade into a
+            // generic product catalogue, so an unknown marque reaches the
+            // automotive dealer surface with the brand carried as data.
             intent = .placeSearch
             entities.removeValue(forKey: "catalog_entity_id")
             entities.removeValue(forKey: "provider")
             entities.removeValue(forKey: "retailer")
             entities["provider_domain"] = "automotive_dealer"
             entities["place_category"] = PlaceCategory.shop.rawValue
-            entities["automotive_brand"] = automotiveBrand
-            entities["query"] = "official \(automotiveBrand) dealer showroom"
+            if let brand = automotive.brandAndModel {
+                entities["automotive_brand"] = brand
+                entities["brand"] = brand
+                entities["query"] = "official \(brand) dealer showroom"
+                constraints.brand = brand
+                constraints.hardConstraintKeys.insert("brand")
+            } else {
+                entities["query"] = "car dealer showroom"
+                constraints.brand = nil
+                constraints.hardConstraintKeys.remove("brand")
+            }
             entities["near_current_location"] = "true"
-            constraints.brand = automotiveBrand
-            constraints.hardConstraintKeys.insert("brand")
-        } else if let automotiveBrand, purchaseEvidence {
-            intent = .productSearch
-            entities.removeValue(forKey: "catalog_entity_id")
-            entities.removeValue(forKey: "provider")
-            entities.removeValue(forKey: "retailer")
-            entities["provider_domain"] = "product_catalog"
-            entities["brand"] = automotiveBrand
-            entities["query"] = automotiveBrand
-            constraints.brand = automotiveBrand
-            constraints.hardConstraintKeys.insert("brand")
+            needsClarification = false
         }
 
         if intent == .parcelTrack && !parcelEvidence && (purchaseEvidence || productCategory != nil) {
@@ -395,6 +396,12 @@ enum CanonicalDomainIntegrityPolicy {
                      risk: command.risk, needsClarification: needsClarification)
     }
 
+    /// Domains that already own this request through a verified service path.
+    /// Automotive analysis must never displace them.
+    private static func resolvedServiceDomain(_ domain: String?) -> Bool {
+        domain == "car_rental" || domain == "vehicle_service" || domain == "current_safety"
+    }
+
     private static func isGenericRestaurantSubject(_ value: String?) -> Bool {
         guard let value else { return true }
         let tokens = CanonicalMorphology.comparableText(value)
@@ -445,7 +452,109 @@ enum CanonicalDomainIntegrityPolicy {
 }
 
 enum CanonicalAutomotiveEntityExtractor {
-    static func brandAndModel(in text: String) -> String? {
+    /// Typed outcome of automotive domain analysis. Brand and model are data on
+    /// this value, never the reason the domain was selected.
+    struct DomainEvidence: Sendable {
+        /// The request is about acquiring a vehicle, so the automotive domain
+        /// owns it even when no marque is recognized.
+        let ownsVehicleDomain: Bool
+        let brandAndModel: String?
+    }
+
+    /// Vehicle object vocabulary. These describe the kind of object the user is
+    /// asking about, so an unknown manufacturer still owns this domain.
+    /// Cyrillic roots match on a productive prefix; Latin roots match only as a
+    /// whole evidence form so unrelated words sharing letters cannot match.
+    private static let vehicleObjectRoots = ["авто", "автомоб", "машин"]
+    private static let vehicleBodyRoots = [
+        "седан", "хетчбек", "хэтчбек", "універсал", "кросовер",
+        "пікап", "пикап", "фургон", "мікроавтобус", "спорткар", "кабріолет"
+    ]
+    private static let vehiclePowertrainRoots = ["електромобіл", "електроавто", "гібрид"]
+    private static let latinVehicleForms: Set<String> = [
+        "car", "cars", "vehicle", "vehicles", "suv", "suvs", "sedan", "sedans",
+        "hatchback", "crossover", "pickup", "minivan", "coupe", "cabriolet", "hybrid"
+    ]
+    /// Series/model language lets an ownership request own the automotive domain
+    /// when no vehicle object noun was spoken.
+    private static let vehicleSpecificationRoots = [
+        "сері", "модифікац", "комплектац", "двигун", "привід", "пробіг", "vin"
+    ]
+    /// Public transport is a separate domain and must never be captured here.
+    private static let publicTransportRoots = [
+        "автобус", "автобуси", "трамва", "потяг", "поїзд", "метро", "маршрутк", "тролейбус"
+    ]
+    /// Parts, consumables and servicing stay in commerce/service ownership. They
+    /// mention a vehicle but do not acquire one.
+    private static let vehiclePartsRoots = [
+        "запчаст", "масл", "масло", "олив", "олі", "шини", "шина", "резин", "колодк",
+        "батаре", "свіч", "фільтр", "заправ", "митт", "мийк", "шиномонтаж", "автосервіс"
+    ]
+    private static let physicalDealerRoots = [
+        "дилер", "шоурум", "автосалон", "dealer", "dealership", "showroom", "testdrive"
+    ]
+    /// Ownership excludes bare "order": that form stays ambiguous between a
+    /// ride, a rental and a purchase, exactly as the verified service ambiguity
+    /// already resolves it.
+    private static let ownershipRoots = ["куп", "придб"]
+    private static let rentalRoots = ["оренд", "прокат"]
+    private static let rideRoots = ["таксі", "такси"]
+    /// Latin evidence is matched as whole forms for the same reason Cyrillic
+    /// prefixes are safe here: "card" must not satisfy "car".
+    private static let latinServiceForms: Set<String> = ["rent", "rental", "hire", "ride", "taxi"]
+
+    /// Words that carry no brand information and must be stripped before an
+    /// open-world marque is read as residual text. Vehicle object and body
+    /// vocabulary belongs here too: it names the kind of vehicle, never the
+    /// manufacturer.
+    private static let residualNoiseRoots = [
+        "куп", "придб", "замов", "закаж", "знайд", "покаж", "підбер", "хочу",
+        "авто", "автомоб", "машин", "car", "vehicle", "офіційн", "официальн",
+        "official", "дилер", "шоурум", "dealer", "тестдрайв", "testdrive",
+        "новий", "новый", "new", "сері", "модифікац", "комплектац",
+        "привід", "двигун", "пробіг", "vin", "клас", "рік", "year",
+        "седан", "хетчбек", "хэтчбек", "універсал", "кросовер",
+        "пікап", "пикап", "фургон", "мікроавтобус", "спорткар", "кабріолет",
+        "електромобіл", "електроавто", "гібрид", "suv", "sedan", "hatchback",
+        "crossover", "pickup", "minivan", "coupe", "cabriolet", "hybrid",
+        "для", "про", "щоб", "тако", "замало", "бистро", "бажано",
+        "салон", "де", "та", "там", "тут", "туди"
+    ]
+
+    static func domainEvidence(in text: String) -> DomainEvidence {
+        let forms = Set(text.split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+            .flatMap { CanonicalMorphology.forms(for: String($0)) })
+        func has(_ roots: [String]) -> Bool {
+            forms.contains { value in roots.contains { value.hasPrefix($0) } }
+        }
+        guard !has(publicTransportRoots), !has(vehiclePartsRoots),
+              forms.isDisjoint(with: latinServiceForms) else {
+            return .init(ownsVehicleDomain: false, brandAndModel: nil)
+        }
+        // A resolved ride/rental service already owns this request. Capturing it
+        // here would replace a verified car-rental capability with a dealer query.
+        guard !has(rideRoots), !has(rentalRoots) else {
+            return .init(ownsVehicleDomain: false, brandAndModel: nil)
+        }
+        let vehicleObject = has(vehicleObjectRoots) || has(vehicleBodyRoots) ||
+            has(vehiclePowertrainRoots) || !forms.isDisjoint(with: latinVehicleForms)
+        let specification = has(vehicleSpecificationRoots)
+        let ownership = has(ownershipRoots) || has(physicalDealerRoots)
+        // A marque verified by the existing automotive regexes is trusted
+        // evidence on its own, which preserves the already verified
+        // marque-plus-official path. A residual open-world marque is *data* and
+        // never decides ownership on its own: without vehicle semantics the
+        // request stays unresolved rather than being guessed into this domain.
+        let verifiedMarque = trustedMarque(in: text)
+        guard ownership, vehicleObject || specification || verifiedMarque != nil else {
+            return .init(ownsVehicleDomain: false, brandAndModel: nil)
+        }
+        return .init(ownsVehicleDomain: true, brandAndModel: brandAndModel(in: text))
+    }
+
+    /// Marques whose automotive identity is already verified in the production
+    /// corridor. This is pre-existing verified scope, not a general brand list.
+    private static func trustedMarque(in text: String) -> String? {
         let patterns = [
             #"\b(BMW(?:\s+[A-Z0-9][A-Z0-9 .-]{0,20})?)\b"#,
             #"\b(Mercedes(?:-Benz)?(?:\s+[A-Z0-9][A-Z0-9 .-]{0,20})?)\b"#,
@@ -458,6 +567,37 @@ enum CanonicalAutomotiveEntityExtractor {
             return String(text[range]).trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
         }
         return nil
+    }
+
+    /// Marque data for an already owned automotive request: the verified marque
+    /// when one is present, otherwise whatever the user actually said once the
+    /// control, object and specification words are removed.
+    static func brandAndModel(in text: String) -> String? {
+        trustedMarque(in: text) ?? residualBrandAndModel(in: text)
+    }
+
+    /// Open-world marque reading: whatever the user actually said after the
+    /// control, object and specification words are removed is the marque data.
+    /// No manufacturer list participates in this decision.
+    private static func residualBrandAndModel(in text: String) -> String? {
+        var residuals: [String] = []
+        for rawToken in text.split(whereSeparator: { !$0.isLetter && !$0.isNumber }) {
+            let token = String(rawToken)
+            // A one/two-character token is a preposition or an article, never a
+            // marque. Rejecting it here keeps function words out of the query.
+            guard token.count >= 3 else { continue }
+            let forms = CanonicalMorphology.forms(for: token)
+            if forms.contains(where: { value in residualNoiseRoots.contains { value.hasPrefix($0) } }) {
+                continue
+            }
+            residuals.append(token)
+        }
+        guard let first = residuals.first, first.rangeOfCharacter(from: .letters) != nil else { return nil }
+        // A marque plus an adjacent model token is usable data; more than that
+        // is unverified residual text and must not become a query.
+        guard residuals.count <= 2 else { return nil }
+        let value = residuals.joined(separator: " ")
+        return value.rangeOfCharacter(from: .letters) == nil ? nil : value
     }
 }
 

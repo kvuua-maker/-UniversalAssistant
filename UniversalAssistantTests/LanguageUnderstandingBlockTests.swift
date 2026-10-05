@@ -5,6 +5,67 @@ import UIKit
 
 @Suite("Build 31 authoritative language understanding")
 struct LanguageUnderstandingBlockTests {
+    @Test func automotiveDomainOwnershipFollowsRequestMeaningNotAMarqueList() {
+        let block = LanguageUnderstandingBlock()
+
+        // Historical Build 59 physical failures: these reached generic commerce
+        // (Zara / Prom.ua / Fozzy / Ukrposhta) because domain ownership was
+        // decided by a closed three-marque list. They must now own automotive.
+        for text in ["Купити BMW сьомої серії", "Купити Rolls-Royce",
+                     "Купити Mercedes-Benz", "Купити авто", "Купити авто в салоні"] {
+            let command = block.parse(text)
+            #expect(command.entities["provider_domain"] == "automotive_dealer",
+                    "Automotive domain lost for: \(text) -> \(command.entities)")
+            #expect(command.intent == .placeSearch, "Wrong intent for: \(text)")
+            #expect(!["Zara", "Fozzy", "Ukrposhta", "Prom.ua"].contains(command.entities["provider"] ?? ""),
+                    "Generic commerce contamination for: \(text)")
+        }
+    }
+
+    @Test func automotiveOwnershipIsOpenWorldOverVehicleObjectSemantics() {
+        let block = LanguageUnderstandingBlock()
+        // An unknown marque still owns the domain because the request is about
+        // acquiring a vehicle. No manufacturer list participates here.
+        for text in ["Купити седан", "Купити кросовер", "Купити електромобіль",
+                     "Купити гібрид", "Купити SUV", "Купити кросовер BMW X5"] {
+            let command = block.parse(text)
+            #expect(command.entities["provider_domain"] == "automotive_dealer",
+                    "Vehicle request escaped automotive ownership: \(text)")
+            #expect(command.entities["query"]?.isEmpty == false,
+                    "Missing dealer query for: \(text)")
+        }
+    }
+
+    @Test func automotiveDomainOwnershipNeverDisplacesVerifiedCommerceOrCarRental() {
+        let block = LanguageUnderstandingBlock()
+        // These are verified capabilities that mention vehicles but do not
+        // acquire one, or that own the request through a service domain.
+        for text in ["Купити кросівки 41 розміру", "Купити домашні тапочки",
+                     "Замов автомобіль", "Знайди прокат машини у Львові",
+                     "Купити олія для авто", "Купити зимові шини",
+                     "Знайди автосервіс поруч"] {
+            let command = block.parse(text)
+            #expect(command.entities["provider_domain"] != "automotive_dealer",
+                    "Automotive wrongly captured: \(text) -> \(command.entities)")
+        }
+        // The verified bare-vehicle service ambiguity must remain reachable.
+        let ambiguous = block.parse("Замов автомобіль")
+        #expect(ambiguous.entities["clarification_role"] == "vehicle_service")
+        #expect(ambiguous.needsClarification)
+    }
+
+    @Test func automotiveDealerRequestsUseTheFreeGoogleMapsHandoff() {
+        let block = LanguageUnderstandingBlock()
+        for text in ["Купити BMW сьомої серії", "Купити авто"] {
+            let command = block.parse(text)
+            let destination = GoogleMapsSearchHandoff().destination(for: command)
+            #expect(GoogleMapsSearchHandoff().shouldOpenImmediately(command),
+                    "Automotive dealer handoff blocked for: \(text)")
+            #expect(destination?.host == "www.google.com")
+            #expect(destination?.path == "/maps/search")
+        }
+    }
+
     @Test func build59MixedCatalogCannotPromoteAcrossDomains() {
         let block = LanguageUnderstandingBlock()
 
