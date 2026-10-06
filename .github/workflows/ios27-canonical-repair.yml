@@ -7,6 +7,7 @@ on:
     paths-ignore:
       - ".github/workflows/ios27-canonical-repair.yml"
       - ".github/workflows/ios27-testflight.yml"
+      - "UniversalAssistant.xcodeproj/project.pbxproj"
 
 permissions:
   contents: read
