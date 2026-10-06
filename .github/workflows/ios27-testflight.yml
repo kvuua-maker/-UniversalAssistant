@@ -1,10 +1,8 @@
 name: iOS 27 signed iPhone build and TestFlight
 
-# Manual App Store signing with the two reviewed profiles. A new push to the release branch needs the exact one-shot commit marker.
+# Disabled for automatic pushes; release builds are handled by CircleCI.
 on:
-  push:
-    branches: [fix/canonical-repair-20261006]
-    paths: [".github/workflows/ios27-testflight.yml"]
+  workflow_dispatch:
 
 permissions:
   contents: read
