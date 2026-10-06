@@ -1,53 +1,71 @@
 name: iOS 27 signed iPhone build and TestFlight
-# Run after Apple API key secrets are configured.
 
+# Manual only. This workflow is never started by a code push.
 on:
-  push:
-    branches: [fix/canonical-repair-20261006]
-    paths: [".github/workflows/ios27-testflight.yml"]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  check-apple-key:
+  check-signing-inputs:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify credentials before renting a Mac
+      - name: Check Apple API key and distribution certificate before renting a Mac
+        shell: bash
         env:
           KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          P12_BASE64: ${{ secrets.IOS_DIST_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
         run: |
           set -euo pipefail
           missing=""
-          [[ -n "$KEY_ID" ]] || missing="${missing} ASC_KEY_ID"
-          [[ -n "$ISSUER_ID" ]] || missing="${missing} ASC_ISSUER_ID"
-          [[ -n "$PRIVATE_KEY" ]] || missing="${missing} ASC_PRIVATE_KEY"
+          [[ -n "$KEY_ID" ]] || missing="$missing ASC_KEY_ID"
+          [[ -n "$ISSUER_ID" ]] || missing="$missing ASC_ISSUER_ID"
+          [[ -n "$PRIVATE_KEY" ]] || missing="$missing ASC_PRIVATE_KEY"
+          [[ -n "$P12_BASE64" ]] || missing="$missing IOS_DIST_P12_BASE64"
+          [[ -n "$P12_PASSWORD" ]] || missing="$missing IOS_DIST_P12_PASSWORD"
           if [[ -n "$missing" ]]; then
             echo "::error::Missing GitHub repository secrets:$missing"
             exit 1
           fi
-          [[ "$KEY_ID" =~ ^[A-Z0-9]{10}$ ]] || { echo "::error::Invalid key ID"; exit 1; }
-          [[ "$ISSUER_ID" =~ ^[0-9a-fA-F-]{36}$ ]] || { echo "::error::Invalid issuer ID"; exit 1; }
-          printf '%s\n' "$PRIVATE_KEY" | openssl pkey -noout >/dev/null 2>&1 || {
-            echo "::error::ASC_PRIVATE_KEY must contain the complete AuthKey .p8 text"
+          [[ "$KEY_ID" =~ ^[A-Z0-9]{10}$ ]] || { echo "::error::ASC_KEY_ID is invalid"; exit 1; }
+          [[ "$ISSUER_ID" =~ ^[0-9a-fA-F-]{36}$ ]] || { echo "::error::ASC_ISSUER_ID is invalid"; exit 1; }
+          printf '%s' "$PRIVATE_KEY" | openssl pkey -noout >/dev/null 2>&1 || {
+            echo "::error::ASC_PRIVATE_KEY is not a valid App Store Connect .p8 key"
             exit 1
           }
+          umask 077
+          printf '%s' "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/distribution.p12"
+          openssl pkcs12 -in "$RUNNER_TEMP/distribution.p12" -passin env:P12_PASSWORD -clcerts -nokeys -out "$RUNNER_TEMP/distribution-cert.pem"
+          openssl pkcs12 -in "$RUNNER_TEMP/distribution.p12" -passin env:P12_PASSWORD -nocerts -nodes -out "$RUNNER_TEMP/distribution-key.pem"
+          openssl x509 -in "$RUNNER_TEMP/distribution-cert.pem" -checkend 2592000 -noout >/dev/null || {
+            echo "::error::Distribution certificate is expired or expires within 30 days"
+            exit 1
+          }
+          openssl x509 -in "$RUNNER_TEMP/distribution-cert.pem" -noout -subject | grep -Fq "Apple Distribution:"
+          openssl x509 -in "$RUNNER_TEMP/distribution-cert.pem" -noout -subject | grep -Fq "9V5XXDXF3N"
+          cert_hash="$(openssl x509 -in "$RUNNER_TEMP/distribution-cert.pem" -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256 | awk '{print $NF}')"
+          key_hash="$(openssl pkey -in "$RUNNER_TEMP/distribution-key.pem" -pubout -outform DER | openssl dgst -sha256 | awk '{print $NF}')"
+          [[ "$cert_hash" == "$key_hash" ]] || { echo "::error::The certificate and private key do not match"; exit 1; }
+          rm -f "$RUNNER_TEMP/distribution.p12" "$RUNNER_TEMP/distribution-cert.pem" "$RUNNER_TEMP/distribution-key.pem"
 
   archive-and-upload:
-    needs: check-apple-key
+    needs: check-signing-inputs
     runs-on: xcode-27
     timeout-minutes: 90
     env:
       KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+      P12_BASE64: ${{ secrets.IOS_DIST_P12_BASE64 }}
+      P12_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
       BUILD_NUMBER: "65"
     steps:
       - uses: actions/checkout@v4
-      - name: Check Xcode 27 and prepare private key
+      - name: Check Xcode 27 and install signing certificate
         shell: bash
         run: |
           set -euo pipefail
@@ -56,9 +74,19 @@ jobs:
           [[ "$(xcrun --sdk iphoneos --show-sdk-version)" == 27.* ]]
           mkdir -p "$RUNNER_TEMP/asc"
           umask 077
-          printf '%s\n' "$PRIVATE_KEY" > "$RUNNER_TEMP/asc/AuthKey_$KEY_ID.p8"
+          printf '%s' "$PRIVATE_KEY" > "$RUNNER_TEMP/asc/AuthKey_$KEY_ID.p8"
           openssl pkey -in "$RUNNER_TEMP/asc/AuthKey_$KEY_ID.p8" -noout
-      - name: Archive with Apple automatic signing
+          printf '%s' "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/asc/distribution.p12"
+          KEYCHAIN="$RUNNER_TEMP/ua-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/asc/distribution.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" "$HOME/Library/Keychains/login.keychain-db"
+      - name: Archive with Apple managed signing
         shell: bash
         run: |
           set -euo pipefail
@@ -137,7 +165,9 @@ jobs:
           path: release-artifact/
           if-no-files-found: warn
           retention-days: 7
-      - name: Remove key
+      - name: Remove signing material
         if: always()
+        shell: bash
         run: |
           rm -rf "$RUNNER_TEMP/asc" "$HOME/.appstoreconnect/private_keys/AuthKey_$KEY_ID.p8"
+          security delete-keychain "$RUNNER_TEMP/ua-signing.keychain-db" 2>/dev/null || true
