@@ -1,6 +1,6 @@
 name: iOS 27 signed iPhone build and TestFlight
 
-# One authorized retry after replacing signing secrets. Both jobs skip every rerun attempt.
+# Manual App Store signing with the two reviewed profiles. A new push to the release branch needs the exact one-shot commit marker.
 on:
   push:
     branches: [fix/canonical-repair-20261006]
@@ -11,9 +11,10 @@ permissions:
 
 jobs:
   check-signing-inputs:
-    if: ${{ github.run_attempt == 1 && github.event.head_commit.message == 'ONE_SHOT_UA_BUILD65_20261006_1818' }}
+    if: ${{ github.run_attempt == 1 && github.event.head_commit.message == 'ONE_SHOT_UA_BUILD65_MANUAL_PROFILES_20261006' }}
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Check Apple API key and distribution certificate before renting a Mac
         shell: bash
         env:
@@ -53,10 +54,36 @@ jobs:
           cert_hash="$(openssl x509 -in "$RUNNER_TEMP/distribution-cert.pem" -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256 | awk '{print $NF}')"
           key_hash="$(openssl pkey -in "$RUNNER_TEMP/distribution-key.pem" -pubout -outform DER | openssl dgst -sha256 | awk '{print $NF}')"
           [[ "$cert_hash" == "$key_hash" ]] || { echo "::error::The certificate and private key do not match"; exit 1; }
+          python3 - "$RUNNER_TEMP/distribution-cert.pem" <<'PY'
+          import base64, datetime, hashlib, pathlib, plistlib, ssl, subprocess, sys
+          cert_pem = pathlib.Path(sys.argv[1]).read_text()
+          cert_sha = hashlib.sha256(ssl.PEM_cert_to_DER_cert(cert_pem)).hexdigest()
+          expected = (
+              (".github/signing/UniversalAssistant_App_Store_2026.mobileprovision.base64",
+               "Universal-Assistant App Store 2026", "9V5XXDXF3N.com.universalassistant.app"),
+              (".github/signing/UniversalAssistant_Share_App_Store_2026.mobileprovision.base64",
+               "Universal-Assistant Share App Store 2026", "9V5XXDXF3N.com.universalassistant.app.share"),
+          )
+          for path, name, app_id in expected:
+              raw = base64.b64decode(pathlib.Path(path).read_text().strip(), validate=True)
+              decoded = subprocess.run(
+                  ["openssl", "smime", "-verify", "-inform", "DER", "-noverify"],
+                  input=raw, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True,
+              ).stdout
+              profile = plistlib.loads(decoded)
+              rights = profile["Entitlements"]
+              assert profile["Name"] == name and rights["application-identifier"] == app_id
+              assert rights["com.apple.developer.team-identifier"] == "9V5XXDXF3N"
+              assert rights["get-task-allow"] is False and rights["beta-reports-active"] is True
+              assert profile["ExpirationDate"] > datetime.datetime.utcnow()
+              assert any(hashlib.sha256(cert).hexdigest() == cert_sha
+                         for cert in profile["DeveloperCertificates"])
+              print("Verified App Store profile for " + app_id)
+          PY
           rm -f "$RUNNER_TEMP/distribution.p12" "$RUNNER_TEMP/distribution-cert.pem" "$RUNNER_TEMP/distribution-key.pem"
 
   archive-and-upload:
-    if: ${{ github.run_attempt == 1 && github.event.head_commit.message == 'ONE_SHOT_UA_BUILD65_20261006_1818' }}
+    if: ${{ github.run_attempt == 1 && github.event.head_commit.message == 'ONE_SHOT_UA_BUILD65_MANUAL_PROFILES_20261006' }}
     needs: check-signing-inputs
     runs-on: xcode-27
     timeout-minutes: 90
@@ -90,7 +117,12 @@ jobs:
           security import "$RUNNER_TEMP/asc/distribution.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           security list-keychains -d user -s "$KEYCHAIN" "$HOME/Library/Keychains/login.keychain-db"
-      - name: Archive with Apple managed signing
+          profile_dir="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$profile_dir"
+          base64 -D < .github/signing/UniversalAssistant_App_Store_2026.mobileprovision.base64 > "$profile_dir/7199ac26-0368-45f1-857e-7a74b2902e24.mobileprovision"
+          base64 -D < .github/signing/UniversalAssistant_Share_App_Store_2026.mobileprovision.base64 > "$profile_dir/89cd1a2f-ae27-4eda-9e9a-6208cd564b6c.mobileprovision"
+
+      - name: Archive with manual App Store signing
         shell: bash
         run: |
           set -euo pipefail
@@ -100,12 +132,7 @@ jobs:
             -configuration Production \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/UniversalAssistant.xcarchive" \
-            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey_$KEY_ID.p8" \
-            -authenticationKeyID "$KEY_ID" \
-            -authenticationKeyIssuerID "$ISSUER_ID" \
-            -allowProvisioningUpdates \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-            DEVELOPMENT_TEAM=9V5XXDXF3N \
             archive > "$RUNNER_TEMP/archive.log" 2>&1 || {
               tail -100 "$RUNNER_TEMP/archive.log"
               exit 1
@@ -125,7 +152,12 @@ jobs:
             <key>method</key><string>app-store-connect</string>
             <key>destination</key><string>export</string>
             <key>teamID</key><string>9V5XXDXF3N</string>
-            <key>signingStyle</key><string>automatic</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>provisioningProfiles</key><dict>
+              <key>com.universalassistant.app</key><string>Universal-Assistant App Store 2026</string>
+              <key>com.universalassistant.app.share</key><string>Universal-Assistant Share App Store 2026</string>
+            </dict>
             <key>manageAppVersionAndBuildNumber</key><false/>
           </dict></plist>
           PLIST
@@ -133,11 +165,7 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/UniversalAssistant.xcarchive" \
             -exportPath "$RUNNER_TEMP/export" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey_$KEY_ID.p8" \
-            -authenticationKeyID "$KEY_ID" \
-            -authenticationKeyIssuerID "$ISSUER_ID" \
-            -allowProvisioningUpdates > "$RUNNER_TEMP/export.log" 2>&1 || {
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" > "$RUNNER_TEMP/export.log" 2>&1 || {
               tail -100 "$RUNNER_TEMP/export.log"
               exit 1
             }
@@ -173,4 +201,6 @@ jobs:
         shell: bash
         run: |
           rm -rf "$RUNNER_TEMP/asc" "$HOME/.appstoreconnect/private_keys/AuthKey_$KEY_ID.p8"
+          rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/7199ac26-0368-45f1-857e-7a74b2902e24.mobileprovision"
+          rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/89cd1a2f-ae27-4eda-9e9a-6208cd564b6c.mobileprovision"
           security delete-keychain "$RUNNER_TEMP/ua-signing.keychain-db" 2>/dev/null || true
