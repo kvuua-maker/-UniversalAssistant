@@ -1,14 +1,7 @@
 name: iOS 27 canonical repair
 
 on:
-  push:
-    branches:
-      - fix/canonical-repair-20261006
-    paths-ignore:
-      - ".github/workflows/ios27-canonical-repair.yml"
-      - ".github/workflows/ios27-testflight.yml"
-      - ".github/signing/**"
-      - "UniversalAssistant.xcodeproj/project.pbxproj"
+  workflow_dispatch:
 
 permissions:
   contents: read
