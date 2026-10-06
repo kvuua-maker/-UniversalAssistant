@@ -1,0 +1,81 @@
+name: iOS 27 canonical repair
+
+on:
+  push:
+    branches:
+      - fix/canonical-repair-20261006
+
+permissions:
+  contents: read
+
+jobs:
+  ios27-verify:
+    runs-on: xcode-27
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Xcode, SDK and simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ci-evidence
+          git rev-parse HEAD | tee ci-evidence/source-head.txt
+          xcodebuild -version | tee ci-evidence/xcode-version.txt
+          xcrun --sdk iphoneos --show-sdk-version | tee ci-evidence/ios-sdk-version.txt
+          xcrun simctl list devices available | tee ci-evidence/simulators.txt
+          xcode_version="$(xcodebuild -version | sed -n 's/^Xcode //p')"
+          ios_sdk_version="$(xcrun --sdk iphoneos --show-sdk-version)"
+          [[ "$xcode_version" == 27.* ]]
+          [[ "$ios_sdk_version" == 27.* ]]
+          simulator_id="$(xcrun simctl list devices available -j | jq -r '[.devices | to_entries[] | select(.key | contains("iOS-27")) | .value[] | select(.isAvailable == true and (.name | startswith("iPhone"))) | .udid][0] // empty')"
+          test -n "$simulator_id"
+          printf '%s\n' "$simulator_id" > ci-evidence/simulator-id.txt
+          xcrun simctl boot "$simulator_id" 2>/dev/null || true
+          xcrun simctl bootstatus "$simulator_id" -b
+
+      - name: Build iOS app and tests with system dictation
+        shell: bash
+        run: |
+          set -euo pipefail
+          simulator_id="$(cat ci-evidence/simulator-id.txt)"
+          SWT_EXPERIMENTAL_MAXIMUM_PARALLELIZATION_WIDTH=1 xcodebuild \
+            -project UniversalAssistant.xcodeproj \
+            -scheme UniversalAssistant \
+            -configuration Development \
+            -destination "platform=iOS Simulator,id=$simulator_id" \
+            -derivedDataPath "$RUNNER_TEMP/UniversalAssistant-iOS27" \
+            -parallel-testing-enabled NO \
+            'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) DEBUG DEVELOPMENT IOS27_SPEECH_PROBE' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            build-for-testing 2>&1 | tee ci-evidence/ios27-build.log
+
+      - name: Run complete iOS test suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          simulator_id="$(cat ci-evidence/simulator-id.txt)"
+          app="$RUNNER_TEMP/UniversalAssistant-iOS27/Build/Products/Development-iphonesimulator/UniversalAssistant.app"
+          test -d "$app"
+          xcrun simctl install "$simulator_id" "$app"
+          xcrun simctl privacy "$simulator_id" grant contacts com.universalassistant.app.dev
+          SWT_EXPERIMENTAL_MAXIMUM_PARALLELIZATION_WIDTH=1 xcodebuild \
+            -project UniversalAssistant.xcodeproj \
+            -scheme UniversalAssistant \
+            -configuration Development \
+            -destination "platform=iOS Simulator,id=$simulator_id" \
+            -derivedDataPath "$RUNNER_TEMP/UniversalAssistant-iOS27" \
+            -resultBundlePath "$GITHUB_WORKSPACE/ci-evidence/ios27-tests.xcresult" \
+            -parallel-testing-enabled NO \
+            'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) DEBUG DEVELOPMENT IOS27_SPEECH_PROBE' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            test-without-building 2>&1 | tee ci-evidence/ios27-tests.log
+
+      - name: Upload build and test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios27-canonical-repair-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: ci-evidence/
