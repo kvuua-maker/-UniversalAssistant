@@ -46,6 +46,7 @@ jobs:
             -destination "platform=iOS Simulator,id=$simulator_id" \
             -derivedDataPath "$RUNNER_TEMP/UniversalAssistant-iOS27" \
             -parallel-testing-enabled NO \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
             'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) DEBUG DEVELOPMENT IOS27_SPEECH_PROBE' \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             build-for-testing 2>&1 | tee ci-evidence/ios27-build.log
@@ -67,6 +68,7 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/UniversalAssistant-iOS27" \
             -resultBundlePath "$GITHUB_WORKSPACE/ci-evidence/ios27-tests.xcresult" \
             -parallel-testing-enabled NO \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
             'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) DEBUG DEVELOPMENT IOS27_SPEECH_PROBE' \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             test-without-building 2>&1 | tee ci-evidence/ios27-tests.log
