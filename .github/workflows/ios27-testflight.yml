@@ -1,4 +1,5 @@
 name: iOS 27 signed iPhone build and TestFlight
+# Run after Apple API key secrets are configured.
 
 on:
   push:
