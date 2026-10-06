@@ -775,7 +775,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         // name is service evidence. Contextual fuzzy recovery happens later
         // inside the marked channel span, never over action/person tokens.
         let services: [(String, Set<String>)] = [
-            ("messages", ["messages", "повідомлення", "смс", "sms", "imessage"]),
+            ("messages", ["messages", "смс", "sms", "imessage"]),
             ("whatsapp", ["whatsapp", "whats", "what's", "вотсап", "ватсап", "вотс", "ватс"]),
             ("telegram", ["telegram", "телеграм"]),
             ("viber", ["viber", "вайбер", "вібер"]),
@@ -994,7 +994,8 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         let patterns = [
             #"^\s*(?:веди|проведи|navigate|take me|приведи)\s+(?:мене\s+|меня\s+)?(.+?)\s*$"#,
             #"^\s*(?:їхати|ехать|go)\s+(.+?)\s*$"#,
-            #"(?:маршрут|дорог\p{L}*|шлях\p{L}*|путь\p{L}*|route|directions|path)\s+(?:до|на|у|в|to)\s+(.+?)\s*$"#
+            #"(?:маршрут|дорог\p{L}*|шлях\p{L}*|путь\p{L}*|route|directions|path)\s+(?:до|на|у|в|to)\s+(.+?)\s*$"#,
+            #"^\s*(?:проклад\p{L}*|побуд\p{L}*|постро\p{L}*|build)\s+(?:маршрут|route)\s+(.+?)\s*$"#
         ]
         for pattern in patterns {
             guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
@@ -1021,6 +1022,19 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
             return ["photo_query_kind": "all", "query": "all"]
         }
         var metadata: [String: String] = [:]
+        // A calendar-year range is metadata, not a Vision concept. Keep any
+        // content subject beside it so the executor can AND both constraints.
+        let lastYearPattern = #"(?:\b(?:за|у|в|from|in)\s+)?(?:минул\p{L}*|попередн\p{L}*|прошл\p{L}*|предыдущ\p{L}*|last|previous)\s+(?:рік|року|році|год\p{L}*|year)\b"#
+        if original.range(of: lastYearPattern, options: [.regularExpression, .caseInsensitive]) != nil {
+            metadata["photo_date_period"] = "last_year"
+            metadata["photo_date_filter"] = "true"
+            let subject = semanticPhotoSubject(original.replacingOccurrences(
+                of: lastYearPattern, with: "", options: [.regularExpression, .caseInsensitive]
+            ))
+            metadata["photo_query_kind"] = subject.isEmpty ? "metadata" : "semantic"
+            metadata["query"] = subject.isEmpty ? "metadata" : subject
+            return metadata
+        }
         if let temporal = frame.temporal,
            temporal.relativeDayOffset != nil || temporal.calendarDay != nil || temporal.weekday != nil {
             metadata["photo_date_filter"] = "true"
@@ -1063,7 +1077,7 @@ struct CanonicalSemanticFrameAnalyzer: Sendable {
         let actionOrObjectRoots = [
             "знайд", "пошук", "покаж", "відкр", "найд", "поищ", "откр",
             "find", "search", "show", "open",
-            "фото", "фотограф", "світлин", "знім", "сним", "picture", "image"
+            "фото", "фотограф", "світлин", "знім", "сним", "photo", "picture", "image"
         ]
         let structuralWords: Set<String> = [
             "у", "в", "на", "серед", "поміж", "из", "среди", "among", "in", "from",

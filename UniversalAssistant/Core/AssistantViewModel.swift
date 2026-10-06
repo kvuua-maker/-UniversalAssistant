@@ -21,7 +21,10 @@ struct PendingContinuationCompatibilityPolicy: Sendable {
         let normalized = CanonicalMorphology.comparableText(reply)
         switch role {
         case "time", "restaurant_date_time", "temporal":
-            return normalized.range(of: #"\b(?:[01]?\d|2[0-3])[:.]?[0-5]\d\b"#, options: .regularExpression) != nil || isNarrowReply(reply)
+            // Comparable text removes clock punctuation, turning 19:30 into
+            // two words. Preserve the supplied time when a reply also includes
+            // guest count (and therefore exceeds the generic short-reply cap).
+            return reply.range(of: #"\b(?:[01]?\d|2[0-3])[:.]?[0-5]\d\b"#, options: .regularExpression) != nil || isNarrowReply(reply)
         case "party_size", "quantity":
             return normalized.range(of: #"\b\d{1,2}\b"#, options: .regularExpression) != nil || isNarrowReply(reply)
         case "recipient", "message_body", "service_channel", "application":

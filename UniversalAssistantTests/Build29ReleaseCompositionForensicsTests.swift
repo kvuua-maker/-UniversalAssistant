@@ -1089,6 +1089,7 @@ private struct Build29PhotoLoaderBoundary: PhotoAssetImageLoading {
 private struct Build29PhotoLabelBoundary: PhotoSemanticLabeling {
     let confidence: Float
     func labels(imageData: Data) async throws -> [PhotoSemanticLabel] { [.init(name: "document", confidence: confidence)] }
+    func documentLabels(imageData: Data) async throws -> [PhotoSemanticLabel] { [.init(name: "document", confidence: confidence)] }
 }
 
 @Suite("Build 29 Release remaining gap reachability", .serialized)

@@ -126,6 +126,7 @@ final class IOS27DictationProbeController: ObservableObject {
         let rawText: String
         let isFinal: Bool
         switch event {
+        case .evidence: return // Count/text-only probe; production receives evidence separately.
         case let .partial(text): rawText = text; isFinal = false
         case let .final(text): rawText = text; isFinal = true
         case let .failure(message):

@@ -1689,6 +1689,15 @@ final class VoiceInputController: VoiceInputControlling {
         )
     }()
 
+    static func ios27ContextualVocabulary(additional: [String]) -> [String] {
+        // Cached user vocabulary is already permission-scoped by its provider. Never await Contacts
+        // or cloud work on the normal Dictation start path; prewarming refreshes the next session.
+        VoiceRecognitionRequestConfiguration.boundedVocabulary(
+            additional: Array(additional.prefix(40)) + ios27ApplicationContextualVocabulary,
+            includeCanonical: false
+        )
+    }
+
     #if IOS27_SPEECH_PROBE
     let engineIdentifier = "apple-dictation-ios27+sfspeech-legacy"
     #else
@@ -1728,14 +1737,8 @@ final class VoiceInputController: VoiceInputControlling {
     @ObservationIgnored private var appleRecognitionTerminatedEarly = false
     @ObservationIgnored private var appleTerminationUptime: TimeInterval?
     @ObservationIgnored private var speechResumedAfterAppleTermination = false
-    #if IOS27_SPEECH_PROBE
-    @ObservationIgnored private var ios27BackendStorage: AnyObject?
-    @available(iOS 27.0, *)
-    private var ios27Backend: IOS27DictationVoiceBackend? {
-        get { ios27BackendStorage as? IOS27DictationVoiceBackend }
-        set { ios27BackendStorage = newValue }
-    }
-    #endif
+    @ObservationIgnored private var ios27Backend: (any DictationVoiceSession)?
+    private let dictationBackendFactory: @MainActor () -> (any DictationVoiceSession)?
 
     init(
         captureBackend: (any VoiceAudioCaptureBackend)? = nil,
@@ -1743,7 +1746,8 @@ final class VoiceInputController: VoiceInputControlling {
         endOfSpeechDelay: Duration = .milliseconds(850),
         authorization: (@Sendable () async -> Bool)? = nil,
         contextualVocabulary: @escaping @Sendable () async -> [String] = { [] },
-        cloudTranscriber: any CloudVoiceTranscribing = GroqCloudVoiceTranscriber()
+        cloudTranscriber: any CloudVoiceTranscribing = GroqCloudVoiceTranscriber(),
+        dictationBackendFactory: (@MainActor () -> (any DictationVoiceSession)?)? = nil
     ) {
         capture = VoiceAudioCaptureLifecycle(backend: captureBackend ?? AppleVoiceAudioCaptureBackend())
         self.backendSelection = backendSelection
@@ -1756,6 +1760,12 @@ final class VoiceInputController: VoiceInputControlling {
         }
         self.contextualVocabulary = contextualVocabulary
         self.cloudTranscriber = cloudTranscriber
+        self.dictationBackendFactory = dictationBackendFactory ?? {
+            #if IOS27_SPEECH_PROBE
+            if #available(iOS 27.0, *) { return IOS27DictationVoiceBackend() }
+            #endif
+            return nil
+        }
         let components = endOfSpeechDelay.components
         silenceWindowSeconds = min(1.2, max(0.55,
             Double(components.seconds) + Double(components.attoseconds) / 1_000_000_000_000_000_000))
@@ -1787,12 +1797,10 @@ final class VoiceInputController: VoiceInputControlling {
         LocalVoiceDiagnosticReport.shared.record("mic_tap", "source=home")
         LocalVoiceDiagnosticReport.shared.record("start_listening_invoked")
         setState(.requestingPermission)
-        #if IOS27_SPEECH_PROBE
-        if backendSelection == .automatic, #available(iOS 27.0, *) {
-            await startIOS27Dictation(sessionID: sessionID)
+        if backendSelection == .automatic, let backend = dictationBackendFactory() {
+            await startIOS27Dictation(sessionID: sessionID, backend: backend)
             return
         }
-        #endif
         let authorization = await authorization()
         guard case let .authorized(appleSpeechAvailable) = authorization else {
             guard owns(sessionID) else { return }
@@ -1886,8 +1894,7 @@ final class VoiceInputController: VoiceInputControlling {
     }
 
     func stop(reason: VoiceStopReason = .externalRequest) {
-        #if IOS27_SPEECH_PROBE
-        if #available(iOS 27.0, *), let backend = ios27Backend {
+        if let backend = ios27Backend {
             if reason == .userPressedStop,
                let sessionID = activeSessionID,
                state == .listening {
@@ -1906,7 +1913,6 @@ final class VoiceInputController: VoiceInputControlling {
             stop(reason: reason, ownedBy: nil)
             return
         }
-        #endif
         if reason == .userPressedStop, let sessionID = activeSessionID, state == .listening {
             finalizeAuthoritativeTranscript(sessionID: sessionID, appleFallback: transcript)
             return
@@ -1920,12 +1926,10 @@ final class VoiceInputController: VoiceInputControlling {
             return
         }
         activeSessionID = nil
-        #if IOS27_SPEECH_PROBE
-        if #available(iOS 27.0, *), let backend = ios27Backend {
+        if let backend = ios27Backend {
             ios27Backend = nil
             Task { @MainActor in await backend.stop() }
         }
-        #endif
         cloudFinalizationTask?.cancel()
         cloudFinalizationTask = nil
         cloudSilenceMonitorTask?.cancel()
@@ -1954,11 +1958,8 @@ final class VoiceInputController: VoiceInputControlling {
         eventHandler?(.state(newState))
     }
 
-    #if IOS27_SPEECH_PROBE
-    @available(iOS 27.0, *)
-    private func startIOS27Dictation(sessionID: UUID) async {
-        let backend = IOS27DictationVoiceBackend()
-        let contextualStrings = Self.ios27ApplicationContextualVocabulary
+    private func startIOS27Dictation(sessionID: UUID, backend: any DictationVoiceSession) async {
+        let contextualStrings = Self.ios27ContextualVocabulary(additional: cachedContextualVocabulary)
         ios27Backend = backend
         LocalVoiceDiagnosticReport.shared.record("recognizer_ready", "api=dictation_transcriber locale=uk-UA")
         LocalVoiceDiagnosticReport.shared.record("APPLE_LOCALE", "locale=uk-UA")
@@ -1971,6 +1972,9 @@ final class VoiceInputController: VoiceInputControlling {
             try await backend.start(contextualStrings: contextualStrings) { [weak self] event in
                 guard let self, self.owns(sessionID), self.ios27Backend === backend else { return }
                 switch event {
+                case let .evidence(evidence):
+                    self.latestRecognitionEvidence = evidence
+                    self.eventHandler?(.recognitionEvidence(evidence))
                 case let .partial(text):
                     self.transcript = text
                     LocalVoiceDiagnosticReport.shared.recordSpeechTranscript(text, isFinal: false)
@@ -2005,11 +2009,12 @@ final class VoiceInputController: VoiceInputControlling {
                 "SPEECH_START", "locale=uk-UA api=dictation_transcriber status=success"
             )
         } catch {
-            guard owns(sessionID) else { return }
+            await backend.stop()
+            guard owns(sessionID), ios27Backend === backend else { return }
             ios27Backend = nil
             activeSessionID = nil
             let state: VoiceInputState
-            if let backendError = error as? IOS27DictationVoiceBackend.BackendError {
+            if let backendError = error as? DictationVoiceBackendError {
                 if case .microphonePermissionDenied = backendError {
                     state = .denied
                 } else {
@@ -2026,7 +2031,6 @@ final class VoiceInputController: VoiceInputControlling {
             setState(state)
         }
     }
-    #endif
 
     private func receiveRecognition(sessionID: UUID, transcript: String?, evidence: VoiceRecognitionEvidence?, isFinal: Bool, hasError: Bool, errorDomain: String, errorCode: Int) {
         guard owns(sessionID) else {

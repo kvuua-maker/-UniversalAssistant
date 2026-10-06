@@ -15,21 +15,24 @@ struct CanonicalContactAwareMessageRoles: Equatable, Sendable {
 /// structurally classified as communication. It is deliberately a role grammar:
 /// person names, services and message contents are data, never phrase aliases.
 enum CanonicalMessageRoleAnalyzer {
+    private static let tokenRegex = try! NSRegularExpression(pattern: #"[\p{L}\p{N}'’]+"#)
+
     private struct Token {
         let surface: String
         let normalized: String
         let morphology: Set<String>
+        let separatorAfter: String
     }
 
     static func analyze(_ original: String, explicitService: String? = nil) -> CanonicalMessageRoles? {
         let trimmed = original.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
-        let colon = trimmed.firstIndex(where: { $0 == ":" || $0 == "：" })
+        let colon = messageColon(in: trimmed)
         let commandSurface = colon.map { String(trimmed[..<$0]) } ?? trimmed
         let colonBody = colon.map {
             String(trimmed[trimmed.index(after: $0)...])
-                .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
         let tokens = tokenize(commandSurface)
@@ -39,7 +42,8 @@ enum CanonicalMessageRoleAnalyzer {
             return .init(recipient: nil, body: nil)
         }
 
-        if let serviceIndex = tail.firstIndex(where: isServiceBoundary) {
+        if explicitService.flatMap(normalizedService) == nil,
+           let serviceIndex = tail.firstIndex(where: isServiceBoundary) {
             let prefix = Array(tail[..<serviceIndex])
             let suffix = Array(tail.dropFirst(serviceIndex + 1))
             // A trailing channel declaration belongs to SERVICE/CHANNEL and
@@ -55,7 +59,15 @@ enum CanonicalMessageRoleAnalyzer {
             return .init(recipient: recipient, body: colonBody)
         }
 
-        if let objectIndex = tail.firstIndex(where: isMessageObject) {
+        let objectIndex = tail.firstIndex(where: isMessageObject)
+        if let boundary = tail.firstIndex(where: isContentBoundary),
+           boundary < (objectIndex ?? tail.endIndex) {
+            return .init(
+                recipient: recipientText(Array(tail[..<boundary])),
+                body: contentText(from: tail, boundary: boundary)
+            )
+        }
+        if let objectIndex {
             if objectIndex == 0 {
                 tail.removeFirst()
                 trimLeadingRecipientMarker(&tail)
@@ -72,16 +84,10 @@ enum CanonicalMessageRoleAnalyzer {
             let bodyTokens = Array(tail.dropFirst(objectIndex + 1))
             return .init(
                 recipient: recipient,
-                body: bodyTokens.isEmpty ? nil : bodyTokens.map(\.surface).joined(separator: " ")
+                body: payloadText(bodyTokens)
             )
         }
 
-        if let boundary = tail.firstIndex(where: isContentBoundary) {
-            return .init(
-                recipient: recipientText(Array(tail[..<boundary])),
-                body: contentText(from: tail, boundary: boundary)
-            )
-        }
         return .init(recipient: recipientText(tail), body: nil)
     }
 
@@ -100,11 +106,11 @@ enum CanonicalMessageRoleAnalyzer {
         }
         let trimmed = original.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
-        let colon = trimmed.firstIndex(where: { $0 == ":" || $0 == "：" })
+        let colon = messageColon(in: trimmed)
         let commandSurface = colon.map { String(trimmed[..<$0]) } ?? trimmed
         let colonBody = colon.map {
             String(trimmed[trimmed.index(after: $0)...])
-                .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
         }
         let tokens = tokenize(commandSurface)
         guard let actionIndex = tokens.firstIndex(where: isMessageAction) else { return nil }
@@ -142,30 +148,51 @@ enum CanonicalMessageRoleAnalyzer {
         let body: String?
         if let colonBody, !colonBody.isEmpty {
             body = colonBody
+        } else if let parsedBody = base?.body {
+            // An explicit content boundary already owns all following words.
+            // Contact completion must not delete body words such as “у”,
+            // “про”, “повідомлення”, or an app name mentioned in the message.
+            body = parsedBody
         } else {
-            let remaining = tail.enumerated().compactMap { index, token -> Token? in
-                guard !selected.range.contains(index), !isBodyControlToken(token) else { return nil }
-                return token
+            var remaining = tail.enumerated().compactMap { index, token -> Token? in
+                selected.range.contains(index) ? nil : token
             }
-            let value = remaining.map(\.surface).joined(separator: " ")
-                .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
-            body = value.isEmpty ? nil : value
+            while remaining.first.map(isMessageObject) == true { remaining.removeFirst() }
+            trimLeadingRecipientMarker(&remaining)
+            body = payloadText(remaining)
         }
         return .init(recipient: selected.surface, body: body, ambiguousRecipients: [])
     }
 
     private static func tokenize(_ value: String) -> [Token] {
-        value.split { character in
-            !character.isLetter && !character.isNumber && character != "'" && character != "’"
-        }.map { slice in
-            let surface = String(slice)
+        let ranges = tokenRegex.matches(in: value, range: NSRange(value.startIndex..., in: value))
+            .compactMap { Range($0.range, in: value) }
+        return ranges.enumerated().map { index, range in
+            let surface = String(value[range])
             let normalized = CanonicalMorphology.comparableText(surface)
+            let next = index + 1 < ranges.count ? ranges[index + 1].lowerBound : value.endIndex
             return .init(
                 surface: surface,
                 normalized: normalized,
-                morphology: CanonicalMorphology.forms(for: normalized)
+                morphology: CanonicalMorphology.forms(for: normalized),
+                separatorAfter: String(value[range.upperBound..<next])
             )
         }
+    }
+
+    private static func messageColon(in value: String) -> String.Index? {
+        for index in value.indices where value[index] == ":" || value[index] == "：" {
+            let next = value.index(after: index)
+            if index > value.startIndex, next < value.endIndex,
+               value[value.index(before: index)].isNumber, value[next].isNumber { continue }
+            if value[next...].hasPrefix("//") { continue }
+            let prefix = tokenize(String(value[..<index]))
+            guard let action = prefix.firstIndex(where: isMessageAction) else { continue }
+            // A time or colon within an already-bound body is payload.
+            if prefix.dropFirst(action + 1).contains(where: isContentBoundary) { return nil }
+            return index
+        }
+        return nil
     }
 
     private static func isMessageAction(_ token: Token) -> Bool {
@@ -198,16 +225,6 @@ enum CanonicalMessageRoleAnalyzer {
             }
     }
 
-    private static func isBodyControlToken(_ token: Token) -> Bool {
-        isMessageObject(token) || isServiceBoundary(token) || isContentBoundary(token) ||
-            ["у", "в", "по", "via", "using", "канал", "каналом"].contains(token.normalized) ||
-            serviceCandidates.contains { candidate in
-                candidate.aliases.union([candidate.displayName]).contains {
-                    CanonicalMorphology.comparableText($0) == token.normalized
-                }
-            }
-    }
-
     private static func deduplicated(_ values: [String]) -> [String] {
         var seen: Set<String> = []
         return values.filter { seen.insert(CanonicalMorphology.comparableText($0)).inserted }
@@ -217,7 +234,12 @@ enum CanonicalMessageRoleAnalyzer {
         let includeBoundary = ["про", "щодо", "about"].contains(tokens[boundary].normalized)
         let start = includeBoundary ? boundary : boundary + 1
         guard start < tokens.count else { return nil }
-        let value = tokens[start...].map(\.surface).joined(separator: " ")
+        return payloadText(Array(tokens[start...]))
+    }
+
+    private static func payloadText(_ tokens: [Token]) -> String? {
+        let value = tokens.map { $0.surface + $0.separatorAfter }.joined()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? nil : value
     }
 
@@ -251,7 +273,12 @@ enum CanonicalMessageRoleAnalyzer {
         }
         guard let serviceKind else { return }
         let resolver = ContextScopedEntityResolver(candidates: serviceCandidates)
-        guard let index = tokens.firstIndex(where: { token in
+        let contentBoundary = tokens.firstIndex(where: isContentBoundary)
+        guard let index = tokens.indices.first(where: { index in
+            let token = tokens[index]
+            if serviceKind == "messages", token.normalized == "повідомлення" { return false }
+            if let contentBoundary, index > contentBoundary,
+               index == 0 || !isServiceBoundary(tokens[index - 1]) { return false }
             guard case let .resolved(value) = resolver.resolve(token.surface) else { return false }
             return value == serviceKind
         }) else { return }

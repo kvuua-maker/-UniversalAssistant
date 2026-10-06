@@ -21,6 +21,40 @@ struct ProductionMessagingRoutingTests {
         .init(identifier: "olena", displayName: "Олена", phoneNumbers: ["+380 67 111 22 33"])
     }
 
+    @Test func channelBetweenRecipientAndBodyPreservesBothThroughProductionHandoff() async throws {
+        let executor = ProductionCanonicalCapabilityExecutor(
+            contacts: MessageContactResolverStub(.resolved(contact)), personalSearchSources: []
+        )
+        let command = LanguageUnderstandingBlock().parse("Надішли повідомлення Олені через WhatsApp що я буду у Києві, поговоримо про повідомлення!")
+        #expect(command.entities["recipient"] == "Олені")
+        #expect(command.entities["message_service"] == "whatsapp")
+        #expect(command.entities["message_body"] == "я буду у Києві, поговоримо про повідомлення!")
+        #expect(!command.needsClarification)
+        guard case let .handoff(result) = try await executor.execute(command) else {
+            Issue.record("Expected addressed messenger handoff"); return
+        }
+        #expect(result.destination.host == "wa.me")
+        #expect(result.destination.path == "/380671112233")
+        #expect(URLComponents(url: result.destination, resolvingAgainstBaseURL: false)?.queryItems?
+            .first(where: { $0.name == "text" })?.value == command.entities["message_body"])
+    }
+
+    @Test func ordinaryMotherCallReachesTelephoneNotWhatsApp() async throws {
+        let executor = ProductionCanonicalCapabilityExecutor(
+            contacts: MessageContactResolverStub(.resolved(contact)), personalSearchSources: []
+        )
+        for input in ["Подзвони мамі", "Позвони маме", "Call mom"] {
+            let command = LanguageUnderstandingBlock().parse(input)
+            #expect(command.intent == .contactCall)
+            #expect(command.entities["call_service"] == "telephone")
+            guard case let .handoff(result) = try await executor.execute(command) else {
+                Issue.record("Expected telephone handoff"); continue
+            }
+            #expect(result.destination.scheme == "tel")
+            #expect(result.destination.host != "wa.me")
+        }
+    }
+
     @Test func unseenNaturalRecipientUsesSystemMessagesComposer() async throws {
         let executor = ProductionCanonicalCapabilityExecutor(
             contacts: MessageContactResolverStub(.resolved(contact)),
@@ -88,17 +122,11 @@ struct ProductionMessagingRoutingTests {
         let executor = ProductionCanonicalCapabilityExecutor(
             contacts: MessageContactResolverStub(.resolved(mother)), personalSearchSources: []
         )
-        let command = StructuredCommand(
-            originalText: "Напиши мамі повідомлення у Viber, я буду пізніше",
-            normalizedText: "напиши мамі повідомлення у viber я буду пізніше",
-            language: .uk,
-            intent: .messageCompose,
-            entities: [
-                "message_service": "viber",
-                "recipient": "мамі",
-                "message_body": "я буду пізніше"
-            ]
-        )
+        let command = LanguageUnderstandingBlock().parse("Напиши мамі повідомлення у Viber, я буду пізніше")
+        #expect(command.entities["recipient"] == "мамі")
+        #expect(command.entities["message_body"] == "я буду пізніше")
+        #expect(command.entities["message_service"] == "viber")
+        #expect(!command.needsClarification)
         guard case let .handoff(result) = try await executor.execute(command) else {
             Issue.record("Expected Viber forward handoff"); return
         }

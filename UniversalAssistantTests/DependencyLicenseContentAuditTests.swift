@@ -5,6 +5,7 @@ import Testing
 struct DependencyLicenseContentAuditTests {
     private var root: URL {
         URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .resolvingSymlinksInPath()
     }
 
     @Test func productionTargetsHaveNoUninventoriedExternalPackages() throws {
@@ -38,7 +39,16 @@ struct DependencyLicenseContentAuditTests {
         let inventory = try String(contentsOf: root.appendingPathComponent("DEPENDENCIES.md"), encoding: .utf8)
         let bundledMedia = files
             .filter { mediaExtensions.contains($0.pathExtension.lowercased()) }
-            .map { $0.path.replacingOccurrences(of: root.path + "/", with: "") }
+            .map { file in
+                // Xcode may compile through /tmp while Foundation enumerates
+                // /private/tmp. Compare canonical paths without removing a
+                // matching substring from the middle of an absolute path.
+                let path = file.resolvingSymlinksInPath().path
+                let prefix = root.path + "/"
+                #expect(path.hasPrefix(prefix))
+                return String(path.dropFirst(prefix.count))
+            }
+            .sorted()
         #expect(bundledMedia == ["UniversalAssistant/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"])
         #expect(inventory.contains("b2ca19316a2ad5483b96bd4fe63ba97c373fb3d1a964d28d1526cc1f68e8c113"))
         for policy in ["reproducible exact version", "license compatibility", "privacy manifests", "provenance"] {

@@ -179,6 +179,31 @@ struct VoiceTextInputQualityTests {
         #expect(content?.body == "я буду пізніше")
     }
 
+    @Test func contactCompletionPreservesContentWordsAndPunctuation() {
+        for text in [
+            "Напиши мамі через Telegram що я у Києві, поговоримо про повідомлення!",
+            "Напиши мамі у Telegram: я у Києві, поговоримо про повідомлення!"
+        ] {
+            let roles = CanonicalMessageRoleAnalyzer.analyzeContactAware(
+                text, explicitService: "telegram", contactVocabulary: ["мама"]
+            )
+            #expect(roles?.recipient == "мамі")
+            #expect(roles?.body == "я у Києві, поговоримо про повідомлення!")
+        }
+        let time = CanonicalMessageRoleAnalyzer.analyzeContactAware(
+            "Напиши мамі через Telegram що буду о 19:30, адреса: Урлівська 4А.",
+            explicitService: "telegram", contactVocabulary: ["мама"]
+        )
+        #expect(time?.recipient == "мамі")
+        #expect(time?.body == "буду о 19:30, адреса: Урлівська 4А.")
+        let messages = CanonicalMessageRoleAnalyzer.analyzeContactAware(
+            "Напиши мамі що це повідомлення про зустріч у Києві.",
+            explicitService: "messages", contactVocabulary: ["мама"]
+        )
+        #expect(messages?.recipient == "мамі")
+        #expect(messages?.body == "це повідомлення про зустріч у Києві.")
+    }
+
     @Test func speechRequestUsesSupportedQualityConfiguration() {
         let request = SFSpeechAudioBufferRecognitionRequest()
         let configuration = VoiceRecognitionRequestConfiguration(additionalVocabulary: ["Test Entity", "Test Entity", "Three word entity"])

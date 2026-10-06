@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UIKit
 @testable import UniversalAssistant
 
 @Suite("Authorized local content sources") struct AppleLocalContentSourcesTests {
@@ -30,12 +31,35 @@ import Testing
         func labels(imageData: Data) async throws -> [PhotoSemanticLabel] {
             labelsByPayload[String(decoding: imageData, as: UTF8.self)] ?? []
         }
+        func documentLabels(imageData: Data) async throws -> [PhotoSemanticLabel] {
+            labelsByPayload[String(decoding: imageData, as: UTF8.self)] ?? []
+        }
     }
     private struct DelayedSemanticLabelerStub: PhotoSemanticLabeling {
         let delay: Duration
         func labels(imageData: Data) async throws -> [PhotoSemanticLabel] {
             try await Task.sleep(for: delay)
             return [.init(name: "automobile", confidence: 0.91)]
+        }
+    }
+    private actor DocumentEvidenceStub: PhotoSemanticLabeling {
+        private(set) var sceneCalls = 0
+        private(set) var documentCalls = 0
+        func labels(imageData: Data) async throws -> [PhotoSemanticLabel] {
+            sceneCalls += 1
+            return [.init(name: "document", confidence: 0.99)]
+        }
+        func documentLabels(imageData: Data) async throws -> [PhotoSemanticLabel] {
+            documentCalls += 1
+            return String(decoding: imageData, as: UTF8.self) == "text"
+                ? [.init(name: "document", confidence: 0.91)] : []
+        }
+        func counts() -> (Int, Int) { (sceneCalls, documentCalls) }
+    }
+    private struct PartiallySlowLoader: PhotoAssetImageLoading {
+        func imageData(localIdentifier: String) async throws -> Data {
+            if localIdentifier == "slow" { try await Task.sleep(for: .seconds(3)) }
+            return Data("text".utf8)
         }
     }
     @Test func fileSearchUsesOnlyExplicitReferencesAndReturnsExactOpenURL() async throws {
@@ -131,6 +155,71 @@ import Testing
         #expect(matches.map(\.asset.localIdentifier) == ["older", "newer"])
         #expect(matches.map(\.confidence) == [0.94, 0.73])
         #expect(matches.first?.matchedLabels == ["domestic animal"])
+    }
+
+    @Test func documentSearchUsesOCRBeyondEightNewestAssetsAndDoesNotReuseSceneCache() async {
+        let assets = (0..<12).map {
+            PhotoAssetReference(localIdentifier: "ocr-candidate-\($0)", creationDate: nil, coordinate: nil, album: nil)
+        }
+        let index = PhotoSemanticIndex(storeURL: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        await index.store([.init(name: "document", confidence: 0.99)], for: assets[0])
+        let labeler = DocumentEvidenceStub()
+        let payloads = Dictionary(uniqueKeysWithValues: assets.enumerated().map {
+            ($0.element.localIdentifier, Data(($0.offset == 11 ? "text" : "blank").utf8))
+        })
+        let engine = PhotoSemanticSearchEngine(library: PhotoLibraryStub(access: .limited, assets: assets),
+                                               loader: ImageLoaderStub(dataByIdentifier: payloads), labeler: labeler, index: index)
+        #expect(await engine.search("документів", limit: 1) == [assets[11]])
+        #expect(await engine.search("documents", limit: 1) == [assets[11]])
+        let counts = await labeler.counts()
+        #expect(counts.0 == 0)
+        #expect(counts.1 == 12)
+    }
+
+    @Test func documentCacheInvalidatesWhenAssetIsEdited() async {
+        let asset = PhotoAssetReference(localIdentifier: "edited-document", creationDate: .distantPast, coordinate: nil,
+                                        album: nil, modificationDate: .distantPast)
+        var edited = asset
+        edited.modificationDate = .now
+        let index = PhotoSemanticIndex(storeURL: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        await index.store([.init(name: "document", confidence: 0.99)], for: asset, namespace: "document-ocr-v1")
+        let engine = PhotoSemanticSearchEngine(library: PhotoLibraryStub(access: .permitted, assets: [edited]),
+                                               loader: ImageLoaderStub(dataByIdentifier: [edited.localIdentifier: Data("blank".utf8)]),
+                                               labeler: DocumentEvidenceStub(), index: index)
+        #expect((await engine.matches("документів")).isEmpty)
+    }
+
+    @Test func semanticDeadlinePreservesCompletedMatchesAndReportsPartialSearch() async {
+        let assets = ["fast", "slow"].map { PhotoAssetReference(localIdentifier: $0, creationDate: nil, coordinate: nil, album: nil) }
+        let engine = PhotoSemanticSearchEngine(library: PhotoLibraryStub(access: .permitted, assets: assets),
+                                               loader: PartiallySlowLoader(), labeler: DocumentEvidenceStub(),
+                                               index: PhotoSemanticIndex(storeURL: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)))
+        let report = await engine.report("document", timeout: .milliseconds(250))
+        #expect(report.matches.map(\.asset.localIdentifier) == ["fast"])
+        #expect(!report.isComplete)
+        #expect(report.timedOut)
+    }
+
+    @Test @MainActor func visionDocumentOCRRecognizesControlledTextImageAndRejectsBlank() async throws {
+        let renderer = UIGraphicsImageRenderer(size: .init(width: 800, height: 1_000))
+        func fixture(text: Bool) -> Data {
+            renderer.pngData { context in
+                UIColor.white.setFill()
+                context.fill(.init(x: 0, y: 0, width: 800, height: 1_000))
+                if text {
+                    let lines = ["INVOICE NUMBER 12345", "Date: March 10, 2025", "Total amount: 250.00", "Payment received. Thank you."]
+                    for (index, line) in lines.enumerated() {
+                        (line as NSString).draw(at: .init(x: 40, y: 100 + index * 100),
+                                                withAttributes: [.font: UIFont.systemFont(ofSize: 38), .foregroundColor: UIColor.black])
+                    }
+                }
+            }
+        }
+        let labeler = VisionPhotoSemanticLabeler()
+        let document = try await labeler.documentLabels(imageData: fixture(text: true))
+        #expect(document.map(\.name) == ["document"])
+        #expect((document.first?.confidence ?? 0) >= 0.65)
+        #expect(try await labeler.documentLabels(imageData: fixture(text: false)).isEmpty)
     }
 
     @Test func filesQueryDeadlineTerminatesBeforeLateSynchronousCompletion() async {

@@ -53,7 +53,8 @@ struct UniversalDeviceCommandRouterTests {
         #expect(DeviceApplicationResolver(applications: LaunchDeviceApplications.verified).resolve(spokenName: "Vibe") == .unsupported)
         let recognizedViber = LanguageUnderstandingBlock().parse("Open Vibe")
         #expect(recognizedViber.intent == .open)
-        #expect(recognizedViber.entities["app"] == "viber")
+        #expect(recognizedViber.entities["app"] == nil)
+        #expect(recognizedViber.needsClarification)
 
         let capture = DeviceApplicationOpenCapture()
         let model = ProductionAssistantComposition.makeModel(
@@ -68,6 +69,105 @@ struct UniversalDeviceCommandRouterTests {
         }
         #expect(capture.values.first?.absoluteString == "whatsapp://app")
         #expect(model.statusText != AppText.value("clarification_needed"))
+    }
+
+    @Test(arguments: [
+        ("Відкрий Telegram", "telegram", "tg://"),
+        ("Відкрий телеграму", "telegram", "tg://"),
+        ("Открой телеграм", "telegram", "tg://"),
+        ("Открой телегу", "telegram", "tg://"),
+        ("Open Telegram", "telegram", "tg://"),
+        ("Відкрий вайбера", "viber", "viber://"),
+        ("Відкрий вібер", "viber", "viber://"),
+        ("Открой вайбер", "viber", "viber://"),
+        ("Открой вайбера", "viber", "viber://"),
+        ("Open the app Viber", "viber", "viber://")
+    ])
+    @MainActor func messengerNamesPreserveIdentityThroughProductionParserAndExecutor(
+        phrase: String, identifier: String, destination: String
+    ) async throws {
+        let command = LanguageUnderstandingBlock().parse(phrase)
+        #expect(command.originalText == phrase)
+        #expect(command.intent == .open)
+        #expect(command.entities["app"] == identifier)
+        #expect(!command.needsClarification)
+        let executor = ProductionCanonicalCapabilityExecutor(personalSearchSources: [])
+        guard case let .handoff(handoff) = try await executor.execute(command) else {
+            Issue.record("Expected application handoff for \(phrase)"); return
+        }
+        #expect(handoff.destination.absoluteString == destination)
+        #expect(handoff.kind == .system)
+    }
+
+    @Test(arguments: ["Open Telegram or Viber", "Відкрий телеграм або вайбер", "Открой телеграм или вайбер"])
+    func independentAppNamesRequireAChoice(phrase: String) {
+        let command = LanguageUnderstandingBlock().parse(phrase)
+        #expect(command.intent == .open)
+        #expect(command.entities["app"] == nil)
+        #expect(command.needsClarification)
+        #expect(Set((command.entities["clarification_options"] ?? "").split(separator: "|")) == ["telegram", "viber"])
+    }
+
+    @Test(arguments: [
+        ("Відкрий", ["Відкрий Telegram", "Відкрий Viber"]),
+        ("Відкрий", ["Відкрий Viber", "Відкрий Telegram"]),
+        ("Відкрий Telegram", ["Відкрий Viber"]),
+        ("Відкрий Telegram або Viber", ["Відкрий Telegram"])
+    ])
+    func conflictingSpeechApplicationEvidenceCannotAdoptFirstAlternative(primary: String, alternatives: [String]) {
+        // Controlled hypotheses exercise the evidence contract; these are not
+        // claimed recordings or transcripts from the owner's device.
+        let evidence = VoiceRecognitionEvidence(
+            primaryTranscript: primary, alternativeTranscripts: alternatives,
+            segmentAlternativeCount: 0, averageSegmentConfidence: 0.8
+        )
+        let command = LanguageUnderstandingBlock().parse(primary, speechEvidence: evidence)
+        #expect(command.originalText == primary)
+        #expect(command.intent == .open)
+        #expect(command.entities["app"] == nil)
+        #expect(command.needsClarification)
+        #expect(command.entities["speech_entity_evidence"] == "ambiguous_application")
+        #expect(Set((command.entities["clarification_options"] ?? "").split(separator: "|")) == ["telegram", "viber"])
+    }
+
+    @Test(arguments: [("Відкрий Telegram", "tg://", true), ("Відкрий Telegram", "tg://", false),
+                      ("Відкрий Viber", "viber://", true), ("Відкрий Viber", "viber://", false)])
+    @MainActor func messengerLaunchHonorsReportedIOSAcceptance(phrase: String, destination: String, accepted: Bool) async throws {
+        var opened: [URL] = []
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            systemHandoffOpenResult: { url in opened.append(url); return accepted }
+        )
+        model.input = phrase
+        model.submit()
+        for _ in 0..<200 {
+            if !opened.isEmpty, !accepted || model.resultState == .idle { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(opened.map(\.absoluteString) == [destination])
+        if accepted {
+            #expect(model.resultState == .idle)
+        } else {
+            #expect({ if case .failure = model.resultState { return true }; return false }())
+        }
+    }
+
+    @Test(arguments: ["Open Vibe", "Open Telegram or Viber"])
+    @MainActor func unverifiedOrAmbiguousApplicationCannotReachIOSOpen(phrase: String) async throws {
+        var opened: [URL] = []
+        let model = ProductionAssistantComposition.makeModel(
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            systemHandoffOpenResult: { url in opened.append(url); return true }
+        )
+        model.input = phrase
+        model.submit()
+        for _ in 0..<200 {
+            if case .clarification = model.resultState { break }
+            if case .actionRequired = model.resultState { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(opened.isEmpty)
+        #expect(model.statusText == AppText.value("clarification_needed"))
     }
 
     @Test func appWordVariantsResolveOnlyVerifiedPublicDestinations() {

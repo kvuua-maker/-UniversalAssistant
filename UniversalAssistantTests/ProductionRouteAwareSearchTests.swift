@@ -60,6 +60,22 @@ struct ProductionRouteAwareSearchTests {
         guard case let .handoff(value) = try await executor.execute(command) else { Issue.record("Expected Maps handoff"); return }
         #expect(value.kind == .navigation); #expect(context.freshRoute()?.1.destination.displayName == "Kyiv")
     }
+
+    @Test func unmarkedStreetAddressReachesProductionNavigationWithWholeDestination() async throws {
+        let command = LanguageUnderstandingBlock().parse("Проклади маршрут Урлівська 4А Київ")
+        #expect(command.intent == .navigation)
+        #expect(command.entities["destination"] == "Урлівська 4А Київ")
+        #expect(!command.needsClarification)
+        let context = CurrentContextStore()
+        guard case let .handoff(value) = try await executor(context: context).execute(command) else {
+            Issue.record("Expected Maps navigation handoff for complete street address"); return
+        }
+        #expect(value.kind == .navigation)
+        #expect(value.destination.host == "maps.apple.com")
+        #expect(context.freshRoute()?.1.destination.displayName == "Урлівська 4А Київ")
+        #expect(URLComponents(url: value.destination, resolvingAgainstBaseURL: false)?.queryItems?
+            .contains(where: { $0.name == "daddr" }) == true)
+    }
     @Test func currentLocationAddressAndTravelTimeStayOnPublicProductionBoundaries() async throws {
         let parser = LocalCommandEngine(), context = CurrentContextStore(), value = executor(context: context)
         let locationCommand = parser.parse("Де я зараз?")

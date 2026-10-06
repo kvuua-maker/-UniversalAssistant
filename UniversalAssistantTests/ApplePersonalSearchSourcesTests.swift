@@ -36,10 +36,71 @@ private struct DelayedPhotoLibraryStub: PhotoLibrarySearching {
     }
 }
 private struct ImageLoaderStub: PhotoAssetImageLoading { func imageData(localIdentifier: String) async throws -> Data { Data() } }
-private struct LabelerStub: PhotoSemanticLabeling { func labels(imageData: Data) async throws -> [PhotoSemanticLabel] { [.init(name: "receipt", confidence: 1)] } }
+private struct LabelerStub: PhotoSemanticLabeling {
+    func labels(imageData: Data) async throws -> [PhotoSemanticLabel] { [.init(name: "receipt", confidence: 1)] }
+    func documentLabels(imageData: Data) async throws -> [PhotoSemanticLabel] { [.init(name: "document", confidence: 1)] }
+}
 private struct LocalSourceStub: LocalSearchSource {
     let kind: LocalSearchSourceKind; let access: LocalSearchAccess; let values: [LocalSearchResult]
     func search(_ query: LocalSearchQuery) async -> LocalSearchSourceResponse { .init(source: kind, access: access, results: Array(values.prefix(query.limit))) }
+}
+
+private final class FilteredPhotoFixtureLibrary: PhotoLibrarySearching, @unchecked Sendable {
+    let access: LocalSearchAccess
+    let assets: [PhotoAssetReference]
+    let visibleIDs: Set<String>
+    private let lock = NSLock()
+    private var criteriaHistory: [PhotoSearchCriteria] = []
+    init(access: LocalSearchAccess, assets: [PhotoAssetReference], visibleIDs: Set<String>) {
+        self.access = access; self.assets = assets; self.visibleIDs = visibleIDs
+    }
+    func authorization() -> LocalSearchAccess { access }
+    func requestAuthorization() async -> LocalSearchAccess { access }
+    func search(_ criteria: PhotoSearchCriteria, limit: Int) async -> [PhotoAssetReference] {
+        lock.withLock { criteriaHistory.append(criteria) }
+        guard [.permitted, .limited].contains(access) else { return [] }
+        return Array(assets.filter { asset in
+            guard access == .permitted || visibleIDs.contains(asset.localIdentifier) else { return false }
+            guard let range = criteria.dateRange else { return true }
+            return asset.creationDate.map { range.contains($0) } ?? false
+        }.prefix(limit))
+    }
+    func queries() -> [PhotoSearchCriteria] { lock.withLock { criteriaHistory } }
+}
+private struct DocumentFixtureLoader: PhotoAssetImageLoading {
+    func imageData(localIdentifier: String) async throws -> Data { Data(localIdentifier.utf8) }
+}
+private struct PartiallyUnavailableDocumentFixtureLoader: PhotoAssetImageLoading {
+    func imageData(localIdentifier: String) async throws -> Data {
+        if localIdentifier.contains("unreadable") { throw CocoaError(.fileReadNoSuchFile) }
+        return Data(localIdentifier.utf8)
+    }
+}
+private struct DocumentFixtureLabeler: PhotoSemanticLabeling {
+    func labels(imageData: Data) async throws -> [PhotoSemanticLabel] { [] }
+    func documentLabels(imageData: Data) async throws -> [PhotoSemanticLabel] {
+        String(decoding: imageData, as: UTF8.self).contains("document") ? [.init(name: "document", confidence: 0.94)] : []
+    }
+}
+
+private final class RevokingPhotoFixtureLibrary: PhotoLibrarySearching, @unchecked Sendable {
+    private let lock = NSLock()
+    private var access: LocalSearchAccess
+    private let afterSearch: LocalSearchAccess
+    private var hasSearched = false
+    private let asset: PhotoAssetReference
+    init(initial: LocalSearchAccess, afterSearch: LocalSearchAccess, asset: PhotoAssetReference) {
+        access = initial; self.afterSearch = afterSearch; self.asset = asset
+    }
+    func authorization() -> LocalSearchAccess { lock.withLock { access } }
+    func requestAuthorization() async -> LocalSearchAccess { authorization() }
+    func search(_ criteria: PhotoSearchCriteria, limit: Int) async -> [PhotoAssetReference] {
+        lock.withLock { access = afterSearch; hasSearched = true }
+        return [asset] // Simulates an in-flight snapshot from before revocation.
+    }
+    func currentlyAccessible(_ assets: [PhotoAssetReference]) -> [PhotoAssetReference] {
+        lock.withLock { hasSearched ? [] : assets }
+    }
 }
 
 @Suite("Apple personal search adapters") struct ApplePersonalSearchSourcesTests {
@@ -72,6 +133,119 @@ private struct ProductionPersonalSourceStub: PersonalSearchSource {
 }
 
 extension ApplePersonalSearchSourcesTests {
+    @Test @MainActor func revokedAccessCannotPublishLatePhotoResults() async throws {
+        let asset = PhotoAssetReference(localIdentifier: "revoked-document-" + UUID().uuidString, creationDate: .now,
+                                        coordinate: nil, album: nil)
+        let library = RevokingPhotoFixtureLibrary(initial: .permitted, afterSearch: .denied, asset: asset)
+        let response = await PhotosPersonalSearchSource(library: library).search(query: "", limit: 5)
+        #expect(response.results.isEmpty)
+        #expect(response.unavailableReason == "photos_access_unavailable")
+        for phrase in ["Відкрий фото за минулий рік", "Відкрий найновіше фото", "Відкрий фото документів"] {
+            let executor = ProductionCanonicalCapabilityExecutor(
+                photos: RevokingPhotoFixtureLibrary(initial: .permitted, afterSearch: .denied, asset: asset),
+                photoSemanticLoader: DocumentFixtureLoader(), photoSemanticLabeler: DocumentFixtureLabeler(), personalSearchSources: [])
+            do { _ = try await executor.execute(LocalCommandEngine().parse(phrase)); Issue.record("Revoked photo reference escaped") }
+            catch let error as CanonicalCapabilityExecutionError { #expect(error == .unavailable("photos_access_unavailable")) }
+        }
+    }
+
+    @Test @MainActor func changedLimitedSelectionCannotPublishAnEarlierAssetSnapshot() async throws {
+        let asset = PhotoAssetReference(localIdentifier: "removed-document-" + UUID().uuidString, creationDate: .now,
+                                        coordinate: nil, album: nil)
+        for initial in [LocalSearchAccess.permitted, .limited] {
+            for query in ["", "document"] {
+                let library = RevokingPhotoFixtureLibrary(initial: initial, afterSearch: .limited, asset: asset)
+                let response = await PhotosPersonalSearchSource(library: library, loader: DocumentFixtureLoader(), labeler: DocumentFixtureLabeler())
+                    .search(query: query, limit: 5)
+                #expect(response.results.isEmpty)
+                #expect(response.unavailableReason == "photos_access_changed")
+            }
+            let executor = ProductionCanonicalCapabilityExecutor(
+                photos: RevokingPhotoFixtureLibrary(initial: initial, afterSearch: .limited, asset: asset), personalSearchSources: [])
+            let outcome = try await executor.execute(LocalCommandEngine().parse("Відкрий фото за минулий рік"))
+            guard case let .result(result) = outcome else { Issue.record("Expected truthful limited no-match result"); continue }
+            #expect(result.actions.isEmpty)
+            #expect(result.facts.isEmpty)
+        }
+    }
+
+    @Test @MainActor func partialPositivePhotoSearchIsLabeledIncompleteInProductionResult() async throws {
+        let fixtureID = UUID().uuidString
+        let values = ["document-", "unreadable-"].map {
+            PhotoAssetReference(localIdentifier: $0 + fixtureID, creationDate: .now, coordinate: nil, album: nil)
+        }
+        let executor = ProductionCanonicalCapabilityExecutor(photos: PhotoLibraryStub(access: .limited, values: values),
+                                                              photoSemanticLoader: PartiallyUnavailableDocumentFixtureLoader(),
+                                                              photoSemanticLabeler: DocumentFixtureLabeler(), personalSearchSources: [])
+        let outcome = try await executor.execute(LocalCommandEngine().parse("Знайди фото документів"))
+        guard case let .result(result) = outcome else { Issue.record("Expected partial photo results"); return }
+        #expect(result.primaryAnswer.contains("не повністю"))
+        #expect(result.actions.map(\.id) == ["photos:" + values[0].localIdentifier])
+    }
+
+    @Test @MainActor func previousCalendarYearUsesMetadataBeforeFetchingAccessibleAssets() async throws {
+        let calendar = Calendar.autoupdatingCurrent
+        let thisYear = try #require(calendar.dateInterval(of: .year, for: .now)?.start)
+        let previousYear = try #require(calendar.date(byAdding: .year, value: -1, to: thisYear))
+        let fixtureID = UUID().uuidString
+        let values = [
+            PhotoAssetReference(localIdentifier: "current-\(fixtureID)", creationDate: thisYear, coordinate: nil, album: nil),
+            PhotoAssetReference(localIdentifier: "private-\(fixtureID)", creationDate: thisYear.addingTimeInterval(-1), coordinate: nil, album: nil),
+            PhotoAssetReference(localIdentifier: "previous-\(fixtureID)", creationDate: previousYear, coordinate: nil, album: nil),
+            PhotoAssetReference(localIdentifier: "older-\(fixtureID)", creationDate: previousYear.addingTimeInterval(-1), coordinate: nil, album: nil)
+        ]
+        let library = FilteredPhotoFixtureLibrary(access: .limited, assets: values, visibleIDs: [values[0].localIdentifier, values[2].localIdentifier, values[3].localIdentifier])
+        let executor = ProductionCanonicalCapabilityExecutor(photos: library, personalSearchSources: [])
+        let command = LocalCommandEngine().parse("Відкрий фото за минулий рік")
+        #expect(command.intent == .photoSearch)
+        #expect(command.entities["photo_query_kind"] == "metadata")
+        #expect(try await executor.execute(command) == .presentation(.photoAsset(values[2].localIdentifier)))
+        #expect(library.queries().count == 1)
+        #expect(library.queries().first?.dateRange == previousYear..<thisYear)
+    }
+
+    @Test @MainActor func documentPhotoRouteCombinesOCRDateAndLimitedAuthorization() async throws {
+        let thisYear = try #require(Calendar.autoupdatingCurrent.dateInterval(of: .year, for: .now)?.start)
+        let fixtureID = UUID().uuidString
+        let values = [
+            PhotoAssetReference(localIdentifier: "new-document-\(fixtureID)", creationDate: thisYear, coordinate: nil, album: nil),
+            PhotoAssetReference(localIdentifier: "private-document-\(fixtureID)", creationDate: thisYear.addingTimeInterval(-10), coordinate: nil, album: nil),
+            PhotoAssetReference(localIdentifier: "blank-\(fixtureID)", creationDate: thisYear.addingTimeInterval(-20), coordinate: nil, album: nil),
+            PhotoAssetReference(localIdentifier: "old-document-\(fixtureID)", creationDate: thisYear.addingTimeInterval(-30), coordinate: nil, album: nil)
+        ]
+        let visibleIDs: Set<String> = [values[0].localIdentifier, values[2].localIdentifier, values[3].localIdentifier]
+        for access in [LocalSearchAccess.limited, .permitted, .denied] {
+            let library = FilteredPhotoFixtureLibrary(access: access, assets: values, visibleIDs: visibleIDs)
+            let executor = ProductionCanonicalCapabilityExecutor(photos: library, photoSemanticLoader: DocumentFixtureLoader(),
+                                                                  photoSemanticLabeler: DocumentFixtureLabeler(), personalSearchSources: [])
+            let command = LocalCommandEngine().parse("Відкрий фото документів за минулий рік")
+            #expect(command.intent == .photoSearch)
+            #expect(command.entities["photo_query_kind"] == "semantic")
+            if access == .denied {
+                do { _ = try await executor.execute(command); Issue.record("Expected denied Photos boundary") }
+                catch let error as CanonicalCapabilityExecutionError { #expect(error == .unavailable("photos_access_unavailable")) }
+                #expect(library.queries().isEmpty)
+            } else {
+                let expected = access == .limited ? values[3] : values[1]
+                #expect(try await executor.execute(command) == .presentation(.photoAsset(expected.localIdentifier)))
+                #expect(library.queries().count == 1)
+                #expect(library.queries().first?.dateRange?.upperBound == thisYear)
+            }
+        }
+    }
+
+    @Test @MainActor func documentPhotoPhraseUsesOCRProductionRouteWithoutDateConstraint() async throws {
+        let fixtureID = UUID().uuidString
+        let blank = PhotoAssetReference(localIdentifier: "blank-\(fixtureID)", creationDate: .now, coordinate: nil, album: nil)
+        let document = PhotoAssetReference(localIdentifier: "document-\(fixtureID)", creationDate: .distantPast, coordinate: nil, album: nil)
+        let library = FilteredPhotoFixtureLibrary(access: .limited, assets: [blank, document], visibleIDs: [blank.localIdentifier, document.localIdentifier])
+        let executor = ProductionCanonicalCapabilityExecutor(photos: library, photoSemanticLoader: DocumentFixtureLoader(),
+                                                              photoSemanticLabeler: DocumentFixtureLabeler(), personalSearchSources: [])
+        #expect(try await executor.execute(LocalCommandEngine().parse("Відкрий фото документів")) == .presentation(.photoAsset(document.localIdentifier)))
+        #expect(library.queries().count == 1)
+        #expect(library.queries().first?.dateRange == nil)
+    }
+
     @Test @MainActor func productionRequestUsesPersonalSearchAndReturnsTypedResultAction() async throws {
         let contact = ContactCandidate(identifier: "c1", displayName: "Mama", phoneNumbers: ["+380501234567"])
         let executor = ProductionCanonicalCapabilityExecutor(contacts: ContactSearchStub(.resolved(contact)), personalSearchSources: [])

@@ -100,33 +100,40 @@ enum DeviceApplicationResolution: Equatable, Sendable {
     case unsupported
 }
 
+/// The parser and final application resolver must apply the same identity
+/// floor; otherwise a short fuzzy parser guess becomes an exact canonical ID
+/// and bypasses the final resolver's protection.
+enum ApplicationNameResolutionPolicy {
+    static func resolve<Value: Equatable & Sendable>(
+        _ spokenName: String,
+        candidates: [ScopedEntityCandidate<Value>]
+    ) -> ScopedEntityResolutionEvidence<Value> {
+        let normalized = CanonicalMorphology.comparableText(spokenName)
+        let eligible = normalized.count < 5 ? candidates.filter { candidate in
+            candidate.aliases.union([candidate.displayName])
+                .contains { CanonicalMorphology.comparableText($0) == normalized }
+        } : candidates
+        return ContextScopedEntityResolver(
+            candidates: eligible,
+            directThreshold: 0.72,
+            ambiguityThreshold: 0.65,
+            requiredMargin: 0.12
+        ).resolveWithEvidence(spokenName)
+    }
+}
+
 struct DeviceApplicationResolver: Sendable {
     let applications: [DeviceApplicationDescriptor]
 
     func resolve(spokenName: String) -> DeviceApplicationResolution {
         let normalizedName = Self.normalize(spokenName)
-        if normalizedName.count < 5 {
-            let exact = applications.filter { application in
-                application.aliases.map(Self.normalize).contains(normalizedName) ||
-                    Self.normalize(application.id) == normalizedName
-            }
-            if exact.count == 1, let app = exact.first { return .direct(app) }
-            if exact.count > 1 { return .clarification(exact.map(\.id).sorted()) }
-            return .unsupported
-        }
         let domain = applications.map {
             ScopedEntityCandidate(value: $0, displayName: $0.id, aliases: Set($0.aliases.map(Self.normalize)))
         }
         // Weak phonetic overlap with unrelated installed apps is not a useful
         // clarification. Keep direct clipped-name recovery, but require every
         // rendered ambiguity to clear a stronger app-identity floor.
-        let resolver = ContextScopedEntityResolver(
-            candidates: domain,
-            directThreshold: 0.72,
-            ambiguityThreshold: 0.65,
-            requiredMargin: 0.12
-        )
-        switch resolver.resolve(normalizedName) {
+        switch ApplicationNameResolutionPolicy.resolve(normalizedName, candidates: domain).resolution {
         case let .resolved(app): return .direct(app)
         case let .ambiguous(names): return .clarification(names)
         case .unresolved: return .unsupported

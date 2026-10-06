@@ -67,6 +67,22 @@ struct CanonicalSemanticFrameTests {
         #expect(command.entities["requested_action"] == "share")
     }
 
+    @Test func photoYearRangeAndDocumentSubjectRemainIndependent() {
+        let parser = LanguageUnderstandingBlock()
+        for input in ["Відкрий фото за минулий рік", "Открой фото за прошлый год", "Open photos from last year"] {
+            let command = parser.parse(input)
+            #expect(command.intent == .photoSearch)
+            #expect(command.entities["photo_query_kind"] == "metadata")
+            #expect(command.entities["photo_date_period"] == "last_year")
+            #expect(command.entities["photo_date_filter"] == "true")
+        }
+        let mixed = parser.parse("Відкрий фото документів за минулий рік")
+        #expect(mixed.intent == .photoSearch)
+        #expect(mixed.entities["photo_query_kind"] == "semantic")
+        #expect(mixed.entities["photo_date_period"] == "last_year")
+        #expect(mixed.entities["query"] == "документів")
+    }
+
     @Test func temporalAndNumericRolesPreserveOrderedParameters() {
         let timer = parser.parse("Встанови таймер на 2,5 хвилини для чаю")
         #expect(timer.intent == .deviceAction)

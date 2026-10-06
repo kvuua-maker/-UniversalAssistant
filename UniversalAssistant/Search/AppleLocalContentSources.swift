@@ -26,11 +26,12 @@ struct PhotoAssetReference: Equatable, Sendable {
     let creationDate: Date?
     let coordinate: CLLocationCoordinate2D?
     let album: String?
+    var modificationDate: Date? = nil
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.localIdentifier == rhs.localIdentifier && lhs.creationDate == rhs.creationDate &&
         lhs.coordinate?.latitude == rhs.coordinate?.latitude && lhs.coordinate?.longitude == rhs.coordinate?.longitude &&
-        lhs.album == rhs.album
+        lhs.album == rhs.album && lhs.modificationDate == rhs.modificationDate
     }
 }
 
@@ -38,9 +39,26 @@ protocol PhotoLibrarySearching: Sendable {
     func authorization() -> LocalSearchAccess
     func requestAuthorization() async -> LocalSearchAccess
     func search(_ criteria: PhotoSearchCriteria, limit: Int) async -> [PhotoAssetReference]
+    func currentlyAccessible(_ assets: [PhotoAssetReference]) -> [PhotoAssetReference]
+}
+
+extension PhotoLibrarySearching {
+    func currentlyAccessible(_ assets: [PhotoAssetReference]) -> [PhotoAssetReference] {
+        [.permitted, .limited].contains(authorization()) ? assets : []
+    }
 }
 
 struct PhotoKitLibrarySearch: PhotoLibrarySearching {
+    func currentlyAccessible(_ assets: [PhotoAssetReference]) -> [PhotoAssetReference] {
+        guard [.permitted, .limited].contains(authorization()), !assets.isEmpty else { return [] }
+        // Authorization can remain .limited while the user changes the
+        // selection. Re-fetch only the result identifiers before publishing.
+        let fetched = PHAsset.fetchAssets(withLocalIdentifiers: assets.map(\.localIdentifier), options: nil)
+        var visible = Set<String>()
+        fetched.enumerateObjects { asset, _, _ in visible.insert(asset.localIdentifier) }
+        return assets.filter { visible.contains($0.localIdentifier) }
+    }
+
     func authorization() -> LocalSearchAccess {
         switch PHPhotoLibrary.authorizationStatus(for: .readWrite) {
         case .authorized: .permitted
@@ -58,6 +76,7 @@ struct PhotoKitLibrarySearch: PhotoLibrarySearching {
     }
 
     func search(_ criteria: PhotoSearchCriteria, limit: Int) async -> [PhotoAssetReference] {
+        guard limit > 0 else { return [] }
         guard [.permitted, .limited].contains(authorization()) else { return [] }
         guard !Task.isCancelled else { return [] }
         let options = PHFetchOptions()
@@ -68,7 +87,7 @@ struct PhotoKitLibrarySearch: PhotoLibrarySearching {
         // Location filtering requires inspecting metadata across the accessible
         // library. Applying a newest-200 limit before the coordinate predicate
         // makes older geotagged assets permanently invisible.
-        options.fetchLimit = criteria.coordinate == nil ? max(1, min(limit * 8, 200)) : 0
+        options.fetchLimit = criteria.coordinate == nil && criteria.albumName == nil ? min(limit, 200) : 0
         var allowedIDs: Set<String>?
         if let albumName = criteria.albumName {
             let collections = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
@@ -92,8 +111,9 @@ struct PhotoKitLibrarySearch: PhotoLibrarySearching {
                 guard let location = asset.location, location.distance(from: center) <= criteria.radiusMeters else { return }
             }
             output.append(.init(localIdentifier: asset.localIdentifier, creationDate: asset.creationDate,
-                                coordinate: asset.location?.coordinate, album: criteria.albumName))
-            if output.count >= max(1, min(limit, 20)) { stop.pointee = true }
+                                coordinate: asset.location?.coordinate, album: criteria.albumName,
+                                modificationDate: asset.modificationDate))
+            if output.count >= min(limit, 200) { stop.pointee = true }
         }
         return output
     }
@@ -108,13 +128,25 @@ struct PhotoSemanticMatch: Equatable, Sendable {
 protocol PhotoAssetImageLoading: Sendable {
     func imageData(localIdentifier: String) async throws -> Data
     func semanticThumbnailData(localIdentifier: String) async throws -> Data
+    func documentThumbnailData(localIdentifier: String) async throws -> Data
 }
 extension PhotoAssetImageLoading {
     func semanticThumbnailData(localIdentifier: String) async throws -> Data {
         try await imageData(localIdentifier: localIdentifier)
     }
+    func documentThumbnailData(localIdentifier: String) async throws -> Data {
+        try await semanticThumbnailData(localIdentifier: localIdentifier)
+    }
 }
-protocol PhotoSemanticLabeling: Sendable { func labels(imageData: Data) async throws -> [PhotoSemanticLabel] }
+protocol PhotoSemanticLabeling: Sendable {
+    func labels(imageData: Data) async throws -> [PhotoSemanticLabel]
+    func documentLabels(imageData: Data) async throws -> [PhotoSemanticLabel]
+}
+extension PhotoSemanticLabeling {
+    // Scene labels are not OCR evidence. Implementations without text
+    // recognition must not silently claim document support.
+    func documentLabels(imageData: Data) async throws -> [PhotoSemanticLabel] { [] }
+}
 
 enum PhotoAssetImageLoadError: Error, Equatable { case timedOut, unavailable }
 
@@ -175,6 +207,14 @@ struct PhotoKitAssetImageLoader: PhotoAssetImageLoading {
     }
 
     func semanticThumbnailData(localIdentifier: String) async throws -> Data {
+        try await thumbnailData(localIdentifier: localIdentifier, dimension: 384)
+    }
+
+    func documentThumbnailData(localIdentifier: String) async throws -> Data {
+        try await thumbnailData(localIdentifier: localIdentifier, dimension: 1_024)
+    }
+
+    private func thumbnailData(localIdentifier: String, dimension: CGFloat) async throws -> Data {
         guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject else {
             throw CocoaError(.fileNoSuchFile)
         }
@@ -184,15 +224,16 @@ struct PhotoKitAssetImageLoader: PhotoAssetImageLoading {
             try await withCheckedThrowingContinuation { continuation in
                 completion.install(continuation)
                 let options = PHImageRequestOptions()
-                options.deliveryMode = .fastFormat
-                options.resizeMode = .fast
+                options.deliveryMode = dimension > 384 ? .highQualityFormat : .fastFormat
+                options.resizeMode = dimension > 384 ? .exact : .fast
                 options.isNetworkAccessAllowed = false
                 let id = manager.requestImage(
                     for: asset,
-                    targetSize: .init(width: 384, height: 384),
+                    targetSize: .init(width: dimension, height: dimension),
                     contentMode: .aspectFit,
                     options: options
                 ) { image, info in
+                    if dimension > 384, info?[PHImageResultIsDegradedKey] as? Bool == true { return }
                     if let error = info?[PHImageErrorKey] as? Error { completion.finish(.failure(error)) }
                     else if let data = image?.jpegData(compressionQuality: 0.72) { completion.finish(.success(data)) }
                     else { completion.finish(.failure(PhotoAssetImageLoadError.unavailable)) }
@@ -231,14 +272,14 @@ actor PhotoSemanticIndex {
         }
     }
 
-    func labels(for asset: PhotoAssetReference) -> [PhotoSemanticLabel]? {
+    func labels(for asset: PhotoAssetReference, namespace: String = "scene-v1") -> [PhotoSemanticLabel]? {
         let fingerprint = Self.fingerprint(asset)
-        guard let entry = entries[asset.localIdentifier], entry.fingerprint == fingerprint else { return nil }
+        guard let entry = entries[asset.localIdentifier + "|" + namespace], entry.fingerprint == fingerprint else { return nil }
         return entry.labels
     }
 
-    func store(_ labels: [PhotoSemanticLabel], for asset: PhotoAssetReference) {
-        entries[asset.localIdentifier] = .init(
+    func store(_ labels: [PhotoSemanticLabel], for asset: PhotoAssetReference, namespace: String = "scene-v1") {
+        entries[asset.localIdentifier + "|" + namespace] = .init(
             fingerprint: Self.fingerprint(asset), labels: labels, indexedAt: .now
         )
         persist()
@@ -252,7 +293,7 @@ actor PhotoSemanticIndex {
     }
 
     private static func fingerprint(_ asset: PhotoAssetReference) -> String {
-        "\(asset.localIdentifier)|\(asset.creationDate?.timeIntervalSince1970 ?? 0)"
+        "\(asset.localIdentifier)|\(asset.creationDate?.timeIntervalSince1970 ?? 0)|\(asset.modificationDate?.timeIntervalSince1970 ?? 0)"
     }
 }
 
@@ -268,15 +309,52 @@ struct VisionPhotoSemanticLabeler: PhotoSemanticLabeling {
         try Task.checkCancellation()
         return values
     }
+
+    func documentLabels(imageData: Data) async throws -> [PhotoSemanticLabel] {
+        try Task.checkCancellation()
+        let work = Task.detached(priority: .userInitiated) { () throws -> [PhotoSemanticLabel] in
+            let request = VNRecognizeTextRequest()
+            request.recognitionLevel = .accurate
+            request.automaticallyDetectsLanguage = true
+            request.usesLanguageCorrection = false
+            let supported = try request.supportedRecognitionLanguages()
+            let preferred = ["uk-UA", "ru-RU", "en-US"].filter { supported.contains($0) }
+            if !preferred.isEmpty { request.recognitionLanguages = preferred }
+            try VNImageRequestHandler(data: imageData).perform([request])
+            try Task.checkCancellation()
+            // Keep only aggregate evidence: recognized text never leaves this
+            // on-device operation and is neither cached nor logged.
+            let lines = (request.results ?? []).compactMap { $0.topCandidates(1).first }
+                .filter { $0.confidence >= 0.65 && $0.string.filter(\.isLetter).count >= 3 }
+            guard lines.count >= 2, lines.reduce(0, { $0 + $1.string.count }) >= 16 else { return [] }
+            return [.init(name: "document", confidence: lines.map(\.confidence).min() ?? 0)]
+        }
+        return try await withTaskCancellationHandler {
+            let values = try await work.value
+            try Task.checkCancellation()
+            return values
+        } onCancel: { work.cancel() }
+    }
+}
+
+struct PhotoSemanticSearchReport: Sendable {
+    let matches: [PhotoSemanticMatch]
+    let isComplete: Bool
+    let timedOut: Bool
 }
 
 private final class PhotoSemanticDeadlineCompletion: @unchecked Sendable {
     private let lock = NSLock()
-    private var continuation: CheckedContinuation<[PhotoSemanticMatch], Never>?
-    private var result: [PhotoSemanticMatch]?
+    private var continuation: CheckedContinuation<PhotoSemanticSearchReport, Never>?
+    private var result: PhotoSemanticSearchReport?
+    private var partial: [(Int, PhotoSemanticMatch)] = []
+    private var unavailableAssets = false
+    private let limit: Int
     private var work: Task<Void, Never>?
 
-    func install(_ continuation: CheckedContinuation<[PhotoSemanticMatch], Never>) {
+    init(limit: Int) { self.limit = max(1, min(limit, 10)) }
+
+    func install(_ continuation: CheckedContinuation<PhotoSemanticSearchReport, Never>) {
         lock.lock()
         if let result {
             lock.unlock()
@@ -293,9 +371,23 @@ private final class PhotoSemanticDeadlineCompletion: @unchecked Sendable {
         else { lock.unlock(); work.cancel() }
     }
 
-    func finish(_ result: [PhotoSemanticMatch], cancelWork: Bool = false) {
+    func record(_ value: PhotoSemanticMatch, position: Int) {
+        lock.withLock {
+            guard result == nil else { return }
+            partial.append((position, value))
+        }
+    }
+
+    func markUnavailableAsset() { lock.withLock { unavailableAssets = true } }
+
+    func finish(isComplete: Bool, timedOut: Bool = false, cancelWork: Bool = false, discard: Bool = false) {
         lock.lock()
         guard self.result == nil else { lock.unlock(); return }
+        let matches = discard ? [] : partial.sorted {
+            if $0.1.confidence != $1.1.confidence { return $0.1.confidence > $1.1.confidence }
+            return $0.0 < $1.0
+        }.prefix(limit).map { $0.1 }
+        let result = PhotoSemanticSearchReport(matches: matches, isComplete: isComplete && !unavailableAssets, timedOut: timedOut)
         self.result = result
         let continuation = continuation
         let work = cancelWork ? work : nil
@@ -316,17 +408,28 @@ struct PhotoSemanticSearchEngine: Sendable {
     }
 
     func matches(_ query: String, criteria: PhotoSearchCriteria = .init(), limit: Int = 5, timeout: Duration = .seconds(2)) async -> [PhotoSemanticMatch] {
-        guard [.permitted, .limited].contains(library.authorization()) else { return [] }
+        await report(query, criteria: criteria, limit: limit, timeout: timeout).matches
+    }
+
+    func report(_ query: String, criteria: PhotoSearchCriteria = .init(), limit: Int = 5, timeout: Duration = .seconds(2)) async -> PhotoSemanticSearchReport {
+        guard [.permitted, .limited].contains(library.authorization()), limit > 0 else {
+            return .init(matches: [], isComplete: false, timedOut: false)
+        }
         let terms = Self.semanticTerms(query)
-        guard !terms.isEmpty else { return [] }
-        let completion = PhotoSemanticDeadlineCompletion()
+        guard !terms.isEmpty else { return .init(matches: [], isComplete: true, timedOut: false) }
+        let completion = PhotoSemanticDeadlineCompletion(limit: limit)
         return await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
                 completion.install(continuation)
                 let work = Task(priority: .userInitiated) {
-                    let candidates = await library.search(criteria, limit: min(max(limit * 2, 4), 8))
+                    // Metadata is filtered by PhotoKit before this bounded
+                    // candidate window. Result count must not be the scan cap.
+                    let candidates = await library.search(criteria, limit: 200)
                     guard !Task.isCancelled else { return }
-                    completion.finish(await evaluate(candidates: candidates, terms: terms, limit: limit))
+                    await evaluate(candidates: candidates, terms: terms, completion: completion)
+                    guard !Task.isCancelled else { return }
+                    let permitted = [.permitted, .limited].contains(library.authorization())
+                    completion.finish(isComplete: candidates.count < 200 && permitted, discard: !permitted)
                 }
                 completion.setWork(work)
                 // A low-priority deadline can be starved by concurrent Vision
@@ -335,65 +438,61 @@ struct PhotoSemanticSearchEngine: Sendable {
                 // sleeps, cancels and resolves the one-shot completion.
                 Task(priority: .userInitiated) {
                     do { try await Task.sleep(for: timeout) }
-                    catch { completion.finish([], cancelWork: true); return }
+                    catch { completion.finish(isComplete: false, cancelWork: true, discard: true); return }
                     work.cancel()
                     // Give cooperative PhotoKit/Vision work one bounded turn to
                     // observe cancellation before the caller receives timeout.
                     // A non-cooperative loader can delay this by at most 20 ms.
                     try? await Task.sleep(for: .milliseconds(20))
-                    completion.finish([])
+                    completion.finish(isComplete: false, timedOut: true,
+                                      discard: ![.permitted, .limited].contains(library.authorization()))
                 }
             }
         } onCancel: {
-            completion.finish([], cancelWork: true)
+            completion.finish(isComplete: false, cancelWork: true, discard: true)
         }
     }
 
     private func evaluate(
         candidates: [PhotoAssetReference],
         terms: Set<String>,
-        limit: Int
-    ) async -> [PhotoSemanticMatch] {
-        await withTaskGroup(of: (Int, PhotoSemanticMatch)?.self) { group in
-            for (position, asset) in candidates.enumerated() {
-                group.addTask(priority: .userInitiated) {
-                    guard !Task.isCancelled else { return nil }
-                    let labels: [PhotoSemanticLabel]
-                    if let cached = await self.index.labels(for: asset) {
-                        labels = cached
-                    } else {
-                        guard let data = try? await loader.semanticThumbnailData(localIdentifier: asset.localIdentifier),
-                              !Task.isCancelled,
-                              let classified = try? await labeler.labels(imageData: data),
-                              !Task.isCancelled else { return nil }
-                        labels = classified
-                        await self.index.store(classified, for: asset)
+        completion: PhotoSemanticDeadlineCompletion
+    ) async {
+        let document = terms.contains("document")
+        let namespace = document ? "document-ocr-v1" : "scene-v1"
+        // Two concurrent requests bound memory/CPU on iPhone SE 2. Finish each
+        // batch into the deadline snapshot so a slow asset cannot erase hits.
+        for offset in stride(from: 0, to: candidates.count, by: 2) {
+            guard !Task.isCancelled else { return }
+            await withTaskGroup(of: Void.self) { group in
+                for position in offset..<min(offset + 2, candidates.count) {
+                    let asset = candidates[position]
+                    group.addTask(priority: .userInitiated) {
+                        guard !Task.isCancelled else { return }
+                        let labels: [PhotoSemanticLabel]
+                        if let cached = await self.index.labels(for: asset, namespace: namespace) {
+                            labels = cached
+                        } else {
+                            let data = try? await (document
+                                ? loader.documentThumbnailData(localIdentifier: asset.localIdentifier)
+                                : loader.semanticThumbnailData(localIdentifier: asset.localIdentifier))
+                            guard let data, !Task.isCancelled else { completion.markUnavailableAsset(); return }
+                            let classified = try? await (document
+                                ? labeler.documentLabels(imageData: data)
+                                : labeler.labels(imageData: data))
+                            guard let classified, !Task.isCancelled else { completion.markUnavailableAsset(); return }
+                            labels = classified
+                            await self.index.store(classified, for: asset, namespace: namespace)
+                        }
+                        let evidence = labels.filter { label in
+                            !terms.isDisjoint(with: Self.semanticTerms(label.name))
+                        }.sorted { $0.confidence > $1.confidence }
+                        guard let confidence = evidence.first?.confidence,
+                              confidence >= Self.minimumReliableConfidence else { return }
+                        completion.record(.init(asset: asset, confidence: confidence, matchedLabels: evidence.map(\.name)), position: position)
                     }
-                    let evidence = labels.filter { label in
-                        !terms.isDisjoint(with: Self.semanticTerms(label.name))
-                    }.sorted { $0.confidence > $1.confidence }
-                    guard let confidence = evidence.first?.confidence,
-                          confidence >= Self.minimumReliableConfidence else { return nil }
-                    return (
-                        position,
-                        .init(asset: asset, confidence: confidence, matchedLabels: evidence.map(\.name))
-                    )
                 }
             }
-            var values: [(Int, PhotoSemanticMatch)] = []
-            for await value in group {
-                guard !Task.isCancelled else {
-                    group.cancelAll()
-                    return []
-                }
-                if let value { values.append(value) }
-            }
-            return values.sorted {
-                if $0.1.confidence != $1.1.confidence {
-                    return $0.1.confidence > $1.1.confidence
-                }
-                return $0.0 < $1.0
-            }.prefix(max(1, min(limit, 10))).map { $0.1 }
         }
     }
 

@@ -27,7 +27,8 @@ enum CanonicalCurrentCommandRoleNormalizer {
         })
         let hasPhotoQueryRoles = command.entities["photo_query_kind"] != nil ||
             command.entities["photo_location_query"] != nil || command.entities["photo_date_filter"] == "true"
-        if let application = CanonicalSpeechEntityRegistry.applicationID(in: command.originalText),
+        if entities["clarification_role"] != "application",
+           let application = CanonicalSpeechEntityRegistry.applicationID(in: command.originalText),
            currentTokens.contains(where: { token in appActionRoots.contains(where: token.hasPrefix) }),
            !(application == "camera" && requestsCameraCapture),
            !(application == "photos" && hasPhotoQueryRoles) {

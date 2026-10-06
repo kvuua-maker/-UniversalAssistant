@@ -139,14 +139,23 @@ struct LanguageUnderstandingBlockTests {
             standalone: parser.parse("о 19:00"),
             role: "restaurant_date_time"
         ))
+        #expect(policy.shouldConsumeClarification(
+            reply: "о 19:30 для 3 гостей",
+            standalone: parser.parse("о 19:30 для 3 гостей"),
+            role: "temporal"
+        ))
     }
 
-    @Test func build59UnnamedRestaurantBookingSelectsNearbyRestaurantWithoutGenericClarification() {
-        let command = LanguageUnderstandingBlock().parse("Забронювати столик у ресторані сьогодні")
-        #expect(command.intent == .placeSearch)
-        #expect(command.entities["place_category"] == PlaceCategory.restaurant.rawValue)
-        #expect(!command.needsClarification)
-        #expect(GoogleMapsSearchHandoff().shouldOpenImmediately(command))
+    @Test func unnamedRestaurantBookingRetainsBookingRolesAndClarifiesMissingDetails() {
+        for input in ["Забронюй сьогодні столик в ресторані", "Забронювати столик у ресторані сьогодні"] {
+            let command = LanguageUnderstandingBlock().parse(input)
+            #expect(command.intent == .reservation)
+            #expect(command.entities["reservation_operation"] == "availability")
+            #expect(command.entities["reservation_requested_mutation"] == "book")
+            #expect(command.entities["relative_day_offset"] == "0")
+            #expect(command.needsClarification)
+            #expect(!GoogleMapsSearchHandoff().shouldOpenImmediately(command))
+        }
     }
 
     @Test func build58DomainIntegrityKeepsProductsOutOfParcelAndBrandsOpenWorld() {
@@ -344,6 +353,12 @@ struct LanguageUnderstandingBlockTests {
         #expect(command.entities["message_service"] == "matrix")
         #expect(command.entities["service_match_confidence"].flatMap(Double.init) ?? 0 >= 0.72)
         #expect(!command.needsClarification)
+    }
+
+    @Test func alternativeNamedMessageChannelsNeverAutoSelectTheFirstPrefix() {
+        let command = LanguageUnderstandingBlock().parse("Напиши Олені через WhatsApp або Telegram що буду пізніше")
+        #expect(command.intent == .messageCompose)
+        #expect(command.needsClarification)
     }
 
     @Test func messageRolesSeparateRecipientBodyAndServiceWithoutPhraseAliases() {

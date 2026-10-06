@@ -301,6 +301,45 @@ struct RestaurantReservationReleaseRootTests {
         #expect(operations.contains("cancel:booking-a"))
     }
 
+    @Test func incompleteBookingContinuesToAvailabilityWithoutOpeningNearbyMaps() async throws {
+        let provider = AddedRestaurantProviderBoundary()
+        let opened = AddedSystemOpenCapture()
+        let model = ProductionAssistantComposition.makeModel(
+            placeSearch: .init(providers: [AddedRestaurantPlaceBoundary(restaurant: restaurant())]),
+            currentLocation: AddedRestaurantLocationBoundary(makeLocation()),
+            personalSearchSources: [], compactResultDuration: .seconds(60),
+            restaurantProviders: [provider], systemHandoffOpen: opened.open
+        )
+        model.input = "Забронюй сьогодні столик в ресторані"
+        model.submit()
+        try await waitUntil { if case .clarification = model.resultState { return true }; return false }
+        #expect(opened.values.isEmpty)
+        #expect(await provider.operations().isEmpty)
+
+        model.input = "о 19:30 для 3 гостей"
+        model.submit()
+        try await waitUntil {
+            if case let .deterministic(result) = model.resultState { return result.facts.count == 2 }
+            return false
+        }
+        #expect(await provider.operations() == ["availability:restaurant-a:3"])
+        #expect(opened.values.isEmpty)
+
+        model.input = "Забронюй перший столик"
+        model.submit()
+        try await waitUntil { if case .actionRequired = model.resultState { return true }; return false }
+        #expect(await provider.operations() == ["availability:restaurant-a:3"])
+        model.resolveActionRequiredChoice(AppText.value("confirm"))
+        try await waitUntil {
+            if case let .deterministic(result) = model.resultState {
+                return result.facts.first?.value == "provider:booking-a"
+            }
+            return false
+        }
+        #expect(await provider.operations() == ["availability:restaurant-a:3", "book:slot-a"])
+        #expect(opened.values.isEmpty)
+    }
+
     @Test func absentBookingProviderReturnsOnlyTruthfulVerifiedHandoffs() async throws {
         let model = ProductionAssistantComposition.makeModel(
             placeSearch: .init(providers: [AddedRestaurantPlaceBoundary(

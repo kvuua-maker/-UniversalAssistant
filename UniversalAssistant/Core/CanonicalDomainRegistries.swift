@@ -346,20 +346,9 @@ enum CanonicalDomainIntegrityPolicy {
                 entities["fuel_constraint"] = fuel.rawValue
             }
         }
-        // If a booking request names no establishment and is still missing
-        // booking roles, selecting the physical restaurant is the useful next
-        // action. A fully specified availability request remains a reservation
-        // so an injected live reservation provider can execute it directly.
-        if intent == .reservation, needsClarification,
-           isGenericRestaurantSubject(entities["restaurant_query"]) {
-            intent = .placeSearch
-            entities["place_category"] = PlaceCategory.restaurant.rawValue
-            entities["query"] = CanonicalPlaceCategoryRegistry.record(for: .restaurant)?.searchTerm ?? "restaurant"
-            entities["near_current_location"] = entities["location"] == nil ? "true" : entities["near_current_location"]
-            entities.removeValue(forKey: "clarification_options")
-            entities.removeValue(forKey: "clarification_role")
-            needsClarification = false
-        }
+        // Missing booking roles belong to the reservation clarification flow.
+        // Reclassifying them as nearby discovery loses the requested mutation
+        // and bypasses the booking provider/confirmation boundary entirely.
         if jobEvidence {
             intent = .productSearch
             entities["provider_domain"] = "jobs"
@@ -400,15 +389,6 @@ enum CanonicalDomainIntegrityPolicy {
     /// Automotive analysis must never displace them.
     private static func resolvedServiceDomain(_ domain: String?) -> Bool {
         domain == "car_rental" || domain == "vehicle_service" || domain == "current_safety"
-    }
-
-    private static func isGenericRestaurantSubject(_ value: String?) -> Bool {
-        guard let value else { return true }
-        let tokens = CanonicalMorphology.comparableText(value)
-            .split(whereSeparator: { !$0.isLetter }).map(String.init)
-        guard !tokens.isEmpty else { return true }
-        let controlStems = ["ресторан", "заклад", "столик", "restaurant", "table"]
-        return tokens.allSatisfy { token in controlStems.contains(where: token.hasPrefix) }
     }
 
     private static func isExact(_ provider: OfficialPublicProviderHandoff, in text: String) -> Bool {

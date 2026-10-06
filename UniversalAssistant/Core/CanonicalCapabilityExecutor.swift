@@ -1329,7 +1329,11 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             completion.finish(.cancelled, cancelWork: true)
         }
         switch result {
-        case let .values(values): return values
+        case let .values(values):
+            guard [.permitted, .limited].contains(photos.authorization()) else {
+                throw CanonicalCapabilityExecutionError.unavailable("photos_access_unavailable")
+            }
+            return photos.currentlyAccessible(values)
         case .timedOut: throw CanonicalCapabilityExecutionError.unavailable("photos_search_timeout")
         case .cancelled: throw CancellationError()
         }
@@ -1337,6 +1341,12 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
 
     private func photoDateRange(_ command: StructuredCommand, now: Date = .now) -> Range<Date>? {
         guard command.entities["photo_date_filter"] == "true" else { return nil }
+        if command.entities["photo_date_period"] == "last_year" {
+            let calendar = Calendar.autoupdatingCurrent
+            guard let thisYear = calendar.dateInterval(of: .year, for: now)?.start,
+                  let previousYear = calendar.date(byAdding: .year, value: -1, to: thisYear) else { return nil }
+            return previousYear..<thisYear
+        }
         if let explicit = explicitHistoricalPhotoDay(in: command.originalText, now: now) { return explicit }
         guard
               case let .resolved(resolved) = NaturalDateTimeResolver().resolve(
@@ -1417,21 +1427,24 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let access = photos.authorization() == .permissionRequired ? await photos.requestAuthorization() : photos.authorization()
         guard access == .permitted || access == .limited else { throw CanonicalCapabilityExecutionError.unavailable("photos_access_unavailable") }
         let recentIndex = max(0, (command.constraints.ordinal ?? 1) - 1)
+        var criteria = PhotoSearchCriteria(dateRange: photoDateRange(command))
+        if command.entities["photo_date_filter"] == "true", criteria.dateRange == nil {
+            throw CanonicalCapabilityExecutionError.missingParameter("photo_date_range")
+        }
+        if let place = command.entities["photo_location_query"], !place.isEmpty {
+            let location = try await locationResolver.resolve(place)
+            criteria = .init(dateRange: criteria.dateRange,
+                             coordinate: .init(latitude: location.sample.latitude, longitude: location.sample.longitude),
+                             radiusMeters: 50_000)
+        }
         if queryKind == "metadata" {
-            var criteria = PhotoSearchCriteria(dateRange: photoDateRange(command))
-            if let place = command.entities["photo_location_query"], !place.isEmpty {
-                let location = try await locationResolver.resolve(place)
-                criteria = .init(dateRange: criteria.dateRange,
-                                 coordinate: .init(latitude: location.sample.latitude, longitude: location.sample.longitude),
-                                 radiusMeters: 50_000)
-            }
             let values = try await boundedPhotoSearch(criteria, limit: 20)
             let title = command.entities["photo_location_query"] == nil ? "Фото за датою" : "Фото з вибраного місця"
             return try metadataPhotoResult(values, command: command, title: title)
         }
-        let assets = try await boundedPhotoSearch(.init(), limit: latest ? recentIndex + 1 : 20)
-        guard !assets.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("photos_empty") }
         if latest {
+            let assets = try await boundedPhotoSearch(criteria, limit: recentIndex + 1)
+            guard !assets.isEmpty else { throw CanonicalCapabilityExecutionError.unavailable("photos_empty") }
             guard assets.indices.contains(recentIndex) else { throw CanonicalCapabilityExecutionError.unavailable("photos_ordinal_unavailable") }
             let selected = assets[recentIndex]
             let action = ResultAction(id: "photos:" + selected.localIdentifier, title: "Відкрити", kind: .showPhoto, destination: nil)
@@ -1445,8 +1458,12 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             }
             return .result(output)
         }
-        let response = await PhotosPersonalSearchSource(library: photos, loader: photoSemanticLoader, labeler: photoSemanticLabeler).search(query: query, limit: 5)
+        let response = await PhotosPersonalSearchSource(library: photos, loader: photoSemanticLoader, labeler: photoSemanticLabeler)
+            .search(query: query, criteria: criteria, limit: 5)
         guard !response.results.isEmpty else {
+            if let reason = response.unavailableReason, ["photos_search_timeout", "photos_access_unavailable"].contains(reason) {
+                throw CanonicalCapabilityExecutionError.unavailable(reason)
+            }
             // Never substitute unrelated recent assets for a semantic miss.
             // The Photos picker is the truthful, useful system-owned boundary.
             return .presentation(.photoLibrary)
@@ -1455,7 +1472,8 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             ResultFact(id: value.id, label: value.title, value: value.subtitle ?? value.sourceObjectID, state: .verified, source: "Photos", observedAt: .now, priority: 100 - index)
         }
         let actions = response.results.map { ResultAction(id: $0.id, title: "Відкрити", kind: .showPhoto, destination: nil) }
-        let output = try result("Знайдено у Фото", facts: facts, actions: actions)
+        let title = response.isComplete ? "Знайдено у Фото" : "Знайдено у Фото. Пошук завершено не повністю."
+        let output = try result(title, facts: facts, actions: actions)
         currentContext.replacePhotoResults(output)
         if let first = response.results.first {
             switch command.entities["requested_action"] {

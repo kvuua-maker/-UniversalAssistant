@@ -5,32 +5,9 @@ import Speech
 
 @available(iOS 27.0, *)
 @MainActor
-final class IOS27DictationVoiceBackend {
-    enum Event: Equatable, Sendable {
-        case partial(String)
-        case final(String)
-        case failure(String)
-    }
-
-    enum BackendError: LocalizedError {
-        case unsupportedLocale
-        case microphoneUnavailable
-        case microphonePermissionDenied
-        case assetsUnsupported
-        case assetsNotInstalled
-        case captureSessionDidNotStart
-
-        var errorDescription: String? {
-            switch self {
-            case .unsupportedLocale: "DictationTranscriber does not support uk-UA on this device."
-            case .microphoneUnavailable: "No microphone capture device is available."
-            case .microphonePermissionDenied: "Microphone permission was denied."
-            case .assetsUnsupported: "Required DictationTranscriber assets are unsupported."
-            case .assetsNotInstalled: "Required DictationTranscriber assets are not installed."
-            case .captureSessionDidNotStart: "The microphone capture session did not start."
-            }
-        }
-    }
+final class IOS27DictationVoiceBackend: DictationVoiceSession {
+    typealias Event = DictationVoiceEvent
+    typealias BackendError = DictationVoiceBackendError
 
     static let requestedLocale = Locale(identifier: "uk-UA")
     private static var preparedLocaleIdentifiers = Set<String>()
@@ -62,16 +39,24 @@ final class IOS27DictationVoiceBackend {
         emittedFinal = false
 
         guard let locale = await resolvedLocale() else {
+            try requireSession(newSessionID)
             sessionID = nil
             throw BackendError.unsupportedLocale
         }
-        let transcriber = DictationTranscriber(locale: locale, preset: .progressiveShortDictation)
+        try requireSession(newSessionID)
+        var preset = DictationTranscriber.Preset.progressiveShortDictation
+        preset.reportingOptions.insert(.alternativeTranscriptions)
+        preset.attributeOptions.insert(.transcriptionConfidence)
+        let transcriber = DictationTranscriber(locale: locale, preset: preset)
         try await prepareAssets(for: transcriber, locale: locale)
+        try requireSession(newSessionID)
         try await requireMicrophonePermission()
+        try requireSession(newSessionID)
 
         let providerHandle = try await captureWorker.makeProvider(
-            compatibleWith: transcriber
+            compatibleWith: transcriber, sessionID: newSessionID
         )
+        try requireSession(newSessionID)
         let provider = providerHandle.provider
         let analyzer = SpeechAnalyzer(modules: [transcriber])
         let context = AnalysisContext()
@@ -84,7 +69,7 @@ final class IOS27DictationVoiceBackend {
                 for try await result in transcriber.results {
                     guard let self, self.sessionID == newSessionID, !Task.isCancelled else { return }
                     let text = String(result.text.characters)
-                    guard !text.isEmpty else { continue }
+                    onEvent(.evidence(DictationRecognitionEvidence.make(text: result.text, alternatives: result.alternatives)))
                     if result.isFinal {
                         guard !self.emittedFinal else { continue }
                         self.emittedFinal = true
@@ -108,9 +93,10 @@ final class IOS27DictationVoiceBackend {
             guard sessionID == newSessionID else { throw CancellationError() }
             try await analyzer.start(inputSequence: provider.analyzerInputs)
             guard sessionID == newSessionID else { throw CancellationError() }
-            guard await captureWorker.startCapture() else {
+            guard await captureWorker.startCapture(sessionID: newSessionID) else {
                 throw BackendError.captureSessionDidNotStart
             }
+            try requireSession(newSessionID)
         } catch {
             await stop(sessionID: newSessionID)
             throw error
@@ -123,21 +109,29 @@ final class IOS27DictationVoiceBackend {
     }
 
     func finish() async throws {
-        guard sessionID != nil, let analyzer else { return }
-        await captureWorker.stopCapture()
+        guard let current = sessionID, let analyzer else { return }
+        await captureWorker.stopCapture(sessionID: current)
+        try requireSession(current)
         try await analyzer.finalizeAndFinishThroughEndOfInput()
+        try requireSession(current)
         await resultsTask?.value
     }
 
     private func stop(sessionID expectedSessionID: UUID) async {
         guard sessionID == expectedSessionID else { return }
         sessionID = nil
-        await captureWorker.stopAndReset()
-        if let analyzer { await analyzer.cancelAndFinishNow() }
-        resultsTask?.cancel()
+        let oldAnalyzer = analyzer
+        let oldResultsTask = resultsTask
         resultsTask = nil
         analyzer = nil
         captureProvider = nil
+        oldResultsTask?.cancel()
+        await captureWorker.stopAndReset(sessionID: expectedSessionID)
+        if let oldAnalyzer { await oldAnalyzer.cancelAndFinishNow() }
+    }
+
+    private func requireSession(_ id: UUID) throws {
+        guard sessionID == id, !Task.isCancelled else { throw CancellationError() }
     }
 
     private func prepareAssets(for transcriber: DictationTranscriber, locale: Locale) async throws {
@@ -184,10 +178,12 @@ final class IOS27DictationVoiceBackend {
 @available(iOS 27.0, *)
 private actor IOS27DictationCaptureWorker {
     private var captureSession: AVCaptureSession?
+    private var sessionID: UUID?
 
     func makeProvider(
-        compatibleWith transcriber: DictationTranscriber
+        compatibleWith transcriber: DictationTranscriber, sessionID id: UUID
     ) async throws -> IOS27DictationCaptureProviderHandle {
+        sessionID = id
         guard let microphone = AVCaptureDevice.default(for: .audio) else {
             throw IOS27DictationVoiceBackend.BackendError.microphoneUnavailable
         }
@@ -196,21 +192,25 @@ private actor IOS27DictationCaptureWorker {
             compatibleWith: [transcriber],
             priority: .userInitiated
         )
+        guard sessionID == id, !Task.isCancelled else { throw CancellationError() }
         captureSession = provider.captureSession
         return IOS27DictationCaptureProviderHandle(provider: provider)
     }
 
-    func startCapture() -> Bool {
-        guard let captureSession else { return false }
+    func startCapture(sessionID id: UUID) -> Bool {
+        guard sessionID == id, let captureSession else { return false }
         captureSession.startRunning()
         return captureSession.isRunning
     }
 
-    func stopCapture() {
+    func stopCapture(sessionID id: UUID) {
+        guard sessionID == id else { return }
         if let captureSession, captureSession.isRunning { captureSession.stopRunning() }
     }
 
-    func stopAndReset() {
+    func stopAndReset(sessionID id: UUID) {
+        guard sessionID == id else { return }
+        sessionID = nil
         if let captureSession, captureSession.isRunning { captureSession.stopRunning() }
         captureSession = nil
     }

@@ -4,6 +4,106 @@ Repair branch checkpoint. Read this first when resuming work. It records the
 verified starting state, what was actually changed, how it was verified, and
 what is still open. Nothing in this file substitutes for a physical test.
 
+## Продовження 2026-10-06 — актуальний локальний результат
+
+Цей розділ доповнює, а не переписує історичний checkpoint нижче.
+
+- Робоча гілка: `fix/canonical-repair-20261006`, база
+  `39bdd03e8a3b83a3a98eb31000057e0ba2d4bcbd`.
+- Окреме дерево: `/private/tmp/ua-canonical-repair-20261006`.
+  Початковий локальний `active-universalassistant` лишився чистим на
+  `experiment/ios27-speech-probe`, `7d0c0724add242be0e7497419b7e8f54c3703997`.
+- Повторний read-only `ls-remote` підтвердив: main/checkpoint = `89b5a07`,
+  experiment = `ef54b25`, canonical-repair = `39bdd03`. Ці гілки не змінювалися.
+  Push, CI, номер білда, archive, IPA та TestFlight у цьому ремонті не виконувалися.
+
+### Підтверджені зміни A–D
+
+**A — диктування.** Звичайні xcconfig не активували `IOS27_SPEECH_PROBE`;
+додано умови лише для SDK27 у Development/Staging/Production. Первинний
+Apple transcript не переписується й непорожній final передається ViewModel
+один раз. Справжні `DictationTranscriber.Result.alternatives` та атрибут
+confidence тепер доходять до чинного evidence-aware parser; невідомий
+confidence залишається nil. Перевірено публічний Speech SDK26.5 та документацію
+[Result](https://developer.apple.com/documentation/speech/dictationtranscriber/result).
+Контекст містить обмежений кеш користувацьких фраз і назви застосунків;
+запуск не очікує оновлення словника, legacy permission або Groq. Додано
+session ownership після await, щоб старі start/stop/final не зачіпали нове
+диктування. Groq/legacy fallback не вилучено. Втрату конкретної назви саме
+Apple ASR на телефоні не доведено: фізичних transcript немає.
+
+**B — Telegram/Viber.** Усунуто обхід строгих правил коротких app names
+через parser і вибір першої суперечливої ASR-альтернативи. Пороги resolver
+не знижені. Перевірено українські/російські/англійські назви й відмінки,
+parser → executor → `tg://`/`viber://`, а також production ViewModel з
+контрольованими true/false результатами системного open. Чинне оброблення
+невдалого open вже було правдивим і збережено; false не доводить, що app
+відсутній. Слабкий/неоднозначний збіг не відкриває застосунок.
+
+**C — Photos.** «За минулий рік» тепер означає попередній календарний рік
+у PhotoKit predicate; дата зберігається і для змішаного запиту документів.
+Документи мають справжній локальний `VNRecognizeTextRequest`, а не сценовий
+label. OCR-текст не журналюється/не зберігається; кеш містить лише агрегований
+document evidence, окремий namespace та modificationDate. Обмеження:
+200 metadata-filtered кандидатів, 2 паралельні Vision операції, 2 с + 20 мс
+semantic deadline, 1.2 с network-disabled thumbnail deadline; metadata 750 мс.
+Результати, отримані до timeout, не губляться й позначаються неповними.
+Limited/full/denied перевірені контрольованими assets; після await повторно
+перевіряються дозвіл і доступність точних asset IDs перед публікацією.
+Реальний Vision OCR перевірено на згенерованому текстовому PNG та порожньому PNG.
+Це не доказ індексації всієї бібліотеки або швидкодії OCR на SE 2.
+
+**D — історичні маршрути.** Наявний автомобільний repair не переписувався;
+тести BMW/сьомої серії, Rolls-Royce та загального авто-запиту проходять.
+Прибрано підтверджене перетворення неповного booking на nearby Maps;
+збережено уточнення → availability → вибір → підтвердження, без раннього book.
+Виправлено продовження «о 19:30 для 3 гостей»: нормалізація раніше стирала
+двокрапку й не дозволяла розпізнати час. Додано bare-address navigation
+«Проклади маршрут Урлівська 4А Київ». Messenger recipient/channel/body
+більше не обрізаються через «через», службові слова, пунктуацію чи HH:MM;
+альтернативні канали вимагають уточнення. Звичайний дзвінок мамі вже мав
+telephone default: uk/ru/en regression та реальний Contacts framework із
+синтетичним контактом підтверджують `tel:`, не WhatsApp. Усі зовнішні
+відкриття в цих тестах перехоплені, реальні дзвінки/повідомлення не відправлялись.
+
+### Фактичні перевірки
+
+MacinCloud FF146-I, Xcode **26.6 (17F113)**, SDK **26.5**, iPhone 17 Pro
+Simulator **iOS 26.5 (23F77)**; sequential test runner.
+
+- Перший цільовий набір: **169 Swift Testing tests / 13 suites PASS**.
+- Додатковий цільовий набір після booking/Photos access-race виправлень:
+  **72 tests / 5 suites PASS**. Попередній booking-only запуск виявив
+  проблему `19:30`; вона виправлена й перевірена, а не вилучена з тесту.
+- Перший повний набір виявив 2 інфраструктурні FAIL: відсутній Contacts
+  дозвіл у Simulator; помилкове віднімання `/tmp` від `/private/tmp` у
+  license-content тесті. Дозвіл надано лише тестовому Simulator; тест
+  канонізує шляхи й зберігає точну перевірку єдиного дозволеного asset.
+  Їхній цільовий повтор: **3 tests / 2 suites PASS**.
+- Фінальний повний iOS набір: **1111/1111 PASS, 0 failed, 0 skipped**
+  (`1102` Swift Testing + `9` XCTest; `1248` виконань з параметрами).
+  Звіт: `/private/tmp/ua-canonical-full-final-20261006.xcresult`;
+  лог: `/private/tmp/ua-canonical-full-final-20261006.log`.
+- Generic arm64 iOS Development app + ShareExtension: **BUILD SUCCEEDED**,
+  без підпису, без archive/upload. Лог:
+  `/private/tmp/ua-canonical-device-build-20261006.log`.
+- `git diff --check`: PASS. Backend не змінювався; його тести не запускалися.
+- SDK27 backend: syntax parse з прапорцем PASS, але **compile/runtime UNKNOWN**.
+  На Mac немає SDK27, а SDK26.5 не містить `CaptureInputSequenceProvider`.
+  Generic SDK26.5 build та fake-backend tests не підміняють цей шлюз.
+
+### Лише фізично непідтверджене
+
+Після справжньої SDK27 збірки на SE 2 потрібні: перевірка встановленого
+номера білда; диктування Telegram/Viber із зіставленням видимого Apple text
+і результату open; дві Photos-фрази на відомих датах/документах із limited,
+full і denied; історичні auto/booking/address/message/mama сценарії.
+Реальний ASR, встановлені apps, Photos дозвіл/контент, зовнішнє бронювання,
+відкриття адреси та фізичні системні дії — **UNKNOWN**. Статуси
+DEVICE_TEST_REQUIRED/READY_FOR_LIVE_VERIFICATION не підвищувалися до PASS.
+
+## Історичний checkpoint до цього локального продовження
+
 - Branch: `kilo/universalassistant-canonical-repair`
 - START HEAD: `ef54b25a1c0632b3ce5cf13da3ccc174e490eeb9` (== `origin/experiment/ios27-speech-probe`)
 - Merge-base with `origin/main`: `89b5a07d38a19c54b58a88285a5b9903314810db`

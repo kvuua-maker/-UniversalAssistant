@@ -495,8 +495,29 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         let applicationCandidates = candidates.filter {
             $0.intent == .open && $0.entities["app"] != nil
         }
-        let applicationIDs = Set(applicationCandidates.compactMap { $0.entities["app"] })
-        if applicationIDs.count == 1,
+        let applicationChoices = Set(candidates.filter {
+            $0.intent == .open && $0.entities["clarification_role"] == "application"
+        }.flatMap { ($0.entities["clarification_options"] ?? "").split(separator: "|").map(String.init) })
+        let applicationIDs = Set(applicationCandidates.compactMap { $0.entities["app"] }).union(
+            self.applicationCandidates.filter {
+                applicationChoices.contains($0.displayName) || applicationChoices.contains($0.value)
+            }.map(\.value)
+        )
+        if applicationIDs.count > 1, intent == .open || intent == .unknown {
+            // Selecting the first complete Apple alternative must not erase a
+            // competing app identity in another actual hypothesis. There is no
+            // per-alternative confidence here that could resolve this choice.
+            entities.removeValue(forKey: "app")
+            entities["clarification_options"] = self.applicationCandidates
+                .filter { applicationIDs.contains($0.value) }.map(\.displayName).sorted().joined(separator: "|")
+            entities["clarification_role"] = "application"
+            entities["entity_match_resolution"] = "ambiguous"
+            entities["entity_match_margin"] = "0.000"
+            entities["speech_entity_evidence"] = "ambiguous_application"
+            intent = .open
+            needsClarification = true
+            applied = true
+        } else if applicationIDs.count == 1,
            let applicationID = applicationIDs.first,
            command.entities["app"].map({ $0 == applicationID }) != false,
            (intent == .open || intent == .unknown),
@@ -1351,7 +1372,46 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 mechanism: .unresolved
             )
         }
-        return bestScopedResolution(in: subjectTokens, candidates: applicationCandidates)
+        let fullSubject = subjectTokens.map(\.surface).joined(separator: " ")
+        var spans: [(range: Range<Int>, evidence: ScopedEntityResolutionEvidence<String>)] = [
+            (0..<subjectTokens.count, ApplicationNameResolutionPolicy.resolve(fullSubject, candidates: applicationCandidates))
+        ]
+        for length in 1...min(4, subjectTokens.count) {
+            for start in 0...(subjectTokens.count - length) {
+                let range = start..<(start + length)
+                if range == 0..<subjectTokens.count { continue }
+                let subject = subjectTokens[range].map(\.surface).joined(separator: " ")
+                spans.append((range, ApplicationNameResolutionPolicy.resolve(subject, candidates: applicationCandidates)))
+            }
+        }
+        // A longer verified name owns its constituent words (Apple Music must
+        // not compete with Apple), but two independent names remain a choice.
+        let independent = spans.filter { span in
+            !spans.contains { other in
+                other.range != span.range &&
+                    other.range.lowerBound <= span.range.lowerBound &&
+                    other.range.upperBound >= span.range.upperBound &&
+                    other.evidence.isResolved &&
+                    other.evidence.bestScore >= span.evidence.bestScore - (span.evidence.isResolved ? 0 : 0.08)
+            }
+        }
+        let strongest = independent.max {
+            if $0.evidence.bestScore == $1.evidence.bestScore {
+                return $0.evidence.confidenceMargin < $1.evidence.confidenceMargin
+            }
+            return $0.evidence.bestScore < $1.evidence.bestScore
+        }?.evidence
+        let competingIDs = Set(independent.compactMap { span -> String? in
+            guard case let .resolved(identifier) = span.evidence.resolution,
+                  span.evidence.bestScore >= (strongest?.bestScore ?? 1) - 0.12 else { return nil }
+            return identifier
+        })
+        if competingIDs.count > 1 {
+            let names = applicationCandidates.filter { competingIDs.contains($0.value) }.map(\.displayName)
+            return .init(resolution: .ambiguous(Array(Set(names)).sorted()), bestScore: strongest?.bestScore ?? 0,
+                         confidenceMargin: 0, mechanism: strongest?.mechanism ?? .unresolved)
+        }
+        return strongest
     }
 
     private func serviceKey(for intent: CommandIntent) -> String? {
@@ -1379,8 +1439,23 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         if let markerIndex = normalized.indices.first(where: { strongMarkers.contains(normalized[$0]) })
             ?? normalized.indices.first(where: { weakMarkers.contains(normalized[$0]) }),
            markerIndex + 1 < document.tokens.count {
-            let subject = document.tokens[(markerIndex + 1)...].map(\.surface).joined(separator: " ")
-            let evidence = ContextScopedEntityResolver(candidates: serviceCandidates).resolveWithEvidence(subject)
+            let suffix = Array(document.tokens[(markerIndex + 1)...])
+            let bodyMarkers: Set<String> = ["що", "что", "that", "про", "щодо", "about"]
+            let boundary = suffix.firstIndex { bodyMarkers.contains($0.normalized) } ?? suffix.count
+            guard boundary > 0 else { return nil }
+            let resolver = ContextScopedEntityResolver(candidates: serviceCandidates)
+            let maximumWords = max(1, serviceCandidates.flatMap { $0.aliases.union([$0.displayName]) }
+                .map { $0.split(whereSeparator: \.isWhitespace).count }.max() ?? 1)
+            let alternatives: Set<String> = ["або", "чи", "или", "or"]
+            if suffix.prefix(min(boundary, maximumWords * 2 + 1)).contains(where: { alternatives.contains($0.normalized) }) {
+                return .init(resolution: .unresolved, bestScore: 0, confidenceMargin: 0, mechanism: .unresolved)
+            }
+            // SERVICE owns a bounded prefix, not the following message body.
+            // Keep the resolver's score and ambiguity thresholds unchanged.
+            let candidates = (1...min(boundary, maximumWords)).map { length in
+                resolver.resolveWithEvidence(suffix.prefix(length).map(\.surface).joined(separator: " "))
+            }
+            guard let evidence = candidates.max(by: { $0.bestScore < $1.bestScore }) else { return nil }
             let strongScope = strongMarkers.contains(normalized[markerIndex])
             if strongScope || evidence.isResolved { return evidence }
         }
