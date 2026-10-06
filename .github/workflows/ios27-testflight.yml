@@ -101,7 +101,6 @@ jobs:
             -authenticationKeyIssuerID "$ISSUER_ID" \
             -allowProvisioningUpdates \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-            'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) IOS27_SPEECH_PROBE' \
             DEVELOPMENT_TEAM=9V5XXDXF3N \
             archive > "$RUNNER_TEMP/archive.log" 2>&1 || {
               tail -100 "$RUNNER_TEMP/archive.log"
