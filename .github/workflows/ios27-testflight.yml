@@ -55,9 +55,11 @@ jobs:
           key_hash="$(openssl pkey -in "$RUNNER_TEMP/distribution-key.pem" -pubout -outform DER | openssl dgst -sha256 | awk '{print $NF}')"
           [[ "$cert_hash" == "$key_hash" ]] || { echo "::error::The certificate and private key do not match"; exit 1; }
           python3 - "$RUNNER_TEMP/distribution-cert.pem" <<'PY'
-          import base64, datetime, hashlib, pathlib, plistlib, ssl, subprocess, sys
-          cert_pem = pathlib.Path(sys.argv[1]).read_text()
-          cert_sha = hashlib.sha256(ssl.PEM_cert_to_DER_cert(cert_pem)).hexdigest()
+          import base64, datetime, hashlib, pathlib, plistlib, subprocess, sys
+          cert_pem = pathlib.Path(sys.argv[1]).read_bytes()
+          cert_der = subprocess.run(["openssl", "x509", "-outform", "DER"],
+                                    input=cert_pem, stdout=subprocess.PIPE, check=True).stdout
+          cert_sha = hashlib.sha256(cert_der).hexdigest()
           expected = (
               (".github/signing/UniversalAssistant_App_Store_2026.mobileprovision.base64",
                "Universal-Assistant App Store 2026", "9V5XXDXF3N.com.universalassistant.app"),
@@ -75,7 +77,7 @@ jobs:
               assert profile["Name"] == name and rights["application-identifier"] == app_id
               assert rights["com.apple.developer.team-identifier"] == "9V5XXDXF3N"
               assert rights["get-task-allow"] is False and rights["beta-reports-active"] is True
-              assert profile["ExpirationDate"] > datetime.datetime.utcnow()
+              assert profile["ExpirationDate"] > datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
               assert any(hashlib.sha256(cert).hexdigest() == cert_sha
                          for cert in profile["DeveloperCertificates"])
               print("Verified App Store profile for " + app_id)
