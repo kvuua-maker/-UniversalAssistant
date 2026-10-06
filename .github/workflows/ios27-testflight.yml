@@ -1,0 +1,172 @@
+name: iOS 27 signed iPhone build and TestFlight
+
+on:
+  push:
+    branches:
+      - fix/canonical-repair-20261006
+    paths:
+      - "UniversalAssistant/**"
+      - "ShareExtension/**"
+      - "UniversalAssistant.xcodeproj/**"
+      - ".circleci/ExportOptions.plist"
+      - ".github/workflows/ios27-testflight.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-signing:
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - name: Check that existing signing secrets are available
+        id: check
+        shell: bash
+        env:
+          P12: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
+          APP_PROFILE: ${{ secrets.IOS_APP_PROFILE_BASE64 }}
+          SHARE_PROFILE: ${{ secrets.IOS_SHARE_PROFILE_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          missing=()
+          [[ -n "$P12" ]] || missing+=("IOS_DISTRIBUTION_P12_BASE64")
+          [[ -n "$P12_PASSWORD" ]] || missing+=("IOS_DISTRIBUTION_P12_PASSWORD")
+          [[ -n "$APP_PROFILE" ]] || missing+=("IOS_APP_PROFILE_BASE64")
+          [[ -n "$SHARE_PROFILE" ]] || missing+=("IOS_SHARE_PROFILE_BASE64")
+          [[ -n "$ASC_KEY_ID" ]] || missing+=("ASC_KEY_ID")
+          [[ -n "$ASC_ISSUER_ID" ]] || missing+=("ASC_ISSUER_ID")
+          [[ -n "$ASC_PRIVATE_KEY" ]] || missing+=("ASC_PRIVATE_KEY_B64")
+          if (( ${#missing[@]} > 0 )); then
+            printf '::error::GitHub Actions is missing these existing Apple signing secrets: %s\n' "${missing[*]}"
+            exit 1
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+  archive-and-upload:
+    needs: check-signing
+    if: needs.check-signing.outputs.ready == 'true'
+    runs-on: xcode-27
+    timeout-minutes: 90
+    env:
+      IOS_DISTRIBUTION_P12_BASE64: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
+      IOS_DISTRIBUTION_P12_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
+      IOS_APP_PROFILE_BASE64: ${{ secrets.IOS_APP_PROFILE_BASE64 }}
+      IOS_SHARE_PROFILE_BASE64: ${{ secrets.IOS_SHARE_PROFILE_BASE64 }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+      BUILD_NUMBER: "65"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Confirm Xcode 27
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          sdk_version="$(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "iOS SDK $sdk_version"
+          [[ "$(xcodebuild -version | sed -n 's/^Xcode //p')" == 27.* ]]
+          [[ "$sdk_version" == 27.* ]]
+
+      - name: Install the existing Apple signing assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          keychain="$RUNNER_TEMP/universalassistant-signing.keychain-db"
+          keychain_password="$(openssl rand -base64 32)"
+          printf '%s' "$IOS_DISTRIBUTION_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/distribution.p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security list-keychains -d user -s "$keychain"
+          security import "$RUNNER_TEMP/distribution.p12" -k "$keychain" -P "$IOS_DISTRIBUTION_P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain"
+          security find-identity -v -p codesigning "$keychain" | grep -q 'Apple Distribution'
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          install_profile() {
+            local encoded="$1"
+            local expected_bundle="$2"
+            local label="$3"
+            local profile="$RUNNER_TEMP/$label.mobileprovision"
+            local decoded="$RUNNER_TEMP/$label.plist"
+            printf '%s' "$encoded" | base64 --decode > "$profile"
+            security cms -D -i "$profile" > "$decoded"
+            local app_id
+            app_id="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$decoded")"
+            test "$app_id" = "9V5XXDXF3N.$expected_bundle"
+            local uuid
+            uuid="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$decoded")"
+            cp "$profile" "$HOME/Library/MobileDevice/Provisioning Profiles/$uuid.mobileprovision"
+          }
+          install_profile "$IOS_APP_PROFILE_BASE64" "com.universalassistant.app" "app"
+          install_profile "$IOS_SHARE_PROFILE_BASE64" "com.universalassistant.app.share" "share"
+
+      - name: Archive, export and verify iPhone app
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/UniversalAssistant-Build$BUILD_NUMBER.xcarchive"
+          export="$RUNNER_TEMP/UniversalAssistant-Build$BUILD_NUMBER-Export"
+          xcodebuild \
+            -project UniversalAssistant.xcodeproj \
+            -scheme UniversalAssistant \
+            -configuration Production \
+            -destination generic/platform=iOS \
+            -archivePath "$archive" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) IOS27_SPEECH_PROBE' \
+            archive 2>&1 | tee "$RUNNER_TEMP/archive.log"
+          xcodebuild -exportArchive \
+            -archivePath "$archive" \
+            -exportPath "$export" \
+            -exportOptionsPlist .circleci/ExportOptions.plist \
+            2>&1 | tee "$RUNNER_TEMP/export.log"
+          ipa="$(find "$export" -maxdepth 1 -name '*.ipa' -print -quit)"
+          test -n "$ipa"
+          shasum -a 256 "$ipa" | tee "$RUNNER_TEMP/ipa.sha256"
+          mkdir -p release-artifact
+          cp "$ipa" "release-artifact/UniversalAssistant-Build$BUILD_NUMBER.ipa"
+          cp "$RUNNER_TEMP/ipa.sha256" release-artifact/
+          app="$archive/Products/Applications/UniversalAssistant.app"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Info.plist")" = "$BUILD_NUMBER"
+          codesign --verify --deep --strict "$app"
+
+      - name: Upload to TestFlight and wait for Apple
+        shell: bash
+        run: |
+          set -euo pipefail
+          key_dir="$HOME/.appstoreconnect/private_keys"
+          mkdir -p "$key_dir"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$key_dir/AuthKey_$ASC_KEY_ID.p8"
+          chmod 600 "$key_dir/AuthKey_$ASC_KEY_ID.p8"
+          ipa="$(find "$RUNNER_TEMP/UniversalAssistant-Build$BUILD_NUMBER-Export" -maxdepth 1 -name '*.ipa' -print -quit)"
+          xcrun altool \
+            --upload-package "$ipa" \
+            --type ios \
+            --api-key "$ASC_KEY_ID" \
+            --api-issuer "$ASC_ISSUER_ID" \
+            --wait \
+            --output-format json 2>&1 | tee release-artifact/testflight-upload.json
+          grep -q '"build-status" : "VALID"' release-artifact/testflight-upload.json
+
+      - name: Keep the IPA and upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: UniversalAssistant-iPhone-Build65
+          path: release-artifact/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Remove signing keychain
+        if: always()
+        shell: bash
+        run: |
+          security delete-keychain "$RUNNER_TEMP/universalassistant-signing.keychain-db" 2>/dev/null || true
