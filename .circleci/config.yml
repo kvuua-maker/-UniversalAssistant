@@ -184,15 +184,6 @@ jobs:
             test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Info.plist")" = "0.1.0"
             test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Info.plist")" = "$BUILD_NUMBER"
             test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$extension/Info.plist")" = "com.universalassistant.app.share"
-            codesign --verify --deep --strict "$app"
-            codesign -dv --verbose=4 "$app" 2> /tmp/UniversalAssistantArchiveSignature.txt
-            grep -q 'Authority=Apple Distribution:' /tmp/UniversalAssistantArchiveSignature.txt
-            codesign -d --entitlements :- "$app" > /tmp/UniversalAssistantArchiveAppEntitlements.plist
-            codesign -d --entitlements :- "$extension" > /tmp/UniversalAssistantArchiveShareEntitlements.plist
-            security cms -D -i "$app/embedded.mobileprovision" > /tmp/UniversalAssistantArchiveAppProfile.plist
-            security cms -D -i "$extension/embedded.mobileprovision" > /tmp/UniversalAssistantArchiveShareProfile.plist
-            test "$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' /tmp/UniversalAssistantArchiveAppProfile.plist)" = "9V5XXDXF3N.com.universalassistant.app"
-            test "$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' /tmp/UniversalAssistantArchiveShareProfile.plist)" = "9V5XXDXF3N.com.universalassistant.app.share"
             xcodebuild -exportArchive \
               -archivePath "$ARCHIVE_PATH" \
               -exportPath "$EXPORT_PATH" \
@@ -203,6 +194,18 @@ jobs:
               -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tee /tmp/UniversalAssistantExport66.log
             ipa="$(find "$EXPORT_PATH" -maxdepth 1 -name '*.ipa' -print -quit)"
             test -n "$ipa"
+            verification_dir="$(mktemp -d)"
+            unzip -q "$ipa" -d "$verification_dir"
+            signed_app="$verification_dir/Payload/UniversalAssistant.app"
+            signed_extension="$signed_app/PlugIns/ShareExtension.appex"
+            codesign --verify --deep --strict "$signed_app"
+            codesign -dv --verbose=4 "$signed_app" 2> /tmp/UniversalAssistantArchiveSignature.txt
+            grep -q 'Authority=Apple Distribution:' /tmp/UniversalAssistantArchiveSignature.txt
+            security cms -D -i "$signed_app/embedded.mobileprovision" > /tmp/UniversalAssistantArchiveAppProfile.plist
+            security cms -D -i "$signed_extension/embedded.mobileprovision" > /tmp/UniversalAssistantArchiveShareProfile.plist
+            test "$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' /tmp/UniversalAssistantArchiveAppProfile.plist)" = "9V5XXDXF3N.com.universalassistant.app"
+            test "$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' /tmp/UniversalAssistantArchiveShareProfile.plist)" = "9V5XXDXF3N.com.universalassistant.app.share"
+            rm -rf "$verification_dir"
             shasum -a 256 "$ipa" | tee /tmp/UniversalAssistantBuild66.sha256
             mkdir -p /tmp/UniversalAssistantBuild66Artifact
             cp "$ipa" /tmp/UniversalAssistantBuild66Artifact/UniversalAssistant-Build66.ipa
