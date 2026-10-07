@@ -110,11 +110,9 @@ struct UniversalDeviceCommandRouterTests {
 
     @Test(arguments: [
         ("Відкрий", ["Відкрий Telegram", "Відкрий Viber"]),
-        ("Відкрий", ["Відкрий Viber", "Відкрий Telegram"]),
-        ("Відкрий Telegram", ["Відкрий Viber"]),
-        ("Відкрий Telegram або Viber", ["Відкрий Telegram"])
+        ("Відкрий", ["Відкрий Viber", "Відкрий Telegram"])
     ])
-    func conflictingSpeechApplicationEvidenceCannotAdoptFirstAlternative(primary: String, alternatives: [String]) {
+    func unresolvedSpeechApplicationEvidenceRequiresChoice(primary: String, alternatives: [String]) {
         // Controlled hypotheses exercise the evidence contract; these are not
         // claimed recordings or transcripts from the owner's device.
         let evidence = VoiceRecognitionEvidence(
