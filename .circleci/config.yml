@@ -6,22 +6,42 @@ parameters:
     default: true
 
 jobs:
-  repair-preflight:
+  repair-preflight-base:
     docker:
       - image: cimg/base:current
     resource_class: small
     steps:
       - checkout
       - run:
-          name: Check repair inputs before an iOS build
+          name: Check base build number
           command: |
             set -euo pipefail
             test "$(grep -c 'CURRENT_PROJECT_VERSION = 64;' UniversalAssistant.xcodeproj/project.pbxproj)" -eq 6
+  repair-preflight-signing:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Check signing profile names
+          command: |
+            set -euo pipefail
             grep -Fq 'PROVISIONING_PROFILE_SPECIFIER = "Universal-Assistant App Store 2026"' UniversalAssistant.xcodeproj/project.pbxproj
             grep -Fq 'PROVISIONING_PROFILE_SPECIFIER = "Universal-Assistant Share App Store 2026"' UniversalAssistant.xcodeproj/project.pbxproj
             grep -Fq '<string>Universal-Assistant App Store 2026</string>' .circleci/ExportOptions.plist
             grep -Fq '<string>Universal-Assistant Share App Store 2026</string>' .circleci/ExportOptions.plist
             grep -Fq '<string>9V5XXDXF3N</string>' .circleci/ExportOptions.plist
+  repair-preflight-voice:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Check iOS dictation inputs
+          command: |
+            set -euo pipefail
             test -f UniversalAssistant/Voice/IOS27DictationVoiceBackend.swift
             grep -Fq 'startIOS27Dictation' UniversalAssistant/Voice/VoiceInputController.swift
   ios27-dictation-repair-build66:
@@ -215,20 +235,38 @@ jobs:
 workflows:
   automatic-repair-preflight:
     jobs:
-      - repair-preflight:
+      - repair-preflight-base:
+          filters:
+            branches:
+              only: fix/canonical-repair-20261006
+      - repair-preflight-signing:
+          filters:
+            branches:
+              only: fix/canonical-repair-20261006
+      - repair-preflight-voice:
           filters:
             branches:
               only: fix/canonical-repair-20261006
   build-upload-ios27-dictation-repair:
     when: << pipeline.parameters.run_repair_build >>
     jobs:
-      - repair-preflight:
+      - repair-preflight-base:
+          filters:
+            branches:
+              only: ci/build66-once-20261007
+      - repair-preflight-signing:
+          filters:
+            branches:
+              only: ci/build66-once-20261007
+      - repair-preflight-voice:
           filters:
             branches:
               only: ci/build66-once-20261007
       - ios27-dictation-repair-build66:
           requires:
-            - repair-preflight
+            - repair-preflight-base
+            - repair-preflight-signing
+            - repair-preflight-voice
           filters:
             branches:
               only: ci/build66-once-20261007
