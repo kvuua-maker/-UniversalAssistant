@@ -26,7 +26,7 @@ jobs:
             set -euo pipefail
             test "$(git branch --show-current)" = "fix/canonical-repair-20261006"
             git diff --check
-            test "$(xcodebuild -project UniversalAssistant.xcodeproj -scheme UniversalAssistant -configuration Production -showBuildSettings | awk '/CURRENT_PROJECT_VERSION/ {print $3; exit}')" = "64"
+            test "$(grep -c 'CURRENT_PROJECT_VERSION = 64;' UniversalAssistant.xcodeproj/project.pbxproj)" -eq 6
       - run:
           name: Verify Xcode 27 Speech SDK
           command: |
@@ -63,6 +63,7 @@ jobs:
             xcrun simctl boot "$simulator_id" 2>/dev/null || true
             xcrun simctl bootstatus "$simulator_id" -b
             test_log=/tmp/UniversalAssistantTests66.log
+            targeted_log=/tmp/UniversalAssistantTargetedTests66.log
             SWT_EXPERIMENTAL_MAXIMUM_PARALLELIZATION_WIDTH=1 xcodebuild \
               -project UniversalAssistant.xcodeproj \
               -scheme UniversalAssistant \
@@ -169,7 +170,7 @@ jobs:
             test -n "${ASC_PRIVATE_KEY_B64:-}"
             key_dir="$HOME/.appstoreconnect/private_keys"
             mkdir -p "$key_dir"
-            printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
+            printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 -D > "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
             chmod 600 "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
             ipa=/tmp/UniversalAssistantBuild66Artifact/UniversalAssistant-Build66.ipa
             xcrun altool \
