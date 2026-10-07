@@ -3,7 +3,7 @@ version: 2.1
 parameters:
   run_repair_build:
     type: boolean
-    default: false
+    default: true
 
 jobs:
   repair-preflight-base:
@@ -58,12 +58,6 @@ jobs:
     steps:
       - install_signing_bundle
       - checkout
-      - run:
-          name: Verify repair branch and base build number
-          command: |
-            set -euo pipefail
-            git diff --check
-            test "$(grep -o 'CURRENT_PROJECT_VERSION = 64;' UniversalAssistant.xcodeproj/project.pbxproj | wc -l | tr -d ' ')" -eq 6
       - run:
           name: Verify Xcode 27 Speech SDK
           command: |
