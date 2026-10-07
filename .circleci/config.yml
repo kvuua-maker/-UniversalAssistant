@@ -31,6 +31,15 @@ jobs:
             ! grep -Fq 'PROVISIONING_PROFILE_SPECIFIER = "Universal-Assistant' UniversalAssistant.xcodeproj/project.pbxproj
             grep -A1 '<key>signingStyle</key>' .circleci/ExportOptions.plist | grep -Fq '<string>automatic</string>'
             grep -Fq '<string>9V5XXDXF3N</string>' .circleci/ExportOptions.plist
+            test -n "${ASC_KEY_ID:-}" || { echo "Missing ASC_KEY_ID"; exit 1; }
+            test -n "${ASC_ISSUER_ID:-}" || { echo "Missing ASC_ISSUER_ID"; exit 1; }
+            test -n "${ASC_PRIVATE_KEY_PEM:-}" || { echo "Missing ASC_PRIVATE_KEY_PEM"; exit 1; }
+            key_file="$(mktemp)"
+            trap 'rm -f "$key_file"' EXIT
+            printf '%s\n' "$ASC_PRIVATE_KEY_PEM" | tr -d '\r' > "$key_file"
+            grep -Fq -- '-----BEGIN PRIVATE KEY-----' "$key_file" || { echo "Private key value has no BEGIN PRIVATE KEY line"; exit 1; }
+            grep -Fq -- '-----END PRIVATE KEY-----' "$key_file" || { echo "Private key value has no END PRIVATE KEY line"; exit 1; }
+            openssl pkey -in "$key_file" -noout 2>/dev/null || { echo "Private key value is not a valid p8 PEM file"; exit 1; }
   repair-preflight-voice:
     docker:
       - image: cimg/base:current
@@ -63,9 +72,9 @@ jobs:
             test -n "${ASC_PRIVATE_KEY_PEM:-}"
             key_dir="$HOME/.appstoreconnect/private_keys"
             mkdir -p "$key_dir"
-            printf '%s\n' "$ASC_PRIVATE_KEY_PEM" > "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
+            printf '%s\n' "$ASC_PRIVATE_KEY_PEM" | tr -d '\r' > "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
             chmod 600 "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
-            openssl pkey -in "$key_dir/AuthKey_${ASC_KEY_ID}.p8" -noout
+            openssl pkey -in "$key_dir/AuthKey_${ASC_KEY_ID}.p8" -noout 2>/dev/null
       - run:
           name: Verify Xcode 27 Speech SDK
           command: |
