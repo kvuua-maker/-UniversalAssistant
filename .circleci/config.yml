@@ -3,7 +3,7 @@ version: 2.1
 parameters:
   run_repair_build:
     type: boolean
-    default: false
+    default: true
 
 jobs:
   repair-preflight:
@@ -16,7 +16,7 @@ jobs:
           name: Check repair inputs before an iOS build
           command: |
             set -euo pipefail
-            test "$(git branch --show-current)" = "fix/canonical-repair-20261006"
+            test "$(git branch --show-current)" = "ci/build66-once-20261007"
             test "$(grep -c 'CURRENT_PROJECT_VERSION = 64;' UniversalAssistant.xcodeproj/project.pbxproj)" -eq 6
             grep -Fq 'PROVISIONING_PROFILE_SPECIFIER = "Universal-Assistant App Store 2026"' UniversalAssistant.xcodeproj/project.pbxproj
             grep -Fq 'PROVISIONING_PROFILE_SPECIFIER = "Universal-Assistant Share App Store 2026"' UniversalAssistant.xcodeproj/project.pbxproj
@@ -227,4 +227,4 @@ workflows:
       - ios27-dictation-repair-build66:
           filters:
             branches:
-              only: fix/canonical-repair-20261006
+              only: ci/build66-once-20261007
