@@ -312,6 +312,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
         selected = applyingCanonicalSpeechEntityEvidence(
             authoritativeHypotheses: [text] + alternatives,
             partialHypotheses: speechEvidence.partialTranscriptHistory,
+            primaryCommand: primary,
             to: selected
         )
         var entities = selected.entities
@@ -356,6 +357,7 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
     private func applyingCanonicalSpeechEntityEvidence(
         authoritativeHypotheses: [String],
         partialHypotheses: [String],
+        primaryCommand: StructuredCommand,
         to command: StructuredCommand
     ) -> StructuredCommand {
         let hypotheses = uniqueSpeechHypotheses(
@@ -503,10 +505,13 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 applicationChoices.contains($0.displayName) || applicationChoices.contains($0.value)
             }.map(\.value)
         )
-        if applicationIDs.count > 1, intent == .open || intent == .unknown {
-            // Selecting the first complete Apple alternative must not erase a
-            // competing app identity in another actual hypothesis. There is no
-            // per-alternative confidence here that could resolve this choice.
+        let primaryApplicationIsResolved =
+            primaryCommand.entities["app"] != nil && !primaryCommand.needsClarification
+        if applicationIDs.count > 1, !primaryApplicationIsResolved,
+           (intent == .open || intent == .unknown) {
+            // A resolved app in Apple's primary final transcript outranks
+            // contradictory lower-ranked alternatives. When the primary is
+            // unresolved, competing app hypotheses still require clarification.
             entities.removeValue(forKey: "app")
             entities["clarification_options"] = self.applicationCandidates
                 .filter { applicationIDs.contains($0.value) }.map(\.displayName).sorted().joined(separator: "|")
