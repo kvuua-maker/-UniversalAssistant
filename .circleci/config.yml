@@ -16,7 +16,7 @@ jobs:
           name: Check base build number
           command: |
             set -euo pipefail
-            test "$(grep -c 'CURRENT_PROJECT_VERSION = 64;' UniversalAssistant.xcodeproj/project.pbxproj)" -eq 6
+            test "$(grep -o 'CURRENT_PROJECT_VERSION = 64;' UniversalAssistant.xcodeproj/project.pbxproj | wc -l | tr -d ' ')" -eq 6
   repair-preflight-signing:
     docker:
       - image: cimg/base:current
@@ -63,7 +63,7 @@ jobs:
           command: |
             set -euo pipefail
             git diff --check
-            test "$(grep -c 'CURRENT_PROJECT_VERSION = 64;' UniversalAssistant.xcodeproj/project.pbxproj)" -eq 6
+            test "$(grep -o 'CURRENT_PROJECT_VERSION = 64;' UniversalAssistant.xcodeproj/project.pbxproj | wc -l | tr -d ' ')" -eq 6
       - run:
           name: Verify Xcode 27 Speech SDK
           command: |
