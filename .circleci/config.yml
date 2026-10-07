@@ -60,11 +60,12 @@ jobs:
             set -euo pipefail
             test -n "${ASC_KEY_ID:-}"
             test -n "${ASC_ISSUER_ID:-}"
-            test -n "${ASC_PRIVATE_KEY_B64:-}"
+            test -n "${ASC_PRIVATE_KEY_PEM:-}"
             key_dir="$HOME/.appstoreconnect/private_keys"
             mkdir -p "$key_dir"
-            printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 -D > "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
+            printf '%s\n' "$ASC_PRIVATE_KEY_PEM" > "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
             chmod 600 "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
+            openssl pkey -in "$key_dir/AuthKey_${ASC_KEY_ID}.p8" -noout
       - run:
           name: Verify Xcode 27 Speech SDK
           command: |
