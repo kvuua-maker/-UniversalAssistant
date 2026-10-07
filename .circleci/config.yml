@@ -24,13 +24,12 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Check signing profile names
+          name: Check automatic signing configuration
           command: |
             set -euo pipefail
-            grep -Fq 'PROVISIONING_PROFILE_SPECIFIER = "Universal-Assistant App Store 2026"' UniversalAssistant.xcodeproj/project.pbxproj
-            grep -Fq 'PROVISIONING_PROFILE_SPECIFIER = "Universal-Assistant Share App Store 2026"' UniversalAssistant.xcodeproj/project.pbxproj
-            grep -Fq '<string>Universal-Assistant App Store 2026</string>' .circleci/ExportOptions.plist
-            grep -Fq '<string>Universal-Assistant Share App Store 2026</string>' .circleci/ExportOptions.plist
+            test "$(grep -o 'CODE_SIGN_STYLE = Automatic;' UniversalAssistant.xcodeproj/project.pbxproj | wc -l | tr -d ' ')" -ge 2
+            ! grep -Fq 'PROVISIONING_PROFILE_SPECIFIER = "Universal-Assistant' UniversalAssistant.xcodeproj/project.pbxproj
+            grep -A1 '<key>signingStyle</key>' .circleci/ExportOptions.plist | grep -Fq '<string>automatic</string>'
             grep -Fq '<string>9V5XXDXF3N</string>' .circleci/ExportOptions.plist
   repair-preflight-voice:
     docker:
@@ -47,8 +46,6 @@ jobs:
   ios27-dictation-repair-build66:
     macos:
       xcode: 27.0.0
-      code_signing:
-        - universalassistant-build60
     resource_class: m4pro.medium
     environment:
       BUILD_NUMBER: "66"
@@ -56,38 +53,18 @@ jobs:
       EXPORT_PATH: /tmp/UniversalAssistant-Build66-Export
       APP_STORE_ID: "6808699811"
     steps:
-      - install_signing_bundle
       - checkout
       - run:
-          name: Verify installed App Store signing profiles
+          name: Prepare App Store Connect signing key
           command: |
             set -euo pipefail
-            profile_dir="$HOME/Library/MobileDevice/Provisioning Profiles"
-            test -d "$profile_dir" || { echo "Signing bundle installed no provisioning profiles"; exit 1; }
-            app_found=0
-            share_found=0
-            for profile in "$profile_dir"/*.mobileprovision; do
-              test -f "$profile" || continue
-              decoded="$(mktemp)"
-              security cms -D -i "$profile" > "$decoded"
-              name="$(/usr/libexec/PlistBuddy -c 'Print :Name' "$decoded")"
-              team="$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$decoded")"
-              identifier="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$decoded")"
-              rm -f "$decoded"
-              if [ "$name" = "Universal-Assistant App Store 2026" ] &&
-                 [ "$team" = "9V5XXDXF3N" ] &&
-                 [ "$identifier" = "9V5XXDXF3N.com.universalassistant.app" ]; then
-                app_found=1
-              fi
-              if [ "$name" = "Universal-Assistant Share App Store 2026" ] &&
-                 [ "$team" = "9V5XXDXF3N" ] &&
-                 [ "$identifier" = "9V5XXDXF3N.com.universalassistant.app.share" ]; then
-                share_found=1
-              fi
-            done
-            test "$app_found" -eq 1 || { echo "Missing App Store profile: Universal-Assistant App Store 2026"; exit 1; }
-            test "$share_found" -eq 1 || { echo "Missing Share profile: Universal-Assistant Share App Store 2026"; exit 1; }
-            security find-identity -v -p codesigning | grep -Fq 'Apple Distribution:'
+            test -n "${ASC_KEY_ID:-}"
+            test -n "${ASC_ISSUER_ID:-}"
+            test -n "${ASC_PRIVATE_KEY_B64:-}"
+            key_dir="$HOME/.appstoreconnect/private_keys"
+            mkdir -p "$key_dir"
+            printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 -D > "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
+            chmod 600 "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
       - run:
           name: Verify Xcode 27 Speech SDK
           command: |
@@ -114,6 +91,24 @@ jobs:
             grep -q 'CaptureInputSequenceProvider.providerWithSession' UniversalAssistant/Voice/IOS27DictationVoiceBackend.swift
             test -z "$(grep -nE 'SFSpeechRecognizer|GroqCloudVoiceTranscriber|VoiceRecognitionCandidateBuilder|VoiceTranscriptStabilizer|VoiceAuthoritativeTranscriptSelector' UniversalAssistant/Voice/IOS27DictationVoiceBackend.swift || true)"
             /usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' UniversalAssistant/Info.plist
+      - run:
+          name: Archive signed Build 66
+          no_output_timeout: 30m
+          command: |
+            set -euo pipefail
+            xcodebuild \
+              -project UniversalAssistant.xcodeproj \
+              -allowProvisioningUpdates \
+              -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+              -authenticationKeyID "$ASC_KEY_ID" \
+              -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+              -scheme UniversalAssistant \
+              -configuration Production \
+              -destination generic/platform=iOS \
+              -archivePath "$ARCHIVE_PATH" \
+              CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+              'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) IOS27_SPEECH_PROBE' \
+              archive | tee /tmp/UniversalAssistantArchive66.log
       - run:
           name: Run full test suite
           no_output_timeout: 30m
@@ -180,20 +175,6 @@ jobs:
           path: /tmp/UniversalAssistantTests66.xcresult
           destination: UniversalAssistantTests66.xcresult
       - run:
-          name: Archive signed Build 66
-          no_output_timeout: 30m
-          command: |
-            set -euo pipefail
-            xcodebuild \
-              -project UniversalAssistant.xcodeproj \
-              -scheme UniversalAssistant \
-              -configuration Production \
-              -destination generic/platform=iOS \
-              -archivePath "$ARCHIVE_PATH" \
-              CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-              'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) IOS27_SPEECH_PROBE' \
-              archive | tee /tmp/UniversalAssistantArchive66.log
-      - run:
           name: Verify archive and export IPA
           command: |
             set -euo pipefail
@@ -215,7 +196,11 @@ jobs:
             xcodebuild -exportArchive \
               -archivePath "$ARCHIVE_PATH" \
               -exportPath "$EXPORT_PATH" \
-              -exportOptionsPlist .circleci/ExportOptions.plist | tee /tmp/UniversalAssistantExport66.log
+              -exportOptionsPlist .circleci/ExportOptions.plist \
+              -allowProvisioningUpdates \
+              -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+              -authenticationKeyID "$ASC_KEY_ID" \
+              -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tee /tmp/UniversalAssistantExport66.log
             ipa="$(find "$EXPORT_PATH" -maxdepth 1 -name '*.ipa' -print -quit)"
             test -n "$ipa"
             shasum -a 256 "$ipa" | tee /tmp/UniversalAssistantBuild66.sha256
@@ -226,13 +211,6 @@ jobs:
           no_output_timeout: 60m
           command: |
             set -euo pipefail
-            test -n "${ASC_KEY_ID:-}"
-            test -n "${ASC_ISSUER_ID:-}"
-            test -n "${ASC_PRIVATE_KEY_B64:-}"
-            key_dir="$HOME/.appstoreconnect/private_keys"
-            mkdir -p "$key_dir"
-            printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 -D > "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
-            chmod 600 "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
             ipa=/tmp/UniversalAssistantBuild66Artifact/UniversalAssistant-Build66.ipa
             xcrun altool \
               --upload-package "$ipa" \
