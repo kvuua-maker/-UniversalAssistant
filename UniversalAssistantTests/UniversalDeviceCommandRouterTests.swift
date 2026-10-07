@@ -110,7 +110,8 @@ struct UniversalDeviceCommandRouterTests {
 
     @Test(arguments: [
         ("Відкрий", ["Відкрий Telegram", "Відкрий Viber"]),
-        ("Відкрий", ["Відкрий Viber", "Відкрий Telegram"])
+        ("Відкрий", ["Відкрий Viber", "Відкрий Telegram"]),
+        ("Відкрий Telegram або Viber", ["Відкрий Telegram"])
     ])
     func unresolvedSpeechApplicationEvidenceRequiresChoice(primary: String, alternatives: [String]) {
         // Controlled hypotheses exercise the evidence contract; these are not
