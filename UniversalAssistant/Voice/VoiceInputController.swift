@@ -1467,7 +1467,7 @@ struct VoiceRecognitionRequestConfiguration: Sendable {
         return preferred.map { [$0] } ?? []
     }
 
-    private static func speechTransliterationVariants(for value: String) -> [String] {
+    static func speechTransliterationVariants(for value: String) -> [String] {
         guard value.unicodeScalars.contains(where: { $0.isASCII && CharacterSet.letters.contains($0) }),
               let transformed = value.applyingTransform(StringTransform("Latin-Cyrillic"), reverse: false) else { return [] }
         let trimmed = transformed.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1702,7 +1702,7 @@ final class VoiceInputController: VoiceInputControlling {
             }
         }
         let canonicalBrands = CanonicalCatalogEntityRegistry.brandNames.flatMap { name in
-            [name] + speechTransliterationVariants(for: name)
+            [name] + VoiceRecognitionRequestConfiguration.speechTransliterationVariants(for: name)
         }
         return VoiceRecognitionRequestConfiguration.boundedVocabulary(
             additional: Array(additional.prefix(20)) + priorityCommunicationApps +
