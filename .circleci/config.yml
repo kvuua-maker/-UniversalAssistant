@@ -3,7 +3,7 @@ version: 2.1
 parameters:
   run_repair_build:
     type: boolean
-    default: false
+    default: true
 
 jobs:
   repair-preflight:
