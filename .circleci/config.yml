@@ -6,6 +6,25 @@ parameters:
     default: false
 
 jobs:
+  repair-preflight:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Check repair inputs before an iOS build
+          command: |
+            set -euo pipefail
+            test "$(git branch --show-current)" = "fix/canonical-repair-20261006"
+            test "$(grep -c 'CURRENT_PROJECT_VERSION = 64;' UniversalAssistant.xcodeproj/project.pbxproj)" -eq 6
+            grep -Fq 'PROVISIONING_PROFILE_SPECIFIER = "Universal-Assistant App Store 2026"' UniversalAssistant.xcodeproj/project.pbxproj
+            grep -Fq 'PROVISIONING_PROFILE_SPECIFIER = "Universal-Assistant Share App Store 2026"' UniversalAssistant.xcodeproj/project.pbxproj
+            grep -Fq '<string>Universal-Assistant App Store 2026</string>' .circleci/ExportOptions.plist
+            grep -Fq '<string>Universal-Assistant Share App Store 2026</string>' .circleci/ExportOptions.plist
+            grep -Fq '<string>9V5XXDXF3N</string>' .circleci/ExportOptions.plist
+            test -f UniversalAssistant/Voice/IOS27DictationVoiceBackend.swift
+            grep -Fq 'startIOS27Dictation' UniversalAssistant/Voice/VoiceInputController.swift
   ios27-dictation-repair-build66:
     macos:
       xcode: 27.0.0
@@ -196,6 +215,12 @@ jobs:
           destination: UniversalAssistantBuildStatus66.json
 
 workflows:
+  automatic-repair-preflight:
+    jobs:
+      - repair-preflight:
+          filters:
+            branches:
+              only: fix/canonical-repair-20261006
   build-upload-ios27-dictation-repair:
     when: << pipeline.parameters.run_repair_build >>
     jobs:
