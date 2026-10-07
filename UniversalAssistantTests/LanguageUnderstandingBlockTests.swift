@@ -342,6 +342,19 @@ struct LanguageUnderstandingBlockTests {
         #expect(command.intent != .deviceAction)
     }
 
+    @Test func resolvedPrimaryAppOutranksConflictingVoiceAlternative() {
+        let evidence = VoiceRecognitionEvidence(
+            primaryTranscript: "Відкрий Viber",
+            alternativeTranscripts: ["Відкрий Telegram"],
+            segmentAlternativeCount: 1,
+            averageSegmentConfidence: 0.35
+        )
+        let command = LanguageUnderstandingBlock().parse("Відкрий Viber", speechEvidence: evidence)
+        #expect(command.intent == .open)
+        #expect(command.entities["app"] == "viber")
+        #expect(!command.needsClarification)
+    }
+
     @Test func noisyServiceResolvesOnlyAfterCommunicationRoleAndExplicitChannelScope() {
         let block = LanguageUnderstandingBlock(serviceCandidates: [
             .init(value: "matrix", displayName: "Matrix", aliases: ["Matrix"]),
