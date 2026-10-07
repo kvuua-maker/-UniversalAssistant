@@ -1692,8 +1692,21 @@ final class VoiceInputController: VoiceInputControlling {
     static func ios27ContextualVocabulary(additional: [String]) -> [String] {
         // Cached user vocabulary is already permission-scoped by its provider. Never await Contacts
         // or cloud work on the normal Dictation start path; prewarming refreshes the next session.
-        VoiceRecognitionRequestConfiguration.boundedVocabulary(
-            additional: Array(additional.prefix(40)) + ios27ApplicationContextualVocabulary,
+        let priorityCommunicationApps = ios27ApplicationContextualVocabulary.filter { value in
+            let normalized = value.folding(
+                options: [.caseInsensitive, .diacriticInsensitive],
+                locale: Locale(identifier: "uk_UA")
+            )
+            return ["telegram", "телеграм", "viber", "вайбер", "вібер"].contains {
+                normalized.contains($0)
+            }
+        }
+        let canonicalBrands = CanonicalCatalogEntityRegistry.brandNames.flatMap { name in
+            [name] + speechTransliterationVariants(for: name)
+        }
+        return VoiceRecognitionRequestConfiguration.boundedVocabulary(
+            additional: Array(additional.prefix(20)) + priorityCommunicationApps +
+                canonicalBrands + ios27ApplicationContextualVocabulary,
             includeCanonical: false
         )
     }
