@@ -505,13 +505,10 @@ struct LanguageUnderstandingBlock: EvidenceAwareCommandParsing, Sendable {
                 applicationChoices.contains($0.displayName) || applicationChoices.contains($0.value)
             }.map(\.value)
         )
-        let primaryApplicationIsResolved =
-            primaryCommand.entities["app"] != nil && !primaryCommand.needsClarification
-        if applicationIDs.count > 1, !primaryApplicationIsResolved,
+        if applicationIDs.count > 1,
            (intent == .open || intent == .unknown) {
-            // A resolved app in Apple's primary final transcript outranks
-            // contradictory lower-ranked alternatives. When the primary is
-            // unresolved, competing app hypotheses still require clarification.
+            // Conflicting application names across Apple's final and alternative
+            // hypotheses must be clarified before opening either app.
             entities.removeValue(forKey: "app")
             entities["clarification_options"] = self.applicationCandidates
                 .filter { applicationIDs.contains($0.value) }.map(\.displayName).sorted().joined(separator: "|")
