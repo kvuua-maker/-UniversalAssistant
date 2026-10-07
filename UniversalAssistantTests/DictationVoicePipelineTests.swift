@@ -118,6 +118,7 @@ struct DictationVoicePipelineTests {
         #expect(values.filter { $0 == "Моя фраза" }.count == 1)
         #expect(values.contains { $0.lowercased() == "telegram" })
         #expect(values.contains { $0.lowercased() == "viber" })
+        #expect(values.contains { $0.caseInsensitiveCompare("Baldinini") == .orderedSame })
     }
 
     @Test func speechEvidenceContainsOnlyRealPublicAlternativesAndConfidence() {
