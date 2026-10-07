@@ -36,10 +36,15 @@ jobs:
             test -n "${ASC_PRIVATE_KEY_PEM:-}" || { echo "Missing ASC_PRIVATE_KEY_PEM"; exit 1; }
             key_file="$(mktemp)"
             trap 'rm -f "$key_file"' EXIT
-            printf '%s\n' "$ASC_PRIVATE_KEY_PEM" | tr -d '\r' > "$key_file"
-            grep -Fq -- '-----BEGIN PRIVATE KEY-----' "$key_file" || { echo "Private key value has no BEGIN PRIVATE KEY line"; exit 1; }
-            grep -Fq -- '-----END PRIVATE KEY-----' "$key_file" || { echo "Private key value has no END PRIVATE KEY line"; exit 1; }
-            openssl pkey -in "$key_file" -noout 2>/dev/null || { echo "Private key value is not a valid p8 PEM file"; exit 1; }
+            case "$ASC_PRIVATE_KEY_PEM" in
+              *'-----BEGIN PRIVATE KEY-----'*'-----END PRIVATE KEY-----'*) ;;
+              *) echo "Private key value has no complete PRIVATE KEY markers"; exit 1 ;;
+            esac
+            key_body="$(printf '%s' "$ASC_PRIVATE_KEY_PEM" | sed -e 's/-----BEGIN PRIVATE KEY-----//g' -e 's/-----END PRIVATE KEY-----//g' -e 's/\\n//g' | tr -d '[:space:]')"
+            test -n "$key_body" || { echo "Private key body is empty"; exit 1; }
+            case "$key_body" in *[!A-Za-z0-9+/=]*) echo "Private key body has invalid characters"; exit 1 ;; esac
+            { printf '%s\n' '-----BEGIN PRIVATE KEY-----'; printf '%s' "$key_body" | fold -w 64; printf '%s\n' '-----END PRIVATE KEY-----'; } > "$key_file"
+            openssl pkey -in "$key_file" -noout 2>/dev/null || { echo "Private key value is not a valid p8 PEM file after normalization"; exit 1; }
   repair-preflight-voice:
     docker:
       - image: cimg/base:current
@@ -72,7 +77,8 @@ jobs:
             test -n "${ASC_PRIVATE_KEY_PEM:-}"
             key_dir="$HOME/.appstoreconnect/private_keys"
             mkdir -p "$key_dir"
-            printf '%s\n' "$ASC_PRIVATE_KEY_PEM" | tr -d '\r' > "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
+            key_body="$(printf '%s' "$ASC_PRIVATE_KEY_PEM" | sed -e 's/-----BEGIN PRIVATE KEY-----//g' -e 's/-----END PRIVATE KEY-----//g' -e 's/\\n//g' | tr -d '[:space:]')"
+            { printf '%s\n' '-----BEGIN PRIVATE KEY-----'; printf '%s' "$key_body" | fold -w 64; printf '%s\n' '-----END PRIVATE KEY-----'; } > "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
             chmod 600 "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
             openssl pkey -in "$key_dir/AuthKey_${ASC_KEY_ID}.p8" -noout 2>/dev/null
       - run:
