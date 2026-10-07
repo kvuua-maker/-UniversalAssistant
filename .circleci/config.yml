@@ -33,18 +33,24 @@ jobs:
             grep -Fq '<string>9V5XXDXF3N</string>' .circleci/ExportOptions.plist
             test -n "${ASC_KEY_ID:-}" || { echo "Missing ASC_KEY_ID"; exit 1; }
             test -n "${ASC_ISSUER_ID:-}" || { echo "Missing ASC_ISSUER_ID"; exit 1; }
-            test -n "${ASC_PRIVATE_KEY_PEM:-}" || { echo "Missing ASC_PRIVATE_KEY_PEM"; exit 1; }
+            test -n "${ASC_PRIVATE_KEY_B64:-}${ASC_PRIVATE_KEY_PEM:-}" || { echo "Missing ASC_PRIVATE_KEY_B64 or ASC_PRIVATE_KEY_PEM"; exit 1; }
             key_file="$(mktemp)"
             trap 'rm -f "$key_file"' EXIT
-            case "$ASC_PRIVATE_KEY_PEM" in
-              *'-----BEGIN PRIVATE KEY-----'*'-----END PRIVATE KEY-----'*) ;;
-              *) echo "Private key value has no complete PRIVATE KEY markers"; exit 1 ;;
-            esac
-            key_body="$(printf '%s' "$ASC_PRIVATE_KEY_PEM" | sed -e 's/-----BEGIN PRIVATE KEY-----//g' -e 's/-----END PRIVATE KEY-----//g' -e 's/\\n//g' | tr -d '[:space:]')"
-            test -n "$key_body" || { echo "Private key body is empty"; exit 1; }
-            case "$key_body" in *[!A-Za-z0-9+/=]*) echo "Private key body has invalid characters"; exit 1 ;; esac
-            { printf '%s\n' '-----BEGIN PRIVATE KEY-----'; printf '%s' "$key_body" | fold -w 64; printf '%s\n' '-----END PRIVATE KEY-----'; } > "$key_file"
-            openssl pkey -in "$key_file" -noout 2>/dev/null || { echo "Private key value is not a valid p8 PEM file after normalization"; exit 1; }
+            if test -n "${ASC_PRIVATE_KEY_B64:-}"; then
+              printf '%s' "$ASC_PRIVATE_KEY_B64" | openssl base64 -d -A > "$key_file" || { echo "Invalid base64 signing key"; exit 1; }
+            else
+              case "$ASC_PRIVATE_KEY_PEM" in
+                *'-----BEGIN PRIVATE KEY-----'*'-----END PRIVATE KEY-----'*) ;;
+                *) echo "Private key value has no complete PRIVATE KEY markers"; exit 1 ;;
+              esac
+              key_body="${ASC_PRIVATE_KEY_PEM#*-----BEGIN PRIVATE KEY-----}"
+              key_body="${key_body%%-----END PRIVATE KEY-----*}"
+              key_body="$(printf '%s' "$key_body" | sed 's/\\n//g' | tr -d '[:space:]')"
+              test -n "$key_body" || { echo "Private key body is empty"; exit 1; }
+              case "$key_body" in *[!A-Za-z0-9+/=]*) echo "Private key body has invalid characters"; exit 1 ;; esac
+              { printf '%s\n' '-----BEGIN PRIVATE KEY-----'; printf '%s' "$key_body" | fold -w 64; printf '%s\n' '-----END PRIVATE KEY-----'; } > "$key_file"
+            fi
+            openssl pkey -in "$key_file" -noout 2>/dev/null || { echo "Private key value is not a valid p8 PEM file"; exit 1; }
   repair-preflight-voice:
     docker:
       - image: cimg/base:current
@@ -74,13 +80,20 @@ jobs:
             set -euo pipefail
             test -n "${ASC_KEY_ID:-}"
             test -n "${ASC_ISSUER_ID:-}"
-            test -n "${ASC_PRIVATE_KEY_PEM:-}"
+            test -n "${ASC_PRIVATE_KEY_B64:-}${ASC_PRIVATE_KEY_PEM:-}"
             key_dir="$HOME/.appstoreconnect/private_keys"
             mkdir -p "$key_dir"
-            key_body="$(printf '%s' "$ASC_PRIVATE_KEY_PEM" | sed -e 's/-----BEGIN PRIVATE KEY-----//g' -e 's/-----END PRIVATE KEY-----//g' -e 's/\\n//g' | tr -d '[:space:]')"
-            { printf '%s\n' '-----BEGIN PRIVATE KEY-----'; printf '%s' "$key_body" | fold -w 64; printf '%s\n' '-----END PRIVATE KEY-----'; } > "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
-            chmod 600 "$key_dir/AuthKey_${ASC_KEY_ID}.p8"
-            openssl pkey -in "$key_dir/AuthKey_${ASC_KEY_ID}.p8" -noout 2>/dev/null
+            key_file="$key_dir/AuthKey_${ASC_KEY_ID}.p8"
+            if test -n "${ASC_PRIVATE_KEY_B64:-}"; then
+              printf '%s' "$ASC_PRIVATE_KEY_B64" | openssl base64 -d -A > "$key_file"
+            else
+              key_body="${ASC_PRIVATE_KEY_PEM#*-----BEGIN PRIVATE KEY-----}"
+              key_body="${key_body%%-----END PRIVATE KEY-----*}"
+              key_body="$(printf '%s' "$key_body" | sed 's/\\n//g' | tr -d '[:space:]')"
+              { printf '%s\n' '-----BEGIN PRIVATE KEY-----'; printf '%s' "$key_body" | fold -w 64; printf '%s\n' '-----END PRIVATE KEY-----'; } > "$key_file"
+            fi
+            chmod 600 "$key_file"
+            openssl pkey -in "$key_file" -noout 2>/dev/null
       - run:
           name: Verify Xcode 27 Speech SDK
           command: |
