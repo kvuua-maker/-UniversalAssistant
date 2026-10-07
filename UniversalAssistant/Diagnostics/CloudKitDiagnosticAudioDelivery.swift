@@ -266,6 +266,9 @@ actor CloudKitDiagnosticAudioDelivery {
         database: any CloudKitDiagnosticAudioDatabase = SystemCloudKitDiagnosticAudioDatabase(),
         localStore: PhysicalDiagnosticLocalStore = .shared,
         enabled: @escaping @Sendable () async -> Bool = {
+            // Keep the optional CloudKit audio sidecar off on iOS 27: its
+            // launch-time query can terminate the app inside CloudKit.framework.
+            guard ProcessInfo.processInfo.operatingSystemVersion.majorVersion < 27 else { return false }
             let environment = ProcessInfo.processInfo.environment
             return environment["XCTestConfigurationFilePath"] == nil &&
                 environment["XCODE_RUNNING_FOR_PREVIEWS"] != "1"
