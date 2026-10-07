@@ -59,6 +59,36 @@ jobs:
       - install_signing_bundle
       - checkout
       - run:
+          name: Verify installed App Store signing profiles
+          command: |
+            set -euo pipefail
+            profile_dir="$HOME/Library/MobileDevice/Provisioning Profiles"
+            test -d "$profile_dir" || { echo "Signing bundle installed no provisioning profiles"; exit 1; }
+            app_found=0
+            share_found=0
+            for profile in "$profile_dir"/*.mobileprovision; do
+              test -f "$profile" || continue
+              decoded="$(mktemp)"
+              security cms -D -i "$profile" > "$decoded"
+              name="$(/usr/libexec/PlistBuddy -c 'Print :Name' "$decoded")"
+              team="$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$decoded")"
+              identifier="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$decoded")"
+              rm -f "$decoded"
+              if [ "$name" = "Universal-Assistant App Store 2026" ] &&
+                 [ "$team" = "9V5XXDXF3N" ] &&
+                 [ "$identifier" = "9V5XXDXF3N.com.universalassistant.app" ]; then
+                app_found=1
+              fi
+              if [ "$name" = "Universal-Assistant Share App Store 2026" ] &&
+                 [ "$team" = "9V5XXDXF3N" ] &&
+                 [ "$identifier" = "9V5XXDXF3N.com.universalassistant.app.share" ]; then
+                share_found=1
+              fi
+            done
+            test "$app_found" -eq 1 || { echo "Missing App Store profile: Universal-Assistant App Store 2026"; exit 1; }
+            test "$share_found" -eq 1 || { echo "Missing Share profile: Universal-Assistant Share App Store 2026"; exit 1; }
+            security find-identity -v -p codesigning | grep -Fq 'Apple Distribution:'
+      - run:
           name: Verify Xcode 27 Speech SDK
           command: |
             set -euo pipefail
