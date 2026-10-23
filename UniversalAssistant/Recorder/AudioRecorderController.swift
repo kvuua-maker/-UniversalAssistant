@@ -25,7 +25,7 @@ final class AppleAudioRecordingBackend: NSObject, AudioRecordingBackend, AVAudio
 
     func start(at url: URL) throws -> Bool {
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothHFP])
+        try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
         try session.setActive(true, options: .notifyOthersOnDeactivation)
         recorder = try AVAudioRecorder(url: url, settings: [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),

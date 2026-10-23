@@ -371,8 +371,8 @@ struct HEOSForwardCompatibleParser: Sendable {
               let command = root["command"] as? String,
               let heos = root["heos"] as? [String: Any],
               let result = heos["result"] as? String else { throw HEOSParserError.malformed }
-        let message = Self.stringMap(heos["message"])
-        let payload = (root["payload"] as? [[String: Any]] ?? []).map(Self.stringMap)
+        let message: [String: String] = Self.stringMap(heos["message"])
+        let payload: [[String: String]] = (root["payload"] as? [[String: Any]] ?? []).map { Self.stringMap($0) }
         return HEOSResponse(command: command, succeeded: result == "success", message: message, payload: payload)
     }
     private static func stringMap(_ value: Any?) -> [String: String] {
