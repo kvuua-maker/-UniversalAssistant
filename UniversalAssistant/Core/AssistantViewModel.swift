@@ -140,6 +140,9 @@ final class AssistantViewModel {
         systemHandoffOpen: (@MainActor (URL) -> Void)? = nil,
         systemHandoffOpenResult: (@MainActor (URL) async -> Bool)? = nil
     ) {
+        // Resolve optional collaborators once, so the rest of the body (and the
+        // orchestrator below) sees concrete values.
+        let recorder = recorder ?? AudioRecorderController()
         self.commandEngine = commandEngine
         self.interactionEngine = interactionEngine
         self.semanticCommandResolver = semanticCommandResolver
@@ -159,8 +162,7 @@ final class AssistantViewModel {
             web: webSearchHandoff
         )
         self.ocrPipeline = OCRProductionPipeline(processor: ocrProcessor ?? OnDeviceDocumentOCR())
-        // Inline default argument crashed Swift 6.1 SILGen for this init.
-        self.recorder = recorder ?? AudioRecorderController()
+        self.recorder = recorder
         self.feedbackStore = feedbackStore
         self.compactResultDuration = compactResultDuration
         self.presentationPreferenceStore = presentationPreferenceStore
