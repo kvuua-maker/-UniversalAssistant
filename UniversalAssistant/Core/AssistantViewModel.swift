@@ -66,6 +66,7 @@ final class AssistantViewModel {
     private(set) var personalTasks: [PersonalTaskItem] = []
     private(set) var favorites: [FavoriteReference] = []
     var presentationPreferences = PresentationPreferences()
+    private(set) var languageConfiguration = LanguageConfiguration()
     let recorder: AudioRecorderController
     private let commandEngine: any CommandParsing
     private let interactionEngine: any InteractionDeciding
@@ -82,6 +83,9 @@ final class AssistantViewModel {
     private let presentationPreferenceStore: PresentationPreferenceStore
     private let systemHandoffOpenResult: @MainActor (URL) async -> Bool
     private let quickLaunchStore: QuickLaunchRequestStore
+    private let personalTaskStore = PersonalTaskStore()
+    private let favoriteStore = FavoriteStore()
+    private let languageConfigurationStore = LanguageConfigurationStore()
     private let notificationEnable: @MainActor () async -> ProactiveNotificationEnableResult
     private var resultDismissTask: Task<Void, Never>?
     private var weatherExecutionInFlight = false
@@ -184,6 +188,104 @@ final class AssistantViewModel {
         Task { [weak self] in
             guard let self else { return }
             if let value = try? await presentationPreferenceStore.load() { self.presentationPreferences = value }
+        }
+        Task { [weak self] in
+            guard let self else { return }
+            await self.loadPersonalHub()
+        }
+        Task { [weak self] in
+            guard let self else { return }
+            if let value = try? await self.languageConfigurationStore.load() {
+                self.languageConfiguration = value
+                AppText.languageIdentifier = value.uiLanguage.rawValue
+            }
+        }
+    }
+
+    /// Applies the interface language chosen in Settings. Persisted separately
+    /// from presentation preferences because it also drives command parsing.
+    func setUILanguage(_ language: UILanguage) {
+        languageConfiguration.uiLanguage = language
+        AppText.languageIdentifier = language.rawValue
+        let snapshot = languageConfiguration
+        Task { [weak self] in
+            guard let self else { return }
+            try? await self.languageConfigurationStore.save(snapshot)
+        }
+    }
+
+    // MARK: - Personal hub (My Tasks / Favorites)
+
+    /// Restores the two first-class personal surfaces from protected local
+    /// storage. Without this both tabs rendered their empty state forever.
+    func loadPersonalHub() async {
+        try? await personalTaskStore.restore()
+        let storedTasks = await personalTaskStore.snapshot()
+        personalTasks = PersonalTaskHub().aggregate(assistantOwned: storedTasks, systemReferences: [])
+        try? await favoriteStore.restore()
+        favorites = await favoriteStore.snapshot()
+        await synchronizeFavorites()
+    }
+
+    /// Replicates favorites through the local-primary sync boundary. CloudKit is
+    /// used only where the entitlement exists; otherwise the same contract is
+    /// served by protected local storage, so an outage never blocks the UI.
+    private func synchronizeFavorites() async {
+        let deviceID = UIDevice.current.identifierForVendor?.uuidString ?? "unidentified-device"
+        let hub = PersonalHubSync()
+        let coordinator = LocalPrimarySyncCoordinator(transport: SyncTransportFactory.make())
+        let outcome = await coordinator.reconcile(local: hub.records(from: favorites, deviceID: deviceID))
+        guard case let .synchronized(result) = outcome else { return }
+        let merged = hub.favorites(from: result.records)
+        if !merged.isEmpty { favorites = merged }
+    }
+
+    /// Records an assistant-owned consequential item (booking, created event or
+    /// reminder) so it appears in My Tasks. System-owned records stay in their
+    /// own frameworks and are never duplicated here.
+    func recordPersonalTask(_ item: PersonalTaskItem) {
+        Task { [weak self] in
+            guard let self else { return }
+            try? await personalTaskStore.upsert(item)
+            let stored = await personalTaskStore.snapshot()
+            self.personalTasks = PersonalTaskHub()
+                .aggregate(assistantOwned: stored, systemReferences: [])
+        }
+    }
+
+    func toggleFavorite(place: Place) {
+        toggleFavorite(FavoriteReference(
+            id: "place:\(place.id)", kind: .place,
+            providerID: place.providerID ?? "apple-maps",
+            externalReference: place.id,
+            displayTitle: place.name,
+            displaySubtitle: place.address,
+            freshness: .unknown))
+    }
+
+    func toggleFavorite(offer presentation: CommerceOfferPresentation) {
+        let offer = presentation.offer
+        toggleFavorite(FavoriteReference(
+            id: "product:\(offer.id)", kind: .product,
+            providerID: offer.providerID,
+            externalReference: offer.providerOfferID,
+            displayTitle: presentation.title,
+            displaySubtitle: offer.seller.name,
+            freshness: .unknown))
+    }
+
+    func isFavorite(id: String) -> Bool { favorites.contains { $0.id == id } }
+
+    private func toggleFavorite(_ reference: FavoriteReference) {
+        let removing = favorites.contains { $0.id == reference.id }
+        Task { [weak self] in
+            guard let self else { return }
+            if removing {
+                try? await favoriteStore.remove(id: reference.id)
+            } else {
+                try? await favoriteStore.save(reference)
+            }
+            self.favorites = await favoriteStore.snapshot()
         }
     }
 
@@ -838,6 +940,17 @@ final class AssistantViewModel {
             resultState = .eventKit(result)
             statusText = AppText.value("ready")
             LocalVoiceDiagnosticReport.shared.record("visible_result", "kind=eventkit")
+            if result.operation == .created {
+                recordPersonalTask(PersonalTaskItem(
+                    id: "assistant:\(command.intent.rawValue):\(result.title)",
+                    kind: result.kind == .calendar ? .appointment : .unfinished,
+                    source: .assistant,
+                    externalReference: result.title,
+                    title: result.title,
+                    status: .confirmed,
+                    relevantAt: nil,
+                    verifiedAt: Date()))
+            }
         case let .exactWeb(result):
             resultState = .webHandoff(result)
             statusText = AppText.value("ready")

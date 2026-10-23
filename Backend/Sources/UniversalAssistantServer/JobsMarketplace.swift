@@ -540,6 +540,34 @@ actor JobsMarketplaceService {
   }
   func vacancy(_ id: UUID) -> JobVacancy? { state.vacancies.first { $0.id == id } }
   func application(_ id: UUID) -> JobApplication? { state.applications.first { $0.id == id } }
+
+  /// Publicly visible vacancies: moderated and not expired. Paid-employer
+  /// inventory is exposed first; commercial partners only with an evidence id.
+  func visibleVacancies(now: Date = .now) -> [JobVacancy] {
+    state.vacancies.filter { vacancy in
+      guard vacancy.status == .active else { return false }
+      guard vacancy.expiresAt.map({ $0 > now }) ?? true else { return false }
+      if vacancy.sourceTier == .commercialPartner { return vacancy.commercialEvidenceID != nil }
+      return vacancy.sourceTier == .directPaidEmployer
+    }
+  }
+
+  /// Deterministic search over locally held vacancies. OUR JOBS FIRST, then
+  /// evidenced commercial partners; no invented external inventory.
+  func search(_ request: JobSearchRequest, now: Date = .now) -> [JobMatch] {
+    let visible = visibleVacancies(now: now)
+    let matches = JobsSourceSelector().matches(request, in: visible, now: now)
+    let limit = max(1, min(request.limit, 50))
+    return Array(
+      matches.sorted {
+        $0.score == $1.score ? $0.vacancy.updatedAt > $1.vacancy.updatedAt : $0.score > $1.score
+      }.prefix(limit))
+  }
+
+  func counts(now: Date = .now) -> (visible: Int, total: Int) {
+    (visibleVacancies(now: now).count, state.vacancies.count)
+  }
+
   private func idx(_ id: UUID) throws -> Int {
     guard let i = state.vacancies.firstIndex(where: { $0.id == id }) else {
       throw JobsError.invalid

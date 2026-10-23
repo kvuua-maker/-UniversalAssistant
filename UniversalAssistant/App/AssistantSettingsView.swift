@@ -21,7 +21,21 @@ struct AssistantSettingsView: View {
                 LabeledContent("Base Mode", value: "On")
                 LabeledContent("AI-відновлення", value: "Опційне, автоматичне")
             }
-            Section("Language") { Text(Locale.current.localizedString(forIdentifier: Locale.current.identifier) ?? Locale.current.identifier) }
+            Section {
+                Picker(selection: Binding(
+                    get: { model.languageConfiguration.uiLanguage },
+                    set: { model.setUILanguage($0) }
+                )) {
+                    ForEach(UILanguage.allCases, id: \.self) { language in
+                        Text(languageDisplayName(language)).tag(language)
+                    }
+                } label: {
+                    Text(AppText.value("ui_language"))
+                }
+                .accessibilityIdentifier("settings.ui-language")
+            } header: {
+                Text(AppText.value("language"))
+            }
             Section("Appearance") {
                 Button("Theme: \(preferences.appearance.rawValue)") { preferences.appearance = preferences.appearance == .automatic ? .dark : preferences.appearance == .dark ? .light : .automatic; persist() }
                 Button("Accent: \(preferences.accent.rawValue)") { preferences.accent = preferences.accent == .purple ? .blue : .purple; persist() }
@@ -112,6 +126,19 @@ struct AssistantSettingsView: View {
         }
         .sheet(item: $diagnosticExport) { item in
             SystemShareSheet(items: [item.url])
+        }
+    }
+
+    /// Endonyms: every language is always listed in its own script so the
+    /// picker stays usable even when the current interface language is the one
+    /// the user is trying to leave.
+    private func languageDisplayName(_ language: UILanguage) -> String {
+        switch language {
+        case .uk: "Українська"
+        case .ru: "Русский"
+        case .en: "English"
+        case .de: "Deutsch"
+        case .fr: "Français"
         }
     }
 

@@ -58,7 +58,13 @@ struct AssistantHomeView: View {
 
                             CompactResultCard(state: model.resultState, onReportIssue: {
                                 Task { await model.reportWrongResult() }
-                            }, onScannerAction: model.performScannerAction, onOCRAction: model.performOCRAction, onTranslationAction: model.performTranslationAction, onResultAction: model.performResultAction, onActionRequiredChoice: model.resolveActionRequiredChoice)
+                            }, onScannerAction: model.performScannerAction, onOCRAction: model.performOCRAction, onTranslationAction: model.performTranslationAction, onResultAction: model.performResultAction, onActionRequiredChoice: model.resolveActionRequiredChoice, onToggleFavoritePlace: { place in
+                                model.toggleFavorite(place: place)
+                            }, onToggleFavoriteOffer: { offer in
+                                model.toggleFavorite(offer: offer)
+                            }, isFavorite: { identifier in
+                                model.isFavorite(id: identifier)
+                            })
                                 .frame(maxWidth: 560)
                                 .transition(reduceMotion ? .opacity : .asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.98)), removal: .opacity))
 
@@ -100,6 +106,9 @@ struct AssistantHomeView: View {
         }
         .preferredColorScheme(model.presentationPreferences.appearance == .dark ? .dark : model.presentationPreferences.appearance == .light ? .light : nil)
         .tint(model.presentationPreferences.accent.color)
+        // AppText resolves strings at render time; rebuilding the tree on
+        // language change is what makes the picker take effect immediately.
+        .id(model.languageConfiguration.uiLanguage)
         .sheet(item: Binding(
             get: { model.capabilityPresentation },
             set: { if $0 == nil { model.dismissCapabilityPresentation() } }

@@ -18,3 +18,9 @@
 "navigation_open" = "Ouvrir l’itinéraire";
 "system_handoff_ready" = "L’action système est prête";
 "system_handoff_open" = "Continuer";
+"cancel" = "Annuler";
+"confirm" = "Confirmer";
+"confirmation_required" = "Confirmation requise";
+"send" = "Envoyer";
+"language" = "Langue";
+"ui_language" = "Langue de l'interface";

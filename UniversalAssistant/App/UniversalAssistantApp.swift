@@ -76,6 +76,9 @@ enum ProductionAssistantComposition {
 struct UniversalAssistantApp: App {
     @State private var model: AssistantViewModel
     @Environment(\.scenePhase) private var scenePhase
+    // Without an app delegate nothing receives the APNs device token, so the
+    // entitlement and the registration call were both inert.
+    @UIApplicationDelegateAdaptor(RemoteNotificationBridge.self) private var notificationBridge
 
     init() {
         CrashlyticsDiagnosticBridge.configureProductionCollection()
@@ -92,6 +95,9 @@ struct UniversalAssistantApp: App {
                         await PhysicalDiagnosticDelivery.shared.enqueue(recovered)
                     }
                     await PhysicalDiagnosticDelivery.shared.flush()
+                    // Token is requested only when the user already granted
+                    // notification permission; this never prompts.
+                    await RemoteNotificationBridge.registerIfAuthorized()
                 }
         }
             .onChange(of: scenePhase) { _, phase in

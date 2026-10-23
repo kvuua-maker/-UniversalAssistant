@@ -18,3 +18,9 @@
 "navigation_open" = "Route öffnen";
 "system_handoff_ready" = "Systemaktion ist bereit";
 "system_handoff_open" = "Fortfahren";
+"cancel" = "Abbrechen";
+"confirm" = "Bestätigen";
+"confirmation_required" = "Bestätigung erforderlich";
+"send" = "Senden";
+"language" = "Sprache";
+"ui_language" = "Sprache der Oberfläche";

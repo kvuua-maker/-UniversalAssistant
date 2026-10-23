@@ -18,3 +18,9 @@
 "navigation_open" = "Открыть в Картах";
 "system_handoff_ready" = "Системное действие готово";
 "system_handoff_open" = "Продолжить";
+"cancel" = "Отмена";
+"confirm" = "Подтвердить";
+"confirmation_required" = "Требуется подтверждение";
+"send" = "Отправить";
+"language" = "Язык";
+"ui_language" = "Язык интерфейса";

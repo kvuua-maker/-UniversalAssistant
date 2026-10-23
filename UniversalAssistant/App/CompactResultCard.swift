@@ -8,6 +8,9 @@ struct CompactResultCard: View {
     var onTranslationAction: (TranslationProductionResult, OCRResultAction) -> Void = { _, _ in }
     var onResultAction: (ResultAction) -> Void = { _ in }
     var onActionRequiredChoice: (String) -> Void = { _ in }
+    var onToggleFavoritePlace: ((Place) -> Void)? = nil
+    var onToggleFavoriteOffer: ((CommerceOfferPresentation) -> Void)? = nil
+    var isFavorite: (String) -> Bool = { _ in false }
 
     var body: some View {
         switch state {
@@ -72,11 +75,18 @@ struct CompactResultCard: View {
             }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .accessibilityIdentifier("assistant.deterministic-result")
         case .placeResults(let places):
-            PlaceResultsView(places: places)
+            PlaceResultsView(
+                places: places,
+                isFavorite: isFavorite,
+                onToggleFavorite: onToggleFavoritePlace)
         case .commerceResults(let offers):
-            CommerceResultsView(presentations: offers, isComplete: true) { offer in
-                onResultAction(.init(id: offer.id, title: "Відкрити продавця", kind: .purchaseHandoff, destination: offer.exactPurchaseURL))
-            }
+            CommerceResultsView(
+                presentations: offers, isComplete: true,
+                onPurchase: { offer in
+                    onResultAction(.init(id: offer.id, title: "Відкрити продавця", kind: .purchaseHandoff, destination: offer.exactPurchaseURL))
+                },
+                isFavorite: isFavorite,
+                onToggleFavorite: onToggleFavoriteOffer)
         case .jobResults(let jobs):
             JobsResultsView(jobs: jobs)
         case .eventKit(let result):

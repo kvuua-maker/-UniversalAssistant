@@ -38,3 +38,9 @@
 "navigation_open" = "Відкрити в Картах";
 "system_handoff_ready" = "Системна дія готова";
 "system_handoff_open" = "Продовжити";
+"cancel" = "Скасувати";
+"confirm" = "Підтвердити";
+"confirmation_required" = "Потрібне підтвердження";
+"send" = "Надіслати";
+"language" = "Мова";
+"ui_language" = "Мова інтерфейсу";

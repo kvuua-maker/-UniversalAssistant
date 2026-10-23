@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import hashlib, json, re, subprocess
+import hashlib, json, re, subprocess, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 INV = json.loads((ROOT / "REQUIREMENT_INVENTORY.json").read_text())
@@ -73,4 +73,8 @@ for name, expected_hash in canonical_hashes.items():
     assert actual == expected_hash, f"canonical source hash mismatch: {name}"
 report=(ROOT/'docs/LIVE_VERIFICATION_QUEUE_REPORT.md').read_text()
 assert report.count('|') > len(QUEUE['items']) * 3
-print(f"FINAL AUDIT OK: {len(rows)} requirements; {len(ready)} READY IDs; {len(QUEUE['items'])} exact live queue items")
+# Metadata alone cannot prove a capability exists. The wiring audit fails on
+# unreachable routes, unwired modules, permanently empty screens and missing
+# translations, so it must pass before this audit may report success.
+subprocess.run([sys.executable, str(ROOT/'Scripts/audit_wiring.py')], check=True)
+print(f"FINAL AUDIT OK: {len(rows)} requirements; {len(ready)} READY IDs; {len(QUEUE['items'])} exact live queue items; wiring verified")

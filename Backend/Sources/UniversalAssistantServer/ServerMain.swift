@@ -22,6 +22,10 @@ struct UniversalAssistantServer {
         app.http.server.configuration.port = Int(Environment.get("UA_SERVER_PORT") ?? "8787") ?? 8787
         let storage = Environment.get("UA_DIAGNOSTIC_STORAGE") ?? "/var/lib/universalassistant-diagnostics"
         try app.configurePhysicalDiagnostics(storageRoot: URL(fileURLWithPath: storage, isDirectory: true))
+        // Jobs marketplace: previously compiled but never mounted. The route
+        // surface is required by JOBS-097 (public vacancy search) and by the
+        // canonical "OUR JOBS FIRST" source ordering.
+        try app.configureJobsRoutes(storageRoot: URL(fileURLWithPath: storage, isDirectory: true))
         try await app.execute()
     }
 }

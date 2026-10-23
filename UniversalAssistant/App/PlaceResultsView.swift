@@ -3,6 +3,8 @@ import MapKit
 
 struct PlaceResultsView: View {
     let places: [Place]
+    var isFavorite: (String) -> Bool = { _ in false }
+    var onToggleFavorite: ((Place) -> Void)? = nil
 
     var body: some View {
         LazyVStack(spacing: 12) {
@@ -39,6 +41,15 @@ struct PlaceResultsView: View {
                             Link("Подзвонити", destination: url).buttonStyle(.bordered)
                         }
                         if let url = place.officialWebsite { Link("Сайт", destination: url).buttonStyle(.bordered) }
+                        if let onToggleFavorite {
+                            Button {
+                                onToggleFavorite(place)
+                            } label: {
+                                Image(systemName: isFavorite("place:\(place.id)") ? "star.fill" : "star")
+                            }
+                            .buttonStyle(.bordered)
+                            .accessibilityLabel(Text(isFavorite("place:\(place.id)") ? "Видалити з обраного" : "Додати в обране"))
+                        }
                     }
                     if let attribution = place.attribution { Text(attribution).font(.caption2).foregroundStyle(.secondary) }
                 }
