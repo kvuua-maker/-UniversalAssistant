@@ -12,7 +12,11 @@ jobs:
   verify:
     runs-on: macos-15
     steps:
+      # The requirement audit verifies that every recorded evidence commit
+      # exists, so this checkout must contain full history.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Static configuration checks
         run: |
           git diff --check

@@ -43,6 +43,9 @@ for row in rows:
     if row["status"] not in {"NOT_IMPLEMENTED", "IMPLEMENTED_UNVERIFIED"}:
         assert row["implementation_evidence"] and row["test_evidence"] and row["commit_evidence"]
         commits.update(row["commit_evidence"])
+shallow = subprocess.run(["git","rev-parse","--is-shallow-repository"],cwd=ROOT,capture_output=True,text=True).stdout.strip()
+if shallow == "true":
+    raise SystemExit("audit requires full git history: check out with fetch-depth: 0 (shallow clone cannot verify evidence commits)")
 for commit in commits:
     subprocess.run(["git","rev-parse","--verify",f"{commit}^{{commit}}"], cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
 for base in [ROOT/'UniversalAssistant', ROOT/'Backend/Sources', ROOT/'ShareExtension']:
