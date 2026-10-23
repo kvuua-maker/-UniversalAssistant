@@ -130,7 +130,7 @@ final class AssistantViewModel {
         configuredRestaurantReservationProviderIDs: Set<String> = [],
         currentContext suppliedCurrentContext: CurrentContextStore? = nil,
         ocrProcessor: (any DocumentOCRProcessing)? = nil,
-        recorder: AudioRecorderController = AudioRecorderController(),
+        recorder: AudioRecorderController? = nil,
         feedbackStore: UserFeedbackStore = .shared,
         compactResultDuration: Duration = .seconds(2),
         presentationPreferenceStore: PresentationPreferenceStore = PresentationPreferenceStore(),
@@ -159,7 +159,8 @@ final class AssistantViewModel {
             web: webSearchHandoff
         )
         self.ocrPipeline = OCRProductionPipeline(processor: ocrProcessor ?? OnDeviceDocumentOCR())
-        self.recorder = recorder
+        // Inline default argument crashed Swift 6.1 SILGen for this init.
+        self.recorder = recorder ?? AudioRecorderController()
         self.feedbackStore = feedbackStore
         self.compactResultDuration = compactResultDuration
         self.presentationPreferenceStore = presentationPreferenceStore
