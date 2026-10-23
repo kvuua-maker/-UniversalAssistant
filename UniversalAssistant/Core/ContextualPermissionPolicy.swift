@@ -30,9 +30,12 @@ enum ProductionNotificationRegistration {
         guard ContextualPermissionPolicy().decision(for: .proactiveFeatureEnabled) == .notifications else { return .failed }
         do {
             let center = UNUserNotificationCenter.current()
-            let settings = await center.notificationSettings()
+            // UNNotificationSettings is not Sendable; only the status crosses.
+            let status: UNAuthorizationStatus = await withCheckedContinuation { continuation in
+                center.getNotificationSettings { continuation.resume(returning: $0.authorizationStatus) }
+            }
             let granted: Bool
-            switch settings.authorizationStatus {
+            switch status {
             case .authorized, .provisional, .ephemeral: granted = true
             case .denied: granted = false
             case .notDetermined: granted = try await center.requestAuthorization(options: [.alert, .badge, .sound])
