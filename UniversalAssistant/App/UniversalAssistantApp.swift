@@ -20,7 +20,7 @@ enum ProductionAssistantComposition {
         currentLocation: any CurrentLocationResolving = AppleCurrentLocationResolver(),
         reverseLocation: any ReverseLocationGeocoding = AppleReverseLocationGeocoder(),
         routeProvider: any RouteProvider = MapKitRouteProvider(),
-        recorder: AudioRecorderController = AudioRecorderController(),
+        recorder: AudioRecorderController? = nil,
         personalSearchSources: [any PersonalSearchSource] = [
             ContactsPersonalSearchSource(), PhotosPersonalSearchSource(),
             LocalPersonalSearchSourceAdapter(source: AuthorizedFileSearchSource())
@@ -41,6 +41,9 @@ enum ProductionAssistantComposition {
         systemHandoffOpen: (@MainActor (URL) -> Void)? = nil,
         systemHandoffOpenResult: (@MainActor (URL) async -> Bool)? = nil
     ) -> AssistantViewModel {
+        // Built in the body: inline default arguments crash Swift 6.1 SILGen
+        // when this module is compiled with -O.
+        let recorder = recorder ?? AudioRecorderController()
         let context = CurrentContextStore()
         let voiceInput: any VoiceInputControlling = voiceInputOverride ?? VoiceInputController(contextualVocabulary: {
             languageUnderstanding.requestScopedCatalogVocabulary(limit: 32)

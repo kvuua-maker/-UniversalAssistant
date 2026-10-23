@@ -21,3 +21,10 @@ OTHER_LDFLAGS = $(inherited) -ObjC
 LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks
 
 UA_USE_CLOUDKIT_SYNC = NO
+
+// Custom configuration names do not inherit Xcode Debug defaults, so -O was
+// applied to Development and crashed swift-frontend while emitting default
+// arguments. Development/Staging must build unoptimized.
+SWIFT_OPTIMIZATION_LEVEL = -Onone
+SWIFT_COMPILATION_MODE = singlefile
+GCC_OPTIMIZATION_LEVEL = 0

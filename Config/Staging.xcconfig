@@ -20,3 +20,7 @@ OTHER_LDFLAGS = $(inherited) -ObjC
 LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks
 
 UA_USE_CLOUDKIT_SYNC = NO
+
+SWIFT_OPTIMIZATION_LEVEL = -Onone
+SWIFT_COMPILATION_MODE = singlefile
+GCC_OPTIMIZATION_LEVEL = 0
