@@ -64,7 +64,10 @@ actor EventKitReminderService: ReminderMutating {
         switch EKEventStore.authorizationStatus(for: .reminder) {
         case .fullAccess: return
         case .notDetermined:
-            guard try await store.requestFullAccessToReminders() else { throw ReminderServiceError.permissionDenied }
+            // EKEventStore is not Sendable; a local instance keeps the request
+            // inside the actor instead of sending stored state.
+            let permissionStore = EKEventStore()
+            guard try await permissionStore.requestFullAccessToReminders() else { throw ReminderServiceError.permissionDenied }
         case .denied, .restricted, .writeOnly: throw ReminderServiceError.permissionDenied
         @unknown default: throw ReminderServiceError.permissionDenied
         }
