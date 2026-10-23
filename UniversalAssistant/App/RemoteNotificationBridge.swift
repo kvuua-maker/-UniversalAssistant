@@ -69,8 +69,14 @@ final class RemoteNotificationBridge: NSObject, UIApplicationDelegate, UNUserNot
     /// Requests the token only when the user already granted notification
     /// permission; never prompts from here.
     static func registerIfAuthorized() async {
-        let settings = await UNUserNotificationCenter.current().notificationSettings()
-        switch settings.authorizationStatus {
+        // UNNotificationSettings is not Sendable; only the status enum crosses
+        // the concurrency boundary.
+        let status: UNAuthorizationStatus = await withCheckedContinuation { continuation in
+            UNUserNotificationCenter.current().getNotificationSettings { settings in
+                continuation.resume(returning: settings.authorizationStatus)
+            }
+        }
+        switch status {
         case .authorized, .provisional, .ephemeral:
             UIApplication.shared.registerForRemoteNotifications()
         case .denied, .notDetermined:
