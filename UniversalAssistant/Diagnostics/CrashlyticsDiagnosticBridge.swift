@@ -68,17 +68,25 @@ protocol CrashlyticsClient: AnyObject {
     func record(error: Error)
 }
 
+/// Firebase is linked into the app target only. Keeping every FIR symbol out
+/// of DEBUG means the XCTest bundle no longer needs to link Firebase.
 private final class FirebaseCrashlyticsClient: CrashlyticsClient {
     func setCustomValue(_ value: Any, forKey key: String) {
+        #if !DEBUG
         Crashlytics.crashlytics().setCustomValue(value, forKey: key)
+        #endif
     }
 
     func log(_ message: String) {
+        #if !DEBUG
         Crashlytics.crashlytics().log(message)
+        #endif
     }
 
     func record(error: Error) {
+        #if !DEBUG
         Crashlytics.crashlytics().record(error: error)
+        #endif
     }
 }
 
@@ -109,7 +117,11 @@ final class CrashlyticsDiagnosticBridge: CrashlyticsDiagnosticRecording, @unchec
 
 
     convenience init() {
+        #if DEBUG
+        self.init(client: FirebaseCrashlyticsClient(), readiness: { false })
+        #else
         self.init(client: FirebaseCrashlyticsClient(), readiness: { FirebaseApp.app() != nil })
+        #endif
     }
 
     init(client: any CrashlyticsClient, readiness: @escaping @Sendable () -> Bool) {
@@ -127,8 +139,10 @@ final class CrashlyticsDiagnosticBridge: CrashlyticsDiagnosticRecording, @unchec
     /// Used only by the targeted ingestion XCTest; production startup remains
     /// governed by configureProductionCollection().
     static func configureTargetedValidationCollection() {
+        #if !DEBUG
         if FirebaseApp.app() == nil { FirebaseApp.configure() }
         Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(true)
+        #endif
     }
 
 
