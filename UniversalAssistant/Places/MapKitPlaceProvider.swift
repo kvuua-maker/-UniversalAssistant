@@ -14,15 +14,11 @@ struct MapKitPlaceProvider: PlaceProvider {
         let response = try await MKLocalSearch(request: request).start()
         let origin = CLLocation(latitude: center.latitude, longitude: center.longitude)
         return response.mapItems.prefix(query.limit).map { item in
-            let location: CLLocation
-            let address: String?
-            if #available(iOS 26.0, *) {
-                location = item.location
-                address = item.address?.fullAddress
-            } else {
-                location = item.placemark.location ?? origin
-                address = item.placemark.title
-            }
+            // MKMapItem.location only exists in a newer SDK than the one this
+            // project builds with, so the placemark (available since iOS 18)
+            // is the portable path.
+            let location: CLLocation = item.placemark.location ?? origin
+            let address: String? = item.placemark.title
             let rawID = item.identifier?.rawValue
             return Place(
                 id: rawID ?? "mapkit:\(location.coordinate.latitude):\(location.coordinate.longitude):\(item.name ?? "place")",
