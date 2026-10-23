@@ -99,12 +99,12 @@ struct SystemAppAttestService: AppAttestServicing {
 }
 
 protocol DiagnosticHTTPTransport: Sendable {
-    func post<Request: Encodable, Response: Decodable>(_ path: String, body: Request, response: Response.Type) async throws -> Response
+    func post<Request: Encodable, Response: Decodable & Sendable>(_ path: String, body: Request, response: Response.Type) async throws -> Response
 }
 
 struct URLSessionDiagnosticTransport: DiagnosticHTTPTransport {
     let baseURL: URL
-    func post<Request: Encodable, Response: Decodable>(_ path: String, body: Request, response: Response.Type) async throws -> Response {
+    func post<Request: Encodable, Response: Decodable & Sendable>(_ path: String, body: Request, response: Response.Type) async throws -> Response {
         let destination = baseURL.appending(path: path)
         guard destination.scheme == "https", destination.host == "178.105.32.46" else { throw PhysicalDiagnosticDeliveryError.invalidEndpoint }
         var request = URLRequest(url: destination, timeoutInterval: 30)
@@ -277,7 +277,7 @@ actor PhysicalDiagnosticDelivery {
     /// The same production App Attest boundary used by diagnostics also
     /// authenticates purpose-bound AI requests. Provider credentials never
     /// cross this boundary into the app.
-    func postAttested<Payload: Codable & Sendable, Response: Decodable>(
+    func postAttested<Payload: Codable & Sendable, Response: Decodable & Sendable>(
         operation: String,
         path: String,
         payload: Payload,
