@@ -252,7 +252,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         currentContext: CurrentContextStore = CurrentContextStore(),
         routeProvider: any RouteProvider = MapKitRouteProvider(),
         eventKit: any EventKitCommandExecuting = ProductionEventKitCommandExecutor(),
-        recorder: AudioRecorderController = AudioRecorderController(),
+        recorder: AudioRecorderController? = nil,
         publicDeviceExecute: @escaping @MainActor (SystemQuickAction) throws -> String = { try ProductionPublicDeviceExecutor().execute($0) },
         clipboardRead: @escaping @MainActor () throws -> SharedContent = { try SystemUserInitiatedClipboardReader().readAfterUserAction() },
         fx: any CurrentFXProviding = RegionalCurrentFXProvider(),
@@ -279,7 +279,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         self.routeProvider = routeProvider
         self.reverseLocation = reverseLocation
         self.eventKit = eventKit
-        self.recorder = recorder
+        // Constructed inside the body: an inline default argument here
+        // crashes Swift 6.1 SILGen on this initializer.
+        self.recorder = recorder ?? AudioRecorderController()
         self.publicDeviceExecute = publicDeviceExecute
         self.clipboardRead = clipboardRead
         self.fx = fx
