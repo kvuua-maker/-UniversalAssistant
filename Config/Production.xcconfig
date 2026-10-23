@@ -18,3 +18,7 @@ INFOPLIST_KEY_NSPhotoLibraryUsageDescription = UniversalAssistant searches only 
 INFOPLIST_KEY_NSCameraUsageDescription = UniversalAssistant uses the camera only when you ask to capture an image.
 OTHER_LDFLAGS = $(inherited) -ObjC
 LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks
+
+// Build-time switch: CloudKit sync is used only in builds whose App ID has
+// the iCloud container enabled (Production). Development stays local-only.
+UA_USE_CLOUDKIT_SYNC = YES

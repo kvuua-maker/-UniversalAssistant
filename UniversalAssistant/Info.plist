@@ -87,5 +87,7 @@
 	<array>
 		<string>arm64</string>
 	</array>
+	<key>UAUseCloudKitSync</key>
+	<string>$(UA_USE_CLOUDKIT_SYNC)</string>
 </dict>
 </plist>

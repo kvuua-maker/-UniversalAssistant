@@ -238,11 +238,49 @@ def audit_language_picker() -> None:
         check(raw in declared, f"UILanguage is missing the '{raw}' case")
 
 
+def audit_sync_transport() -> None:
+    """A declared CloudKit entitlement must be reachable from the sync factory.
+
+    Declaring iCloud in the entitlements while the app always falls back to a
+    local mirror is the same class of defect as an unmounted backend module: the
+    capability exists on paper only.
+    """
+    entitlements = ROOT / "UniversalAssistant/UniversalAssistant.entitlements"
+    declared = (
+        "com.apple.developer.icloud-container-identifiers" in entitlements.read_text(errors="ignore")
+        if entitlements.exists()
+        else False
+    )
+    factory = (IOS / "Persistence/PersonalHubSync.swift").read_text(errors="ignore")
+    check(
+        "CloudKitSyncTransport" in factory,
+        "sync factory never references CloudKitSyncTransport",
+    )
+    if not declared:
+        return
+    production = (ROOT / "Config/Production.xcconfig").read_text(errors="ignore")
+    info = (IOS / "Info.plist").read_text(errors="ignore")
+    check(
+        re.search(r"^\s*UA_USE_CLOUDKIT_SYNC\s*=\s*YES", production, re.M) is not None,
+        "CloudKit container is declared in entitlements but Production.xcconfig "
+        "does not set UA_USE_CLOUDKIT_SYNC = YES",
+    )
+    check(
+        "UAUseCloudKitSync" in info,
+        "Info.plist does not expose UAUseCloudKitSync, so the runtime cannot choose CloudKit",
+    )
+    check(
+        "UAUseCloudKitSync" in factory,
+        "sync factory ignores the UAUseCloudKitSync build flag",
+    )
+
+
 def main() -> int:
     audit_backend()
     audit_ios_surfaces()
     audit_localization()
     audit_language_picker()
+    audit_sync_transport()
     if failures:
         print(f"WIRING AUDIT FAILED: {len(failures)} of {checks} checks\n")
         for item in failures:
