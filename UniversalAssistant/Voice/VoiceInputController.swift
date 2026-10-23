@@ -1514,7 +1514,7 @@ final class AppleVoiceAudioCaptureBackend: VoiceAudioCaptureBackend {
     func configureSession() throws {
         tearDownEngine()
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.record, mode: .measurement, options: [.duckOthers, .allowBluetoothHFP])
+        try session.setCategory(.record, mode: .measurement, options: [.duckOthers, .allowBluetooth])
         try session.setActive(true, options: .notifyOthersOnDeactivation)
         audioEngine = AVAudioEngine()
         let input = session.currentRoute.inputs.first?.portType.rawValue ?? "none"
