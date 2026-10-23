@@ -147,11 +147,8 @@ struct CommerceOfferCard: View {
     private var availabilitySymbol: String { offer.availability == .inStock ? "checkmark.circle.fill" : "questionmark.circle" }
     private var isHistoricalPriceEvidence: Bool { offer.providerID == "open-food-facts-open-prices" }
     private var deliveryKey: LocalizedStringKey? {
-        switch offer.deliversToUkraine {
-        case true: "commerce_delivers_ukraine"
-        case false: "commerce_no_ukraine_delivery"
-        case nil: nil
-        }
+        guard let delivers = offer.deliversToUkraine else { return nil }
+        return delivers ? "commerce_delivers_ukraine" : "commerce_no_ukraine_delivery"
     }
     private func badgeKey(_ badge: CommerceOfferBadge) -> LocalizedStringKey {
         switch badge {
