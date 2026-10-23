@@ -50,9 +50,9 @@ struct MapKitRouteProvider: RouteProvider {
     }
     private static func mapItem(_ point: RoutePoint) -> MKMapItem {
         let coordinate = CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
-        let item: MKMapItem
-        if #available(iOS 26.0, *) { item = MKMapItem(location: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude), address: nil) }
-        else { item = MKMapItem(placemark: MKPlacemark(coordinate: coordinate)) }
+        // MKMapItem(location:address:) is not declared by the build SDK; the
+        // placemark initializer is the portable path.
+        let item = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
         item.name = point.name
         return item
     }
