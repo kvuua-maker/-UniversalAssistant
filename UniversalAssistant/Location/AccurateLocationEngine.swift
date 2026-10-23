@@ -30,8 +30,10 @@ protocol ReverseLocationGeocoding: Sendable {
 }
 
 actor AppleReverseLocationGeocoder: ReverseLocationGeocoding {
-    private let geocoder = CLGeocoder()
+    // CLGeocoder is not Sendable; a stored instance made every async call a
+    // cross-isolation send. A per-call instance stays inside the actor.
     func locality(for location: ValidatedLocation) async throws -> String {
+        let geocoder = CLGeocoder()
         let point = CLLocation(latitude: location.sample.latitude, longitude: location.sample.longitude)
         guard let placemark = try await geocoder.reverseGeocodeLocation(point).first,
               let value = placemark.locality ?? placemark.subAdministrativeArea ?? placemark.administrativeArea,
@@ -39,6 +41,7 @@ actor AppleReverseLocationGeocoder: ReverseLocationGeocoding {
         return value
     }
     func address(for location: ValidatedLocation) async throws -> String {
+        let geocoder = CLGeocoder()
         let point = CLLocation(latitude: location.sample.latitude, longitude: location.sample.longitude)
         guard let value = try await geocoder.reverseGeocodeLocation(point).first else { throw CurrentLocationResolutionError.unavailable }
         let parts = [value.name, value.locality, value.administrativeArea, value.country].compactMap { component in component }.filter { component in !component.isEmpty }
@@ -52,9 +55,8 @@ protocol ManualLocationGeocoding: Sendable {
 }
 
 actor AppleManualLocationGeocoder: ManualLocationGeocoding {
-    private let geocoder = CLGeocoder()
-
     func resolve(_ label: String) async throws -> LocationSample {
+        let geocoder = CLGeocoder()
         let query = label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { throw ManualLocationError.emptyQuery }
         let placemarks = try await geocoder.geocodeAddressString(query)
