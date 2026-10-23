@@ -10,7 +10,9 @@ permissions:
 
 jobs:
   preflight:
-    # Cheap Linux gate: no Apple-runner minute is spent unless this passes.
+    # Cheap Linux gate: formatting, lint, compilation and the wiring audit only.
+    # Backend tests need macOS and run in the `verify` job below, so no Apple
+    # minute is spent unless this gate passes first.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,8 +52,10 @@ jobs:
           python3 Scripts/reconcile_requirement_evidence.py
           git diff --exit-code REQUIREMENT_INVENTORY.json
           python3 Scripts/audit_final_requirements.py
-      - name: Backend tests
-        run: swift test --package-path Backend 2>&1 | tee backend-tests.log
+      # Step 4 of the preflight contract: platform-dependent tests run here,
+      # on macOS, after the Linux gate has already passed.
+      - name: Backend tests (macOS)
+        run: ./scripts/preflight.sh --tests 2>&1 | tee backend-tests.log
       - name: iOS build and tests
         run: |
           set -o pipefail

@@ -26,30 +26,36 @@ fail() {
 }
 need() { command -v "$1" >/dev/null 2>&1 || fail "$2 ($1 not installed)"; }
 
-step "0/5 tool availability"
+step "0/4 tool availability"
 need swiftformat "install SwiftFormat"
 need swiftlint "install SwiftLint"
 need swift "install the Swift toolchain"
 need python3 "install python3"
 echo "  swiftformat $(swiftformat --version), swiftlint $(swiftlint version), $(swift --version 2>&1 | head -1)"
 
-step "1/5 swiftformat --lint"
+step "1/4 swiftformat --lint"
 swiftformat --lint . \
   --swift-version 6 \
   --rules trailingSpace,linebreakAtEndOfFile \
   --exclude .build,Backend/.build,.tools,DerivedData \
   || fail "swiftformat (formatting rules)"
 
-step "2/5 swiftlint lint --strict"
+step "2/4 swiftlint lint --strict"
 swiftlint lint --strict --quiet --no-cache --config .swiftlint.yml || fail "swiftlint (style / probable bugs)"
 
-step "3/5 swift build"
+step "3/4 swift build"
 swift build --package-path Backend --scratch-path .build/backend --cache-path .build/swiftpm-cache || fail "swift build (backend package)"
 
-step "4/5 swift test"
-swift test --package-path Backend --scratch-path .build/backend --cache-path .build/swiftpm-cache || fail "swift test (backend package)"
+# Backend tests are deliberately NOT part of the Linux gate: they are
+# platform-dependent and run on the macOS runner, after this gate has already
+# rejected formatting/syntax failures. Pass --tests to run them locally on a
+# machine where they are known to work (macOS).
+if [ "${1:-}" = "--tests" ]; then
+  step "3.5/4 swift test (macOS only)"
+  swift test --package-path Backend --scratch-path .build/backend --cache-path .build/swiftpm-cache || fail "swift test (backend package)"
+fi
 
-step "5/5 wiring audit"
+step "4/4 wiring audit"
 python3 Scripts/audit_wiring.py || fail "audit_wiring.py (unreachable code / empty screens / missing translations)"
 
 printf '\n\033[32m✓ PREFLIGHT PASSED\033[0m - safe to push\n'
