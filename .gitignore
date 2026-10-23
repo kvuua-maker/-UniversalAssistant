@@ -13,3 +13,5 @@ xcuserdata/
 Secrets.xcconfig
 __pycache__/
 *.pyc
+.build/
+.swiftpm/

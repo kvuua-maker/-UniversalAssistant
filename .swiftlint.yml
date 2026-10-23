@@ -1,0 +1,24 @@
+# SwiftLint configuration for preflight.
+#
+# The project predates linting, so this starts with correctness-oriented rules
+# that the current tree can satisfy. New rules are added as the tree is cleaned;
+# running with every default rule today would report thousands of style
+# warnings and make the gate meaningless.
+included:
+  - UniversalAssistant
+  - Backend/Sources
+  - ShareExtension
+
+excluded:
+  - .build
+  - Backend/.build
+  - .tools
+
+only_rules:
+  - duplicate_conditions
+  - empty_enum_arguments
+  - identical_operands
+  - unneeded_break_in_switch
+  - untyped_error_in_catch
+
+reporter: "xcode"

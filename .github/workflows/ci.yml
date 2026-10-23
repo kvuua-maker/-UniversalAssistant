@@ -9,7 +9,32 @@ permissions:
   contents: read
 
 jobs:
+  preflight:
+    # Cheap Linux gate: no Apple-runner minute is spent unless this passes.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.1.2"
+      - name: Install SwiftFormat and SwiftLint
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          curl -sL -o /tmp/sf.zip https://github.com/nicklockwood/SwiftFormat/releases/download/0.64.1/swiftformat_linux.zip
+          unzip -q /tmp/sf.zip -d /tmp/sf
+          install -m 755 /tmp/sf/swiftformat_linux "$HOME/.local/bin/swiftformat"
+          curl -sL -o /tmp/sl.zip https://github.com/realm/SwiftLint/releases/download/0.65.1/swiftlint_linux_amd64.zip
+          unzip -q /tmp/sl.zip -d /tmp/sl
+          install -m 755 /tmp/sl/swiftlint "$HOME/.local/bin/swiftlint"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Preflight
+        run: ./scripts/preflight.sh
+
   verify:
+    needs: preflight
     runs-on: macos-15
     steps:
       # The requirement audit verifies that every recorded evidence commit
