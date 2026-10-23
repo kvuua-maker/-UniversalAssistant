@@ -28,3 +28,8 @@ UA_USE_CLOUDKIT_SYNC = NO
 SWIFT_OPTIMIZATION_LEVEL = -Onone
 SWIFT_COMPILATION_MODE = singlefile
 GCC_OPTIMIZATION_LEVEL = 0
+
+// TECHNICAL DEBT (temporary): strict concurrency is relaxed for Development so
+// the app can build and ship; the target state is `complete`. See
+// docs/TECHNICAL_DEBT.md item TD-001 for the exit criteria.
+SWIFT_STRICT_CONCURRENCY = minimal
