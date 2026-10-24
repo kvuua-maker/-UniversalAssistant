@@ -137,6 +137,28 @@ jobs:
           security list-keychains -d user -s ua-sign.keychain $(security list-keychains -d user | tr -d '"')
           security find-identity -v -p codesigning ua-sign.keychain
 
+      - name: Ensure APNs certificate exists
+        run: |
+          set -euo pipefail
+          curl -s -o "$RUNNER_TEMP/push.json" -w 'list push certs -> %{http_code}\n' \
+            -H "Authorization: Bearer $ASC_TOKEN" \
+            "$API/certificates?filter%5BcertificateType%5D=APPLE_PUSH_SERVICES&limit=200"
+          COUNT=$(node -e 'const d=require(process.env.RUNNER_TEMP+"/push.json");process.stdout.write(String((d.data||[]).length))')
+          echo "existing APNs certificates: $COUNT"
+          if [ "$COUNT" = "0" ]; then
+            openssl genrsa -out "$RUNNER_TEMP/push.key" 2048 2>/dev/null
+            openssl req -new -key "$RUNNER_TEMP/push.key" -out "$RUNNER_TEMP/push.csr" \
+              -subj "/CN=UniversalAssistant Push/O=UniversalAssistant/C=UA"
+            openssl req -in "$RUNNER_TEMP/push.csr" -outform DER -out "$RUNNER_TEMP/push.der"
+            PCSR=$(openssl base64 -A -in "$RUNNER_TEMP/push.der")
+            printf '{"data":{"type":"certificates","attributes":{"certificateType":"APPLE_PUSH_SERVICES","csrContent":"%s"}}}' "$PCSR" > "$RUNNER_TEMP/push-req.json"
+            CODE=$(curl -s -o "$RUNNER_TEMP/push-resp.json" -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
+              --data @"$RUNNER_TEMP/push-req.json" "$API/certificates")
+            echo "POST push certificate -> HTTP $CODE"
+            if [ "$CODE" != "201" ]; then cat "$RUNNER_TEMP/push-resp.json"; fi
+          fi
+
       - name: Recreate profiles with the new certificate
         run: |
           set -euo pipefail
