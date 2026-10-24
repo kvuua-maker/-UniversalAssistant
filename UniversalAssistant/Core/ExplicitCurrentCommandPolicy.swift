@@ -44,8 +44,7 @@ enum CanonicalCurrentCommandRoleNormalizer {
         let namesGlobalSystemPane = currentTokens.contains("bluetooth") ||
             currentTokens.contains("блютуз") ||
             currentTokens.contains("wifi") ||
-            (currentTokens.contains("wi") && currentTokens.contains("fi")) ||
-            currentTokens.contains(where: { $0.hasPrefix("налаштуван") || $0.hasPrefix("параметр") || $0 == "settings" })
+            (currentTokens.contains("wi") && currentTokens.contains("fi"))
         if asksToOpen && namesGlobalSystemPane {
             intent = .settings
             entities = [

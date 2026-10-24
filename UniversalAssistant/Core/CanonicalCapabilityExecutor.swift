@@ -543,7 +543,17 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                hasExplicitOfficialPublicProvider(in: command) {
                 return try officialPublicProviderHandoff(command, routingDecision: routingDecision)
             }
-            return try await localServices(command, allowsMultiple: routingDecision.allowsMultipleResults)
+            do {
+                return try await localServices(command, allowsMultiple: routingDecision.allowsMultipleResults)
+            } catch {
+                // No verified provider for this service: answer with a truthful
+                // external search instead of a generic system failure.
+                let query = command.entities["query"] ?? command.originalText
+                if let url = URL(string: "https://www.google.com/maps/search/?api=1&query=\(query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+                    return .handoff(.init(query: query, destination: url, kind: .webSearch))
+                }
+                throw error
+            }
         case .restaurantSearch:
             return try await places(command, allowsMultiple: routingDecision.allowsMultipleResults)
         case .publicTransport:
