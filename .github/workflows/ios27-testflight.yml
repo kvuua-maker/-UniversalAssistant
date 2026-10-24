@@ -140,6 +140,7 @@ jobs:
         with:
           name: testflight-${{ github.run_number }}
           path: |
+            asc-diagnostics.log
             archive.log
             export.log
             upload.log
