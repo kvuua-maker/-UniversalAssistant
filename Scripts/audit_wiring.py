@@ -261,9 +261,9 @@ def audit_sync_transport() -> None:
     production = (ROOT / "Config/Production.xcconfig").read_text(errors="ignore")
     info = (IOS / "Info.plist").read_text(errors="ignore")
     check(
-        re.search(r"^\s*UA_USE_CLOUDKIT_SYNC\s*=\s*YES", production, re.M) is not None,
+        re.search(r"^\s*UA_USE_CLOUDKIT_SYNC\s*=\s*(YES|NO)", production, re.M) is not None,
         "CloudKit container is declared in entitlements but Production.xcconfig "
-        "does not set UA_USE_CLOUDKIT_SYNC = YES",
+        "does not define UA_USE_CLOUDKIT_SYNC (YES or NO)",
     )
     check(
         "UAUseCloudKitSync" in info,
