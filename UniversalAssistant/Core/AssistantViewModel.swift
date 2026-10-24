@@ -106,7 +106,7 @@ final class AssistantViewModel {
     // also prevents abandoned starts surviving re-entry or scene transitions.
     private var voiceStartTask: Task<Void, Never>?
     private var voiceDraftSourceText: String?
-    private var voiceContinuationAttempted = false
+    private var voiceContinuationPrefix: String?
     private var pendingVoiceRecognitionEvidence: VoiceRecognitionEvidence?
     private var voiceAutoSubmitArmed = false
     private var voiceSubmitPerformed = false
@@ -438,6 +438,12 @@ final class AssistantViewModel {
     }
 
     func submit() {
+        // A clipped command ("Відкрий") is completed by the next phrase; the
+        // prefix is merged here so the parser sees one full command.
+        if let prefix = voiceContinuationPrefix {
+            input = prefix + " " + input
+            voiceContinuationPrefix = nil
+        }
         let isVoiceSubmission = voiceDraftSourceText != nil
         let voiceEvidence = voiceDraftSourceText == input ? pendingVoiceRecognitionEvidence : nil
         let standaloneCommand = if let parser = commandEngine as? any EvidenceAwareCommandParsing {
@@ -451,8 +457,8 @@ final class AssistantViewModel {
            input.split(separator: " ").count < 2,
            standaloneCommand.intent == .open || standaloneCommand.intent == .appAction,
            standaloneCommand.entities["app"] == nil,
-           !voiceContinuationAttempted {
-            voiceContinuationAttempted = true
+           voiceContinuationPrefix == nil {
+            voiceContinuationPrefix = input
             RuntimeDiagnostics.shared.log("voice", "short utterance '\(input)' -> keep listening")
             statusText = "Слухаю… назвіть застосунок"
             input = ""

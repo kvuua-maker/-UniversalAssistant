@@ -670,6 +670,38 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     }
 
     private func systemQuickAction(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        // "Де я знаходжусь" / "яка в мене адреса" are location questions, not
+        // device actions; resolve them here before the quick-action table.
+        let lowered = command.originalText.lowercased()
+        if lowered.contains("де я") || lowered.contains("знаходж")
+            || lowered.contains("адрес") || lowered.contains("локац") {
+            do {
+                let validated = try await currentLocation.resolveCurrent(for: .general)
+                let address = try? await reverseLocation.address(for: validated)
+                return .result(try result(
+                    address ?? "Місцезнаходження визначено",
+                    facts: [
+                        .init(id: "location.lat", label: "Широта",
+                              value: String(format: "%.5f", validated.sample.latitude),
+                              state: .verified, source: "CoreLocation", observedAt: .now, priority: 90),
+                        .init(id: "location.lon", label: "Довгота",
+                              value: String(format: "%.5f", validated.sample.longitude),
+                              state: .verified, source: "CoreLocation", observedAt: .now, priority: 89)
+                    ]))
+            } catch CurrentLocationResolutionError.denied {
+                throw CanonicalCapabilityExecutionError.systemRestricted("location_permission_required")
+            }
+        }
+        if lowered.contains("qr") || lowered.contains("скан") || lowered.contains("штрих") {
+            return .presentation(.scanner)
+        }
+        // System radios are not publicly addressable; say so instead of failing.
+        if lowered.contains("wi-fi") || lowered.contains("wifi") || lowered.contains("bluetooth")
+            || lowered.contains("блютуз") {
+            return .result(try result(
+                "Wi-Fi і Bluetooth можна змінити лише в Налаштуваннях iPhone. Відкрийте Налаштування вручну.",
+                facts: []))
+        }
         let kind = command.entities["system_action"] ?? ""
         if kind == "clipboard_read" {
             switch try clipboardRead() {
@@ -1416,6 +1448,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     }
 
     private func photo(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
+        if command.originalText.lowercased().contains("відео") {
+            return .presentation(.camera)
+        }
         let query = command.entities["query"] ?? ""
         let queryKind = command.entities["photo_query_kind"]
         let latest = queryKind == "recent" || query == "latest" || query == "recent"
