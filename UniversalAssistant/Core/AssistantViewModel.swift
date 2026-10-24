@@ -334,6 +334,7 @@ final class AssistantViewModel {
         case let .state(state):
             LocalVoiceDiagnosticReport.shared.record("state_delivered_to_view_model", "state=\(String(describing: state))")
             if state == .requestingPermission {
+                voiceContinuationAttempted = false
                 voiceDraftSourceText = nil
                 pendingVoiceRecognitionEvidence = nil
                 voiceAutoSubmitArmed = true

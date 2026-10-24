@@ -443,6 +443,17 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .musicRecognition:
             return .result(try result(musicRecognitionAvailabilityMessage(for: command.language), facts: []))
         case .mediaSearch:
+            // "Увімкни музику" must always reach a player. Without a connected
+            // music provider the truthful action is to open the system player.
+            if command.originalText.lowercased().contains("музик")
+                || command.originalText.lowercased().contains("music") {
+                if let url = URL(string: "music://"), UIApplication.shared.canOpenURL(url) {
+                    return .handoff(.init(query: command.originalText, destination: url, kind: .system))
+                }
+                if let url = URL(string: "https://music.apple.com") {
+                    return .handoff(.init(query: command.originalText, destination: url, kind: .webSearch))
+                }
+            }
             let requestedApp = command.entities["app"]?.lowercased()
             if requestedApp == "spotify" {
                 // Spotify documents its iOS app scheme for app detection/opening.
@@ -1450,6 +1461,12 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
     private func photo(_ command: StructuredCommand) async throws -> CapabilityExecutionOutcome {
         if command.originalText.lowercased().contains("відео") {
             return .presentation(.camera)
+        }
+        // "Знайди фото …" has no exact asset to open; Photos itself is the
+        // truthful destination unless the query resolves to a specific item.
+        if command.entities["photo_query_kind"] == "semantic",
+           let url = URL(string: "photos-redirect://"), UIApplication.shared.canOpenURL(url) {
+            return .handoff(.init(query: command.originalText, destination: url, kind: .system))
         }
         let query = command.entities["query"] ?? ""
         let queryKind = command.entities["photo_query_kind"]
