@@ -137,12 +137,13 @@ jobs:
 
           # 2. Import into a throwaway keychain for this job only.
           openssl x509 -inform DER -in "$RUNNER_TEMP/dist.cer" -out "$RUNNER_TEMP/dist.pem"
-          openssl pkcs12 -export -inkey "$RUNNER_TEMP/dist.key" -in "$RUNNER_TEMP/dist.pem" \
-            -out "$RUNNER_TEMP/dist.p12" -passout pass:ua-ci-temp
           security create-keychain -p ua-ci-temp ua-sign.keychain || true
           security set-keychain-settings -lut 3600 ua-sign.keychain
           security unlock-keychain -p ua-ci-temp ua-sign.keychain
-          security import "$RUNNER_TEMP/dist.p12" -k ua-sign.keychain -P ua-ci-temp -T /usr/bin/codesign
+          # Import PEM key + certificate directly: a .p12 produced by the
+          # runner's OpenSSL uses algorithms macOS Keychain rejects.
+          security import "$RUNNER_TEMP/dist.key" -k ua-sign.keychain -T /usr/bin/codesign
+          security import "$RUNNER_TEMP/dist.pem" -k ua-sign.keychain -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k ua-ci-temp ua-sign.keychain >/dev/null
           security list-keychains -d user -s ua-sign.keychain $(security list-keychains -d user | tr -d '"')
           security find-identity -v -p codesigning ua-sign.keychain
