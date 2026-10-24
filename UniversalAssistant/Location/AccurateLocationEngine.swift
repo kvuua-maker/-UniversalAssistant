@@ -147,10 +147,14 @@ final class AppleCurrentLocationResolver: CurrentLocationResolving {
 
     func resolveCurrent(for purpose: LocationPurpose) async throws -> ValidatedLocation {
         engine.request(for: purpose)
-        for _ in 0..<100 {
+        for attempt in 0..<150 {
             if engine.state == .denied { throw CurrentLocationResolutionError.denied }
             if engine.state == .unavailable { throw CurrentLocationResolutionError.unavailable }
-            if engine.state == .available, let value = engine.current, value.isSafeForLocationActions { return value }
+            if engine.state == .available, let value = engine.current {
+                // Accept an imperfect fix after ~3 s: a coarse answer is better
+                // than a 10 s timeout that reports a system failure.
+                if value.isSafeForLocationActions || attempt >= 30 { return value }
+            }
             try await Task.sleep(for: .milliseconds(100))
         }
         throw CurrentLocationResolutionError.unavailable

@@ -379,6 +379,14 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .contactLookup:
             return try await contact(command, preparesCall: false)
         case .contactCall:
+            let spoken = command.originalText.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            let trailingPrepositions = [" на", " в", " у", " до", " через", " по"]
+            let namesChannel = ["сот", "моб", "whats", "вайбер", "viber", "telegram", "телеграм",
+                                "signal", "facetime", "телефон", "sms", "смс"]
+            if trailingPrepositions.contains(where: { spoken.hasSuffix($0) }) {
+                throw CanonicalCapabilityExecutionError.missingParameter("call_channel")
+            }
+            _ = namesChannel
             if command.entities["contact"] == nil, command.entities["phone_number"] == nil {
                 return try await contextual(command, opensSelection: true)
             }
@@ -1464,7 +1472,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         }
         // "Знайди фото …" has no exact asset to open; Photos itself is the
         // truthful destination unless the query resolves to a specific item.
-        if command.entities["photo_query_kind"] == "semantic",
+        if command.entities["photo_query_kind"] != "recent",
            let url = URL(string: "photos-redirect://"), UIApplication.shared.canOpenURL(url) {
             return .handoff(.init(query: command.originalText, destination: url, kind: .system))
         }
