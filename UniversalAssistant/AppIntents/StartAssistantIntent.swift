@@ -43,5 +43,6 @@ struct UniversalAssistantShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(intent: StartAssistantIntent(), phrases: ["Start \(.applicationName)", "Ask \(.applicationName)"], shortTitle: "Start Assistant", systemImageName: "mic.circle")
         AppShortcut(intent: OpenAssistantForTypingIntent(), phrases: ["Open \(.applicationName) for typing", "Type in \(.applicationName)"], shortTitle: "Type a Command", systemImageName: "keyboard")
+        AppShortcut(intent: RunAssistantCommandIntent(), phrases: ["Ask \(.applicationName) to open an app", "Run a command in \(.applicationName)"], shortTitle: "Run a Command", systemImageName: "text.bubble")
     }
 }

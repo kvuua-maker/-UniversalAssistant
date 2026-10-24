@@ -46,7 +46,7 @@ enum ProductionAssistantComposition {
         let recorder = recorder ?? AudioRecorderController()
         let context = CurrentContextStore()
         let voiceInput: any VoiceInputControlling = voiceInputOverride ?? VoiceInputController(contextualVocabulary: {
-            languageUnderstanding.requestScopedCatalogVocabulary(limit: 32)
+            languageUnderstanding.requestScopedCatalogVocabulary(limit: 64)
         })
         let executor = ProductionCanonicalCapabilityExecutor(
             contacts: contacts, photos: photos, photoSemanticLoader: photoSemanticLoader, photoSemanticLabeler: photoSemanticLabeler, podcasts: podcasts, mediaOverride: mediaOverride, locationResolver: locationResolver, placeSearch: placeSearch,

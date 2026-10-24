@@ -89,5 +89,18 @@
 	</array>
 	<key>UAUseCloudKitSync</key>
 	<string>$(UA_USE_CLOUDKIT_SYNC)</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tg</string>
+		<string>viber</string>
+		<string>whatsapp</string>
+		<string>spotify</string>
+		<string>youtube</string>
+		<string>maps</string>
+		<string>comgooglemaps</string>
+		<string>waze</string>
+		<string>instagram</string>
+		<string>telegram</string>
+	</array>
 </dict>
 </plist>

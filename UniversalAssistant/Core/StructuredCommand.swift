@@ -386,7 +386,12 @@ struct CanonicalLexicalCandidateExtractor: CommandParsing {
             "цьому застосунку", "цього додатку", "цьому додатку",
             "этого приложения", "этому приложению", "this app", "the app"
         ]
-        return applicationReferences.contains(where: text.contains) ? "application" : "system"
+        // Only the app's own settings page is publicly openable; system panes
+        // (Wi-Fi, Bluetooth) are not, so they are reported instead of guessed.
+        let systemReferences = ["wi-fi", "wifi", "bluetooth", "мобільн", "мобильн", "стільников", "cellular"]
+        if systemReferences.contains(where: text.contains) { return "system" }
+        _ = applicationReferences
+        return "application"
     }
 
     private func validatedWebURL(_ text: String) -> URL? {

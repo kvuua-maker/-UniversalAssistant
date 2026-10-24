@@ -52,7 +52,20 @@ enum CanonicalSpeechEntityRegistry {
     }
 
     static func applicationID(in text: String) -> String? {
-        exactValue(in: text, registry: applicationAliases)
+        if let exact = exactValue(in: text, registry: applicationAliases) { return exact }
+        // Fuzzy fallback for recogniser variants ("телега", "вайбєр", "вацап",
+        // "ютьюб"): match on a stable stem instead of an exact alias.
+        let normalized = " " + normalize(text) + " "
+        let stems: [(String, [String])] = [
+            ("telegram", ["телег", "теліг", "telegram", "telega"]),
+            ("viber", ["вайб", "віб", "viber"]),
+            ("whatsapp", ["ватс", "вотс", "вацап", "whats"]),
+            ("youtube", ["ютуб", "ютьюб", "youtube"]),
+        ]
+        for (identifier, prefixes) in stems where prefixes.contains(where: { normalized.contains($0) }) {
+            return identifier
+        }
+        return nil
     }
 
     static func communicationChannel(in text: String) -> String? {
