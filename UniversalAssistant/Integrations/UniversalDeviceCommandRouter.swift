@@ -30,7 +30,7 @@ enum CanonicalSpeechEntityRegistry {
         "whatsapp": applicationAliases["whatsapp"]!,
         "viber": applicationAliases["viber"]!,
         "telegram": applicationAliases["telegram"]!,
-        "messages": ["messages", "imessage", "sms", "смс"],
+        "messages": ["messages", "imessage", "sms", "смс", "повідомлення", "повідомлень", "меседж", "месседж"],
         "email": ["email", "mail", "пошта", "пошту", "почта", "почту"],
         "telephone": ["phone", "cellular", "телефон", "телефоном", "мобільний", "мобильный"]
     ]
@@ -210,6 +210,12 @@ enum LaunchDeviceApplications {
         // A root launch carries no unsupported contact/page parameters and
         // therefore avoids Viber's "page unavailable" intermediate screen.
         .init(id: "viber", aliases: CanonicalSpeechEntityRegistry.aliases(for: "viber"), launchURL: URL(string: "viber://")!, exactContext: nil),
+        // Messages has no public "open app" scheme; `sms:` opens the composer,
+        // which is the only supported entry point.
+        .init(id: "messages", aliases: CanonicalSpeechEntityRegistry.aliases(for: "messages"), launchURL: URL(string: "sms:")!, exactContext: nil),
+        // Only the app's own settings page is public; system panes are not.
+        .init(id: "settings", aliases: CanonicalSpeechEntityRegistry.aliases(for: "settings"),
+              launchURL: URL(string: UIApplication.openSettingsURLString) ?? URL(string: "sms:")!, exactContext: nil),
         .init(id: "youtube", aliases: CanonicalSpeechEntityRegistry.aliases(for: "youtube"), launchURL: URL(string: "https://www.youtube.com")!, exactContext: nil),
         .init(id: "app-store", aliases: ["app store", "ап стор", "магазин застосунків"], launchURL: URL(string: "https://apps.apple.com")!, exactContext: nil),
         .init(id: "mail", aliases: CanonicalSpeechEntityRegistry.aliases(for: "mail"), launchURL: URL(string: "mailto:")!, exactContext: nil),
