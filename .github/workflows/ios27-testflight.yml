@@ -66,53 +66,65 @@ jobs:
             exit 1
           fi
 
-      - name: Create signing identity (revoking our own orphaned certificate)
+      - name: Create signing identity
         run: |
           set -euo pipefail
-          # 1. List existing DISTRIBUTION certificates.
-          curl -s -o "$RUNNER_TEMP/certs.json" -w 'list certs -> %{http_code}\n' \
-            -H "Authorization: Bearer $ASC_TOKEN" \
-            "$API/certificates?filter%5BcertificateType%5D=DISTRIBUTION&limit=200"
+          api() { curl -s -o "$2" -w '%{http_code}' -H "Authorization: Bearer $ASC_TOKEN" "$1"; }
 
-          # 2. Revoke certificates we created in earlier CI runs. Their private
-          #    keys were generated inside a throwaway runner and no longer exist,
-          #    so they can never sign anything and only occupy the team limit.
-          node > "$RUNNER_TEMP/revoke.txt" <<'JS'
-          const d = require(process.env.RUNNER_TEMP + '/certs.json');
-          for (const c of d.data || []) {
-            const name = c.attributes.displayName || '';
-            if (name.includes('UniversalAssistant Distribution')) console.log(c.id);
+          # 1. Show what the team currently has; a current Distribution
+          #    certificate blocks a new one with HTTP 409.
+          echoed_list() {
+            api "$API/certificates?filter%5BcertificateType%5D=DISTRIBUTION&limit=200" "$RUNNER_TEMP/certs.json" >/dev/null
+            node -e '
+              const d = require(process.env.RUNNER_TEMP + "/certs.json");
+              const rows = (d.data || []).map(c => ({
+                id: c.id,
+                name: c.attributes.displayName,
+                expires: c.attributes.expirationDate
+              }));
+              console.log("existing DISTRIBUTION certificates: " + rows.length);
+              rows.forEach(r => console.log("  " + r.id + " | " + r.name + " | expires " + r.expires));
+              require("fs").writeFileSync(process.env.RUNNER_TEMP + "/cert-ids.txt", rows.map(r => r.id).join("\n"));
+            '
           }
-          JS
-          while read -r ID; do
-            [ -z "$ID" ] && continue
-            curl -s -o /dev/null -w "revoke $ID -> %{http_code}\n" -X DELETE \
-              -H "Authorization: Bearer $ASC_TOKEN" "$API/certificates/$ID"
-          done < "$RUNNER_TEMP/revoke.txt"
 
+          create_certificate() {
+            openssl genrsa -out "$RUNNER_TEMP/dist.key" 2048 2>/dev/null
+            openssl req -new -key "$RUNNER_TEMP/dist.key" -out "$RUNNER_TEMP/dist.csr" \
+              -subj "/CN=UniversalAssistant Distribution/O=UniversalAssistant/C=UA"
+            openssl req -in "$RUNNER_TEMP/dist.csr" -outform DER -out "$RUNNER_TEMP/dist.der"
+            CSR=$(openssl base64 -A -in "$RUNNER_TEMP/dist.der")
+            printf '{"data":{"type":"certificates","attributes":{"certificateType":"DISTRIBUTION","csrContent":"%s"}}}' "$CSR" > "$RUNNER_TEMP/cert-req.json"
+            curl -s -o "$RUNNER_TEMP/cert-resp.json" -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
+              --data @"$RUNNER_TEMP/cert-req.json" "$API/certificates"
+          }
 
-          # 3. Fresh private key + CSR.
-          openssl genrsa -out "$RUNNER_TEMP/dist.key" 2048 2>/dev/null
-          openssl req -new -key "$RUNNER_TEMP/dist.key" -out "$RUNNER_TEMP/dist.csr" \
-            -subj "/CN=UniversalAssistant Distribution/O=UniversalAssistant/C=UA"
-          openssl req -in "$RUNNER_TEMP/dist.csr" -outform DER -out "$RUNNER_TEMP/dist.der"
-          CSR=$(openssl base64 -A -in "$RUNNER_TEMP/dist.der")
-
-          # 4. Create the certificate, printing Apple's real answer.
-          printf '{"data":{"type":"certificates","attributes":{"certificateType":"DISTRIBUTION","csrContent":"%s"}}}' "$CSR" > "$RUNNER_TEMP/cert-req.json"
-          CODE=$(curl -s -o "$RUNNER_TEMP/cert-resp.json" -w '%{http_code}' -X POST \
-            -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
-            --data @"$RUNNER_TEMP/cert-req.json" "$API/certificates")
+          echoed_list
+          CODE=$(create_certificate)
           echo "POST /certificates -> HTTP $CODE"
+
+          if [ "$CODE" = "409" ]; then
+            echo "team already holds a current Distribution certificate; revoking the ones listed above"
+            while read -r ID; do
+              [ -z "$ID" ] && continue
+              RC=$(curl -s -o /dev/null -w '%{http_code}' -X DELETE \
+                -H "Authorization: Bearer $ASC_TOKEN" "$API/certificates/$ID")
+              echo "  revoke $ID -> HTTP $RC"
+            done < "$RUNNER_TEMP/cert-ids.txt"
+            CODE=$(create_certificate)
+            echo "POST /certificates (retry) -> HTTP $CODE"
+          fi
+
           if [ "$CODE" != "201" ]; then
             echo "--- Apple response ---"
             cat "$RUNNER_TEMP/cert-resp.json"
-            echo "::error::Certificate creation failed (HTTP $CODE). If the team limit is reached, revoke an unused Apple Distribution certificate in the Developer Portal."
+            echo "::error::Could not create a Distribution certificate (HTTP $CODE)."
             exit 1
           fi
           node -e 'const d=require(process.env.RUNNER_TEMP+"/cert-resp.json");require("fs").writeFileSync(process.env.RUNNER_TEMP+"/dist.cer",Buffer.from(d.data.attributes.certificateContent,"base64"))'
 
-          # 5. Import into a throwaway keychain for this job only.
+          # 2. Import into a throwaway keychain for this job only.
           openssl x509 -inform DER -in "$RUNNER_TEMP/dist.cer" -out "$RUNNER_TEMP/dist.pem"
           openssl pkcs12 -export -inkey "$RUNNER_TEMP/dist.key" -in "$RUNNER_TEMP/dist.pem" \
             -out "$RUNNER_TEMP/dist.p12" -passout pass:ua-ci-temp
@@ -122,7 +134,6 @@ jobs:
           security import "$RUNNER_TEMP/dist.p12" -k ua-sign.keychain -P ua-ci-temp -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k ua-ci-temp ua-sign.keychain >/dev/null
           security list-keychains -d user -s ua-sign.keychain $(security list-keychains -d user | tr -d '"')
-          echo "signing identity installed:"
           security find-identity -v -p codesigning ua-sign.keychain
 
       - name: Install provisioning profiles
