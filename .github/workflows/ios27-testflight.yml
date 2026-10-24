@@ -1,8 +1,5 @@
 name: Signed iPhone build and TestFlight
 
-# Fully automatic signing: Xcode creates/downloads the Apple Distribution
-# certificate and the App Store provisioning profile through the App Store
-# Connect API. No manual .p12 or profile is stored anywhere.
 on:
   workflow_dispatch:
 
@@ -13,6 +10,13 @@ jobs:
   archive-and-upload:
     runs-on: macos-15
     timeout-minutes: 90
+    env:
+      API: https://api.appstoreconnect.apple.com/v1
+      TEAM_ID: 9V5XXDXF3N
+      APP_BUNDLE: com.universalassistant.app
+      EXT_BUNDLE: com.universalassistant.app.share
+      APP_PROFILE: UniversalAssistant_AppStore
+      EXT_PROFILE: UniversalAssistant_ShareExtension
     steps:
       - uses: actions/checkout@v4
 
@@ -22,121 +26,142 @@ jobs:
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
         run: |
           set -euo pipefail
+          KEY="$RUNNER_TEMP/private_keys/AuthKey_$ASC_KEY_ID.p8"
           mkdir -p "$RUNNER_TEMP/private_keys" "$HOME/.appstoreconnect/private_keys"
-          printf '%s' "$ASC_PRIVATE_KEY" > "$RUNNER_TEMP/private_keys/AuthKey_$ASC_KEY_ID.p8"
-          chmod 600 "$RUNNER_TEMP/private_keys/AuthKey_$ASC_KEY_ID.p8"
-          cp "$RUNNER_TEMP/private_keys/AuthKey_$ASC_KEY_ID.p8" "$HOME/.appstoreconnect/private_keys/"
-          openssl pkey -in "$RUNNER_TEMP/private_keys/AuthKey_$ASC_KEY_ID.p8" -noout
+          printf '%s' "$ASC_PRIVATE_KEY" | tr -d '\r' > "$KEY"
+          chmod 600 "$KEY"
+          cp "$KEY" "$HOME/.appstoreconnect/private_keys/"
+          openssl pkey -in "$KEY" -noout
+          echo "ASC_KEY_PATH=$KEY" >> "$GITHUB_ENV"
 
-      - name: ASC diagnostics (bundle id + capabilities)
+      - name: Mint API token
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          KEY_PATH: ${{ runner.temp }}/private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8
         run: |
           set -euo pipefail
           cat > "$RUNNER_TEMP/jwt.js" <<'JS'
-          const fs=require('fs'),crypto=require('crypto');
-          const key=fs.readFileSync(process.env.KEY_PATH,'utf8');
-          const b64=o=>Buffer.from(JSON.stringify(o)).toString('base64url');
-          const now=Math.floor(Date.now()/1000);
-          const input=b64({alg:'ES256',kid:process.env.ASC_KEY_ID,typ:'JWT'})+'.'+
-                      b64({iss:process.env.ASC_ISSUER_ID,iat:now,exp:now+600,aud:'appstoreconnect-v1'});
-          const sig=crypto.sign('sha256',Buffer.from(input),{key,dsaEncoding:'ieee-p1363'}).toString('base64url');
-          process.stdout.write(input+'.'+sig);
+          const fs = require('fs'), crypto = require('crypto');
+          const key = fs.readFileSync(process.env.ASC_KEY_PATH, 'utf8');
+          const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url');
+          const now = Math.floor(Date.now() / 1000);
+          const input = b64({ alg: 'ES256', kid: process.env.ASC_KEY_ID, typ: 'JWT' }) + '.' +
+                        b64({ iss: process.env.ASC_ISSUER_ID, iat: now, exp: now + 900, aud: 'appstoreconnect-v1' });
+          const sig = crypto.sign('sha256', Buffer.from(input), { key, dsaEncoding: 'ieee-p1363' }).toString('base64url');
+          process.stdout.write(input + '.' + sig);
           JS
           TOKEN=$(node "$RUNNER_TEMP/jwt.js")
-          API=https://api.appstoreconnect.apple.com/v1
-          echo "--- bundle ids for this team ---"
-          curl -sf -H "Authorization: Bearer $TOKEN" \
-            "$API/bundleIds?filter%5Bidentifier%5D=com.universalassistant.app&limit=5" \
-            -o "$RUNNER_TEMP/bundle.json" | true
-          node -e '
-            const d=require(process.env.RUNNER_TEMP+"/bundle.json");
-            const b=(d.data||[])[0];
-            if(!b){console.log("BUNDLE_ID_NOT_FOUND");process.exit(3);}
-            console.log("bundleId:",b.id,b.attributes.identifier,"platform:",b.attributes.platform,"seedId(team):",b.attributes.seedId);
-          '
-          BID=$(node -e 'const d=require(process.env.RUNNER_TEMP+"/bundle.json");process.stdout.write(d.data[0].id)')
-          echo "--- capabilities ---"
-          curl -sf -H "Authorization: Bearer $TOKEN" "$API/bundleIds/$BID/bundleIdCapabilities" -o "$RUNNER_TEMP/caps.json"
-          node -e '
-            const d=require(process.env.RUNNER_TEMP+"/caps.json");
-            const caps=(d.data||[]).map(c=>c.attributes.capabilityType).sort();
-            console.log("count:",caps.length); console.log(caps.join(", "));
-            const need=["APP_GROUPS","PUSH_NOTIFICATIONS","ICLOUD","APPLE_ID_AUTH","WEATHERKIT","APP_ATTEST"];
-            const missing=need.filter(n=>!caps.includes(n));
-            console.log(missing.length? "MISSING: "+missing.join(", ") : "ALL REQUIRED CAPABILITIES PRESENT");
-          '
-          echo "--- certificates ---"
-          curl -sf -H "Authorization: Bearer $TOKEN" "$API/certificates?limit=20" \
-            | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const d=JSON.parse(s);console.log((d.data||[]).map(c=>c.attributes.certificateType+":"+c.attributes.displayName).join("\n")||"none")})'
+          test -n "$TOKEN"
+          echo "ASC_TOKEN=$TOKEN" >> "$GITHUB_ENV"
 
-      - name: Create distribution certificate and install profiles
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          KEY_PATH: ${{ runner.temp }}/private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8
+      - name: Verify API access
         run: |
           set -euo pipefail
-          API=https://api.appstoreconnect.apple.com/v1
-          TOKEN=$(node "$RUNNER_TEMP/jwt.js")
-
-          # 1. Key + CSR for a fresh Apple Distribution certificate.
-          openssl genrsa -out "$RUNNER_TEMP/dist.key" 2048
-          openssl req -new -key "$RUNNER_TEMP/dist.key" -out "$RUNNER_TEMP/dist.csr" \
-            -subj "/CN=UniversalAssistant Distribution/OU=9V5XXDXF3N/O=UniversalAssistant/C=UA"
-          openssl req -in "$RUNNER_TEMP/dist.csr" -outform DER -out "$RUNNER_TEMP/dist.der"
-          CSR=$(base64 -i "$RUNNER_TEMP/dist.der" | tr -d '\n')
-          printf '{"data":{"type":"certificates","attributes":{"certificateType":"DISTRIBUTION","csrContent":"%s"}}}' "$CSR" > "$RUNNER_TEMP/cert.json"
-          curl -sf -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-            --data @"$RUNNER_TEMP/cert.json" "$API/certificates" -o "$RUNNER_TEMP/cert-resp.json" || true
-          CERT_ID=$(node -e 'try{const d=require(process.env.RUNNER_TEMP+"/cert-resp.json");process.stdout.write(d.data.id)}catch(e){}')
-          if [ -n "$CERT_ID" ]; then
-            curl -sf -H "Authorization: Bearer $TOKEN" "$API/certificates/$CERT_ID" -o "$RUNNER_TEMP/cert.json"
-          else
-            curl -sf -H "Authorization: Bearer $TOKEN" "$API/certificates?filter%5BcertificateType%5D=DISTRIBUTION&limit=1" -o "$RUNNER_TEMP/cert-list.json"
-            CERT_ID=$(node -e 'const d=require(process.env.RUNNER_TEMP+"/cert-list.json");process.stdout.write(d.data[0].id)')
-            curl -sf -H "Authorization: Bearer $TOKEN" "$API/certificates/$CERT_ID" -o "$RUNNER_TEMP/cert.json"
+          CODE=$(curl -s -o "$RUNNER_TEMP/me.json" -w '%{http_code}' \
+            -H "Authorization: Bearer $ASC_TOKEN" "$API/certificates?limit=1")
+          echo "GET /certificates -> HTTP $CODE"
+          if [ "$CODE" != "200" ]; then
+            cat "$RUNNER_TEMP/me.json"
+            echo "::error::App Store Connect rejected the API key (HTTP $CODE)"
+            exit 1
           fi
-          node -e 'const d=require(process.env.RUNNER_TEMP+"/cert.json");require("fs").writeFileSync(process.env.RUNNER_TEMP+"/dist.cer",Buffer.from(d.data.attributes.certificateContent,"base64"))'
+
+      - name: Create signing identity (revoking our own orphaned certificate)
+        run: |
+          set -euo pipefail
+          # 1. List existing DISTRIBUTION certificates.
+          curl -s -o "$RUNNER_TEMP/certs.json" -w 'list certs -> %{http_code}\n' \
+            -H "Authorization: Bearer $ASC_TOKEN" \
+            "$API/certificates?filter%5BcertificateType%5D=DISTRIBUTION&limit=200"
+
+          # 2. Revoke certificates we created in earlier CI runs. Their private
+          #    keys were generated inside a throwaway runner and no longer exist,
+          #    so they can never sign anything and only occupy the team limit.
+          node > "$RUNNER_TEMP/revoke.txt" <<'JS'
+          const d = require(process.env.RUNNER_TEMP + '/certs.json');
+          for (const c of d.data || []) {
+            const name = c.attributes.displayName || '';
+            if (name.includes('UniversalAssistant Distribution')) console.log(c.id);
+          }
+          JS
+          while read -r ID; do
+            [ -z "$ID" ] && continue
+            curl -s -o /dev/null -w "revoke $ID -> %{http_code}\n" -X DELETE \
+              -H "Authorization: Bearer $ASC_TOKEN" "$API/certificates/$ID"
+          done < "$RUNNER_TEMP/revoke.txt"
+
+
+          # 3. Fresh private key + CSR.
+          openssl genrsa -out "$RUNNER_TEMP/dist.key" 2048 2>/dev/null
+          openssl req -new -key "$RUNNER_TEMP/dist.key" -out "$RUNNER_TEMP/dist.csr" \
+            -subj "/CN=UniversalAssistant Distribution/O=UniversalAssistant/C=UA"
+          openssl req -in "$RUNNER_TEMP/dist.csr" -outform DER -out "$RUNNER_TEMP/dist.der"
+          CSR=$(openssl base64 -A -in "$RUNNER_TEMP/dist.der")
+
+          # 4. Create the certificate, printing Apple's real answer.
+          printf '{"data":{"type":"certificates","attributes":{"certificateType":"DISTRIBUTION","csrContent":"%s"}}}' "$CSR" > "$RUNNER_TEMP/cert-req.json"
+          CODE=$(curl -s -o "$RUNNER_TEMP/cert-resp.json" -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
+            --data @"$RUNNER_TEMP/cert-req.json" "$API/certificates")
+          echo "POST /certificates -> HTTP $CODE"
+          if [ "$CODE" != "201" ]; then
+            echo "--- Apple response ---"
+            cat "$RUNNER_TEMP/cert-resp.json"
+            echo "::error::Certificate creation failed (HTTP $CODE). If the team limit is reached, revoke an unused Apple Distribution certificate in the Developer Portal."
+            exit 1
+          fi
+          node -e 'const d=require(process.env.RUNNER_TEMP+"/cert-resp.json");require("fs").writeFileSync(process.env.RUNNER_TEMP+"/dist.cer",Buffer.from(d.data.attributes.certificateContent,"base64"))'
+
+          # 5. Import into a throwaway keychain for this job only.
           openssl x509 -inform DER -in "$RUNNER_TEMP/dist.cer" -out "$RUNNER_TEMP/dist.pem"
           openssl pkcs12 -export -inkey "$RUNNER_TEMP/dist.key" -in "$RUNNER_TEMP/dist.pem" \
-            -out "$RUNNER_TEMP/dist.p12" -passout pass:ua-temp
-          security create-keychain -p ua-temp ua.keychain
-          security set-keychain-settings -lut 3600 ua.keychain
-          security unlock-keychain -p ua-temp ua.keychain
-          security import "$RUNNER_TEMP/dist.p12" -k ua.keychain -P ua-temp -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k ua-temp ua.keychain >/dev/null
-          security list-keychains -d user -s ua.keychain $(security list-keychains -d user | tr -d '"')
+            -out "$RUNNER_TEMP/dist.p12" -passout pass:ua-ci-temp
+          security create-keychain -p ua-ci-temp ua-sign.keychain || true
+          security set-keychain-settings -lut 3600 ua-sign.keychain
+          security unlock-keychain -p ua-ci-temp ua-sign.keychain
+          security import "$RUNNER_TEMP/dist.p12" -k ua-sign.keychain -P ua-ci-temp -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k ua-ci-temp ua-sign.keychain >/dev/null
+          security list-keychains -d user -s ua-sign.keychain $(security list-keychains -d user | tr -d '"')
+          echo "signing identity installed:"
+          security find-identity -v -p codesigning ua-sign.keychain
 
-          # 2. Download the two App Store profiles the owner created.
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          # No name filter: ASC filtering is brittle, so fetch the full list and
-          # match locally.
-          curl -sf --http1.1 --retry 5 --retry-all-errors -H "Authorization: Bearer $TOKEN" \
-            "$API/profiles?limit=200" -o "$RUNNER_TEMP/profiles.json"
+      - name: Install provisioning profiles
+        run: |
+          set -euo pipefail
+          curl -s -o "$RUNNER_TEMP/profiles.json" -w 'list profiles -> %{http_code}\n' \
+            -H "Authorization: Bearer $ASC_TOKEN" "$API/profiles?limit=200"
+
           install_profile() {
             NAME="$1"
-            PID=$(node -e "const d=require('$RUNNER_TEMP/profiles.json');const p=d.data.find(x=>x.attributes.name==='$NAME');if(!p){console.error('MISSING $NAME');process.exit(4)}process.stdout.write(p.id)")
+            PID=$(NAME="$NAME" node -e '
+              const fs = require("fs");
+              const d = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/profiles.json", "utf8"));
+              const p = (d.data || []).find(x => x.attributes.name === process.env.NAME);
+              if (!p) {
+                console.error("MISSING profile: " + process.env.NAME);
+                console.error("available: " + (d.data || []).map(x => x.attributes.name).join(" | "));
+                process.exit(4);
+              }
+              process.stdout.write(p.id);
+            ')
             echo "profile $NAME -> $PID"
-            curl -sf --http1.1 --retry 5 --retry-all-errors -H "Authorization: Bearer $TOKEN" \
-              "$API/profiles/$PID/profileContent" -o "$RUNNER_TEMP/$NAME.raw"
+            CODE=$(curl -s -o "$RUNNER_TEMP/$NAME.raw" -w '%{http_code}' \
+              -H "Authorization: Bearer $ASC_TOKEN" "$API/profiles/$PID/profileContent")
+            echo "GET profileContent $NAME -> HTTP $CODE"
+            [ "$CODE" = "200" ] || { echo "::error::profile download failed for $NAME"; exit 1; }
             DEST="$HOME/Library/MobileDevice/Provisioning Profiles/$NAME.mobileprovision"
-            if head -c 40 "$RUNNER_TEMP/$NAME.raw" | grep -qE '^[A-Za-z0-9+/=]+$'; then
-              base64 -d -i "$RUNNER_TEMP/$NAME.raw" -o "$DEST"
+            mkdir -p "$(dirname "$DEST")"
+            if LC_ALL=C head -c 1 "$RUNNER_TEMP/$NAME.raw" | grep -qE '[A-Za-z0-9+/]'; then
+              openssl base64 -d -A -in "$RUNNER_TEMP/$NAME.raw" -out "$DEST"
             else
               cp "$RUNNER_TEMP/$NAME.raw" "$DEST"
             fi
-            ls -la "$DEST"
+            ls -l "$DEST"
           }
-          install_profile UniversalAssistant_AppStore
-          install_profile UniversalAssistant_ShareExtension
+          install_profile "$APP_PROFILE"
+          install_profile "$EXT_PROFILE"
 
-      - name: Archive (automatic signing via ASC API)
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      - name: Archive
         run: |
           set -euo pipefail
           xcodebuild archive \
@@ -146,17 +171,14 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/UniversalAssistant.xcarchive" \
             -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/private_keys/AuthKey_$ASC_KEY_ID.p8" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            DEVELOPMENT_TEAM=9V5XXDXF3N \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "${{ secrets.ASC_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.ASC_ISSUER_ID }}" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
             CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             MARKETING_VERSION=1.0.0 2>&1 | tee archive.log
 
       - name: Export signed IPA
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           set -euo pipefail
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
@@ -164,21 +186,22 @@ jobs:
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0"><dict>
             <key>method</key><string>app-store-connect</string>
-            <key>teamID</key><string>9V5XXDXF3N</string>
-            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>manual</string>
             <key>uploadSymbols</key><true/>
             <key>destination</key><string>export</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${APP_BUNDLE}</key><string>${APP_PROFILE}</string>
+              <key>${EXT_BUNDLE}</key><string>${EXT_PROFILE}</string>
+            </dict>
           </dict></plist>
           PLIST
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/UniversalAssistant.xcarchive" \
             -exportPath "$RUNNER_TEMP/export" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/private_keys/AuthKey_$ASC_KEY_ID.p8" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" 2>&1 | tee export.log
-          ls -la "$RUNNER_TEMP/export"
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" 2>&1 | tee export.log
+          ls -l "$RUNNER_TEMP/export"
 
       - name: Upload to TestFlight
         env:
@@ -191,9 +214,11 @@ jobs:
           xcrun altool --upload-app -f "$IPA" -t ios \
             --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID" 2>&1 | tee upload.log
 
-      - name: Remove signing material
+      - name: Clean up signing material
         if: always()
-        run: rm -rf "$HOME/.appstoreconnect" "$RUNNER_TEMP/private_keys"
+        run: |
+          security delete-keychain ua-sign.keychain 2>/dev/null || true
+          rm -rf "$HOME/.appstoreconnect" "$RUNNER_TEMP/private_keys" "$RUNNER_TEMP"/*.p12 "$RUNNER_TEMP"/*.key
 
       - name: Upload logs
         if: always()
@@ -201,7 +226,6 @@ jobs:
         with:
           name: testflight-${{ github.run_number }}
           path: |
-            asc-diagnostics.log
             archive.log
             export.log
             upload.log
