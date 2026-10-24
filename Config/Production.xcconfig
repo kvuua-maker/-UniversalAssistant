@@ -1,4 +1,4 @@
-PRODUCT_BUNDLE_IDENTIFIER = com.universalassistant.app
+PRODUCT_BUNDLE_IDENTIFIER = com.universalassistant.app2
 CODE_SIGN_ENTITLEMENTS = UniversalAssistant/UniversalAssistant.entitlements
 SWIFT_ACTIVE_COMPILATION_CONDITIONS = PRODUCTION
 CODE_SIGN_STYLE = Automatic

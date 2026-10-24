@@ -13,10 +13,10 @@ jobs:
     env:
       API: https://api.appstoreconnect.apple.com/v1
       TEAM_ID: 9V5XXDXF3N
-      APP_BUNDLE: com.universalassistant.app
-      EXT_BUNDLE: com.universalassistant.app.share
-      APP_PROFILE: UniversalAssistant_AppStore
-      EXT_PROFILE: UniversalAssistant_ShareExtension
+      APP_BUNDLE: com.universalassistant.app2
+      EXT_BUNDLE: com.universalassistant.app2.ShareExtension
+      APP_PROFILE: UniversalAssistant_AppStore_V2
+      EXT_PROFILE: UniversalAssistant_ShareExtension_V2
     steps:
       - uses: actions/checkout@v4
 
@@ -136,6 +136,41 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k ua-ci-temp ua-sign.keychain >/dev/null
           security list-keychains -d user -s ua-sign.keychain $(security list-keychains -d user | tr -d '"')
           security find-identity -v -p codesigning ua-sign.keychain
+
+      - name: Ensure App ID exists
+        run: |
+          set -euo pipefail
+          curl -s -o "$RUNNER_TEMP/bundles.json" -H "Authorization: Bearer $ASC_TOKEN" "$API/bundleIds?limit=200"
+          export APP_IDENT="$APP_BUNDLE"
+          EXISTS=$(node -e '
+            const fs=require("fs");
+            const d=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/bundles.json","utf8"));
+            process.stdout.write((d.data||[]).some(x=>x.attributes.identifier===process.env.APP_IDENT)?"yes":"no");
+          ')
+          echo "bundle id $APP_BUNDLE exists: $EXISTS"
+          if [ "$EXISTS" = "no" ]; then
+            printf '{"data":{"type":"bundleIds","attributes":{"identifier":"%s","name":"UniversalAssistant","platform":"IOS"}}}' "$APP_BUNDLE" > "$RUNNER_TEMP/bid.json"
+            CODE=$(curl -s -o "$RUNNER_TEMP/bid-resp.json" -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
+              --data @"$RUNNER_TEMP/bid.json" "$API/bundleIds")
+            echo "create bundle id -> HTTP $CODE"
+            [ "$CODE" = "201" ] || { cat "$RUNNER_TEMP/bid-resp.json"; exit 1; }
+          fi
+          export EXT_IDENT="$EXT_BUNDLE"
+          EXISTS=$(node -e '
+            const fs=require("fs");
+            const d=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/bundles.json","utf8"));
+            process.stdout.write((d.data||[]).some(x=>x.attributes.identifier===process.env.EXT_IDENT)?"yes":"no");
+          ')
+          echo "bundle id $EXT_BUNDLE exists: $EXISTS"
+          if [ "$EXISTS" = "no" ]; then
+            printf '{"data":{"type":"bundleIds","attributes":{"identifier":"%s","name":"UniversalAssistant Share","platform":"IOS"}}}' "$EXT_BUNDLE" > "$RUNNER_TEMP/bidx.json"
+            CODE=$(curl -s -o "$RUNNER_TEMP/bidx-resp.json" -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
+              --data @"$RUNNER_TEMP/bidx.json" "$API/bundleIds")
+            echo "create extension bundle id -> HTTP $CODE"
+            [ "$CODE" = "201" ] || { cat "$RUNNER_TEMP/bidx-resp.json"; exit 1; }
+          fi
 
       - name: Ensure App ID capabilities
         run: |
