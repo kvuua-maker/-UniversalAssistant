@@ -14,7 +14,7 @@ import Testing
         }
     }
 
-    @Test func simulatorDoesNotPretendCameraCaptureIsAvailable() {
+    @Test @MainActor func simulatorDoesNotPretendCameraCaptureIsAvailable() {
 #if targetEnvironment(simulator)
         #expect(!SystemCameraCapture.isAvailable)
 #endif
