@@ -46,7 +46,12 @@ enum ProductionAssistantComposition {
         let recorder = recorder ?? AudioRecorderController()
         let context = CurrentContextStore()
         let voiceInput: any VoiceInputControlling = voiceInputOverride ?? VoiceInputController(contextualVocabulary: {
-            languageUnderstanding.requestScopedCatalogVocabulary(limit: 64)
+            var vocabulary = languageUnderstanding.requestScopedCatalogVocabulary(limit: 64)
+            // App names are the most error-prone words for uk-UA recognition,
+            // so they are always present even when the catalogue is trimmed.
+            vocabulary += ["Telegram", "Телеграм", "Телега", "Viber", "Вайбер", "WhatsApp",
+                           "Ватсап", "YouTube", "Ютуб", "Налаштування", "Повідомлення"]
+            return Array(Set(vocabulary)).sorted()
         })
         let executor = ProductionCanonicalCapabilityExecutor(
             contacts: contacts, photos: photos, photoSemanticLoader: photoSemanticLoader, photoSemanticLabeler: photoSemanticLabeler, podcasts: podcasts, mediaOverride: mediaOverride, locationResolver: locationResolver, placeSearch: placeSearch,

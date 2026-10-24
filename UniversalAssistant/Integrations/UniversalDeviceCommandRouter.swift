@@ -215,7 +215,7 @@ enum LaunchDeviceApplications {
         .init(id: "messages", aliases: CanonicalSpeechEntityRegistry.aliases(for: "messages"), launchURL: URL(string: "sms:")!, exactContext: nil),
         // Only the app's own settings page is public; system panes are not.
         .init(id: "settings", aliases: CanonicalSpeechEntityRegistry.aliases(for: "settings"),
-              launchURL: URL(string: UIApplication.openSettingsURLString) ?? URL(string: "sms:")!, exactContext: nil),
+              launchURL: URL(string: "app-settings:")!, exactContext: nil),
         .init(id: "youtube", aliases: CanonicalSpeechEntityRegistry.aliases(for: "youtube"), launchURL: URL(string: "https://www.youtube.com")!, exactContext: nil),
         .init(id: "app-store", aliases: ["app store", "ап стор", "магазин застосунків"], launchURL: URL(string: "https://apps.apple.com")!, exactContext: nil),
         .init(id: "mail", aliases: CanonicalSpeechEntityRegistry.aliases(for: "mail"), launchURL: URL(string: "mailto:")!, exactContext: nil),

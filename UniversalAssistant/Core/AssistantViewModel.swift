@@ -106,6 +106,7 @@ final class AssistantViewModel {
     // also prevents abandoned starts surviving re-entry or scene transitions.
     private var voiceStartTask: Task<Void, Never>?
     private var voiceDraftSourceText: String?
+    private var voiceContinuationAttempted = false
     private var pendingVoiceRecognitionEvidence: VoiceRecognitionEvidence?
     private var voiceAutoSubmitArmed = false
     private var voiceSubmitPerformed = false
@@ -443,6 +444,20 @@ final class AssistantViewModel {
             parser.parse(input, speechEvidence: voiceEvidence)
         } else {
             commandEngine.parse(input)
+        }
+        // A clipped utterance such as "Відкрий" carries no object; restart the
+        // microphone once instead of routing an impossible command.
+        if isVoiceSubmission,
+           input.split(separator: " ").count < 2,
+           standaloneCommand.intent == .open || standaloneCommand.intent == .appAction,
+           standaloneCommand.entities["app"] == nil,
+           !voiceContinuationAttempted {
+            voiceContinuationAttempted = true
+            RuntimeDiagnostics.shared.log("voice", "short utterance '\(input)' -> keep listening")
+            statusText = "Слухаю… назвіть застосунок"
+            input = ""
+            toggleListening()
+            return
         }
         RuntimeDiagnostics.shared.log(
             "heard", "\(isVoiceSubmission ? "voice" : "typed"): \(input)")

@@ -1704,7 +1704,7 @@ final class VoiceInputController: VoiceInputControlling {
 
     init(
         captureBackend: (any VoiceAudioCaptureBackend)? = nil,
-        endOfSpeechDelay: Duration = .milliseconds(850),
+        endOfSpeechDelay: Duration = .milliseconds(1100),
         authorization: (@Sendable () async -> Bool)? = nil,
         contextualVocabulary: @escaping @Sendable () async -> [String] = { [] },
         cloudTranscriber: any CloudVoiceTranscribing = GroqCloudVoiceTranscriber()
@@ -2109,6 +2109,11 @@ final class VoiceInputController: VoiceInputControlling {
         evidence: VoiceRecognitionEvidence?
     ) -> Bool {
         if appleRecognitionTerminatedEarly || speechResumedAfterAppleTermination { return true }
+        // A bare action verb ("Відкрий") usually means the last word was cut.
+        let words = assessment.command.originalText.split(separator: " ").count
+        if words < 2, assessment.command.intent == .open || assessment.command.intent == .appAction {
+            return true
+        }
         if hasMissingCriticalRole(assessment, evidence: evidence) { return true }
         if let confidence = evidence?.averageSegmentConfidence, confidence < 0.5,
            assessment.application != nil || assessment.channel != nil || assessment.command.constraints.brand != nil {
