@@ -28,6 +28,50 @@ jobs:
           cp "$RUNNER_TEMP/private_keys/AuthKey_$ASC_KEY_ID.p8" "$HOME/.appstoreconnect/private_keys/"
           openssl pkey -in "$RUNNER_TEMP/private_keys/AuthKey_$ASC_KEY_ID.p8" -noout
 
+      - name: ASC diagnostics (bundle id + capabilities)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          KEY_PATH: ${{ runner.temp }}/private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/jwt.js" <<'JS'
+          const fs=require('fs'),crypto=require('crypto');
+          const key=fs.readFileSync(process.env.KEY_PATH,'utf8');
+          const b64=o=>Buffer.from(JSON.stringify(o)).toString('base64url');
+          const now=Math.floor(Date.now()/1000);
+          const input=b64({alg:'ES256',kid:process.env.ASC_KEY_ID,typ:'JWT'})+'.'+
+                      b64({iss:process.env.ASC_ISSUER_ID,iat:now,exp:now+600,aud:'appstoreconnect-v1'});
+          const sig=crypto.sign('sha256',Buffer.from(input),{key,dsaEncoding:'ieee-p1363'}).toString('base64url');
+          process.stdout.write(input+'.'+sig);
+          JS
+          TOKEN=$(node "$RUNNER_TEMP/jwt.js")
+          API=https://api.appstoreconnect.apple.com/v1
+          echo "--- bundle ids for this team ---"
+          curl -sf -H "Authorization: Bearer $TOKEN" \
+            "$API/bundleIds?filter%5Bidentifier%5D=com.universalassistant.app&limit=5" \
+            -o "$RUNNER_TEMP/bundle.json" | true
+          node -e '
+            const d=require(process.env.RUNNER_TEMP+"/bundle.json");
+            const b=(d.data||[])[0];
+            if(!b){console.log("BUNDLE_ID_NOT_FOUND");process.exit(3);}
+            console.log("bundleId:",b.id,b.attributes.identifier,"platform:",b.attributes.platform,"seedId(team):",b.attributes.seedId);
+          '
+          BID=$(node -e 'const d=require(process.env.RUNNER_TEMP+"/bundle.json");process.stdout.write(d.data[0].id)')
+          echo "--- capabilities ---"
+          curl -sf -H "Authorization: Bearer $TOKEN" "$API/bundleIds/$BID/bundleIdCapabilities" -o "$RUNNER_TEMP/caps.json"
+          node -e '
+            const d=require(process.env.RUNNER_TEMP+"/caps.json");
+            const caps=(d.data||[]).map(c=>c.attributes.capabilityType).sort();
+            console.log("count:",caps.length); console.log(caps.join(", "));
+            const need=["APP_GROUPS","PUSH_NOTIFICATIONS","ICLOUD","APPLE_ID_AUTH","WEATHERKIT","APP_ATTEST"];
+            const missing=need.filter(n=>!caps.includes(n));
+            console.log(missing.length? "MISSING: "+missing.join(", ") : "ALL REQUIRED CAPABILITIES PRESENT");
+          '
+          echo "--- certificates ---"
+          curl -sf -H "Authorization: Bearer $TOKEN" "$API/certificates?limit=20" \
+            | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const d=JSON.parse(s);console.log((d.data||[]).map(c=>c.attributes.certificateType+":"+c.attributes.displayName).join("\n")||"none")})'
+
       - name: Archive (automatic signing via ASC API)
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
