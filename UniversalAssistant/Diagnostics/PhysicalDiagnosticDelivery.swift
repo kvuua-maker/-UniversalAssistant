@@ -200,7 +200,9 @@ actor PhysicalDiagnosticDelivery {
     }
 
     func enqueue(_ session: PhysicalDiagnosticSession, now: Date = .now) async {
-        await CloudKitDiagnosticAudioDelivery.shared.enqueue(session, now: now)
+        if CloudFeatureFlags.cloudSyncEnabled {
+            await CloudKitDiagnosticAudioDelivery.shared.enqueue(session, now: now)
+        }
         localStore.addPending(.init(session: session, attempts: 0, expiresAt: now.addingTimeInterval(7 * 86_400),
                                     nextAttemptAt: now, status: .pendingUpload,
                                     lastHTTPStatus: nil, errorCategory: nil))
@@ -212,7 +214,9 @@ actor PhysicalDiagnosticDelivery {
 
     func flush(now: Date = .now) async {
         restoreMissingCloudKitAudioPending(now: now)
-        await CloudKitDiagnosticAudioDelivery.shared.flush(now: now)
+        if CloudFeatureFlags.cloudSyncEnabled {
+            await CloudKitDiagnosticAudioDelivery.shared.flush(now: now)
+        }
         guard await enabled(), !flushing else { return }
         flushing = true; defer { flushing = false }
         var queue = localStore.loadPending(now: now)

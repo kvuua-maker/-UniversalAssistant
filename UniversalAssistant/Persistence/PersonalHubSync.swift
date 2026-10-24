@@ -26,16 +26,7 @@ struct LocalMirrorTransport: CloudSyncTransport {
 }
 
 enum SyncTransportFactory {
-    static var usesCloudKit: Bool {
-        // Info.plist substitutes the xcconfig value, so this arrives as a
-        // string in Release builds and may arrive as a Bool in tests.
-        let value = Bundle.main.object(forInfoDictionaryKey: "UAUseCloudKitSync")
-        if let flag = value as? Bool { return flag }
-        if let text = value as? String {
-            return ["YES", "TRUE", "1"].contains(text.uppercased())
-        }
-        return false
-    }
+    static var usesCloudKit: Bool { CloudFeatureFlags.cloudSyncEnabled }
 
     static func make() -> any CloudSyncTransport {
         usesCloudKit ? CloudKitSyncTransport() : LocalMirrorTransport()
