@@ -1704,7 +1704,7 @@ final class VoiceInputController: VoiceInputControlling {
 
     init(
         captureBackend: (any VoiceAudioCaptureBackend)? = nil,
-        endOfSpeechDelay: Duration = .milliseconds(1100),
+        endOfSpeechDelay: Duration = .milliseconds(1500),
         authorization: (@Sendable () async -> Bool)? = nil,
         contextualVocabulary: @escaping @Sendable () async -> [String] = { [] },
         cloudTranscriber: any CloudVoiceTranscribing = GroqCloudVoiceTranscriber()
@@ -1720,7 +1720,7 @@ final class VoiceInputController: VoiceInputControlling {
         self.contextualVocabulary = contextualVocabulary
         self.cloudTranscriber = cloudTranscriber
         let components = endOfSpeechDelay.components
-        silenceWindowSeconds = min(1.2, max(0.55,
+        silenceWindowSeconds = min(2.0, max(0.55,
             Double(components.seconds) + Double(components.attoseconds) / 1_000_000_000_000_000_000))
         endpointPolicy = VoiceUtteranceEndpointPolicy(baseSilenceSeconds: silenceWindowSeconds)
         audioEvents = AudioSessionEventMonitor(
@@ -2108,6 +2108,7 @@ final class VoiceInputController: VoiceInputControlling {
         _ assessment: VoiceDeterministicCommandAssessment,
         evidence: VoiceRecognitionEvidence?
     ) -> Bool {
+        if Self.prefersCloudTranscription { return false }
         if appleRecognitionTerminatedEarly || speechResumedAfterAppleTermination { return true }
         // A bare action verb ("Відкрий") usually means the last word was cut.
         let words = assessment.command.originalText.split(separator: " ").count
@@ -2121,6 +2122,11 @@ final class VoiceInputController: VoiceInputControlling {
         }
         return false
     }
+
+    /// Whisper is the authoritative engine: the deterministic fast path is not
+    /// used, so every command is transcribed from the captured audio. If the
+    /// cloud call fails the Apple final is used (see the catch below).
+    private static let prefersCloudTranscription = true
 
     private func fastPathEligibleAfterConfirmedEndpoint(
         _ assessment: VoiceDeterministicCommandAssessment,

@@ -214,6 +214,7 @@ enum LaunchDeviceApplications {
         // which is the only supported entry point.
         .init(id: "messages", aliases: CanonicalSpeechEntityRegistry.aliases(for: "messages"), launchURL: URL(string: "sms:")!, exactContext: nil),
         // Only the app's own settings page is public; system panes are not.
+        .init(id: "photos", aliases: ["photos", "фото", "галерея", "галерею"], launchURL: URL(string: "photos-redirect://")!, exactContext: nil),
         .init(id: "settings", aliases: CanonicalSpeechEntityRegistry.aliases(for: "settings"),
               launchURL: URL(string: "app-settings:")!, exactContext: nil),
         .init(id: "youtube", aliases: CanonicalSpeechEntityRegistry.aliases(for: "youtube"), launchURL: URL(string: "https://www.youtube.com")!, exactContext: nil),

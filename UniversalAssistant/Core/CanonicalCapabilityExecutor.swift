@@ -1409,7 +1409,15 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         let query = command.entities["query"] ?? ""
         let queryKind = command.entities["photo_query_kind"]
         let latest = queryKind == "recent" || query == "latest" || query == "recent"
-        if queryKind == "all" { return .presentation(.photoLibrary) }
+        if queryKind == "all" || command.originalText.lowercased().contains("відкрий") {
+            // "Відкрий фото" must leave the assistant and open Photos itself;
+            // the in-app picker is only a fallback when the scheme is denied.
+            if let url = URL(string: "photos-redirect://"),
+               UIApplication.shared.canOpenURL(url) {
+                return .handoff(.init(query: command.originalText, destination: url, kind: .system))
+            }
+            return .presentation(.photoLibrary)
+        }
         guard latest || !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             // A malformed semantic request must never degrade into returning a
             // private latest asset. Keep the failure in the Photos family so
