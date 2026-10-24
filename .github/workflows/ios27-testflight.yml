@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   archive-and-upload:
-    runs-on: macos-15
+    runs-on: macos-latest
     timeout-minutes: 90
     env:
       API: https://api.appstoreconnect.apple.com/v1
@@ -19,6 +19,16 @@ jobs:
       EXT_PROFILE: UniversalAssistant_ShareExtension_V2
     steps:
       - uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: |
+          set -euo pipefail
+          ls -d /Applications/Xcode*.app || true
+          LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "selected: $LATEST"
+          sudo xcode-select -s "$LATEST"
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i iphoneos || true
 
       - name: Install App Store Connect key
         env:
