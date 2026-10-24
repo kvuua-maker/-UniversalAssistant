@@ -144,6 +144,7 @@ jobs:
 
           install_profile() {
             NAME="$1"
+            export PROFILE_NAME="$NAME"
             PID=$(NAME="$NAME" node -e '
               const fs = require("fs");
               const d = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/profiles.json", "utf8"));
@@ -156,17 +157,21 @@ jobs:
               process.stdout.write(p.id);
             ')
             echo "profile $NAME -> $PID"
-            CODE=$(curl -s -o "$RUNNER_TEMP/$NAME.raw" -w '%{http_code}' \
-              -H "Authorization: Bearer $ASC_TOKEN" "$API/profiles/$PID/profileContent")
-            echo "GET profileContent $NAME -> HTTP $CODE"
-            [ "$CODE" = "200" ] || { echo "::error::profile download failed for $NAME"; exit 1; }
+            CODE=$(curl -s -o "$RUNNER_TEMP/$NAME.json" -w '%{http_code}' \
+              -H "Authorization: Bearer $ASC_TOKEN" "$API/profiles/$PID")
+            echo "GET profile $NAME -> HTTP $CODE"
+            [ "$CODE" = "200" ] || { echo "::error::profile fetch failed for $NAME"; cat "$RUNNER_TEMP/$NAME.json"; exit 1; }
             DEST="$HOME/Library/MobileDevice/Provisioning Profiles/$NAME.mobileprovision"
             mkdir -p "$(dirname "$DEST")"
-            if LC_ALL=C head -c 1 "$RUNNER_TEMP/$NAME.raw" | grep -qE '[A-Za-z0-9+/]'; then
-              openssl base64 -d -A -in "$RUNNER_TEMP/$NAME.raw" -out "$DEST"
-            else
-              cp "$RUNNER_TEMP/$NAME.raw" "$DEST"
-            fi
+            # The profile file is base64 in attributes.profileContent; there is
+            # no /profileContent sub-resource (it answers 404).
+            DEST="$DEST" node -e '
+              const fs = require("fs");
+              const d = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/" + process.env.PROFILE_NAME + ".json", "utf8"));
+              const content = d.data && d.data.attributes && d.data.attributes.profileContent;
+              if (!content) { console.error("profileContent missing"); process.exit(5); }
+              fs.writeFileSync(process.env.DEST, Buffer.from(content, "base64"));
+            '
             ls -l "$DEST"
           }
           install_profile "$APP_PROFILE"
