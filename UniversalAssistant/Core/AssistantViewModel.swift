@@ -444,6 +444,13 @@ final class AssistantViewModel {
         } else {
             commandEngine.parse(input)
         }
+        RuntimeDiagnostics.shared.log(
+            "heard", "\(isVoiceSubmission ? "voice" : "typed"): \(input)")
+        RuntimeDiagnostics.shared.log(
+            "intent",
+            "\(standaloneCommand.intent.rawValue)"
+                + " app=\(standaloneCommand.entities["app"] ?? "-")"
+                + " service=\(standaloneCommand.entities["call_service"] ?? standaloneCommand.entities["message_service"] ?? "-")")
         let continuationPolicy = PendingContinuationCompatibilityPolicy()
         if let pending = pendingCanonicalSelection,
            pending.generation == activeRequestGeneration,
@@ -918,9 +925,17 @@ final class AssistantViewModel {
 
     private func openSystemHandoffObserved(_ destination: URL) async -> Bool {
         let scheme = destination.scheme?.lowercased()
+        if let scheme {
+            let known = ["tg", "viber", "whatsapp", "spotify", "youtube", "maps", "comgooglemaps", "waze"].contains(scheme)
+            let installable = known ? UIApplication.shared.canOpenURL(destination) : true
+            RuntimeDiagnostics.shared.log(
+                "scheme",
+                "\(scheme):// canOpenURL=\(installable)")
+        }
         let boundary = scheme == "tel" ? "CALL_URL" : "EXACT_HANDOFF"
         LocalVoiceDiagnosticReport.shared.recordBoundaryPre(boundary, "scheme=\(scheme ?? "unknown")")
         let opened = await systemHandoffOpenResult(destination)
+        RuntimeDiagnostics.shared.log("openURL", "\(destination.absoluteString) -> \(opened ? "opened" : "rejected")")
         LocalVoiceDiagnosticReport.shared.recordBoundaryPost(
             boundary,
             "scheme=\(scheme ?? "unknown") status=\(opened ? "opened" : "rejected")"
