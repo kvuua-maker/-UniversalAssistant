@@ -12,6 +12,8 @@ extension PDFToolsModel {
                 undoStack.append(results)
                 results.insert(output, at: 0)
                 statusLine = "Додано текстовий шар — файл тепер шукається"
+                ocrSourceURL = output
+                ocrPages = (try? await PDFToolsEngine.shared.recognizePages(output)) ?? ocrPages
                 showOCRDone = true
             } catch {
                 alertMessage = (error as? PDFToolsError)?.userMessage ?? "Не вдалося додати текстовий шар."
@@ -112,10 +114,23 @@ extension PDFToolsModel {
         Task {
             defer { isBusy = false }
             do {
+                // 1. Native text layer of the current file.
                 var pages = try await PDFToolsEngine.shared.searchPages(url, query: searchQuery)
+                // 2. Remembered OCR of this exact file.
+                if pages.isEmpty, ocrSourceURL == url {
+                    pages = Self.matches(in: ocrPages, query: searchQuery)
+                }
+                // 3. Fresh OCR over the pages, then search that.
                 if pages.isEmpty {
-                    _ = try? await PDFToolsEngine.shared.recognizeText(in: url)
-                    pages = try await PDFToolsEngine.shared.searchPages(url, query: searchQuery)
+                    let recognised = try await PDFToolsEngine.shared.recognizePages(url)
+                    ocrPages = recognised
+                    ocrSourceURL = url
+                    pages = Self.matches(in: recognised, query: searchQuery)
+                }
+                Task { @MainActor in
+                    RuntimeDiagnostics.shared.log(
+                        "PDF",
+                        "search \"\(self.searchQuery)\": \(pages.count) pages, ocrIndex=\(self.ocrPages.count)")
                 }
                 searchMatches = pages
                 searchCursor = 0
@@ -127,6 +142,15 @@ extension PDFToolsModel {
                 searchResult = "Пошук не вдався"
             }
         }
+    }
+
+    static func matches(in pages: [Int: String], query: String) -> [Int] {
+        let needle = query.lowercased()
+        guard !needle.isEmpty else { return [] }
+        return pages
+            .filter { $0.value.lowercased().contains(needle) }
+            .keys
+            .sorted()
     }
 
     func exportText() {
@@ -208,6 +232,8 @@ extension PDFToolsModel {
             defer { isBusy = false }
             do {
                 let text = try await PDFToolsEngine.shared.recognizeText(in: url)
+                ocrPages = try await PDFToolsEngine.shared.recognizePages(url)
+                ocrSourceURL = url
                 statusLine = text.isEmpty ? "Текст не розпізнано" : String(text.prefix(600))
             } catch {
                 alertMessage = (error as? PDFToolsError)?.userMessage ?? "Не вдалося розпізнати текст."

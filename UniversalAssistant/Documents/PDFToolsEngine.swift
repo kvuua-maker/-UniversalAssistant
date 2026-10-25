@@ -553,49 +553,67 @@ actor PDFToolsEngine {
 
     // MARK: - Text layer, headers, logos
 
-    /// Re-renders each page with the recognised text drawn invisibly on top, so
-    /// any PDF reader can search and copy it after export.
+    /// Writes a searchable text layer into the PDF itself. Glyphs are drawn
+    /// directly into the PDF content stream (not into a bitmap), so any reader
+    /// can extract and search them after export.
     func addOCRTextLayer(_ url: URL) async throws -> URL {
         guard let document = PDFDocument(url: url) else { throw PDFToolsError.unreadable }
         if document.isLocked { throw PDFToolsError.locked }
-        let output = PDFDocument()
+
+        var pages: [(image: UIImage, lines: [(text: String, bounds: CGRect)], size: CGSize)] = []
         for index in 0..<document.pageCount {
             guard let page = document.page(at: index) else { continue }
             let media = page.bounds(for: .mediaBox)
             let scale: CGFloat = 2
-            let renderer = UIGraphicsImageRenderer(size: CGSize(width: media.width * scale,
-                                                                height: media.height * scale))
-            let base = page.thumbnail(of: CGSize(width: media.width * scale, height: media.height * scale),
-                                      for: .mediaBox)
-            let observations = try Self.recognizeLines(in: base)
-            let composed = renderer.image { context in
-                base.draw(in: CGRect(origin: .zero,
-                                     size: CGSize(width: media.width * scale, height: media.height * scale)))
-                // Nearly transparent glyphs keep the page visually unchanged
-                // while remaining extractable by text engines.
-                for line in observations {
+            let size = CGSize(width: media.width * scale, height: media.height * scale)
+            let image = page.thumbnail(of: size, for: .mediaBox)
+            let lines = (try? Self.recognizeLines(in: image)) ?? []
+            pages.append((image, lines, size))
+        }
+
+        let target = try freshURL("searchable.pdf")
+        guard let first = pages.first else { throw PDFToolsError.unreadable }
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(origin: .zero, size: first.size))
+        try renderer.writePDF(to: target) { context in
+            for page in pages {
+                context.beginPage()
+                page.image.draw(in: CGRect(origin: .zero, size: page.size))
+                for line in page.lines {
                     let box = line.bounds
-                    let rect = CGRect(x: box.minX * media.width * scale,
-                                      y: (1 - box.maxY) * media.height * scale,
-                                      width: box.width * media.width * scale,
-                                      height: box.height * media.height * scale)
-                    let fontSize = max(4, rect.height)
-                    line.text.draw(in: CGRect(x: rect.minX,
-                                              y: rect.minY,
-                                              width: max(rect.width, 10),
-                                              height: rect.height),
-                                   withAttributes: [
-                                       .font: UIFont.systemFont(ofSize: fontSize),
-                                       .foregroundColor: UIColor.black.withAlphaComponent(0.01)
-                                   ])
+                    let rect = CGRect(x: box.minX * page.size.width,
+                                      y: (1 - box.maxY) * page.size.height,
+                                      width: max(box.width * page.size.width, 8),
+                                      height: max(box.height * page.size.height, 6))
+                    line.text.draw(in: rect, withAttributes: [
+                        .font: UIFont.systemFont(ofSize: max(4, rect.height)),
+                        .foregroundColor: UIColor.black.withAlphaComponent(0.01)
+                    ])
                 }
             }
-            if let newPage = PDFPage(image: composed) { output.insert(newPage, at: index) }
         }
-        let target = try freshURL("searchable.pdf")
-        guard output.write(to: target) else { throw PDFToolsError.writeFailed }
-        Task { @MainActor in RuntimeDiagnostics.shared.log("PDF", "OCR text layer added to \(document.pageCount) pages") }
+        let lines = pages.reduce(0) { $0 + $1.lines.count }
+        Task { @MainActor in
+            RuntimeDiagnostics.shared.log("PDF", "OCR text layer: \(pages.count) pages, \(lines) lines")
+        }
         return target
+    }
+
+    /// Per-page recognised text, used as a search fallback for scanned files.
+    func recognizePages(_ url: URL) async throws -> [Int: String] {
+        guard let document = PDFDocument(url: url) else { throw PDFToolsError.unreadable }
+        if document.isLocked { throw PDFToolsError.locked }
+        var result: [Int: String] = [:]
+        for index in 0..<document.pageCount {
+            guard let page = document.page(at: index) else { continue }
+            let media = page.bounds(for: .mediaBox)
+            let image = page.thumbnail(of: CGSize(width: media.width * 2, height: media.height * 2), for: .mediaBox)
+            let lines = (try? Self.recognizeLines(in: image)) ?? []
+            result[index] = lines.map(\.text).joined(separator: "\n")
+        }
+        Task { @MainActor in
+            RuntimeDiagnostics.shared.log("PDF", "OCR memory index: \(result.count) pages")
+        }
+        return result
     }
 
     private static func recognizeLines(in image: UIImage) throws -> [(text: String, bounds: CGRect)] {

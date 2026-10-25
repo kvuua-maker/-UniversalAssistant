@@ -53,6 +53,8 @@ final class PDFToolsModel {
     var duplicateIndex = "1"
     var searchMatches: [Int] = []
     var searchCursor = 0
+    var ocrPages: [Int: String] = [:]
+    var ocrSourceURL: URL?
     var showHeader = false
     var showOCRDone = false
     var headerText = ""
