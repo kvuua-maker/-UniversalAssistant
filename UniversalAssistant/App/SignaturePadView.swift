@@ -1,24 +1,38 @@
 import SwiftUI
 import UIKit
 
-/// Finger-drawing surface for a signature; returns a rendered image.
+/// Draws a signature directly over the document page. The canvas is a single
+/// UIView that captures every touch, so the list behind it can never scroll
+/// while the user is drawing.
 struct SignaturePadView: View {
-    let onSave: (UIImage) -> Void
+    let background: UIImage?
+    let onSave: (UIImage, CGRect) -> Void
     let onCancel: () -> Void
+
     @State private var pad = SignaturePadController()
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 12) {
-                SignatureCanvas(pad: pad)
-                    .background(Color.white)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.3)))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding()
-                Text("Намалюйте підпис пальцем")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                Spacer()
+            GeometryReader { geometry in
+                ZStack {
+                    Color(.systemBackground)
+                    if let background {
+                        Image(uiImage: background)
+                            .resizable()
+                            .scaledToFit()
+                            .opacity(0.9)
+                    }
+                    SignatureCanvas(pad: pad)
+                        .background(Color.clear)
+                }
+                .contentShape(Rectangle())
+                .onAppear { pad.canvasSize = geometry.size }
+                .overlay(alignment: .bottom) {
+                    Text("Намалюйте підпис поверх документа")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .padding(10)
+                }
             }
             .navigationTitle("Підпис")
             .navigationBarTitleDisplayMode(.inline)
@@ -28,34 +42,52 @@ struct SignaturePadView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Готово") {
-                        if let image = pad.render() { onSave(image) }
+                        if let result = pad.render() { onSave(result.image, result.rect) }
                     }
                 }
             }
-            .interactiveDismissDisabled(true)
         }
+        .interactiveDismissDisabled(true)
     }
 }
 
 final class SignaturePadController {
     var strokes: [[CGPoint]] = []
     var current: [CGPoint] = []
+    var canvasSize: CGSize = .zero
 
-    func render(size: CGSize = CGSize(width: 600, height: 240)) -> UIImage? {
-        guard !strokes.isEmpty else { return nil }
-        let renderer = UIGraphicsImageRenderer(size: size)
-        return renderer.image { context in
-            UIColor.white.setFill()
-            context.fill(CGRect(origin: .zero, size: size))
+    /// Returns the signature image plus its normalized rectangle inside the page.
+    func render() -> (image: UIImage, rect: CGRect)? {
+        let all = strokes.flatMap { $0 }
+        guard !all.isEmpty, canvasSize.width > 0, canvasSize.height > 0 else { return nil }
+        let minX = all.map(\.x).min() ?? 0
+        let maxX = all.map(\.x).max() ?? 0
+        let minY = all.map(\.y).min() ?? 0
+        let maxY = all.map(\.y).max() ?? 0
+        let padding: CGFloat = 6
+        let box = CGRect(x: minX - padding, y: minY - padding,
+                         width: maxX - minX + padding * 2,
+                         height: maxY - minY + padding * 2)
+        let renderer = UIGraphicsImageRenderer(size: box.size)
+        let image = renderer.image { context in
+            UIColor.clear.setFill()
+            context.cgContext.clear(CGRect(origin: .zero, size: box.size))
             UIColor.black.setStroke()
             context.cgContext.setLineWidth(3)
             context.cgContext.setLineCap(.round)
             for stroke in strokes where stroke.count > 1 {
-                context.cgContext.move(to: stroke[0])
-                for point in stroke.dropFirst() { context.cgContext.addLine(to: point) }
+                context.cgContext.move(to: CGPoint(x: stroke[0].x - box.minX, y: stroke[0].y - box.minY))
+                for point in stroke.dropFirst() {
+                    context.cgContext.addLine(to: CGPoint(x: point.x - box.minX, y: point.y - box.minY))
+                }
                 context.cgContext.strokePath()
             }
         }
+        let rect = CGRect(x: box.minX / canvasSize.width,
+                          y: box.minY / canvasSize.height,
+                          width: box.width / canvasSize.width,
+                          height: box.height / canvasSize.height)
+        return (image, rect)
     }
 }
 
@@ -65,8 +97,9 @@ struct SignatureCanvas: UIViewRepresentable {
     func makeUIView(context: Context) -> CanvasView {
         let view = CanvasView()
         view.pad = pad
-        view.backgroundColor = .white
+        view.backgroundColor = .clear
         view.isMultipleTouchEnabled = false
+        view.isOpaque = false
         return view
     }
 
@@ -74,6 +107,8 @@ struct SignatureCanvas: UIViewRepresentable {
 
     final class CanvasView: UIView {
         var pad: SignaturePadController?
+
+        // Capture every touch so no ancestor scroll view can scroll underneath.
         override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
             guard let point = touches.first?.location(in: self) else { return }
             pad?.current = [point]
@@ -86,6 +121,11 @@ struct SignatureCanvas: UIViewRepresentable {
         override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
             guard let pad, !pad.current.isEmpty else { return }
             pad.strokes.append(pad.current)
+            pad.current = []
+            setNeedsDisplay()
+        }
+        override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+            guard let pad else { return }
             pad.current = []
             setNeedsDisplay()
         }

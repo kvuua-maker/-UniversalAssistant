@@ -352,6 +352,40 @@ actor PDFToolsEngine {
         return target
     }
 
+    /// Composites a signature into an explicit normalized rectangle of a page.
+    /// The rectangle is in page space with the origin at the top-left, which is
+    /// what the drawing canvas reports.
+    func insertSignature(_ url: URL, signature: UIImage, pageIndex: Int = 0, normalizedRect: CGRect) throws -> URL {
+        guard let document = PDFDocument(url: url), pageIndex < document.pageCount,
+              let page = document.page(at: pageIndex) else { throw PDFToolsError.unreadable }
+        let media = page.bounds(for: .mediaBox)
+        let rect = CGRect(
+            x: normalizedRect.minX * media.width,
+            y: (1 - normalizedRect.maxY) * media.height,
+            width: normalizedRect.width * media.width,
+            height: normalizedRect.height * media.height
+        )
+        let renderer = UIGraphicsImageRenderer(size: media.size)
+        let composed = renderer.image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(origin: .zero, size: media.size))
+            context.cgContext.saveGState()
+            context.cgContext.translateBy(x: 0, y: media.height)
+            context.cgContext.scaleBy(x: 1, y: -1)
+            page.draw(with: .mediaBox, to: context.cgContext)
+            context.cgContext.restoreGState()
+            signature.draw(in: rect)
+        }
+        if let replacement = PDFPage(image: composed) {
+            document.removePage(at: pageIndex)
+            document.insert(replacement, at: pageIndex)
+        }
+        let target = try freshURL("signed.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        Task { @MainActor in RuntimeDiagnostics.shared.log("PDF", "signature placed at \(rect)") }
+        return target
+    }
+
     func saveSignature(_ image: UIImage, name: String = "signature.png") throws -> URL {
         guard let data = image.pngData() else { throw PDFToolsError.writeFailed }
         let url = try freshURL(name)

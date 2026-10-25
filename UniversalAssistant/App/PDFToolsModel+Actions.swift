@@ -2,6 +2,17 @@ import Foundation
 import UIKit
 
 extension PDFToolsModel {
+    func signatureBackground() -> UIImage? {
+        guard let url = results.first else { return nil }
+        return PDFToolsEngine.shared.pageImageSync(url)
+    }
+
+    func applySignature(image: UIImage, rect: CGRect) {
+        guard let url = results.first else { showSignature = false; return }
+        showSignature = false
+        run { Optional(try await PDFToolsEngine.shared.insertSignature(url, signature: image, normalizedRect: rect)) }
+    }
+
     func rotate(_ url: URL) {
         run { Optional(try await PDFToolsEngine.shared.rotate(url, degrees: 90)) }
     }

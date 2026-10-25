@@ -51,10 +51,10 @@ private struct PDFToolsBindings: ViewModifier {
             }
             .sheet(isPresented: $model.showOffice) { OfficeConvertView() }
             .sheet(isPresented: $model.showFileActions) { PDFFileActionsView() }
-            .sheet(isPresented: $model.showSignature) {
-                SignaturePadView { image in
+            .fullScreenCover(isPresented: $model.showSignature) {
+                SignaturePadView(background: model.signatureBackground()) { image, rect in
                     model.signatureImage = image
-                    model.showSignature = false
+                    model.applySignature(image: image, rect: rect)
                 } onCancel: {
                     model.showSignature = false
                 }
