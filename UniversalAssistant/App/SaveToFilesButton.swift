@@ -7,7 +7,7 @@ struct SaveToFilesButton: View {
     @State private var isExporting = false
 
     var body: some View {
-        Button("Зберегти у Файли") { isExporting = true }
+        Button(PDFL10n.t("Зберегти у Файли")) { isExporting = true }
             .fileExporter(
                 isPresented: $isExporting,
                 document: PDFFileDocument(url: url),

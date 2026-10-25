@@ -16,11 +16,11 @@ struct PDFToolsView: View {
                 PDFEditSection(model: model)
                 PDFResultsSection(model: model)
             }
-            .navigationTitle("PDF-інструменти")
+            .navigationTitle(PDFL10n.t("PDF-інструменти"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Закрити") { dismiss() }
+                    Button(PDFL10n.t("Закрити")) { dismiss() }
                 }
             }
             .modifier(PDFToolsBindings(model: model))
@@ -36,10 +36,10 @@ private struct PDFToolsBindings: ViewModifier {
         content
             .overlay { if model.isBusy { ProgressView().padding(24).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
             .confirmationDialog("PDF з фото", isPresented: $model.showPhotoChoice, titleVisibility: .visible) {
-                Button("Зробити фото") { model.showCamera = true }
-                Button("Вибрати з галереї") { model.showPhotoPicker = true }
-                Button("Сканувати документ") { model.showScanner = true }
-                Button("Скасувати", role: .cancel) {}
+                Button(PDFL10n.t("Зробити фото")) { model.showCamera = true }
+                Button(PDFL10n.t("Вибрати з галереї")) { model.showPhotoPicker = true }
+                Button(PDFL10n.t("Сканувати документ")) { model.showScanner = true }
+                Button(PDFL10n.t("Скасувати"), role: .cancel) {}
             }
             .photosPicker(isPresented: $model.showPhotoPicker, selection: $model.photoItems, maxSelectionCount: 20, matching: .images)
             .fullScreenCover(isPresented: $model.showCamera) {
@@ -87,10 +87,10 @@ private struct PDFToolsBindings: ViewModifier {
             .sheet(isPresented: $model.showFileActions) { PDFFileActionsView() }
             .confirmationDialog("Підпис", isPresented: $model.showSignatureHome, titleVisibility: .visible) {
                 if model.savedSignature != nil {
-                    Button("Використати збережений підпис") { model.useSavedSignature() }
+                    Button(PDFL10n.t("Використати збережений підпис")) { model.useSavedSignature() }
                 }
-                Button("Намалювати новий") { model.showSignature = true }
-                Button("Скасувати", role: .cancel) {}
+                Button(PDFL10n.t("Намалювати новий")) { model.showSignature = true }
+                Button(PDFL10n.t("Скасувати"), role: .cancel) {}
             }
             .fullScreenCover(isPresented: $model.showSignature) {
                 SignaturePadView(background: model.signatureBackground()) { image, rect in
@@ -111,62 +111,62 @@ private struct PDFToolsAlerts: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .alert("Водяний знак", isPresented: $model.showWatermark) {
+            .alert(PDFL10n.t("Водяний знак"), isPresented: $model.showWatermark) {
                 TextField("Текст", text: $model.watermarkText)
-                Button("Застосувати") { model.applyWatermark() }
-                Button("Скасувати", role: .cancel) {}
+                Button(PDFL10n.t("Застосувати")) { model.applyWatermark() }
+                Button(PDFL10n.t("Скасувати"), role: .cancel) {}
             }
-            .alert("Зняти пароль", isPresented: $model.showRemovePassword) {
+            .alert(PDFL10n.t("Зняти пароль"), isPresented: $model.showRemovePassword) {
                 TextField("Поточний пароль", text: $model.passwordText)
-                Button("Зняти") { model.removePassword() }
-                Button("Скасувати", role: .cancel) {}
+                Button(PDFL10n.t("Зняти")) { model.removePassword() }
+                Button(PDFL10n.t("Скасувати"), role: .cancel) {}
             }
-            .alert("Пароль", isPresented: $model.showPassword) {
+            .alert(PDFL10n.t("Пароль"), isPresented: $model.showPassword) {
                 TextField("Пароль", text: $model.passwordText)
-                Button("Захистити") { model.applyPassword() }
-                Button("Скасувати", role: .cancel) {}
+                Button(PDFL10n.t("Захистити")) { model.applyPassword() }
+                Button(PDFL10n.t("Скасувати"), role: .cancel) {}
             }
-            .alert("Текст на сторінку", isPresented: $model.showText) {
+            .alert(PDFL10n.t("Текст на сторінку"), isPresented: $model.showText) {
                 TextField("Текст", text: $model.textToInsert)
-                Button("Додати") { model.applyText() }
-                Button("Скасувати", role: .cancel) {}
+                Button(PDFL10n.t("Додати")) { model.applyText() }
+                Button(PDFL10n.t("Скасувати"), role: .cancel) {}
             }
-            .alert("Витягти сторінки", isPresented: $model.showSplit) {
+            .alert(PDFL10n.t("Витягти сторінки"), isPresented: $model.showSplit) {
                 TextField("1-2", text: $model.splitRange)
-                Button("Витягти") { model.splitPages() }
-                Button("Скасувати", role: .cancel) {}
+                Button(PDFL10n.t("Витягти")) { model.splitPages() }
+                Button(PDFL10n.t("Скасувати"), role: .cancel) {}
             }
-            .alert("Видалити сторінки", isPresented: $model.showDeletePage) {
+            .alert(PDFL10n.t("Видалити сторінки"), isPresented: $model.showDeletePage) {
                 TextField("2-4", text: $model.deleteRange)
-                Button("Видалити", role: .destructive) { model.deleteRangePages() }
-                Button("Скасувати", role: .cancel) {}
+                Button(PDFL10n.t("Видалити"), role: .destructive) { model.deleteRangePages() }
+                Button(PDFL10n.t("Скасувати"), role: .cancel) {}
             }
-            .alert("Верхній колонтитул", isPresented: $model.showHeader) {
+            .alert(PDFL10n.t("Верхній колонтитул"), isPresented: $model.showHeader) {
                 TextField("Текст", text: $model.headerText)
-                Button("Додати") { model.applyHeader() }
-                Button("Скасувати", role: .cancel) {}
+                Button(PDFL10n.t("Додати")) { model.applyHeader() }
+                Button(PDFL10n.t("Скасувати"), role: .cancel) {}
             }
-            .alert("Перемістити сторінку", isPresented: $model.showMovePage) {
+            .alert(PDFL10n.t("Перемістити сторінку"), isPresented: $model.showMovePage) {
                 TextField("З", text: $model.moveFrom)
                 TextField("На", text: $model.moveTo)
-                Button("Перемістити") { model.movePage() }
-                Button("Скасувати", role: .cancel) {}
+                Button(PDFL10n.t("Перемістити")) { model.movePage() }
+                Button(PDFL10n.t("Скасувати"), role: .cancel) {}
             }
-            .alert("Дублювати сторінку", isPresented: $model.showDuplicatePage) {
+            .alert(PDFL10n.t("Дублювати сторінку"), isPresented: $model.showDuplicatePage) {
                 TextField("1", text: $model.duplicateIndex)
-                Button("Дублювати") { model.duplicateChosenPage() }
-                Button("Скасувати", role: .cancel) {}
+                Button(PDFL10n.t("Дублювати")) { model.duplicateChosenPage() }
+                Button(PDFL10n.t("Скасувати"), role: .cancel) {}
             }
-            .alert("Номер сторінки", isPresented: $model.showBlank) {
+            .alert(PDFL10n.t("Номер сторінки"), isPresented: $model.showBlank) {
                 TextField("1", text: $model.blankIndex)
-                Button("Вставити") { model.insertBlankPage() }
-                Button("Скасувати", role: .cancel) {}
+                Button(PDFL10n.t("Вставити")) { model.insertBlankPage() }
+                Button(PDFL10n.t("Скасувати"), role: .cancel) {}
             }
-            .alert("Помилка", isPresented: Binding(
+            .alert(PDFL10n.t("Помилка"), isPresented: Binding(
                 get: { model.alertMessage != nil },
                 set: { if !$0 { model.alertMessage = nil } }
             )) {
-                Button("OK", role: .cancel) { model.alertMessage = nil }
+                Button(PDFL10n.t("OK"), role: .cancel) { model.alertMessage = nil }
             } message: {
                 Text(model.alertMessage ?? "")
             }

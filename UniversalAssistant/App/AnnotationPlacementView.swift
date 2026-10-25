@@ -48,9 +48,9 @@ struct AnnotationPlacementView: View {
             .navigationTitle(kind.rawValue)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Скасувати") { onCancel() } }
+                ToolbarItem(placement: .cancellationAction) { Button(PDFL10n.t("Скасувати")) { onCancel() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Додати") {
+                    Button(PDFL10n.t("Додати")) {
                         if let rect { onApply(rect) }
                     }
                 }

@@ -21,13 +21,13 @@ struct PDFFileActionsView: View {
         NavigationStack {
             List {
                 Section {
-                    Button("Вибрати PDF") { showPicker = true }
+                    Button(PDFL10n.t("Вибрати PDF")) { showPicker = true }
                 }
                 if file != nil {
                     Section("Дії") {
-                        Button("Витягнути зображення") { extract() }
-                        Button("Вставити порожню сторінку") { blankIndex = "1"; blankPrompt = true }
-                        Button("Перемістити анотації пальцем") { if let file { moverItem = PreviewTarget(url: file) } }
+                        Button(PDFL10n.t("Витягнути зображення")) { extract() }
+                        Button(PDFL10n.t("Вставити порожню сторінку")) { blankIndex = "1"; blankPrompt = true }
+                        Button(PDFL10n.t("Перемістити анотації пальцем")) { if let file { moverItem = PreviewTarget(url: file) } }
                     }
                 }
                 if !results.isEmpty {
@@ -36,7 +36,7 @@ struct PDFFileActionsView: View {
                             VStack(alignment: .leading) {
                                 Text(url.lastPathComponent).lineLimit(1)
                                 HStack {
-                                    Button("Перегляд") { previewItem = PreviewTarget(url: url) }
+                                    Button(PDFL10n.t("Перегляд")) { previewItem = PreviewTarget(url: url) }
                                     SaveToFilesButton(url: url)
                                 }
                             }
@@ -47,26 +47,26 @@ struct PDFFileActionsView: View {
                     Section("Статус") { Text(status).font(.footnote) }
                 }
             }
-            .navigationTitle("Інструменти для файлу")
+            .navigationTitle(PDFL10n.t("Інструменти для файлу"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Готово") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button(PDFL10n.t("Готово")) { dismiss() } } }
             .overlay { if isBusy { ProgressView().padding(24).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
             .fileImporter(isPresented: $showPicker, allowedContentTypes: [.pdf], allowsMultipleSelection: true) { outcome in
                 guard case let .success(files) = outcome, let first = files.first else { return }
                 file = FileImport.copy(first)
             }
-            .alert("Номер сторінки для вставки", isPresented: $blankPrompt) {
+            .alert(PDFL10n.t("Номер сторінки для вставки"), isPresented: $blankPrompt) {
                 TextField("1", text: $blankIndex)
-                Button("Вставити") { insertBlank() }
-                Button("Скасувати", role: .cancel) {}
+                Button(PDFL10n.t("Вставити")) { insertBlank() }
+                Button(PDFL10n.t("Скасувати"), role: .cancel) {}
             }
             .sheet(item: $moverItem) { item in AnnotationMoverView(url: item.url) }
             .sheet(item: $previewItem) { item in PDFPreviewSheet(url: item.url) }
-            .alert("Помилка", isPresented: Binding(
+            .alert(PDFL10n.t("Помилка"), isPresented: Binding(
                 get: { alertMessage != nil },
                 set: { if !$0 { alertMessage = nil } }
             )) {
-                Button("OK", role: .cancel) { alertMessage = nil }
+                Button(PDFL10n.t("OK"), role: .cancel) { alertMessage = nil }
             } message: {
                 Text(alertMessage ?? "")
             }

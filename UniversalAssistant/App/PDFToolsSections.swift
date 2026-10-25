@@ -5,12 +5,12 @@ struct PDFCreateSection: View {
 
     var body: some View {
         Section("Створити") {
-            Button("PDF з фото") { model.showPhotoChoice = true }
-            Button("Порожній PDF") { model.runBlank() }
-            Button("Об’єднати PDF-файли") { model.showPDFImport = true }
-            Button("Word / Excel → PDF") { model.showOffice = true }
-            Button("Інструменти для файлу") { model.showFileActions = true }
-            Button("Підпис") { model.showSignatureHome = true }
+            Button(PDFL10n.t("PDF з фото")) { model.showPhotoChoice = true }
+            Button(PDFL10n.t("Порожній PDF")) { model.runBlank() }
+            Button(PDFL10n.t("Об’єднати PDF-файли")) { model.showPDFImport = true }
+            Button(PDFL10n.t("Word / Excel → PDF")) { model.showOffice = true }
+            Button(PDFL10n.t("Інструменти для файлу")) { model.showFileActions = true }
+            Button(PDFL10n.t("Підпис")) { model.showSignatureHome = true }
         }
     }
 }
@@ -21,23 +21,23 @@ struct PDFConvertSection: View {
     var body: some View {
         Section("Конвертувати та оформити") {
             if model.results.isEmpty {
-                Text("Спочатку створіть або виберіть PDF")
+                Text(PDFL10n.t("Спочатку створіть або виберіть PDF"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else {
-                Button("PDF → Текст") { model.exportText() }
-                Button("PDF → PNG") { model.exportPNG() }
-                Button("OCR: розпізнати текст") { model.runOCR() }
-                Button("Обрізати поля…") { model.showCrop = true }
-                Button("Розмір A4") { model.resizeA4() }
-                Button("Розмір Letter") { model.resizeLetter() }
-                Button("Колонтитули (номер + дата)") { model.addFooters() }
-                Button("Верхній колонтитул…") { model.headerText = ""; model.showHeader = true }
-                Button("Водяний знак-логотип…") { model.showLogoPicker = true }
-                Button("Зробити PDF з пошуком (OCR-шар)") { model.makeSearchable() }
+                Button(PDFL10n.t("PDF → Текст")) { model.exportText() }
+                Button(PDFL10n.t("PDF → PNG")) { model.exportPNG() }
+                Button(PDFL10n.t("OCR: розпізнати текст")) { model.runOCR() }
+                Button(PDFL10n.t("Обрізати поля…")) { model.showCrop = true }
+                Button(PDFL10n.t("Розмір A4")) { model.resizeA4() }
+                Button(PDFL10n.t("Розмір Letter")) { model.resizeLetter() }
+                Button(PDFL10n.t("Колонтитули (номер + дата)")) { model.addFooters() }
+                Button(PDFL10n.t("Верхній колонтитул…")) { model.headerText = ""; model.showHeader = true }
+                Button(PDFL10n.t("Водяний знак-логотип…")) { model.showLogoPicker = true }
+                Button(PDFL10n.t("Зробити PDF з пошуком (OCR-шар)")) { model.makeSearchable() }
                 HStack {
                     TextField("Пошук по тексту", text: $model.searchQuery)
-                    Button("Знайти") { model.findPages() }
+                    Button(PDFL10n.t("Знайти")) { model.findPages() }
                         .buttonStyle(.borderless)
                 }
                 if let result = model.searchResult {
@@ -59,29 +59,29 @@ struct PDFEditSection: View {
     var body: some View {
         Section("Редагувати") {
             if model.results.isEmpty {
-                Text("Спочатку створіть або виберіть PDF")
+                Text(PDFL10n.t("Спочатку створіть або виберіть PDF"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else if let current = model.results.first {
-                Button("Повернути на 90°") { model.rotate(current) }
-                Button("Додати текст") { model.showText = true }
-                Button("Водяний знак") { model.showWatermark = true }
-                Button("Захистити паролем") { model.showPassword = true }
-                Button("Зняти пароль") { model.passwordText = ""; model.showRemovePassword = true }
-                Button("Стиснути") { model.compress(current) }
-                Button("Вставити порожню сторінку") { model.showBlank = true }
-                Button("Витягнути зображення") { model.extractImages() }
-                Button("Розділити: витягти сторінки") { model.showSplit = true }
-                Button("Видалити сторінки…") { model.deleteRange = "2-4"; model.showDeletePage = true }
-                Button("Дублювати сторінку…") { model.duplicateIndex = "1"; model.showDuplicatePage = true }
-                Button("Перемістити сторінку…") { model.moveFrom = "1"; model.moveTo = "2"; model.showMovePage = true }
+                Button(PDFL10n.t("Повернути на 90°")) { model.rotate(current) }
+                Button(PDFL10n.t("Додати текст")) { model.showText = true }
+                Button(PDFL10n.t("Водяний знак")) { model.showWatermark = true }
+                Button(PDFL10n.t("Захистити паролем")) { model.showPassword = true }
+                Button(PDFL10n.t("Зняти пароль")) { model.passwordText = ""; model.showRemovePassword = true }
+                Button(PDFL10n.t("Стиснути")) { model.compress(current) }
+                Button(PDFL10n.t("Вставити порожню сторінку")) { model.showBlank = true }
+                Button(PDFL10n.t("Витягнути зображення")) { model.extractImages() }
+                Button(PDFL10n.t("Розділити: витягти сторінки")) { model.showSplit = true }
+                Button(PDFL10n.t("Видалити сторінки…")) { model.deleteRange = "2-4"; model.showDeletePage = true }
+                Button(PDFL10n.t("Дублювати сторінку…")) { model.duplicateIndex = "1"; model.showDuplicatePage = true }
+                Button(PDFL10n.t("Перемістити сторінку…")) { model.moveFrom = "1"; model.moveTo = "2"; model.showMovePage = true }
                 Menu("Анотація") {
-                    Button("Маркер") { model.startPlacement(.highlight) }
-                    Button("Підкреслення") { model.startPlacement(.underline) }
-                    Button("Закреслення") { model.startPlacement(.strikeOut) }
-                    Button("Прямокутник") { model.startPlacement(.square) }
-                    Button("Коло") { model.startPlacement(.circle) }
-                    Button("Коментар") { model.startPlacement(.comment) }
+                    Button(PDFL10n.t("Маркер")) { model.startPlacement(.highlight) }
+                    Button(PDFL10n.t("Підкреслення")) { model.startPlacement(.underline) }
+                    Button(PDFL10n.t("Закреслення")) { model.startPlacement(.strikeOut) }
+                    Button(PDFL10n.t("Прямокутник")) { model.startPlacement(.square) }
+                    Button(PDFL10n.t("Коло")) { model.startPlacement(.circle) }
+                    Button(PDFL10n.t("Коментар")) { model.startPlacement(.comment) }
                 }
             }
         }
@@ -94,17 +94,17 @@ struct PDFResultsSection: View {
     var body: some View {
         Section("Результати") {
             if model.results.isEmpty {
-                Text("Тут з’являться створені файли").font(.footnote).foregroundStyle(.secondary)
+                Text(PDFL10n.t("Тут з’являться створені файли")).font(.footnote).foregroundStyle(.secondary)
             } else {
                 ForEach(model.results, id: \.self) { url in
                     PDFResultRow(model: model, url: url)
                 }
             }
             if model.results.count > 1 {
-                Button("Скасувати останню дію") { model.undo() }
+                Button(PDFL10n.t("Скасувати останню дію")) { model.undo() }
             }
             if model.canRedo {
-                Button("Повторити дію") { model.redo() }
+                Button(PDFL10n.t("Повторити дію")) { model.redo() }
             }
             if let status = model.statusLine {
                 Text(status).font(.footnote).foregroundStyle(.secondary)
@@ -126,9 +126,9 @@ private struct PDFResultRow: View {
             SaveToFilesButton(url: url)
                 .buttonStyle(.borderless)
             Menu {
-                Button("Перегляд") { model.previewItem = PreviewTarget(url: url) }
-                Button("Друк") { model.printPDF(url) }
-                Button("Видалити зі списку") { model.results.removeAll { $0 == url } }
+                Button(PDFL10n.t("Перегляд")) { model.previewItem = PreviewTarget(url: url) }
+                Button(PDFL10n.t("Друк")) { model.printPDF(url) }
+                Button(PDFL10n.t("Видалити зі списку")) { model.results.removeAll { $0 == url } }
             } label: {
                 Image(systemName: "ellipsis.circle")
             }

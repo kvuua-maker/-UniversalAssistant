@@ -28,20 +28,20 @@ struct SignaturePadView: View {
                 .contentShape(Rectangle())
                 .onAppear { pad.canvasSize = geometry.size }
                 .overlay(alignment: .bottom) {
-                    Text("Намалюйте підпис поверх документа")
+                    Text(PDFL10n.t("Намалюйте підпис поверх документа"))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .padding(10)
                 }
             }
-            .navigationTitle("Підпис")
+            .navigationTitle(PDFL10n.t("Підпис"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Скасувати") { onCancel() }
+                    Button(PDFL10n.t("Скасувати")) { onCancel() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Готово") {
+                    Button(PDFL10n.t("Готово")) {
                         if let result = pad.render() { onSave(result.image, result.rect) }
                     }
                 }

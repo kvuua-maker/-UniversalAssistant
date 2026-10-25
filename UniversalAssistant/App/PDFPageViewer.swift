@@ -23,12 +23,12 @@ struct PDFPageViewer: View {
                 }
         }
         .interactiveDismissDisabled(false)
-        .alert("Файл захищений паролем", isPresented: $needsPassword) {
+        .alert(PDFL10n.t("Файл захищений паролем"), isPresented: $needsPassword) {
             SecureField("Пароль", text: $password)
-            Button("Відкрити") { unlocked = true }
-            Button("Скасувати", role: .cancel) { dismiss() }
+            Button(PDFL10n.t("Відкрити")) { unlocked = true }
+            Button(PDFL10n.t("Скасувати"), role: .cancel) { dismiss() }
         } message: {
-            Text("Введіть пароль, щоб переглянути документ")
+            Text(PDFL10n.t("Введіть пароль, щоб переглянути документ"))
         }
         .onAppear {
             if let document = PDFDocument(url: url), document.isLocked {

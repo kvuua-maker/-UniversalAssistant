@@ -26,18 +26,18 @@ struct CropView: View {
             }
             .safeAreaInset(edge: .bottom) {
                 Picker("Область", selection: $onlyFirstPage) {
-                    Text("Всі сторінки").tag(false)
-                    Text("Лише перша").tag(true)
+                    Text(PDFL10n.t("Всі сторінки")).tag(false)
+                    Text(PDFL10n.t("Лише перша")).tag(true)
                 }
                 .pickerStyle(.segmented)
                 .padding()
                 .background(.ultraThinMaterial)
             }
-            .navigationTitle("Обрізати")
+            .navigationTitle(PDFL10n.t("Обрізати"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Скасувати") { onCancel() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Застосувати") { onApply(rect) } }
+                ToolbarItem(placement: .cancellationAction) { Button(PDFL10n.t("Скасувати")) { onCancel() } }
+                ToolbarItem(placement: .confirmationAction) { Button(PDFL10n.t("Застосувати")) { onApply(rect) } }
             }
         }
         .interactiveDismissDisabled(true)

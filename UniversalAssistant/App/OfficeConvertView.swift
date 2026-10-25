@@ -15,22 +15,22 @@ struct OfficeConvertView: View {
         NavigationStack {
             List {
                 Section {
-                    Button("Вибрати Word або Excel") { showImporter = true }
+                    Button(PDFL10n.t("Вибрати Word або Excel")) { showImporter = true }
                 }
                 if let result {
                     Section("Результат") {
                         Text(result.lastPathComponent)
-                        Button("Перегляд") { preview = PreviewTarget(url: result) }
-                        ShareLink(item: result) { Text("Поділитися") }
+                        Button(PDFL10n.t("Перегляд")) { preview = PreviewTarget(url: result) }
+                        ShareLink(item: result) { Text(PDFL10n.t("Поділитися")) }
                     }
                 }
                 if let status {
                     Section("Статус") { Text(status).font(.footnote) }
                 }
             }
-            .navigationTitle("Office → PDF")
+            .navigationTitle(PDFL10n.t("Office → PDF"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Готово") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button(PDFL10n.t("Готово")) { dismiss() } } }
             .overlay { if isBusy { ProgressView().padding(24).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
             .fileImporter(isPresented: $showImporter,
                           allowedContentTypes: ["docx", "doc", "xlsx", "xls", "rtf", "odt"]

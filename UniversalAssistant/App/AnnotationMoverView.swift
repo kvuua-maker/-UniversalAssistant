@@ -46,18 +46,18 @@ struct AnnotationMoverView: View {
                         HStack {
                             Text(box.label).lineLimit(1)
                             Spacer()
-                            Button("Видалити", role: .destructive) { remove(box.id) }
+                            Button(PDFL10n.t("Видалити"), role: .destructive) { remove(box.id) }
                         }
                     }
                 }
                 .frame(maxHeight: 160)
             }
-            .navigationTitle("Переміщення анотацій")
+            .navigationTitle(PDFL10n.t("Переміщення анотацій"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Скасувати") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(PDFL10n.t("Скасувати")) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Зберегти") { Task { await save() } }
+                    Button(PDFL10n.t("Зберегти")) { Task { await save() } }
                 }
             }
             .task { load() }
