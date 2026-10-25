@@ -84,6 +84,16 @@ private struct PDFToolsAlerts: ViewModifier {
                 Button("Додати") { model.applyText() }
                 Button("Скасувати", role: .cancel) {}
             }
+            .alert("Витягти сторінки", isPresented: $model.showSplit) {
+                TextField("1-2", text: $model.splitRange)
+                Button("Витягти") { model.splitPages() }
+                Button("Скасувати", role: .cancel) {}
+            }
+            .alert("Видалити сторінку", isPresented: $model.showDeletePage) {
+                TextField("1", text: $model.deletePageIndex)
+                Button("Видалити", role: .destructive) { model.deleteChosenPage() }
+                Button("Скасувати", role: .cancel) {}
+            }
             .alert("Номер сторінки", isPresented: $model.showBlank) {
                 TextField("1", text: $model.blankIndex)
                 Button("Вставити") { model.insertBlankPage() }

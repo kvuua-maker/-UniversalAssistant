@@ -2,6 +2,51 @@ import Foundation
 import UIKit
 
 extension PDFToolsModel {
+    func runOCR() {
+        guard let url = results.first else { return }
+        isBusy = true
+        Task {
+            defer { isBusy = false }
+            do {
+                let text = try await PDFToolsEngine.shared.recognizeText(in: url)
+                statusLine = text.isEmpty ? "Текст не розпізнано" : String(text.prefix(600))
+            } catch {
+                alertMessage = (error as? PDFToolsError)?.userMessage ?? "Не вдалося розпізнати текст."
+            }
+        }
+    }
+
+    func exportPNG() {
+        guard let url = results.first else { return }
+        run { let pages = try await PDFToolsEngine.shared.images(from: url); return pages.first }
+    }
+
+    func splitPages() {
+        guard let url = results.first else { return }
+        let parts = splitRange.split(separator: "-").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+        guard let first = parts.first else { return }
+        let last = parts.count > 1 ? parts[1] : first
+        guard first >= 1, last >= first else { showSplit = false; return }
+        showSplit = false
+        run { Optional(try await PDFToolsEngine.shared.extractPages(from: url, range: (first - 1)...(last - 1))) }
+    }
+
+    func deleteChosenPage() {
+        guard let url = results.first, let index = Int(deletePageIndex), index >= 1 else { return }
+        showDeletePage = false
+        run { Optional(try await PDFToolsEngine.shared.deletePages(url, indexes: [index - 1])) }
+    }
+
+    func addAnnotation(_ kind: PDFAnnotationKind) {
+        guard let url = results.first else { return }
+        run { Optional(try await PDFToolsEngine.shared.addAnnotation(url, kind: kind)) }
+    }
+
+    func duplicateFirstPage() {
+        guard let url = results.first else { return }
+        run { Optional(try await PDFToolsEngine.shared.duplicatePage(url, index: 0)) }
+    }
+
     func signatureBackground() -> UIImage? {
         guard let url = results.first else { return nil }
         return PDFToolsEngine.shared.pageImageSync(url)

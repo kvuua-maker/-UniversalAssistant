@@ -32,6 +32,10 @@ final class PDFToolsModel {
     var showPassword = false
     var showText = false
     var showBlank = false
+    var showSplit = false
+    var showDeletePage = false
+    var splitRange = "1-2"
+    var deletePageIndex = "1"
     var shareURL: URL?
     var previewItem: PreviewTarget?
 

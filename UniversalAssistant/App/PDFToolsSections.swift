@@ -32,6 +32,18 @@ struct PDFEditSection: View {
                 Button("Стиснути") { model.compress(current) }
                 Button("Вставити порожню сторінку") { model.showBlank = true }
                 Button("Витягнути зображення") { model.extractImages() }
+                Button("OCR: розпізнати текст") { model.runOCR() }
+                Button("PDF → PNG") { model.exportPNG() }
+                Button("Розділити: витягти сторінки") { model.showSplit = true }
+                Button("Видалити сторінку") { model.showDeletePage = true }
+                Button("Дублювати першу сторінку") { model.duplicateFirstPage() }
+                Menu("Анотація") {
+                    Button("Маркер") { model.addAnnotation(.highlight) }
+                    Button("Підкреслення") { model.addAnnotation(.underline) }
+                    Button("Закреслення") { model.addAnnotation(.strikeOut) }
+                    Button("Прямокутник") { model.addAnnotation(.square) }
+                    Button("Коло") { model.addAnnotation(.circle) }
+                }
             }
         }
     }
@@ -48,6 +60,9 @@ struct PDFResultsSection: View {
                 ForEach(model.results, id: \.self) { url in
                     PDFResultRow(model: model, url: url)
                 }
+            }
+            if model.results.count > 1 {
+                Button("Скасувати останню дію") { model.undo() }
             }
             if let status = model.statusLine {
                 Text(status).font(.footnote).foregroundStyle(.secondary)
