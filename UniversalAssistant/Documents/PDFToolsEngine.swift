@@ -368,8 +368,8 @@ actor PDFToolsEngine {
         guard let document = CGPDFDocument(url as CFURL) else { throw PDFToolsError.unreadable }
         var written: [URL] = []
         for pageIndex in 1...max(1, document.numberOfPages) {
-            guard let page = document.page(at: pageIndex) else { continue }
-            let pageDictionary = page.dictionary
+            guard let page = document.page(at: pageIndex),
+                  let pageDictionary = page.dictionary else { continue }
             var resources: CGPDFDictionaryRef?
             guard CGPDFDictionaryGetDictionary(pageDictionary, "Resources", &resources), let resources else { continue }
             var xObjects: CGPDFDictionaryRef?
@@ -386,7 +386,8 @@ actor PDFToolsEngine {
                     var subtype: UnsafePointer<Int8>?
                     guard CGPDFDictionaryGetName(dictionary, "Subtype", &subtype),
                           let subtype, String(cString: subtype) == "Image" else { return }
-                    guard let raw = CGPDFStreamCopyData(stream, .raw) else { return }
+                    var format = CGPDFDataFormat.raw
+                    guard let raw = CGPDFStreamCopyData(stream, &format) else { return }
                     let data = raw as Data
                     // Only formats that need no re-encoding are kept verbatim.
                     var filterName: UnsafePointer<Int8>?
