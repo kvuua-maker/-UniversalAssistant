@@ -280,9 +280,8 @@ struct GroqCloudVoiceTranscriber: CloudVoiceTranscribing {
         let audio = try Data(contentsOf: audioURL, options: [.mappedIfSafe])
         guard !audio.isEmpty, audio.count <= 15_000_000 else { throw URLError(.dataLengthExceedsMaximum) }
         let context = prompt.prefix(80).joined(separator: ", ")
-        let result: Output = try await PhysicalDiagnosticDelivery.shared.postAttested(
-            operation: "groq-transcription",
-            path: "v1/ai/transcriptions",
+        let result: Output = try await PhysicalDiagnosticDelivery.shared.postToken(
+            path: "v1/ai/transcribe",
             payload: Input(
                 requestID: requestID,
                 audioBase64: audio.base64EncodedString(),
@@ -297,6 +296,7 @@ struct GroqCloudVoiceTranscriber: CloudVoiceTranscribing {
         }
         let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { throw URLError(.zeroByteResource) }
+        await MainActor.run { RuntimeDiagnostics.shared.log("Groq STT", text) }
         return text
     }
 }
@@ -424,13 +424,17 @@ struct GroqSemanticCommandResolver: SemanticCommandResolving {
 struct GroqCloudSemanticEngine: CloudSemanticUnderstanding {
     private struct Input: Codable, Sendable { let requestID: UUID; let text: String; let language: String }
     func interpret(_ text: String, requestID: UUID) async throws -> CloudSemanticFrame {
-        let result: CloudSemanticFrame = try await PhysicalDiagnosticDelivery.shared.postAttested(
-            operation: "groq-semantic",
-            path: "v1/ai/semantic",
+        let result: CloudSemanticFrame = try await PhysicalDiagnosticDelivery.shared.postToken(
+            path: "v1/ai/interpret",
             payload: Input(requestID: requestID, text: text, language: "uk"),
             response: CloudSemanticFrame.self
         )
-        guard result.requestID == requestID, result.model == "openai/gpt-oss-20b" else { throw URLError(.cannotParseResponse) }
+        guard result.requestID == requestID, result.model == "openai/gpt-oss-120b" else { throw URLError(.cannotParseResponse) }
+        await MainActor.run {
+            RuntimeDiagnostics.shared.log(
+                "Groq LLM",
+                "intent=\(result.intent) app=\(result.app ?? "-") ambiguous=\(result.ambiguous)")
+        }
         return result
     }
 }

@@ -103,5 +103,7 @@
 		<string>photos-redirect</string>
 		<string>telegram</string>
 	</array>
+	<key>UAAPIToken</key>
+	<string>$(UA_API_TOKEN)</string>
 </dict>
 </plist>

@@ -22,3 +22,5 @@ LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks
 // Build-time switch: CloudKit sync is used only in builds whose App ID has
 // the iCloud container enabled (Production). Development stays local-only.
 UA_USE_CLOUDKIT_SYNC = NO
+
+UA_API_TOKEN = 9fe7322c938a2a226bbce5335559e24dec447172c1a17529

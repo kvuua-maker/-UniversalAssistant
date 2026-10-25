@@ -100,15 +100,39 @@ struct SystemAppAttestService: AppAttestServicing {
 
 protocol DiagnosticHTTPTransport: Sendable {
     func post<Request: Encodable, Response: Decodable & Sendable>(_ path: String, body: Request, response: Response.Type) async throws -> Response
+    func postAuthenticated<Request: Encodable, Response: Decodable & Sendable>(
+        _ path: String, body: Request, token: String, response: Response.Type
+    ) async throws -> Response
+}
+
+extension DiagnosticHTTPTransport {
+    /// Default keeps existing transports (and test doubles) compiling; only the
+    /// URLSession transport actually attaches the token header.
+    func postAuthenticated<Request: Encodable, Response: Decodable & Sendable>(
+        _ path: String, body: Request, token: String, response: Response.Type
+    ) async throws -> Response {
+        try await post(path, body: body, response: response)
+    }
 }
 
 struct URLSessionDiagnosticTransport: DiagnosticHTTPTransport {
     let baseURL: URL
     func post<Request: Encodable, Response: Decodable & Sendable>(_ path: String, body: Request, response: Response.Type) async throws -> Response {
+        try await send(path, body: body, token: nil, response: response)
+    }
+    func postAuthenticated<Request: Encodable, Response: Decodable & Sendable>(
+        _ path: String, body: Request, token: String, response: Response.Type
+    ) async throws -> Response {
+        try await send(path, body: body, token: token, response: response)
+    }
+    private func send<Request: Encodable, Response: Decodable & Sendable>(
+        _ path: String, body: Request, token: String?, response: Response.Type
+    ) async throws -> Response {
         let destination = baseURL.appending(path: path)
         guard destination.scheme == "https", destination.host == "178.105.32.46" else { throw PhysicalDiagnosticDeliveryError.invalidEndpoint }
         var request = URLRequest(url: destination, timeoutInterval: 30)
         request.httpMethod = "POST"; request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token { request.setValue(token, forHTTPHeaderField: "X-UA-Token") }
         request.httpBody = try JSONEncoder.diagnostic.encode(body)
         let (data, urlResponse) = try await URLSession.shared.data(for: request)
         guard let http = urlResponse as? HTTPURLResponse else { throw PhysicalDiagnosticDeliveryError.httpFailure(statusCode: 0) }
@@ -277,6 +301,18 @@ actor PhysicalDiagnosticDelivery {
 
     func pendingCount(now: Date = .now) -> Int { localStore.loadPending(now: now).count }
     func pendingAttempts(now: Date = .now) -> [Int] { localStore.loadPending(now: now).map(\.attempts) }
+
+    /// Token-authenticated AI call used while App Attest is being fixed.
+    /// The token comes from Info.plist (build setting), never from source.
+    func postToken<Payload: Codable & Sendable, Response: Decodable & Sendable>(
+        path: String,
+        payload: Payload,
+        response: Response.Type
+    ) async throws -> Response {
+        let token = (Bundle.main.object(forInfoDictionaryKey: "UAAPIToken") as? String) ?? ""
+        guard !token.isEmpty else { throw PhysicalDiagnosticDeliveryError.unauthorized }
+        return try await transport.postAuthenticated(path, body: payload, token: token, response: response)
+    }
 
     /// The same production App Attest boundary used by diagnostics also
     /// authenticates purpose-bound AI requests. Provider credentials never

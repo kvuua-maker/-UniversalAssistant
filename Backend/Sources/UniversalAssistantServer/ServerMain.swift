@@ -26,6 +26,7 @@ struct UniversalAssistantServer {
         // surface is required by JOBS-097 (public vacancy search) and by the
         // canonical "OUR JOBS FIRST" source ordering.
         try app.configureJobsRoutes(storageRoot: URL(fileURLWithPath: storage, isDirectory: true))
+        try app.configureTokenAIRoutes()
         try await app.execute()
     }
 }

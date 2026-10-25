@@ -15,3 +15,6 @@ __pycache__/
 *.pyc
 .build/
 .swiftpm/
+Backend/.build-static/
+Backend/.build/
+.backport/
