@@ -9,7 +9,7 @@ struct OfficeConvertView: View {
     @State private var status: String?
     @State private var result: URL?
     @State private var showImporter = false
-    @State private var preview: PreviewItem?
+    @State private var preview: PreviewTarget?
 
     var body: some View {
         NavigationStack {
@@ -20,7 +20,7 @@ struct OfficeConvertView: View {
                 if let result {
                     Section("Результат") {
                         Text(result.lastPathComponent)
-                        Button("Перегляд") { preview = PreviewItem(url: result) }
+                        Button("Перегляд") { preview = PreviewTarget(url: result) }
                         ShareLink(item: result) { Text("Поділитися") }
                     }
                 }

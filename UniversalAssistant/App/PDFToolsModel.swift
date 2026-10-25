@@ -22,7 +22,7 @@ final class PDFToolsModel {
     var alertMessage: String?
     var _blankIndex = "1"
     var shareURL: URL?
-    var previewItem: PreviewItem?
+    var previewItem: PreviewTarget?
 
     func run(_ operation: @escaping () async throws -> URL?) {
         isBusy = true

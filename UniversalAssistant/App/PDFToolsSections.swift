@@ -82,7 +82,7 @@ private struct PDFResultRow: View {
             SaveToFilesButton(url: url)
                 .buttonStyle(.borderless)
             Menu {
-                Button("Перегляд") { model.previewItem = PreviewItem(url: url) }
+                Button("Перегляд") { model.previewItem = PreviewTarget(url: url) }
                 Button("Друк") { model.printPDF(url) }
                 Button("Видалити зі списку") { model.results.removeAll { $0 == url } }
             } label: {

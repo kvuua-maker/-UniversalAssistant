@@ -2,6 +2,11 @@ import SwiftUI
 import QuickLook
 import UIKit
 
+struct PreviewTarget: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
 /// Modal QuickLook preview with an explicit close button and swipe-to-dismiss.
 struct PDFPreviewSheet: View {
     let url: URL
@@ -48,8 +53,8 @@ private struct QuickLookRepresentable: UIViewControllerRepresentable {
     final class Coordinator: NSObject, QLPreviewControllerDataSource {
         let url: URL
         init(url: URL) { self.url = url }
-        func numberOfPreviewItems(in controller: QLPreviewController) -> Int { 1 }
-        func previewController(_ controller: QLPreviewController, previewItemAt index: Int) -> QLPreviewItem {
+        func numberOfPreviewTargets(in controller: QLPreviewController) -> Int { 1 }
+        func previewController(_ controller: QLPreviewController, previewItemAt index: Int) -> QLPreviewTarget {
             url as NSURL
         }
     }

@@ -13,8 +13,8 @@ struct PDFFileActionsView: View {
     @State private var showPicker = false
     @State private var blankPrompt = false
     @State private var blankIndex = "1"
-    @State private var moverItem: PreviewItem?
-    @State private var previewItem: PreviewItem?
+    @State private var moverItem: PreviewTarget?
+    @State private var previewItem: PreviewTarget?
     @State private var alertMessage: String?
 
     var body: some View {
@@ -27,7 +27,7 @@ struct PDFFileActionsView: View {
                     Section("Дії") {
                         Button("Витягнути зображення") { extract() }
                         Button("Вставити порожню сторінку") { blankIndex = "1"; blankPrompt = true }
-                        Button("Перемістити анотації пальцем") { if let file { moverItem = PreviewItem(url: file) } }
+                        Button("Перемістити анотації пальцем") { if let file { moverItem = PreviewTarget(url: file) } }
                     }
                 }
                 if !results.isEmpty {
@@ -36,7 +36,7 @@ struct PDFFileActionsView: View {
                             VStack(alignment: .leading) {
                                 Text(url.lastPathComponent).lineLimit(1)
                                 HStack {
-                                    Button("Перегляд") { previewItem = PreviewItem(url: url) }
+                                    Button("Перегляд") { previewItem = PreviewTarget(url: url) }
                                     SaveToFilesButton(url: url)
                                 }
                             }
