@@ -183,6 +183,136 @@ actor PDFToolsEngine {
         return target
     }
 
+    // MARK: - Page structure
+
+    func duplicatePage(_ url: URL, index: Int) throws -> URL {
+        guard let document = PDFDocument(url: url), let page = document.page(at: index) else {
+            throw PDFToolsError.unreadable
+        }
+        document.insert(page, at: min(index + 1, document.pageCount))
+        let target = try freshURL("duplicated.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        return target
+    }
+
+    func movePage(_ url: URL, from: Int, to: Int) throws -> URL {
+        guard let document = PDFDocument(url: url), let page = document.page(at: from) else {
+            throw PDFToolsError.unreadable
+        }
+        document.removePage(at: from)
+        document.insert(page, at: max(0, min(to, document.pageCount)))
+        let target = try freshURL("reordered.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        return target
+    }
+
+    func insertImage(_ url: URL, image: UIImage, at index: Int) throws -> URL {
+        guard let document = PDFDocument(url: url) else { throw PDFToolsError.unreadable }
+        let bounds = CGRect(x: 0, y: 0, width: 595, height: 842)
+        let renderer = UIGraphicsImageRenderer(size: bounds.size)
+        let composed = renderer.image { context in
+            UIColor.white.setFill()
+            context.fill(bounds)
+            let scale = min(bounds.width / image.size.width, bounds.height / image.size.height)
+            let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+            image.draw(in: CGRect(x: (bounds.width - size.width) / 2,
+                                  y: (bounds.height - size.height) / 2,
+                                  width: size.width, height: size.height))
+        }
+        guard let page = PDFPage(image: composed) else { throw PDFToolsError.writeFailed }
+        document.insert(page, at: max(0, min(index, document.pageCount)))
+        let target = try freshURL("with-image.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        return target
+    }
+
+    func crop(_ url: URL, inset: CGFloat) throws -> URL {
+        guard let document = PDFDocument(url: url) else { throw PDFToolsError.unreadable }
+        for index in 0..<document.pageCount {
+            guard let page = document.page(at: index) else { continue }
+            let media = page.bounds(for: .mediaBox)
+            page.setBounds(media.insetBy(dx: inset, dy: inset), for: .mediaBox)
+        }
+        let target = try freshURL("cropped.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        return target
+    }
+
+    func resize(_ url: URL, to size: CGSize) throws -> URL {
+        guard let document = PDFDocument(url: url) else { throw PDFToolsError.unreadable }
+        let bounds = CGRect(origin: .zero, size: size)
+        let renderer = UIGraphicsPDFRenderer(bounds: bounds)
+        let target = try freshURL("resized.pdf")
+        try renderer.writePDF(to: target) { context in
+            for index in 0..<document.pageCount {
+                guard let page = document.page(at: index) else { continue }
+                context.beginPage()
+                context.cgContext.saveGState()
+                context.cgContext.translateBy(x: 0, y: bounds.height)
+                context.cgContext.scaleBy(x: 1, y: -1)
+                let media = page.bounds(for: .mediaBox)
+                let scale = min(bounds.width / media.width, bounds.height / media.height)
+                context.cgContext.scaleBy(x: scale, y: scale)
+                page.draw(with: .mediaBox, to: context.cgContext)
+                context.cgContext.restoreGState()
+            }
+        }
+        return target
+    }
+
+    // MARK: - Content editing
+
+    func addText(_ url: URL, text: String, pageIndex: Int = 0, fontSize: CGFloat = 18, color: UIColor = .label) throws -> URL {
+        guard let document = PDFDocument(url: url), pageIndex < document.pageCount,
+              let page = document.page(at: pageIndex) else { throw PDFToolsError.unreadable }
+        let bounds = page.bounds(for: .mediaBox)
+        let rectangle = CGRect(x: 40, y: bounds.height - 120, width: bounds.width - 80, height: 80)
+        let annotation = PDFAnnotation(bounds: rectangle, forType: .freeText, withProperties: nil)
+        annotation.contents = text
+        annotation.font = UIFont.systemFont(ofSize: fontSize)
+        annotation.fontColor = color
+        annotation.color = .clear
+        page.addAnnotation(annotation)
+        let target = try freshURL("with-text.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        return target
+    }
+
+    func addAnnotation(_ url: URL, kind: PDFAnnotationKind, pageIndex: Int = 0) throws -> URL {
+        guard let document = PDFDocument(url: url), pageIndex < document.pageCount,
+              let page = document.page(at: pageIndex) else { throw PDFToolsError.unreadable }
+        let bounds = page.bounds(for: .mediaBox)
+        let rectangle = CGRect(x: 60, y: bounds.midY, width: bounds.width - 120, height: 60)
+        let annotation = PDFAnnotation(bounds: rectangle, forType: kind.pdfType, withProperties: nil)
+        annotation.color = kind.color
+        page.addAnnotation(annotation)
+        let target = try freshURL("annotated.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        return target
+    }
+
+    func addFooter(_ url: URL, withDate: Bool = true) throws -> URL {
+        guard let document = PDFDocument(url: url) else { throw PDFToolsError.unreadable }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd.MM.yyyy"
+        for index in 0..<document.pageCount {
+            guard let page = document.page(at: index) else { continue }
+            let bounds = page.bounds(for: .mediaBox)
+            let label = withDate ? "\(index + 1) / \(document.pageCount) · \(formatter.string(from: Date()))"
+                                 : "\(index + 1) / \(document.pageCount)"
+            let rectangle = CGRect(x: 40, y: 24, width: bounds.width - 80, height: 18)
+            let annotation = PDFAnnotation(bounds: rectangle, forType: .freeText, withProperties: nil)
+            annotation.contents = label
+            annotation.font = UIFont.systemFont(ofSize: 10)
+            annotation.fontColor = .gray
+            annotation.color = .clear
+            page.addAnnotation(annotation)
+        }
+        let target = try freshURL("with-footer.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        return target
+    }
+
     // MARK: - Security & size
 
     func protect(_ url: URL, password: String) throws -> URL {
@@ -235,6 +365,30 @@ actor PDFToolsEngine {
         let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
         let bytes = (attributes?[.size] as? NSNumber)?.intValue ?? 0
         return bytes / 1024
+    }
+}
+
+enum PDFAnnotationKind: String, CaseIterable {
+    case highlight, underline, strikeOut, square, circle, comment
+
+    var pdfType: PDFAnnotationSubtype {
+        switch self {
+        case .highlight: .highlight
+        case .underline: .underline
+        case .strikeOut: .strikeOut
+        case .square: .square
+        case .circle: .circle
+        case .comment: .freeText
+        }
+    }
+
+    var color: UIColor {
+        switch self {
+        case .highlight: .systemYellow.withAlphaComponent(0.5)
+        case .underline, .strikeOut: .systemBlue
+        case .square, .circle: .systemRed
+        case .comment: .systemGreen
+        }
     }
 }
 

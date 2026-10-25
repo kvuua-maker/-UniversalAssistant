@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
+import QuickLook
 
 /// Standalone PDF workspace. Every operation runs off the main actor through
 /// PDFToolsEngine; results can be previewed, shared, printed or saved to Files.
@@ -20,6 +21,10 @@ struct PDFToolsView: View {
     @State private var passwordText = ""
     @State private var showWatermarkPrompt = false
     @State private var showPasswordPrompt = false
+    @State private var textToInsert = ""
+    @State private var showTextPrompt = false
+    @State private var previewItem: PreviewItem?
+    @State private var annotationKind: PDFAnnotationKind = .highlight
 
     var body: some View {
         NavigationStack {
@@ -62,19 +67,49 @@ struct PDFToolsView: View {
                         Button("Стиснути") { run { Optional(try await PDFToolsEngine.shared.compress(url)) } }
                     }
                 }
+                Section("Сторінки") {
+                    ForEach(results, id: \.self) { url in
+                        Button("Дублювати першу сторінку") { run { Optional(try await PDFToolsEngine.shared.duplicatePage(url, index: 0)) } }
+                        Button("Перемістити першу в кінець") { run { Optional(try await PDFToolsEngine.shared.movePage(url, from: 0, to: 1)) } }
+                        Button("Обрізати поля (10 pt)") { run { Optional(try await PDFToolsEngine.shared.crop(url, inset: 10)) } }
+                        Button("Розмір A4") { run { Optional(try await PDFToolsEngine.shared.resize(url, to: CGSize(width: 595, height: 842))) } }
+                        Button("Розмір Letter") { run { Optional(try await PDFToolsEngine.shared.resize(url, to: CGSize(width: 612, height: 792))) } }
+                        Button("Колонтитули (номер + дата)") { run { Optional(try await PDFToolsEngine.shared.addFooter(url)) } }
+                    }
+                }
+                Section("Текст і анотації") {
+                    ForEach(results, id: \.self) { url in
+                        Button("Додати текст") { textToInsert = ""; showTextPrompt = true }
+                        Picker("Тип", selection: $annotationKind) {
+                            ForEach(PDFAnnotationKind.allCases, id: \.self) { kind in
+                                Text(kind.rawValue).tag(kind)
+                            }
+                        }
+                        Button("Додати \(annotationKind.rawValue)") {
+                            run { Optional(try await PDFToolsEngine.shared.addAnnotation(url, kind: annotationKind)) }
+                        }
+                    }
+                }
                 if !results.isEmpty {
                     Section("Результати") {
                         ForEach(results, id: \.self) { url in
                             HStack {
                                 Text(url.lastPathComponent).lineLimit(1)
                                 Spacer()
+                                Button("Перегляд") { previewItem = PreviewItem(url: url) }
                                 Button("Поділитися") { shareURL = url; showShareSheet = true }
+                                Button("Друк") { printPDF(url) }
                             }
                         }
                     }
                 }
                 if let statusLine {
-                    Section("Статус") { Text(statusLine).font(.footnote) }
+                    Section("Статус") {
+                        Text(statusLine).font(.footnote)
+                        if results.count > 1 {
+                            Button("Скасувати останню дію") { results.removeFirst() }
+                        }
+                    }
                 }
             }
             .navigationTitle("PDF-інструменти")
@@ -97,6 +132,17 @@ struct PDFToolsView: View {
                 Button("Застосувати") {
                     guard let url = results.first else { return }
                     run { Optional(try await PDFToolsEngine.shared.watermark(url, text: watermarkText)) }
+                }
+                Button("Скасувати", role: .cancel) {}
+            }
+            .sheet(item: $previewItem) { item in
+                QuickLookPreview(url: item.url)
+            }
+            .alert("Текст для додавання", isPresented: $showTextPrompt) {
+                TextField("Текст", text: $textToInsert)
+                Button("Додати") {
+                    guard let url = results.first, !textToInsert.isEmpty else { return }
+                    run { Optional(try await PDFToolsEngine.shared.addText(url, text: textToInsert)) }
                 }
                 Button("Скасувати", role: .cancel) {}
             }
@@ -131,6 +177,20 @@ struct PDFToolsView: View {
         photoItems = []
     }
 
+    private func printPDF(_ url: URL) {
+        guard UIPrintInteractionController.isPrintingAvailable else {
+            statusLine = "Друк недоступний на цьому пристрої"
+            return
+        }
+        let controller = UIPrintInteractionController.shared
+        let info = UIPrintInfo.printInfo()
+        info.jobName = url.lastPathComponent
+        info.outputType = .general
+        controller.printInfo = info
+        controller.printingItem = url
+        controller.present(animated: true)
+    }
+
     private func run(_ operation: @escaping () async throws -> URL?) {
         isBusy = true
         Task {
@@ -150,4 +210,30 @@ struct ShareSheet: UIViewControllerRepresentable {
         UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+
+
+struct PreviewItem: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
+struct QuickLookPreview: UIViewControllerRepresentable {
+    let url: URL
+    func makeUIViewController(context: Context) -> QLPreviewController {
+        let controller = QLPreviewController()
+        controller.dataSource = context.coordinator
+        return controller
+    }
+    func updateUIViewController(_ controller: QLPreviewController, context: Context) {}
+    func makeCoordinator() -> Coordinator { Coordinator(url: url) }
+
+    final class Coordinator: NSObject, QLPreviewControllerDataSource {
+        let url: URL
+        init(url: URL) { self.url = url }
+        func numberOfPreviewItems(in controller: QLPreviewController) -> Int { 1 }
+        func previewController(_ controller: QLPreviewController, previewItemAt index: Int) -> QLPreviewItem {
+            url as NSURL
+        }
+    }
 }
