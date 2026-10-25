@@ -26,18 +26,18 @@ struct PDFToolsView: View {
             List {
                 Section("Створити") {
                     Button("PDF з фото") { showPhotoPicker = true }
-                    Button("Порожній PDF (1 сторінка)") { run { try await PDFToolsEngine.shared.makeBlankPDF() } }
+                    Button("Порожній PDF (1 сторінка)") { run { Optional(try await PDFToolsEngine.shared.makeBlankPDF()) } }
                 }
                 Section("Об’єднати та розділити") {
                     Button("Вибрати PDF для об’єднання") { showPDFImporter = true }
                     if importedPDFs.count >= 2 {
                         Button("Об’єднати \(importedPDFs.count) файли") {
-                            run { try await PDFToolsEngine.shared.merge(importedPDFs) }
+                            run { Optional(try await PDFToolsEngine.shared.merge(importedPDFs)) }
                         }
                     }
                     if let first = results.first {
                         Button("Витягнути першу сторінку") {
-                            run { try await PDFToolsEngine.shared.extractPages(from: first, range: 0...0) }
+                            run { Optional(try await PDFToolsEngine.shared.extractPages(from: first, range: 0...0)) }
                         }
                     }
                 }
@@ -56,10 +56,10 @@ struct PDFToolsView: View {
                 }
                 Section("Редагувати") {
                     ForEach(results, id: \.self) { url in
-                        Button("Повернути 90°") { run { try await PDFToolsEngine.shared.rotate(url, degrees: 90) } }
+                        Button("Повернути 90°") { run { Optional(try await PDFToolsEngine.shared.rotate(url, degrees: 90)) } }
                         Button("Водяний знак") { watermarkText = ""; showWatermarkPrompt = true }
                         Button("Захистити паролем") { passwordText = ""; showPasswordPrompt = true }
-                        Button("Стиснути") { run { try await PDFToolsEngine.shared.compress(url) } }
+                        Button("Стиснути") { run { Optional(try await PDFToolsEngine.shared.compress(url)) } }
                     }
                 }
                 if !results.isEmpty {
@@ -96,7 +96,7 @@ struct PDFToolsView: View {
                 TextField("Наприклад: ЧЕРНЕТКА", text: $watermarkText)
                 Button("Застосувати") {
                     guard let url = results.first else { return }
-                    run { try await PDFToolsEngine.shared.watermark(url, text: watermarkText) }
+                    run { Optional(try await PDFToolsEngine.shared.watermark(url, text: watermarkText)) }
                 }
                 Button("Скасувати", role: .cancel) {}
             }
@@ -104,7 +104,7 @@ struct PDFToolsView: View {
                 TextField("Пароль", text: $passwordText)
                 Button("Захистити") {
                     guard let url = results.first, !passwordText.isEmpty else { return }
-                    run { try await PDFToolsEngine.shared.protect(url, password: passwordText) }
+                    run { Optional(try await PDFToolsEngine.shared.protect(url, password: passwordText)) }
                 }
                 Button("Скасувати", role: .cancel) {}
             }
