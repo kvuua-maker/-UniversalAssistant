@@ -3,6 +3,7 @@ import SwiftUI
 /// Interactive crop: drag the rectangle over the rendered page, then apply.
 struct CropView: View {
     let image: UIImage?
+    @Binding var onlyFirstPage: Bool
     let onApply: (CGRect) -> Void
     let onCancel: () -> Void
 
@@ -22,6 +23,15 @@ struct CropView: View {
                     cropOverlay(in: geometry.size)
                 }
                 .contentShape(Rectangle())
+            }
+            .safeAreaInset(edge: .bottom) {
+                Picker("Область", selection: $onlyFirstPage) {
+                    Text("Всі сторінки").tag(false)
+                    Text("Лише перша").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .padding()
+                .background(.ultraThinMaterial)
             }
             .navigationTitle("Обрізати")
             .navigationBarTitleDisplayMode(.inline)

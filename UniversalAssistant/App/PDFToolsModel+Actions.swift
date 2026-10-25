@@ -2,6 +2,58 @@ import Foundation
 import UIKit
 
 extension PDFToolsModel {
+    func makeSearchable() {
+        guard let url = results.first else { return }
+        isBusy = true
+        Task {
+            defer { isBusy = false }
+            do {
+                let output = try await PDFToolsEngine.shared.addOCRTextLayer(url)
+                undoStack.append(results)
+                results.insert(output, at: 0)
+                statusLine = "Додано текстовий шар — файл тепер шукається"
+            } catch {
+                alertMessage = (error as? PDFToolsError)?.userMessage ?? "Не вдалося додати текстовий шар."
+            }
+        }
+    }
+
+    func applyHeader() {
+        guard let url = results.first, !headerText.isEmpty else { showHeader = false; return }
+        showHeader = false
+        run { Optional(try await PDFToolsEngine.shared.addHeaderFooter(url, header: self.headerText, footer: "")) }
+    }
+
+    func applyLogoWatermark(_ image: UIImage) {
+        guard let url = results.first else { return }
+        run { Optional(try await PDFToolsEngine.shared.watermarkImage(url, image: image)) }
+    }
+
+    func movePage() {
+        guard let url = results.first,
+              let from = Int(moveFrom), let to = Int(moveTo), from >= 1, to >= 1 else { return }
+        showMovePage = false
+        run { Optional(try await PDFToolsEngine.shared.movePage(url, from: from - 1, to: to - 1)) }
+    }
+
+    func applyCropTo(rect: CGRect) {
+        showCrop = false
+        guard let url = results.first else { return }
+        let pages = cropOnlyFirstPage ? [0] : Array(0..<max(1, PDFToolsEngine.shared.pageCountSync(url)))
+        run { Optional(try await PDFToolsEngine.shared.crop(url, normalizedRect: rect, pages: pages)) }
+    }
+
+    func saveSignatureImage(_ image: UIImage) {
+        if let data = image.pngData() {
+            UserDefaults.standard.set(data, forKey: "PDFSavedSignature")
+        }
+    }
+
+    var savedSignature: UIImage? {
+        guard let data = UserDefaults.standard.data(forKey: "PDFSavedSignature") else { return nil }
+        return UIImage(data: data)
+    }
+
     func applyCrop(_ rect: CGRect) {
         showCrop = false
         guard let url = results.first else { return }

@@ -32,6 +32,9 @@ struct PDFConvertSection: View {
                 Button("Розмір A4") { model.resizeA4() }
                 Button("Розмір Letter") { model.resizeLetter() }
                 Button("Колонтитули (номер + дата)") { model.addFooters() }
+                Button("Верхній колонтитул…") { model.headerText = ""; model.showHeader = true }
+                Button("Водяний знак-логотип…") { model.showLogoPicker = true }
+                Button("Зробити PDF з пошуком (OCR-шар)") { model.makeSearchable() }
                 HStack {
                     TextField("Пошук по тексту", text: $model.searchQuery)
                     Button("Знайти") { model.findPages() }
@@ -71,6 +74,7 @@ struct PDFEditSection: View {
                 Button("Розділити: витягти сторінки") { model.showSplit = true }
                 Button("Видалити сторінки…") { model.deleteRange = "2-4"; model.showDeletePage = true }
                 Button("Дублювати сторінку…") { model.duplicateIndex = "1"; model.showDuplicatePage = true }
+                Button("Перемістити сторінку…") { model.moveFrom = "1"; model.moveTo = "2"; model.showMovePage = true }
                 Menu("Анотація") {
                     Button("Маркер") { model.startPlacement(.highlight) }
                     Button("Підкреслення") { model.startPlacement(.underline) }

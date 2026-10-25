@@ -45,8 +45,19 @@ private struct PDFToolsBindings: ViewModifier {
             .fullScreenCover(isPresented: $model.showCamera) {
                 CameraPhotoPicker { image in model.add(image: image) }
             }
+            .photosPicker(isPresented: $model.showLogoPicker, selection: $model.logoItem, matching: .images)
+            .onChange(of: model.logoItem) { _, item in
+                guard let item else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        model.applyLogoWatermark(image)
+                    }
+                    model.logoItem = nil
+                }
+            }
             .fullScreenCover(isPresented: $model.showCrop) {
-                CropView(image: model.signatureBackground()) { rect in
+                CropView(image: model.signatureBackground(), onlyFirstPage: $model.cropOnlyFirstPage) { rect in
                     model.applyCrop(rect)
                 } onCancel: {
                     model.showCrop = false
@@ -120,6 +131,17 @@ private struct PDFToolsAlerts: ViewModifier {
             .alert("Видалити сторінки", isPresented: $model.showDeletePage) {
                 TextField("2-4", text: $model.deleteRange)
                 Button("Видалити", role: .destructive) { model.deleteRangePages() }
+                Button("Скасувати", role: .cancel) {}
+            }
+            .alert("Верхній колонтитул", isPresented: $model.showHeader) {
+                TextField("Текст", text: $model.headerText)
+                Button("Додати") { model.applyHeader() }
+                Button("Скасувати", role: .cancel) {}
+            }
+            .alert("Перемістити сторінку", isPresented: $model.showMovePage) {
+                TextField("З", text: $model.moveFrom)
+                TextField("На", text: $model.moveTo)
+                Button("Перемістити") { model.movePage() }
                 Button("Скасувати", role: .cancel) {}
             }
             .alert("Дублювати сторінку", isPresented: $model.showDuplicatePage) {

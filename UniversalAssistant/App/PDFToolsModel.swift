@@ -52,6 +52,14 @@ final class PDFToolsModel {
     var duplicateIndex = "1"
     var searchMatches: [Int] = []
     var searchCursor = 0
+    var showHeader = false
+    var headerText = ""
+    var showLogoPicker = false
+    var logoItem: PhotosPickerItem?
+    var showMovePage = false
+    var moveFrom = "1"
+    var moveTo = "2"
+    var cropOnlyFirstPage = false
     var shareURL: URL?
     var previewItem: PreviewTarget?
 

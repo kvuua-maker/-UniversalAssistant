@@ -551,6 +551,154 @@ actor PDFToolsEngine {
         return matches
     }
 
+    // MARK: - Text layer, headers, logos
+
+    /// Re-renders each page with the recognised text drawn invisibly on top, so
+    /// any PDF reader can search and copy it after export.
+    func addOCRTextLayer(_ url: URL) async throws -> URL {
+        guard let document = PDFDocument(url: url) else { throw PDFToolsError.unreadable }
+        if document.isLocked { throw PDFToolsError.locked }
+        let output = PDFDocument()
+        for index in 0..<document.pageCount {
+            guard let page = document.page(at: index) else { continue }
+            let media = page.bounds(for: .mediaBox)
+            let scale: CGFloat = 2
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: media.width * scale,
+                                                                height: media.height * scale))
+            let base = page.thumbnail(of: CGSize(width: media.width * scale, height: media.height * scale),
+                                      for: .mediaBox)
+            let observations = try Self.recognizeLines(in: base)
+            let composed = renderer.image { context in
+                base.draw(in: CGRect(origin: .zero,
+                                     size: CGSize(width: media.width * scale, height: media.height * scale)))
+                // Nearly transparent glyphs keep the page visually unchanged
+                // while remaining extractable by text engines.
+                for line in observations {
+                    let box = line.bounds
+                    let rect = CGRect(x: box.minX * media.width * scale,
+                                      y: (1 - box.maxY) * media.height * scale,
+                                      width: box.width * media.width * scale,
+                                      height: box.height * media.height * scale)
+                    let fontSize = max(4, rect.height)
+                    line.text.draw(in: CGRect(x: rect.minX,
+                                              y: rect.minY,
+                                              width: max(rect.width, 10),
+                                              height: rect.height),
+                                   withAttributes: [
+                                       .font: UIFont.systemFont(ofSize: fontSize),
+                                       .foregroundColor: UIColor.black.withAlphaComponent(0.01)
+                                   ])
+                }
+            }
+            if let newPage = PDFPage(image: composed) { output.insert(newPage, at: index) }
+        }
+        let target = try freshURL("searchable.pdf")
+        guard output.write(to: target) else { throw PDFToolsError.writeFailed }
+        Task { @MainActor in RuntimeDiagnostics.shared.log("PDF", "OCR text layer added to \(document.pageCount) pages") }
+        return target
+    }
+
+    private static func recognizeLines(in image: UIImage) throws -> [(text: String, bounds: CGRect)] {
+        guard let cgImage = image.cgImage else { return [] }
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.recognitionLanguages = ["uk-UA", "en-US"]
+        request.usesLanguageCorrection = true
+        try VNImageRequestHandler(cgImage: cgImage, options: [:]).perform([request])
+        return (request.results ?? []).compactMap { observation in
+            guard let candidate = observation.topCandidates(1).first else { return nil }
+            return (candidate.string, observation.boundingBox)
+        }
+    }
+
+    func addHeaderFooter(_ url: URL, header: String, footer: String, withDate: Bool = true) throws -> URL {
+        guard let document = PDFDocument(url: url) else { throw PDFToolsError.unreadable }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd.MM.yyyy"
+        for index in 0..<document.pageCount {
+            guard let page = document.page(at: index) else { continue }
+            let media = page.bounds(for: .mediaBox)
+            if !header.isEmpty {
+                let rect = CGRect(x: 40, y: media.height - 40, width: media.width - 80, height: 20)
+                let annotation = PDFAnnotation(bounds: rect, forType: .freeText, withProperties: nil)
+                annotation.contents = header
+                annotation.font = UIFont.systemFont(ofSize: 10)
+                annotation.fontColor = .darkGray
+                annotation.color = .clear
+                page.addAnnotation(annotation)
+            }
+            if !footer.isEmpty || withDate {
+                let label = footer.isEmpty
+                    ? "\(index + 1) / \(document.pageCount) · \(formatter.string(from: Date()))"
+                    : "\(footer) · \(index + 1) / \(document.pageCount)"
+                let rect = CGRect(x: 40, y: 24, width: media.width - 80, height: 18)
+                let annotation = PDFAnnotation(bounds: rect, forType: .freeText, withProperties: nil)
+                annotation.contents = label
+                annotation.font = UIFont.systemFont(ofSize: 10)
+                annotation.fontColor = .gray
+                annotation.color = .clear
+                page.addAnnotation(annotation)
+            }
+        }
+        let target = try freshURL("header-footer.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        return target
+    }
+
+    func watermarkImage(_ url: URL, image: UIImage, scale: CGFloat = 0.5) throws -> URL {
+        guard let document = PDFDocument(url: url) else { throw PDFToolsError.unreadable }
+        let output = PDFDocument()
+        for index in 0..<document.pageCount {
+            guard let page = document.page(at: index) else { continue }
+            let media = page.bounds(for: .mediaBox)
+            let renderer = UIGraphicsImageRenderer(size: media.size)
+            let composed = renderer.image { context in
+                UIColor.white.setFill()
+                context.fill(CGRect(origin: .zero, size: media.size))
+                context.cgContext.saveGState()
+                context.cgContext.translateBy(x: 0, y: media.height)
+                context.cgContext.scaleBy(x: 1, y: -1)
+                page.draw(with: .mediaBox, to: context.cgContext)
+                context.cgContext.restoreGState()
+                let width = media.width * min(max(scale, 0.1), 1)
+                let ratio = image.size.height / max(image.size.width, 1)
+                let rect = CGRect(x: (media.width - width) / 2,
+                                  y: (media.height - width * ratio) / 2,
+                                  width: width,
+                                  height: width * ratio)
+                image.draw(in: rect, blendMode: .normal, alpha: 0.22)
+            }
+            if let newPage = PDFPage(image: composed) { output.insert(newPage, at: index) }
+        }
+        let target = try freshURL("logo-watermark.pdf")
+        guard output.write(to: target) else { throw PDFToolsError.writeFailed }
+        return target
+    }
+
+    func deleteAnnotation(_ url: URL, pageIndex: Int = 0, annotationIndex: Int) throws -> URL {
+        guard let document = PDFDocument(url: url), let page = document.page(at: pageIndex),
+              annotationIndex < page.annotations.count else { throw PDFToolsError.unreadable }
+        page.removeAnnotation(page.annotations[annotationIndex])
+        let target = try freshURL("annotation-removed.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        return target
+    }
+
+    func crop(_ url: URL, normalizedRect: CGRect, pages: [Int]) throws -> URL {
+        guard let document = PDFDocument(url: url) else { throw PDFToolsError.unreadable }
+        for index in pages where index >= 0 && index < document.pageCount {
+            guard let page = document.page(at: index) else { continue }
+            let media = page.bounds(for: .mediaBox)
+            let rect = pageRect(from: normalizedRect, in: media)
+            guard rect.width > 8, rect.height > 8 else { continue }
+            page.setBounds(rect, for: .cropBox)
+            page.setBounds(rect, for: .mediaBox)
+        }
+        let target = try freshURL("cropped-selected.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        return target
+    }
+
     // MARK: - Password removal
 
     /// Rewrites a password-protected document without its password. The current
@@ -646,6 +794,10 @@ enum PDFAnnotationKind: String, CaseIterable {
 }
 
 extension PDFToolsEngine {
+    nonisolated func pageCountSync(_ url: URL) -> Int {
+        PDFDocument(url: url)?.pageCount ?? 1
+    }
+
     nonisolated func pageImageSync(_ url: URL) -> UIImage? {
         guard let document = PDFDocument(url: url), let page = document.page(at: 0) else { return nil }
         let bounds = page.bounds(for: .mediaBox)
