@@ -31,7 +31,7 @@ struct PDFToolsView: View {
     @State private var showExtractImporter = false
     @State private var blankPrompt = false
     @State private var blankIndex = "1"
-    @State private var moverURL: URL?
+    @State private var moverItem: PreviewItem?
 
     var body: some View {
         NavigationStack {
@@ -78,7 +78,7 @@ struct PDFToolsView: View {
                     Button("Витягнути зображення з PDF") { showExtractImporter = true }
                     ForEach(results, id: \.self) { url in
                         Button("Вставити порожню сторінку") { blankIndex = "1"; blankPrompt = true }
-                        Button("Перемістити анотації пальцем") { moverURL = url }
+                        Button("Перемістити анотації пальцем") { moverItem = PreviewItem(url: url) }
                     }
                 }
                 Section("Word / Excel") {
@@ -178,7 +178,7 @@ struct PDFToolsView: View {
                 }
                 Button("Скасувати", role: .cancel) {}
             }
-            .sheet(item: $moverURL) { url in AnnotationMoverView(url: url) }
+            .sheet(item: $moverItem) { item in AnnotationMoverView(url: item.url) }
             .sheet(isPresented: $showSignaturePad) {
                 SignaturePadView { image in
                     signatureImage = image
