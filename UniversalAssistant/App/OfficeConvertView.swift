@@ -34,8 +34,9 @@ struct OfficeConvertView: View {
             .overlay { if isBusy { ProgressView().padding(24).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
             .fileImporter(isPresented: $showImporter,
                           allowedContentTypes: ["docx", "doc", "xlsx", "xls", "rtf", "odt"]
-                            .compactMap { UTType(filenameExtension: $0) }) { outcome in
-                guard case let .success(urls) = outcome, let file = urls.first else { return }
+                            .compactMap { UTType(filenameExtension: $0) },
+                          allowsMultipleSelection: false) { outcome in
+                guard case let .success(file) = outcome else { return }
                 Task { await convert(file) }
             }
             .sheet(item: $preview) { item in QuickLookPreview(url: item.url) }
