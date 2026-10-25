@@ -41,6 +41,16 @@ struct AnnotationMoverView: View {
                 }
                 .padding()
                 if let status { Text(status).font(.footnote) }
+                List {
+                    ForEach(boxes, id: \.id) { box in
+                        HStack {
+                            Text(box.label).lineLimit(1)
+                            Spacer()
+                            Button("Видалити", role: .destructive) { remove(box.id) }
+                        }
+                    }
+                }
+                .frame(maxHeight: 160)
             }
             .navigationTitle("Переміщення анотацій")
             .navigationBarTitleDisplayMode(.inline)
@@ -59,6 +69,18 @@ struct AnnotationMoverView: View {
         pageSize = pageImage?.size ?? .zero
         let items = (try? PDFToolsEngine.shared.annotationsSync(url)) ?? []
         boxes = items.map { (id: $0.id, rect: $0.bounds, label: $0.label) }
+    }
+
+    private func remove(_ index: Int) {
+        Task {
+            do {
+                let updated = try await PDFToolsEngine.shared.deleteAnnotation(url, annotationIndex: index)
+                boxes.removeAll { $0.id == index }
+                status = "Анотацію видалено: \(updated.lastPathComponent)"
+            } catch {
+                status = "Не вдалося видалити"
+            }
+        }
     }
 
     private func save() async {

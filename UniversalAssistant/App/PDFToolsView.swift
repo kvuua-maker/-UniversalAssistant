@@ -85,9 +85,17 @@ private struct PDFToolsBindings: ViewModifier {
             }
             .sheet(isPresented: $model.showOffice) { OfficeConvertView() }
             .sheet(isPresented: $model.showFileActions) { PDFFileActionsView() }
+            .confirmationDialog("Підпис", isPresented: $model.showSignatureHome, titleVisibility: .visible) {
+                if model.savedSignature != nil {
+                    Button("Використати збережений підпис") { model.useSavedSignature() }
+                }
+                Button("Намалювати новий") { model.showSignature = true }
+                Button("Скасувати", role: .cancel) {}
+            }
             .fullScreenCover(isPresented: $model.showSignature) {
                 SignaturePadView(background: model.signatureBackground()) { image, rect in
                     model.signatureImage = image
+                    model.saveSignatureImage(image)
                     model.applySignature(image: image, rect: rect)
                 } onCancel: {
                     model.showSignature = false

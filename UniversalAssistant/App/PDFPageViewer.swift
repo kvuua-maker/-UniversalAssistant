@@ -6,10 +6,13 @@ struct PDFPageViewer: View {
     let url: URL
     let pageIndex: Int
     @Environment(\.dismiss) private var dismiss
+    @State private var password = ""
+    @State private var needsPassword = false
+    @State private var unlocked = false
 
     var body: some View {
         NavigationStack {
-            PDFKitView(url: url, pageIndex: pageIndex)
+            PDFKitView(url: url, pageIndex: pageIndex, password: password)
                 .ignoresSafeArea(edges: .bottom)
                 .navigationTitle("Сторінка \(pageIndex + 1)")
                 .navigationBarTitleDisplayMode(.inline)
@@ -20,17 +23,34 @@ struct PDFPageViewer: View {
                 }
         }
         .interactiveDismissDisabled(false)
+        .alert("Файл захищений паролем", isPresented: $needsPassword) {
+            SecureField("Пароль", text: $password)
+            Button("Відкрити") { unlocked = true }
+            Button("Скасувати", role: .cancel) { dismiss() }
+        } message: {
+            Text("Введіть пароль, щоб переглянути документ")
+        }
+        .onAppear {
+            if let document = PDFDocument(url: url), document.isLocked {
+                needsPassword = true
+            }
+        }
     }
 }
 
 private struct PDFKitView: UIViewRepresentable {
     let url: URL
     let pageIndex: Int
+    let password: String
 
     func makeUIView(context: Context) -> PDFView {
         let view = PDFView()
         view.autoScales = true
-        view.document = PDFDocument(url: url)
+        let document = PDFDocument(url: url)
+        if let document, document.isLocked, !password.isEmpty {
+            _ = document.unlock(withPassword: password)
+        }
+        view.document = document
         if let page = view.document?.page(at: pageIndex) {
             view.go(to: page)
         }
@@ -38,6 +58,9 @@ private struct PDFKitView: UIViewRepresentable {
     }
 
     func updateUIView(_ view: PDFView, context: Context) {
+        if let document = view.document, document.isLocked, !password.isEmpty {
+            _ = document.unlock(withPassword: password)
+        }
         guard let page = view.document?.page(at: pageIndex) else { return }
         view.go(to: page)
     }

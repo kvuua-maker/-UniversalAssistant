@@ -43,6 +43,12 @@ extension PDFToolsModel {
         run { Optional(try await PDFToolsEngine.shared.crop(url, normalizedRect: rect, pages: pages)) }
     }
 
+    func useSavedSignature() {
+        guard let image = savedSignature, let url = results.first else { return }
+        let rect = CGRect(x: 0.55, y: 0.82, width: 0.35, height: 0.1)
+        run { Optional(try await PDFToolsEngine.shared.insertSignature(url, signature: image, normalizedRect: rect)) }
+    }
+
     func saveSignatureImage(_ image: UIImage) {
         if let data = image.pngData() {
             UserDefaults.standard.set(data, forKey: "PDFSavedSignature")

@@ -28,6 +28,7 @@ final class PDFToolsModel {
     var showOffice = false
     var showFileActions = false
     var showSignature = false
+    var showSignatureHome = false
     var showWatermark = false
     var showPassword = false
     var showText = false

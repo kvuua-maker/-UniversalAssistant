@@ -10,7 +10,7 @@ struct PDFCreateSection: View {
             Button("Об’єднати PDF-файли") { model.showPDFImport = true }
             Button("Word / Excel → PDF") { model.showOffice = true }
             Button("Інструменти для файлу") { model.showFileActions = true }
-            Button(model.signatureImage == nil ? "Намалювати підпис" : "Перемалювати підпис") { model.showSignature = true }
+            Button("Підпис") { model.showSignatureHome = true }
         }
     }
 }
