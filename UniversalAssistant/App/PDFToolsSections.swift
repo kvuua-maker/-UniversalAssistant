@@ -28,17 +28,22 @@ struct PDFConvertSection: View {
                 Button("PDF → Текст") { model.exportText() }
                 Button("PDF → PNG") { model.exportPNG() }
                 Button("OCR: розпізнати текст") { model.runOCR() }
-                Button("Обрізати поля (10 pt)") { model.cropPages() }
+                Button("Обрізати поля…") { model.showCrop = true }
                 Button("Розмір A4") { model.resizeA4() }
                 Button("Розмір Letter") { model.resizeLetter() }
                 Button("Колонтитули (номер + дата)") { model.addFooters() }
                 HStack {
                     TextField("Пошук по тексту", text: $model.searchQuery)
-                    Button("Знайти") { model.findInDocument() }
+                    Button("Знайти") { model.findPages() }
                         .buttonStyle(.borderless)
                 }
                 if let result = model.searchResult {
                     Text(result).font(.footnote).foregroundStyle(.secondary)
+                }
+                if !model.searchMatches.isEmpty {
+                    Button("Перейти до сторінки \(model.searchMatches.first.map { $0 + 1 } ?? 1)") {
+                        model.nextSearchMatch()
+                    }
                 }
             }
         }
@@ -64,15 +69,15 @@ struct PDFEditSection: View {
                 Button("Вставити порожню сторінку") { model.showBlank = true }
                 Button("Витягнути зображення") { model.extractImages() }
                 Button("Розділити: витягти сторінки") { model.showSplit = true }
-                Button("Видалити сторінку") { model.showDeletePage = true }
-                Button("Дублювати першу сторінку") { model.duplicateFirstPage() }
+                Button("Видалити сторінки…") { model.deleteRange = "2-4"; model.showDeletePage = true }
+                Button("Дублювати сторінку…") { model.duplicateIndex = "1"; model.showDuplicatePage = true }
                 Menu("Анотація") {
-                    Button("Маркер") { model.addAnnotation(.highlight) }
-                    Button("Підкреслення") { model.addAnnotation(.underline) }
-                    Button("Закреслення") { model.addAnnotation(.strikeOut) }
-                    Button("Прямокутник") { model.addAnnotation(.square) }
-                    Button("Коло") { model.addAnnotation(.circle) }
-                    Button("Коментар") { model.addAnnotation(.comment) }
+                    Button("Маркер") { model.startPlacement(.highlight) }
+                    Button("Підкреслення") { model.startPlacement(.underline) }
+                    Button("Закреслення") { model.startPlacement(.strikeOut) }
+                    Button("Прямокутник") { model.startPlacement(.square) }
+                    Button("Коло") { model.startPlacement(.circle) }
+                    Button("Коментар") { model.startPlacement(.comment) }
                 }
             }
         }

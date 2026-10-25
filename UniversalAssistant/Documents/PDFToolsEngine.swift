@@ -500,6 +500,57 @@ actor PDFToolsEngine {
         return rendered
     }
 
+    // MARK: - Precise geometry
+
+    private func pageRect(from normalized: CGRect, in media: CGRect) -> CGRect {
+        CGRect(x: media.minX + normalized.minX * media.width,
+               y: media.minY + (1 - normalized.maxY) * media.height,
+               width: normalized.width * media.width,
+               height: normalized.height * media.height)
+    }
+
+    func crop(_ url: URL, normalizedRect: CGRect) throws -> URL {
+        guard let document = PDFDocument(url: url) else { throw PDFToolsError.unreadable }
+        for index in 0..<document.pageCount {
+            guard let page = document.page(at: index) else { continue }
+            let media = page.bounds(for: .mediaBox)
+            let rect = pageRect(from: normalizedRect, in: media)
+            guard rect.width > 8, rect.height > 8 else { continue }
+            page.setBounds(rect, for: .cropBox)
+            page.setBounds(rect, for: .mediaBox)
+        }
+        let target = try freshURL("cropped.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        return target
+    }
+
+    func addAnnotation(_ url: URL, kind: PDFAnnotationKind, normalizedRect: CGRect, pageIndex: Int = 0) throws -> URL {
+        guard let document = PDFDocument(url: url), pageIndex < document.pageCount,
+              let page = document.page(at: pageIndex) else { throw PDFToolsError.unreadable }
+        let media = page.bounds(for: .mediaBox)
+        let rectangle = pageRect(from: normalizedRect, in: media)
+        let annotation = PDFAnnotation(bounds: rectangle, forType: kind.pdfType, withProperties: nil)
+        annotation.color = kind.color
+        if kind == .comment { annotation.contents = "Коментар" }
+        page.addAnnotation(annotation)
+        let target = try freshURL("annotated.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        return target
+    }
+
+    /// Page indexes (zero-based) whose text contains the query.
+    func searchPages(_ url: URL, query: String) throws -> [Int] {
+        guard let document = PDFDocument(url: url) else { throw PDFToolsError.unreadable }
+        let needle = query.lowercased()
+        var matches: [Int] = []
+        for index in 0..<document.pageCount {
+            if let text = document.page(at: index)?.string, text.lowercased().contains(needle) {
+                matches.append(index)
+            }
+        }
+        return matches
+    }
+
     // MARK: - Password removal
 
     /// Rewrites a password-protected document without its password. The current

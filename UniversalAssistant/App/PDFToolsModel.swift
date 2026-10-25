@@ -42,6 +42,16 @@ final class PDFToolsModel {
     var searchResult: String?
     var undoStack: [[URL]] = []
     var redoStack: [[URL]] = []
+    var showCrop = false
+    var showPlacement = false
+    var placementKind: PDFAnnotationKind = .highlight
+    var showViewer = false
+    var viewerPage = 0
+    var deleteRange = "2-4"
+    var showDuplicatePage = false
+    var duplicateIndex = "1"
+    var searchMatches: [Int] = []
+    var searchCursor = 0
     var shareURL: URL?
     var previewItem: PreviewTarget?
 

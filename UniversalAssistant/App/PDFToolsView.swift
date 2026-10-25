@@ -45,6 +45,24 @@ private struct PDFToolsBindings: ViewModifier {
             .fullScreenCover(isPresented: $model.showCamera) {
                 CameraPhotoPicker { image in model.add(image: image) }
             }
+            .fullScreenCover(isPresented: $model.showCrop) {
+                CropView(image: model.signatureBackground()) { rect in
+                    model.applyCrop(rect)
+                } onCancel: {
+                    model.showCrop = false
+                }
+            }
+            .fullScreenCover(isPresented: $model.showPlacement) {
+                AnnotationPlacementView(image: model.signatureBackground(), kind: model.placementKind) { rect in
+                    model.placeAnnotation(rect)
+                } onCancel: {
+                    model.showPlacement = false
+                }
+            }
+            .sheet(isPresented: $model.showViewer) {
+                PDFPageViewer(url: model.results.first ?? URL(fileURLWithPath: "/"),
+                              pageIndex: model.viewerPage)
+            }
             .fullScreenCover(isPresented: $model.showScanner) {
                 DocumentScannerView { pages in model.scanPages(pages) }
             }
@@ -99,9 +117,14 @@ private struct PDFToolsAlerts: ViewModifier {
                 Button("Витягти") { model.splitPages() }
                 Button("Скасувати", role: .cancel) {}
             }
-            .alert("Видалити сторінку", isPresented: $model.showDeletePage) {
-                TextField("1", text: $model.deletePageIndex)
-                Button("Видалити", role: .destructive) { model.deleteChosenPage() }
+            .alert("Видалити сторінки", isPresented: $model.showDeletePage) {
+                TextField("2-4", text: $model.deleteRange)
+                Button("Видалити", role: .destructive) { model.deleteRangePages() }
+                Button("Скасувати", role: .cancel) {}
+            }
+            .alert("Дублювати сторінку", isPresented: $model.showDuplicatePage) {
+                TextField("1", text: $model.duplicateIndex)
+                Button("Дублювати") { model.duplicateChosenPage() }
                 Button("Скасувати", role: .cancel) {}
             }
             .alert("Номер сторінки", isPresented: $model.showBlank) {

@@ -2,6 +2,74 @@ import Foundation
 import UIKit
 
 extension PDFToolsModel {
+    func applyCrop(_ rect: CGRect) {
+        showCrop = false
+        guard let url = results.first else { return }
+        run { Optional(try await PDFToolsEngine.shared.crop(url, normalizedRect: rect)) }
+    }
+
+    func placeAnnotation(_ rect: CGRect) {
+        showPlacement = false
+        guard let url = results.first else { return }
+        let kind = placementKind
+        run { Optional(try await PDFToolsEngine.shared.addAnnotation(url, kind: kind, normalizedRect: rect)) }
+    }
+
+    func startPlacement(_ kind: PDFAnnotationKind) {
+        placementKind = kind
+        showPlacement = true
+    }
+
+    func deleteRangePages() {
+        guard let url = results.first else { return }
+        let parts = deleteRange.split(separator: "-").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+        guard let first = parts.first else { return }
+        let last = parts.count > 1 ? parts[1] : first
+        guard first >= 1, last >= first else { return }
+        showDeletePage = false
+        run { Optional(try await PDFToolsEngine.shared.deletePages(url, indexes: Array((first - 1)...(last - 1)))) }
+    }
+
+    func duplicateChosenPage() {
+        guard let url = results.first, let index = Int(duplicateIndex), index >= 1 else { return }
+        showDuplicatePage = false
+        run { Optional(try await PDFToolsEngine.shared.duplicatePage(url, index: index - 1)) }
+    }
+
+    func nextSearchMatch() {
+        guard !searchMatches.isEmpty else { return }
+        viewerPage = searchMatches[searchCursor % searchMatches.count]
+        searchCursor += 1
+        showViewer = true
+    }
+
+    func findPages() {
+        guard !searchQuery.isEmpty, let url = results.first else {
+            searchMatches = []
+            searchResult = nil
+            return
+        }
+        isBusy = true
+        Task {
+            defer { isBusy = false }
+            do {
+                var pages = try await PDFToolsEngine.shared.searchPages(url, query: searchQuery)
+                if pages.isEmpty {
+                    _ = try? await PDFToolsEngine.shared.recognizeText(in: url)
+                    pages = try await PDFToolsEngine.shared.searchPages(url, query: searchQuery)
+                }
+                searchMatches = pages
+                searchCursor = 0
+                searchResult = pages.isEmpty
+                    ? "Нічого не знайдено"
+                    : "Знайдено на сторінках: \(pages.map { String($0 + 1) }.joined(separator: ", "))"
+            } catch {
+                searchMatches = []
+                searchResult = "Пошук не вдався"
+            }
+        }
+    }
+
     func exportText() {
         guard let url = results.first else { return }
         isBusy = true
