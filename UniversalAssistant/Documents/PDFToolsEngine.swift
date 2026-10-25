@@ -35,7 +35,8 @@ actor PDFToolsEngine {
                 image.draw(in: CGRect(origin: origin, size: size))
             }
         }
-        RuntimeDiagnostics.shared.log("PDF", "created \(images.count) pages from images, size = \(fileSizeKB(url)) KB")
+        let kb = fileSizeKB(url)
+        Task { @MainActor in RuntimeDiagnostics.shared.log("PDF", "created \(images.count) pages, size = \(kb) KB") }
         return url
     }
 
@@ -46,7 +47,8 @@ actor PDFToolsEngine {
         try renderer.writePDF(to: url) { context in
             for _ in 0..<max(1, pages) { context.beginPage() }
         }
-        RuntimeDiagnostics.shared.log("PDF", "created blank PDF, \(max(1, pages)) pages")
+        let count = max(1, pages)
+        Task { @MainActor in RuntimeDiagnostics.shared.log("PDF", "created blank PDF, \(count) pages") }
         return url
     }
 
