@@ -2,6 +2,78 @@ import Foundation
 import UIKit
 
 extension PDFToolsModel {
+    func exportText() {
+        guard let url = results.first else { return }
+        isBusy = true
+        Task {
+            defer { isBusy = false }
+            do {
+                let text = try await PDFToolsEngine.shared.text(from: url)
+                statusLine = text.isEmpty ? "У файлі немає текстового шару (можливо, це скан)" : String(text.prefix(600))
+            } catch {
+                alertMessage = (error as? PDFToolsError)?.userMessage ?? "Не вдалося прочитати текст."
+            }
+        }
+    }
+
+    func cropPages() {
+        guard let url = results.first else { return }
+        run { Optional(try await PDFToolsEngine.shared.crop(url, inset: 10)) }
+    }
+
+    func resizeA4() {
+        guard let url = results.first else { return }
+        run { Optional(try await PDFToolsEngine.shared.resize(url, to: CGSize(width: 595, height: 842))) }
+    }
+
+    func resizeLetter() {
+        guard let url = results.first else { return }
+        run { Optional(try await PDFToolsEngine.shared.resize(url, to: CGSize(width: 612, height: 792))) }
+    }
+
+    func addFooters() {
+        guard let url = results.first else { return }
+        run { Optional(try await PDFToolsEngine.shared.addFooter(url)) }
+    }
+
+    func removePassword() {
+        guard let url = results.first, !passwordText.isEmpty else { showRemovePassword = false; return }
+        showRemovePassword = false
+        run { Optional(try await PDFToolsEngine.shared.removePassword(url, password: self.passwordText)) }
+    }
+
+    func scanPages(_ images: [UIImage]) {
+        guard !images.isEmpty else { return }
+        run { Optional(try await PDFToolsEngine.shared.makePDF(from: images, name: "scan.pdf")) }
+    }
+
+    func findInDocument() {
+        guard !searchQuery.isEmpty else { searchResult = nil; return }
+        isBusy = true
+        Task {
+            defer { isBusy = false }
+            guard let url = results.first else { return }
+            do {
+                let text = try await PDFToolsEngine.shared.text(from: url)
+                let haystack = text.isEmpty
+                    ? try await PDFToolsEngine.shared.recognizeText(in: url)
+                    : text
+                let count = haystack.lowercased().components(separatedBy: searchQuery.lowercased()).count - 1
+                searchResult = count > 0 ? "Знайдено збігів: \(count)" : "Нічого не знайдено"
+            } catch {
+                searchResult = "Пошук не вдався"
+            }
+        }
+    }
+
+    var canRedo: Bool { !redoStack.isEmpty }
+
+    func redo() {
+        guard let previous = redoStack.popLast() else { return }
+        undoStack.append(results)
+        results = previous
+    }
+
     func runOCR() {
         guard let url = results.first else { return }
         isBusy = true

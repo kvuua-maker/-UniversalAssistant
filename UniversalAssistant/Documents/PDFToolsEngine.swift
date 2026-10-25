@@ -500,6 +500,21 @@ actor PDFToolsEngine {
         return rendered
     }
 
+    // MARK: - Password removal
+
+    /// Rewrites a password-protected document without its password. The current
+    /// password is required because PDFKit cannot decrypt without it.
+    func removePassword(_ url: URL, password: String) throws -> URL {
+        guard let document = PDFDocument(url: url) else { throw PDFToolsError.unreadable }
+        if document.isLocked {
+            guard document.unlock(withPassword: password) else { throw PDFToolsError.locked }
+        }
+        let target = try freshURL("unprotected.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        Task { @MainActor in RuntimeDiagnostics.shared.log("PDF", "password removed") }
+        return target
+    }
+
     // MARK: - Security & size
 
     func protect(_ url: URL, password: String) throws -> URL {

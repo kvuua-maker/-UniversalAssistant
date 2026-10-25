@@ -36,6 +36,12 @@ final class PDFToolsModel {
     var showDeletePage = false
     var splitRange = "1-2"
     var deletePageIndex = "1"
+    var showRemovePassword = false
+    var showScanner = false
+    var searchQuery = ""
+    var searchResult: String?
+    var undoStack: [[URL]] = []
+    var redoStack: [[URL]] = []
     var shareURL: URL?
     var previewItem: PreviewTarget?
 
@@ -44,7 +50,11 @@ final class PDFToolsModel {
         Task {
             defer { isBusy = false }
             do {
-                if let url = try await operation() { results.insert(url, at: 0) }
+                if let url = try await operation() {
+                    undoStack.append(results)
+                    redoStack.removeAll()
+                    results.insert(url, at: 0)
+                }
             } catch {
                 statusLine = "Помилка: \(error)"
             }

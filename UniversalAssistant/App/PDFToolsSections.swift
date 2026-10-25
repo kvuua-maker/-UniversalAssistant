@@ -15,6 +15,36 @@ struct PDFCreateSection: View {
     }
 }
 
+struct PDFConvertSection: View {
+    @Bindable var model: PDFToolsModel
+
+    var body: some View {
+        Section("Конвертувати та оформити") {
+            if model.results.isEmpty {
+                Text("Спочатку створіть або виберіть PDF")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                Button("PDF → Текст") { model.exportText() }
+                Button("PDF → PNG") { model.exportPNG() }
+                Button("OCR: розпізнати текст") { model.runOCR() }
+                Button("Обрізати поля (10 pt)") { model.cropPages() }
+                Button("Розмір A4") { model.resizeA4() }
+                Button("Розмір Letter") { model.resizeLetter() }
+                Button("Колонтитули (номер + дата)") { model.addFooters() }
+                HStack {
+                    TextField("Пошук по тексту", text: $model.searchQuery)
+                    Button("Знайти") { model.findInDocument() }
+                        .buttonStyle(.borderless)
+                }
+                if let result = model.searchResult {
+                    Text(result).font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+}
+
 struct PDFEditSection: View {
     let model: PDFToolsModel
 
@@ -29,11 +59,10 @@ struct PDFEditSection: View {
                 Button("Додати текст") { model.showText = true }
                 Button("Водяний знак") { model.showWatermark = true }
                 Button("Захистити паролем") { model.showPassword = true }
+                Button("Зняти пароль") { model.passwordText = ""; model.showRemovePassword = true }
                 Button("Стиснути") { model.compress(current) }
                 Button("Вставити порожню сторінку") { model.showBlank = true }
                 Button("Витягнути зображення") { model.extractImages() }
-                Button("OCR: розпізнати текст") { model.runOCR() }
-                Button("PDF → PNG") { model.exportPNG() }
                 Button("Розділити: витягти сторінки") { model.showSplit = true }
                 Button("Видалити сторінку") { model.showDeletePage = true }
                 Button("Дублювати першу сторінку") { model.duplicateFirstPage() }
@@ -43,6 +72,7 @@ struct PDFEditSection: View {
                     Button("Закреслення") { model.addAnnotation(.strikeOut) }
                     Button("Прямокутник") { model.addAnnotation(.square) }
                     Button("Коло") { model.addAnnotation(.circle) }
+                    Button("Коментар") { model.addAnnotation(.comment) }
                 }
             }
         }
@@ -63,6 +93,9 @@ struct PDFResultsSection: View {
             }
             if model.results.count > 1 {
                 Button("Скасувати останню дію") { model.undo() }
+            }
+            if model.canRedo {
+                Button("Повторити дію") { model.redo() }
             }
             if let status = model.statusLine {
                 Text(status).font(.footnote).foregroundStyle(.secondary)

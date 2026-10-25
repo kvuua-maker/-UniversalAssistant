@@ -12,6 +12,7 @@ struct PDFToolsView: View {
         NavigationStack {
             List {
                 PDFCreateSection(model: model)
+                PDFConvertSection(model: model)
                 PDFEditSection(model: model)
                 PDFResultsSection(model: model)
             }
@@ -37,11 +38,15 @@ private struct PDFToolsBindings: ViewModifier {
             .confirmationDialog("PDF з фото", isPresented: $model.showPhotoChoice, titleVisibility: .visible) {
                 Button("Зробити фото") { model.showCamera = true }
                 Button("Вибрати з галереї") { model.showPhotoPicker = true }
+                Button("Сканувати документ") { model.showScanner = true }
                 Button("Скасувати", role: .cancel) {}
             }
             .photosPicker(isPresented: $model.showPhotoPicker, selection: $model.photoItems, maxSelectionCount: 20, matching: .images)
             .fullScreenCover(isPresented: $model.showCamera) {
                 CameraPhotoPicker { image in model.add(image: image) }
+            }
+            .fullScreenCover(isPresented: $model.showScanner) {
+                DocumentScannerView { pages in model.scanPages(pages) }
             }
             .onChange(of: model.photoItems) { _, items in
                 if !items.isEmpty { Task { await model.buildFromPhotos() } }
@@ -72,6 +77,11 @@ private struct PDFToolsAlerts: ViewModifier {
             .alert("Водяний знак", isPresented: $model.showWatermark) {
                 TextField("Текст", text: $model.watermarkText)
                 Button("Застосувати") { model.applyWatermark() }
+                Button("Скасувати", role: .cancel) {}
+            }
+            .alert("Зняти пароль", isPresented: $model.showRemovePassword) {
+                TextField("Поточний пароль", text: $model.passwordText)
+                Button("Зняти") { model.removePassword() }
                 Button("Скасувати", role: .cancel) {}
             }
             .alert("Пароль", isPresented: $model.showPassword) {
