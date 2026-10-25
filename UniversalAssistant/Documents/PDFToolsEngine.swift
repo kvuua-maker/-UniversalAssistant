@@ -454,10 +454,16 @@ actor PDFToolsEngine {
     /// something usable even when its images are stored inside compressed
     /// streams.
     func imagesOrRendered(from url: URL) async throws -> [URL] {
+        guard let document = PDFDocument(url: url) else { throw PDFToolsError.unreadable }
+        if document.isLocked { throw PDFToolsError.locked }
         if let extracted = try? extractEmbeddedImages(from: url), !extracted.isEmpty {
             return extracted
         }
-        return try images(from: url)
+        // No standalone image streams (scanned or app-generated PDF): render the
+        // pages instead, which always works for a readable document.
+        let rendered = try images(from: url)
+        guard !rendered.isEmpty else { throw PDFToolsError.noImages }
+        return rendered
     }
 
     // MARK: - Security & size
@@ -558,7 +564,22 @@ extension PDFToolsEngine {
 }
 
 enum PDFToolsError: Error, Equatable {
-    case unreadable, writeFailed, emptyRange
+    case unreadable, writeFailed, emptyRange, locked, noImages
+
+    var userMessage: String {
+        switch self {
+        case .locked:
+            "Файл захищений паролем. Зніміть пароль і спробуйте ще раз."
+        case .unreadable:
+            "Не вдалося відкрити файл. Можливо, він пошкоджений."
+        case .noImages:
+            "У цьому файлі не знайдено окремих зображень."
+        case .emptyRange:
+            "Не вибрано жодної сторінки."
+        case .writeFailed:
+            "Не вдалося зберегти результат. Спробуйте ще раз."
+        }
+    }
 }
 
 private struct ExtractionContext {

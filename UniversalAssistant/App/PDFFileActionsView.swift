@@ -15,6 +15,7 @@ struct PDFFileActionsView: View {
     @State private var blankIndex = "1"
     @State private var moverItem: PreviewItem?
     @State private var previewItem: PreviewItem?
+    @State private var alertMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -52,7 +53,7 @@ struct PDFFileActionsView: View {
             .overlay { if isBusy { ProgressView().padding(24).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
             .fileImporter(isPresented: $showPicker, allowedContentTypes: [.pdf], allowsMultipleSelection: true) { outcome in
                 guard case let .success(files) = outcome, let first = files.first else { return }
-                file = first
+                file = importCopy(first)
             }
             .alert("Номер сторінки для вставки", isPresented: $blankPrompt) {
                 TextField("1", text: $blankIndex)
@@ -61,6 +62,30 @@ struct PDFFileActionsView: View {
             }
             .sheet(item: $moverItem) { item in AnnotationMoverView(url: item.url) }
             .sheet(item: $previewItem) { item in QuickLookPreview(url: item.url) }
+            .alert("Помилка", isPresented: Binding(
+                get: { alertMessage != nil },
+                set: { if !$0 { alertMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) { alertMessage = nil }
+            } message: {
+                Text(alertMessage ?? "")
+            }
+        }
+    }
+
+    /// Files picked from Files are security-scoped; copy them into the sandbox so
+    /// every later read (extraction, rendering) works without the scope.
+    private func importCopy(_ source: URL) -> URL {
+        let scoped = source.startAccessingSecurityScopedResource()
+        defer { if scoped { source.stopAccessingSecurityScopedResource() } }
+        let target = FileManager.default.temporaryDirectory
+            .appendingPathComponent("imported-\(UUID().uuidString)-" + source.lastPathComponent)
+        try? FileManager.default.removeItem(at: target)
+        do {
+            try FileManager.default.copyItem(at: source, to: target)
+            return target
+        } catch {
+            return source
         }
     }
 
@@ -72,9 +97,10 @@ struct PDFFileActionsView: View {
             do {
                 let images = try await PDFToolsEngine.shared.imagesOrRendered(from: file)
                 results.insert(contentsOf: images, at: 0)
-                status = "Витягнуто: \(images.count)"
+                status = "Витягнуто зображень: \(images.count)"
             } catch {
-                status = "Не вдалося: \(error). Файл доступний для повторної спроби."
+                alertMessage = (error as? PDFToolsError)?.userMessage
+                    ?? "Не вдалося витягнути зображення. Можливо, файл захищений паролем або пошкоджений."
             }
         }
     }
@@ -90,7 +116,7 @@ struct PDFFileActionsView: View {
                 results.insert(updated, at: 0)
                 status = "Сторінку вставлено"
             } catch {
-                status = "Не вдалося: \(error)"
+                alertMessage = (error as? PDFToolsError)?.userMessage ?? "Не вдалося змінити файл."
             }
         }
     }
