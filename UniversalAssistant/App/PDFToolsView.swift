@@ -88,29 +88,7 @@ struct PDFToolsView: View {
                         }
                     }
                 }
-                Section("Сторінки") {
-                    ForEach(results, id: \.self) { url in
-                        Button("Дублювати першу сторінку") { run { Optional(try await PDFToolsEngine.shared.duplicatePage(url, index: 0)) } }
-                        Button("Перемістити першу в кінець") { run { Optional(try await PDFToolsEngine.shared.movePage(url, from: 0, to: 1)) } }
-                        Button("Обрізати поля (10 pt)") { run { Optional(try await PDFToolsEngine.shared.crop(url, inset: 10)) } }
-                        Button("Розмір A4") { run { Optional(try await PDFToolsEngine.shared.resize(url, to: CGSize(width: 595, height: 842))) } }
-                        Button("Розмір Letter") { run { Optional(try await PDFToolsEngine.shared.resize(url, to: CGSize(width: 612, height: 792))) } }
-                        Button("Колонтитули (номер + дата)") { run { Optional(try await PDFToolsEngine.shared.addFooter(url)) } }
-                    }
-                }
-                Section("Текст і анотації") {
-                    ForEach(results, id: \.self) { url in
-                        Button("Додати текст") { textToInsert = ""; showTextPrompt = true }
-                        Picker("Тип", selection: $annotationKind) {
-                            ForEach(PDFAnnotationKind.allCases, id: \.self) { kind in
-                                Text(kind.rawValue).tag(kind)
-                            }
-                        }
-                        Button("Додати \(annotationKind.rawValue)") {
-                            run { Optional(try await PDFToolsEngine.shared.addAnnotation(url, kind: annotationKind)) }
-                        }
-                    }
-                }
+                editingSections
                 if !results.isEmpty {
                     Section("Результати") {
                         ForEach(results, id: \.self) { url in
@@ -212,6 +190,33 @@ struct PDFToolsView: View {
             statusLine = "Помилка: \(error)"
         }
         photoItems = []
+    }
+
+    @ViewBuilder
+    private var editingSections: some View {
+                Section("Сторінки") {
+                    ForEach(results, id: \.self) { url in
+                        Button("Дублювати першу сторінку") { run { Optional(try await PDFToolsEngine.shared.duplicatePage(url, index: 0)) } }
+                        Button("Перемістити першу в кінець") { run { Optional(try await PDFToolsEngine.shared.movePage(url, from: 0, to: 1)) } }
+                        Button("Обрізати поля (10 pt)") { run { Optional(try await PDFToolsEngine.shared.crop(url, inset: 10)) } }
+                        Button("Розмір A4") { run { Optional(try await PDFToolsEngine.shared.resize(url, to: CGSize(width: 595, height: 842))) } }
+                        Button("Розмір Letter") { run { Optional(try await PDFToolsEngine.shared.resize(url, to: CGSize(width: 612, height: 792))) } }
+                        Button("Колонтитули (номер + дата)") { run { Optional(try await PDFToolsEngine.shared.addFooter(url)) } }
+                    }
+                }
+                Section("Текст і анотації") {
+                    ForEach(results, id: \.self) { url in
+                        Button("Додати текст") { textToInsert = ""; showTextPrompt = true }
+                        Picker("Тип", selection: $annotationKind) {
+                            ForEach(PDFAnnotationKind.allCases, id: \.self) { kind in
+                                Text(kind.rawValue).tag(kind)
+                            }
+                        }
+                        Button("Додати \(annotationKind.rawValue)") {
+                            run { Optional(try await PDFToolsEngine.shared.addAnnotation(url, kind: annotationKind)) }
+                        }
+                    }
+                }
     }
 
     private func printPDF(_ url: URL) {
