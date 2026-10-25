@@ -39,7 +39,7 @@ struct OfficeConvertView: View {
                 guard case let .success(files) = outcome, let file = files.first else { return }
                 Task { await convert(FileImport.copy(file)) }
             }
-            .sheet(item: $preview) { item in QuickLookPreview(url: item.url) }
+            .sheet(item: $preview) { item in PDFPreviewSheet(url: item.url) }
         }
     }
 

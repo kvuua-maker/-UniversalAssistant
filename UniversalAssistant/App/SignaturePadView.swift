@@ -13,7 +13,7 @@ struct SignaturePadView: View {
                 SignatureCanvas(pad: pad)
                     .background(Color.white)
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.3)))
-                    .frame(height: 240)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding()
                 Text("Намалюйте підпис пальцем")
                     .font(.footnote)
@@ -32,6 +32,7 @@ struct SignaturePadView: View {
                     }
                 }
             }
+            .interactiveDismissDisabled(true)
         }
     }
 }
@@ -65,6 +66,7 @@ struct SignatureCanvas: UIViewRepresentable {
         let view = CanvasView()
         view.pad = pad
         view.backgroundColor = .white
+        view.isMultipleTouchEnabled = false
         return view
     }
 

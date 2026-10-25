@@ -61,7 +61,7 @@ struct PDFFileActionsView: View {
                 Button("Скасувати", role: .cancel) {}
             }
             .sheet(item: $moverItem) { item in AnnotationMoverView(url: item.url) }
-            .sheet(item: $previewItem) { item in QuickLookPreview(url: item.url) }
+            .sheet(item: $previewItem) { item in PDFPreviewSheet(url: item.url) }
             .alert("Помилка", isPresented: Binding(
                 get: { alertMessage != nil },
                 set: { if !$0 { alertMessage = nil } }

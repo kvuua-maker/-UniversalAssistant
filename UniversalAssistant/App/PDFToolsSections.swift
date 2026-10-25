@@ -79,6 +79,8 @@ private struct PDFResultRow: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer()
+            SaveToFilesButton(url: url)
+                .buttonStyle(.borderless)
             Menu {
                 Button("Перегляд") { model.previewItem = PreviewItem(url: url) }
                 Button("Друк") { model.printPDF(url) }
