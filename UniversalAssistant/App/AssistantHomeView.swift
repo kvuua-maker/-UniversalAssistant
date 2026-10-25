@@ -7,6 +7,7 @@ struct AssistantHomeView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
     @State private var showingDiagnostics = false
+    @State private var showingConversation = false
 
     var body: some View {
         TabView {
@@ -95,6 +96,11 @@ struct AssistantHomeView: View {
                         Image(systemName: "bolt.circle")
                     }.accessibilityLabel("Швидкий запуск")
                     Button {
+                        showingConversation = true
+                    } label: {
+                        Image(systemName: "bubble.left.and.bubble.right")
+                    }.accessibilityLabel("Розмова")
+                    Button {
                         showingDiagnostics = true
                     } label: {
                         Image(systemName: "stethoscope")
@@ -113,6 +119,7 @@ struct AssistantHomeView: View {
         .preferredColorScheme(model.presentationPreferences.appearance == .dark ? .dark : model.presentationPreferences.appearance == .light ? .light : nil)
         .tint(model.presentationPreferences.accent.color)
         .sheet(isPresented: $showingDiagnostics) { DiagnosticsView() }
+        .sheet(isPresented: $showingConversation) { ConversationView() }
         // AppText resolves strings at render time; rebuilding the tree on
         // language change is what makes the picker take effect immediately.
         .id(model.languageConfiguration.uiLanguage)

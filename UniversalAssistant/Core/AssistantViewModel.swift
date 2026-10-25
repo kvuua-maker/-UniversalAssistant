@@ -462,6 +462,7 @@ final class AssistantViewModel {
         }
         RuntimeDiagnostics.shared.log(
             "heard", "\(isVoiceSubmission ? "voice" : "typed"): \(input)")
+        ConversationStore.shared.add(.user, input)
         RuntimeDiagnostics.shared.log(
             "intent",
             "\(standaloneCommand.intent.rawValue)"
@@ -950,8 +951,13 @@ final class AssistantViewModel {
         }
         let boundary = scheme == "tel" ? "CALL_URL" : "EXACT_HANDOFF"
         LocalVoiceDiagnosticReport.shared.recordBoundaryPre(boundary, "scheme=\(scheme ?? "unknown")")
+        ConversationStore.shared.add(.assistant, "Відкриваю \(displayName(for: scheme))…")
         let opened = await systemHandoffOpenResult(destination)
         RuntimeDiagnostics.shared.log("openURL", "\(destination.absoluteString) -> \(opened ? "opened" : "rejected")")
+        ConversationStore.shared.add(
+            .status,
+            opened ? "\(displayName(for: scheme)) відкрито"
+                   : "Не вдалося відкрити \(displayName(for: scheme)) — застосунок не встановлено")
         LocalVoiceDiagnosticReport.shared.recordBoundaryPost(
             boundary,
             "scheme=\(scheme ?? "unknown") status=\(opened ? "opened" : "rejected")"
@@ -1652,7 +1658,26 @@ final class AssistantViewModel {
         resultState = .actionRequired(.init(prompt: prompt, choices: choices))
     }
 
+    private func displayName(for scheme: String?) -> String {
+        switch scheme {
+        case "tg": "Telegram"
+        case "viber": "Viber"
+        case "whatsapp": "WhatsApp"
+        case "binance": "Binance"
+        case "spotify": "Spotify"
+        case "music": "Музику"
+        case "tel": "Телефон"
+        case "sms": "Повідомлення"
+        case "mailto": "Пошту"
+        case "photos-redirect": "Фото"
+        case "app-settings": "Налаштування"
+        case "https": "Посилання"
+        default: scheme ?? "застосунок"
+        }
+    }
+
     func presentFailure(message: String, recoveryAction: String? = nil) {
+        ConversationStore.shared.add(.status, message)
         RuntimeDiagnostics.shared.log("result", "failure: \(message)")
         resultDismissTask?.cancel()
         statusText = message

@@ -404,6 +404,13 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         case .noteQuery:
             throw CanonicalCapabilityExecutionError.unavailable("notes_database_not_publicly_available")
         case .fileSearch:
+            // "Відкрий PDF" is a Files request, not a creation request: the
+            // document picker is the only public way to reach user documents.
+            if command.originalText.lowercased().contains("pdf"),
+               command.entities["pdf_operation"] == nil,
+               command.entities["pdf_creation_requested"] != "true" {
+                return .presentation(.documents)
+            }
             // iOS does not expose a public API for silently searching every Files provider.
             // The document picker is the system-owned, security-scoped production boundary.
             if let raw = command.entities["pdf_operation"], let operation = PDFWorkflowOperation(rawValue: raw) {
