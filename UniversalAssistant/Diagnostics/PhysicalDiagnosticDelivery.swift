@@ -310,7 +310,7 @@ actor PhysicalDiagnosticDelivery {
         response: Response.Type
     ) async throws -> Response {
         let token = (Bundle.main.object(forInfoDictionaryKey: "UAAPIToken") as? String) ?? ""
-        guard !token.isEmpty else { throw PhysicalDiagnosticDeliveryError.unauthorized }
+        guard !token.isEmpty else { throw PhysicalDiagnosticDeliveryError.invalidChallenge }
         return try await transport.postAuthenticated(path, body: payload, token: token, response: response)
     }
 
