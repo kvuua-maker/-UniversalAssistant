@@ -392,6 +392,10 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             }
             return try await contact(command, preparesCall: true)
         case .messageCompose:
+            let spoken = command.originalText.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            if [" в", " у", " через", " на"].contains(where: { spoken.hasSuffix($0) }) {
+                throw CanonicalCapabilityExecutionError.missingParameter("message_service")
+            }
             return try await message(command)
         case .noteCreate:
             let value = try required(command.entities["content"] ?? subject(after: ["створи нову нотатку", "створи нотатку", "создай заметку", "create a note"], in: command.originalText), "note_content")
@@ -708,7 +712,11 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                               state: .verified, source: "CoreLocation", observedAt: .now, priority: 89)
                     ]))
             } catch CurrentLocationResolutionError.denied {
+                RuntimeDiagnostics.shared.log("location", "denied")
                 throw CanonicalCapabilityExecutionError.systemRestricted("location_permission_required")
+            } catch {
+                RuntimeDiagnostics.shared.log("location", "failed: \(error)")
+                throw error
             }
         }
         if lowered.contains("qr") || lowered.contains("скан") || lowered.contains("штрих") {
@@ -1611,6 +1619,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         } else {
             resolution = try await contacts.resolve(name: name)
         }
+        RuntimeDiagnostics.shared.log("contact", "resolved=\(resolution)")
         switch resolution {
         case .notFound:
             if await contacts.authorizationState() == .limited, command.entities["contact_identifier"] == nil {

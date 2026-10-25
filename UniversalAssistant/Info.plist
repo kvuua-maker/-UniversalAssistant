@@ -101,6 +101,7 @@
 		<string>waze</string>
 		<string>instagram</string>
 		<string>photos-redirect</string>
+		<string>binance</string>
 		<string>telegram</string>
 	</array>
 	<key>UAAPIToken</key>

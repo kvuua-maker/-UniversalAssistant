@@ -106,7 +106,6 @@ struct UniversalAssistantApp: App {
                     // Token is requested only when the user already granted
                     // notification permission; this never prompts.
                     await RemoteNotificationBridge.registerIfAuthorized()
-                    RuntimeDiagnostics.shared.log("engine", MoonshineEngineProbe.status)
                 }
         }
             .onChange(of: scenePhase) { _, phase in

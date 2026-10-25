@@ -9,6 +9,7 @@ enum CanonicalSpeechEntityRegistry {
         "viber": ["viber", "вайбер", "вібер"],
         "telegram": ["telegram", "телеграм", "телега"],
         "spotify": ["spotify", "спотіфай", "спотифай"],
+        "binance": ["binance", "бінанс", "бинанс", "бінансу"],
         "music": ["music", "музика", "музику", "музики", "пісні", "пісню"],
         "youtube": ["youtube", "ютуб"],
         "apple-music": ["apple music", "епл мюзік", "эппл мьюзик"],
@@ -216,6 +217,7 @@ enum LaunchDeviceApplications {
         .init(id: "messages", aliases: CanonicalSpeechEntityRegistry.aliases(for: "messages"), launchURL: URL(string: "sms:")!, exactContext: nil),
         // Only the app's own settings page is public; system panes are not.
         .init(id: "music", aliases: CanonicalSpeechEntityRegistry.aliases(for: "music"), launchURL: URL(string: "music://")!, exactContext: nil),
+        .init(id: "binance", aliases: CanonicalSpeechEntityRegistry.aliases(for: "binance"), launchURL: URL(string: "binance://")!, exactContext: nil),
         .init(id: "photos", aliases: ["photos", "фото", "галерея", "галерею"], launchURL: URL(string: "photos-redirect://")!, exactContext: nil),
         .init(id: "settings", aliases: CanonicalSpeechEntityRegistry.aliases(for: "settings"),
               launchURL: URL(string: "app-settings:")!, exactContext: nil),
