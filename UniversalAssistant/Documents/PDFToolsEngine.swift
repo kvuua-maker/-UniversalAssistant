@@ -65,7 +65,7 @@ actor PDFToolsEngine {
         }
         let url = try freshURL(name)
         guard output.write(to: url) else { throw PDFToolsError.writeFailed }
-        RuntimeDiagnostics.shared.log("PDF", "merged \(urls.count) files into \(index) pages")
+        Task { @MainActor in RuntimeDiagnostics.shared.log("PDF", "merged \(urls.count) files into \(index) pages") }
         return url
     }
 
@@ -81,7 +81,7 @@ actor PDFToolsEngine {
         guard index > 0 else { throw PDFToolsError.emptyRange }
         let target = try freshURL(name)
         guard output.write(to: target) else { throw PDFToolsError.writeFailed }
-        RuntimeDiagnostics.shared.log("PDF", "extracted \(index) pages")
+        Task { @MainActor in RuntimeDiagnostics.shared.log("PDF", "extracted \(index) pages") }
         return target
     }
 
@@ -101,7 +101,7 @@ actor PDFToolsEngine {
             try data.write(to: target)
             results.append(target)
         }
-        RuntimeDiagnostics.shared.log("PDF", "rendered \(results.count) pages to PNG")
+        Task { @MainActor in RuntimeDiagnostics.shared.log("PDF", "rendered \(results.count) pages to PNG") }
         return results
     }
 
@@ -224,7 +224,7 @@ actor PDFToolsEngine {
             output += lines.joined(separator: "\n") + "\n"
         }
         let ms = Int(Date().timeIntervalSince(started) * 1000)
-        RuntimeDiagnostics.shared.log("PDF", "OCR completed in \(ms) ms, \(output.count) chars")
+        Task { @MainActor in RuntimeDiagnostics.shared.log("PDF", "OCR completed in \(ms) ms, \(output.count) chars") }
         return output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
