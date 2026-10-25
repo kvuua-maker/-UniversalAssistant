@@ -12,6 +12,7 @@ extension PDFToolsModel {
                 undoStack.append(results)
                 results.insert(output, at: 0)
                 statusLine = "Додано текстовий шар — файл тепер шукається"
+                showOCRDone = true
             } catch {
                 alertMessage = (error as? PDFToolsError)?.userMessage ?? "Не вдалося додати текстовий шар."
             }

@@ -15,6 +15,8 @@ enum PDFL10n {
     private static let english: [String: String] = [
         // Sections
         "Створити": "Create",
+        "Пошук": "Search",
+        "Конвертувати": "Convert",
         "Конвертувати та оформити": "Convert & style",
         "Редагувати": "Edit",
         "Результати": "Results",
@@ -44,6 +46,11 @@ enum PDFL10n {
         "Водяний знак-логотип…": "Logo watermark…",
         "Пошук по тексту": "Search text",
         "Знайти": "Find",
+        "Пошук у документі": "Search in document",
+        "Перейти до знайденого": "Go to match",
+        "Розпізнати текст для пошуку": "Recognise text for search",
+        "Текст розпізнано": "Text recognised",
+        "Текст успішно розпізнано! Збережіть файл і скористайтеся пошуком у будь-якому читачі PDF": "Text recognised successfully! Save the file and search it in any PDF reader.",
         // Edit
         "Повернути на 90°": "Rotate 90°",
         "Додати текст": "Add text",
@@ -93,6 +100,11 @@ enum PDFL10n {
         "Дублювати": "Duplicate",
         "Перемістити": "Move",
         "Знайти": "Find",
+        "Пошук у документі": "Search in document",
+        "Перейти до знайденого": "Go to match",
+        "Розпізнати текст для пошуку": "Recognise text for search",
+        "Текст розпізнано": "Text recognised",
+        "Текст успішно розпізнано! Збережіть файл і скористайтеся пошуком у будь-якому читачі PDF": "Text recognised successfully! Save the file and search it in any PDF reader.",
         "OK": "OK",
         // File tools screen
         "Вибрати PDF": "Choose PDF",

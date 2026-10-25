@@ -15,7 +15,7 @@ struct SignaturePadView: View {
         NavigationStack {
             GeometryReader { geometry in
                 ZStack {
-                    Color(.systemBackground)
+                    Color.white
                     if let background {
                         Image(uiImage: background)
                             .resizable()
@@ -23,14 +23,14 @@ struct SignaturePadView: View {
                             .opacity(0.9)
                     }
                     SignatureCanvas(pad: pad)
-                        .background(Color.clear)
+                        .background(Color.white)
                 }
                 .contentShape(Rectangle())
                 .onAppear { pad.canvasSize = geometry.size }
                 .overlay(alignment: .bottom) {
                     Text(PDFL10n.t("Намалюйте підпис поверх документа"))
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.black.opacity(0.6))
                         .padding(10)
                 }
             }
@@ -48,6 +48,7 @@ struct SignaturePadView: View {
             }
         }
         .interactiveDismissDisabled(true)
+        .preferredColorScheme(.light)
     }
 }
 

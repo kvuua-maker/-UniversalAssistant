@@ -54,6 +54,7 @@ final class PDFToolsModel {
     var searchMatches: [Int] = []
     var searchCursor = 0
     var showHeader = false
+    var showOCRDone = false
     var headerText = ""
     var showLogoPicker = false
     var logoItem: PhotosPickerItem?

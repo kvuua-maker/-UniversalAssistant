@@ -12,6 +12,7 @@ struct PDFToolsView: View {
         NavigationStack {
             List {
                 PDFCreateSection(model: model)
+                PDFSearchSection(model: model)
                 PDFConvertSection(model: model)
                 PDFEditSection(model: model)
                 PDFResultsSection(model: model)

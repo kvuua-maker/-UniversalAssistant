@@ -4,7 +4,7 @@ struct PDFCreateSection: View {
     let model: PDFToolsModel
 
     var body: some View {
-        Section("Створити") {
+        Section(PDFL10n.t("Створити")) {
             Button(PDFL10n.t("PDF з фото")) { model.showPhotoChoice = true }
             Button(PDFL10n.t("Порожній PDF")) { model.runBlank() }
             Button(PDFL10n.t("Об’єднати PDF-файли")) { model.showPDFImport = true }
@@ -15,11 +15,47 @@ struct PDFCreateSection: View {
     }
 }
 
+struct PDFSearchSection: View {
+    @Bindable var model: PDFToolsModel
+
+    var body: some View {
+        Section {
+            HStack {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField(PDFL10n.t("Пошук по тексту"), text: $model.searchQuery)
+                    .textInputAutocapitalization(.never)
+                    .submitLabel(.search)
+                    .onSubmit { model.findPages() }
+                if !model.searchQuery.isEmpty {
+                    Button {
+                        model.searchQuery = ""
+                        model.searchResult = nil
+                        model.searchMatches = []
+                    } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
+            Button(PDFL10n.t("Знайти")) { model.findPages() }
+                .disabled(model.results.isEmpty)
+            if let result = model.searchResult {
+                Text(result).font(.footnote).foregroundStyle(.secondary)
+            }
+            if !model.searchMatches.isEmpty {
+                Button(PDFL10n.t("Перейти до знайденого")) { model.nextSearchMatch() }
+            }
+        } header: {
+            Label(PDFL10n.t("Пошук у документі"), systemImage: "doc.text.magnifyingglass")
+        }
+    }
+}
+
 struct PDFConvertSection: View {
     @Bindable var model: PDFToolsModel
 
     var body: some View {
-        Section("Конвертувати та оформити") {
+        Section(PDFL10n.t("Конвертувати та оформити")) {
             if model.results.isEmpty {
                 Text(PDFL10n.t("Спочатку створіть або виберіть PDF"))
                     .font(.footnote)
@@ -27,27 +63,13 @@ struct PDFConvertSection: View {
             } else {
                 Button(PDFL10n.t("PDF → Текст")) { model.exportText() }
                 Button(PDFL10n.t("PDF → PNG")) { model.exportPNG() }
-                Button(PDFL10n.t("OCR: розпізнати текст")) { model.runOCR() }
+                Button(PDFL10n.t("Розпізнати текст для пошуку")) { model.makeSearchable() }
                 Button(PDFL10n.t("Обрізати поля…")) { model.showCrop = true }
                 Button(PDFL10n.t("Розмір A4")) { model.resizeA4() }
                 Button(PDFL10n.t("Розмір Letter")) { model.resizeLetter() }
                 Button(PDFL10n.t("Колонтитули (номер + дата)")) { model.addFooters() }
                 Button(PDFL10n.t("Верхній колонтитул…")) { model.headerText = ""; model.showHeader = true }
                 Button(PDFL10n.t("Водяний знак-логотип…")) { model.showLogoPicker = true }
-                Button(PDFL10n.t("Зробити PDF з пошуком (OCR-шар)")) { model.makeSearchable() }
-                HStack {
-                    TextField("Пошук по тексту", text: $model.searchQuery)
-                    Button(PDFL10n.t("Знайти")) { model.findPages() }
-                        .buttonStyle(.borderless)
-                }
-                if let result = model.searchResult {
-                    Text(result).font(.footnote).foregroundStyle(.secondary)
-                }
-                if !model.searchMatches.isEmpty {
-                    Button("Перейти до сторінки \(model.searchMatches.first.map { $0 + 1 } ?? 1)") {
-                        model.nextSearchMatch()
-                    }
-                }
             }
         }
     }
@@ -57,7 +79,7 @@ struct PDFEditSection: View {
     let model: PDFToolsModel
 
     var body: some View {
-        Section("Редагувати") {
+        Section(PDFL10n.t("Редагувати")) {
             if model.results.isEmpty {
                 Text(PDFL10n.t("Спочатку створіть або виберіть PDF"))
                     .font(.footnote)
@@ -92,7 +114,7 @@ struct PDFResultsSection: View {
     @Bindable var model: PDFToolsModel
 
     var body: some View {
-        Section("Результати") {
+        Section(PDFL10n.t("Результати")) {
             if model.results.isEmpty {
                 Text(PDFL10n.t("Тут з’являться створені файли")).font(.footnote).foregroundStyle(.secondary)
             } else {
