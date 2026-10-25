@@ -28,10 +28,7 @@ struct PDFToolsView: View {
     @State private var signatureImage: UIImage?
     @State private var showSignaturePad = false
     @State private var showOffice = false
-    @State private var showExtractImporter = false
-    @State private var blankPrompt = false
-    @State private var blankIndex = "1"
-    @State private var moverItem: PreviewItem?
+    @State private var showFileActions = false
 
     var body: some View {
         NavigationStack {
@@ -75,11 +72,7 @@ struct PDFToolsView: View {
                     }
                 }
                 Section("Файл PDF") {
-                    Button("Витягнути зображення з PDF") { showExtractImporter = true }
-                    ForEach(results, id: \.self) { url in
-                        Button("Вставити порожню сторінку") { blankIndex = "1"; blankPrompt = true }
-                        Button("Перемістити анотації пальцем") { moverItem = PreviewItem(url: url) }
-                    }
+                    Button("Відкрити інструменти для файлу") { showFileActions = true }
                 }
                 Section("Word / Excel") {
                     Button("Відкрити конвертер") { showOffice = true }
@@ -164,21 +157,7 @@ struct PDFToolsView: View {
                 Button("Скасувати", role: .cancel) {}
             }
             .sheet(isPresented: $showOffice) { OfficeConvertView() }
-            .fileImporter(isPresented: $showExtractImporter,
-                          allowedContentTypes: [.pdf],
-                          allowsMultipleSelection: true) { outcome in
-                guard case let .success(files) = outcome, let file = files.first else { return }
-                extractImages(file)
-            }
-            .alert("Номер сторінки для вставки", isPresented: $blankPrompt) {
-                TextField("1", text: $blankIndex)
-                Button("Вставити") {
-                    guard let url = results.first, let index = Int(blankIndex) else { return }
-                    run { Optional(try await PDFToolsEngine.shared.insertBlankPage(url, at: max(0, index - 1))) }
-                }
-                Button("Скасувати", role: .cancel) {}
-            }
-            .sheet(item: $moverItem) { item in AnnotationMoverView(url: item.url) }
+            .sheet(isPresented: $showFileActions) { PDFFileActionsView() }
             .sheet(isPresented: $showSignaturePad) {
                 SignaturePadView { image in
                     signatureImage = image
