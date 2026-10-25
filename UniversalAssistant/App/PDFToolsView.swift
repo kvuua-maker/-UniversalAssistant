@@ -34,83 +34,11 @@ struct PDFToolsView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Створити") {
-                    Button("PDF з фото") { showPhotoPicker = true }
-                    Button("Порожній PDF (1 сторінка)") { run { Optional(try await PDFToolsEngine.shared.makeBlankPDF()) } }
-                }
-                Section("Об’єднати та розділити") {
-                    Button("Вибрати PDF для об’єднання") { showPDFImporter = true }
-                    if importedPDFs.count >= 2 {
-                        Button("Об’єднати \(importedPDFs.count) файли") {
-                            run { Optional(try await PDFToolsEngine.shared.merge(importedPDFs)) }
-                        }
-                    }
-                    if let first = results.first {
-                        Button("Витягнути першу сторінку") {
-                            run { Optional(try await PDFToolsEngine.shared.extractPages(from: first, range: 0...0)) }
-                        }
-                    }
-                }
-                Section("Конвертувати") {
-                    ForEach(results, id: \.self) { url in
-                        Button("Текст з \(url.lastPathComponent)") {
-                            run { let text = try await PDFToolsEngine.shared.text(from: url); statusLine = String(text.prefix(400)); return nil }
-                        }
-                        Button("PNG з \(url.lastPathComponent)") {
-                            run { let images = try await PDFToolsEngine.shared.images(from: url); statusLine = "Створено \(images.count) PNG"; return nil }
-                        }
-                        Button("OCR \(url.lastPathComponent)") {
-                            run { let text = try await PDFToolsEngine.shared.recognizeText(in: url); statusLine = String(text.prefix(400)); return nil }
-                        }
-                    }
-                }
-                Section("Редагувати") {
-                    ForEach(results, id: \.self) { url in
-                        Button("Повернути 90°") { run { Optional(try await PDFToolsEngine.shared.rotate(url, degrees: 90)) } }
-                        Button("Водяний знак") { watermarkText = ""; showWatermarkPrompt = true }
-                        Button("Захистити паролем") { passwordText = ""; showPasswordPrompt = true }
-                        Button("Стиснути") { run { Optional(try await PDFToolsEngine.shared.compress(url)) } }
-                    }
-                }
-                Section("Office → PDF") {
-                    Button("Вибрати Word / Excel") { showOfficeImporter = true }
-                    if let officeURL {
-                        Button("Відкрити \(officeURL.lastPathComponent)") { previewOffice = PreviewItem(url: officeURL) }
-                        Button("Друк / Зберегти як PDF") { printPDF(officeURL) }
-                    }
-                }
-                Section("Підпис") {
-                    Button(signatureImage == nil ? "Намалювати підпис" : "Перемалювати підпис") { showSignaturePad = true }
-                    ForEach(results, id: \.self) { url in
-                        Button("Вставити підпис у \(url.lastPathComponent)") {
-                            guard let signatureImage else { statusLine = "Спочатку намалюйте підпис"; return }
-                            run { Optional(try await PDFToolsEngine.shared.insertSignature(url, signature: signatureImage)) }
-                        }
-                    }
-                }
+                createSections
                 editingSections
-                if !results.isEmpty {
-                    Section("Результати") {
-                        ForEach(results, id: \.self) { url in
-                            HStack {
-                                Text(url.lastPathComponent).lineLimit(1)
-                                Spacer()
-                                Button("Перегляд") { previewItem = PreviewItem(url: url) }
-                                Button("Поділитися") { shareURL = url; showShareSheet = true }
-                                Button("Друк") { printPDF(url) }
-                            }
-                        }
-                    }
-                }
-                if let statusLine {
-                    Section("Статус") {
-                        Text(statusLine).font(.footnote)
-                        if results.count > 1 {
-                            Button("Скасувати останню дію") { results.removeFirst() }
-                        }
-                    }
-                }
+                resultSections
             }
+
             .navigationTitle("PDF-інструменти")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Готово") { dismiss() } } }
@@ -217,6 +145,92 @@ struct PDFToolsView: View {
                         }
                     }
                 }
+    }
+
+    @ViewBuilder
+    private var createSections: some View {
+
+                Section("Створити") {
+                    Button("PDF з фото") { showPhotoPicker = true }
+                    Button("Порожній PDF (1 сторінка)") { run { Optional(try await PDFToolsEngine.shared.makeBlankPDF()) } }
+                }
+                Section("Об’єднати та розділити") {
+                    Button("Вибрати PDF для об’єднання") { showPDFImporter = true }
+                    if importedPDFs.count >= 2 {
+                        Button("Об’єднати \(importedPDFs.count) файли") {
+                            run { Optional(try await PDFToolsEngine.shared.merge(importedPDFs)) }
+                        }
+                    }
+                    if let first = results.first {
+                        Button("Витягнути першу сторінку") {
+                            run { Optional(try await PDFToolsEngine.shared.extractPages(from: first, range: 0...0)) }
+                        }
+                    }
+                }
+                Section("Конвертувати") {
+                    ForEach(results, id: \.self) { url in
+                        Button("Текст з \(url.lastPathComponent)") {
+                            run { let text = try await PDFToolsEngine.shared.text(from: url); statusLine = String(text.prefix(400)); return nil }
+                        }
+                        Button("PNG з \(url.lastPathComponent)") {
+                            run { let images = try await PDFToolsEngine.shared.images(from: url); statusLine = "Створено \(images.count) PNG"; return nil }
+                        }
+                        Button("OCR \(url.lastPathComponent)") {
+                            run { let text = try await PDFToolsEngine.shared.recognizeText(in: url); statusLine = String(text.prefix(400)); return nil }
+                        }
+                    }
+                }
+                Section("Редагувати") {
+                    ForEach(results, id: \.self) { url in
+                        Button("Повернути 90°") { run { Optional(try await PDFToolsEngine.shared.rotate(url, degrees: 90)) } }
+                        Button("Водяний знак") { watermarkText = ""; showWatermarkPrompt = true }
+                        Button("Захистити паролем") { passwordText = ""; showPasswordPrompt = true }
+                        Button("Стиснути") { run { Optional(try await PDFToolsEngine.shared.compress(url)) } }
+                    }
+                }
+                Section("Office → PDF") {
+                    Button("Вибрати Word / Excel") { showOfficeImporter = true }
+                    if let officeURL {
+                        Button("Відкрити \(officeURL.lastPathComponent)") { previewOffice = PreviewItem(url: officeURL) }
+                        Button("Друк / Зберегти як PDF") { printPDF(officeURL) }
+                    }
+                }
+                Section("Підпис") {
+                    Button(signatureImage == nil ? "Намалювати підпис" : "Перемалювати підпис") { showSignaturePad = true }
+                    ForEach(results, id: \.self) { url in
+                        Button("Вставити підпис у \(url.lastPathComponent)") {
+                            guard let signatureImage else { statusLine = "Спочатку намалюйте підпис"; return }
+                            run { Optional(try await PDFToolsEngine.shared.insertSignature(url, signature: signatureImage)) }
+                        }
+                    }
+                }
+                editingSections
+    }
+
+    @ViewBuilder
+    private var resultSections: some View {
+                if !results.isEmpty {
+                    Section("Результати") {
+                        ForEach(results, id: \.self) { url in
+                            HStack {
+                                Text(url.lastPathComponent).lineLimit(1)
+                                Spacer()
+                                Button("Перегляд") { previewItem = PreviewItem(url: url) }
+                                Button("Поділитися") { shareURL = url; showShareSheet = true }
+                                Button("Друк") { printPDF(url) }
+                            }
+                        }
+                    }
+                }
+                if let statusLine {
+                    Section("Статус") {
+                        Text(statusLine).font(.footnote)
+                        if results.count > 1 {
+                            Button("Скасувати останню дію") { results.removeFirst() }
+                        }
+                    }
+                }
+
     }
 
     private func printPDF(_ url: URL) {
