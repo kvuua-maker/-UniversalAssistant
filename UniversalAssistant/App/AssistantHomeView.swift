@@ -8,6 +8,7 @@ struct AssistantHomeView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var showingDiagnostics = false
     @State private var showingConversation = false
+    @State private var showingPDFTools = false
 
     var body: some View {
         TabView {
@@ -96,6 +97,11 @@ struct AssistantHomeView: View {
                         Image(systemName: "bolt.circle")
                     }.accessibilityLabel("Швидкий запуск")
                     Button {
+                        showingPDFTools = true
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                    }.accessibilityLabel("PDF-інструменти")
+                    Button {
                         showingConversation = true
                     } label: {
                         Image(systemName: "bubble.left.and.bubble.right")
@@ -120,6 +126,7 @@ struct AssistantHomeView: View {
         .tint(model.presentationPreferences.accent.color)
         .sheet(isPresented: $showingDiagnostics) { DiagnosticsView() }
         .sheet(isPresented: $showingConversation) { ConversationView() }
+        .sheet(isPresented: $showingPDFTools) { PDFToolsView() }
         // AppText resolves strings at render time; rebuilding the tree on
         // language change is what makes the picker take effect immediately.
         .id(model.languageConfiguration.uiLanguage)
