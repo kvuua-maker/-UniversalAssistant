@@ -21,6 +21,17 @@ final class PDFToolsModel {
     var officePDF: URL?
     var alertMessage: String?
     var _blankIndex = "1"
+    var showPhotoChoice = false
+    var showCamera = false
+    var showPhotoPicker = false
+    var showPDFImport = false
+    var showOffice = false
+    var showFileActions = false
+    var showSignature = false
+    var showWatermark = false
+    var showPassword = false
+    var showText = false
+    var showBlank = false
     var shareURL: URL?
     var previewItem: PreviewTarget?
 

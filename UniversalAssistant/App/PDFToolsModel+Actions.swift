@@ -2,6 +2,14 @@ import Foundation
 import UIKit
 
 extension PDFToolsModel {
+    func rotate(_ url: URL) {
+        run { Optional(try await PDFToolsEngine.shared.rotate(url, degrees: 90)) }
+    }
+
+    func compress(_ url: URL) {
+        run { Optional(try await PDFToolsEngine.shared.compress(url)) }
+    }
+
     var blankIndex: String {
         get { _blankIndex }
         set { _blankIndex = newValue }
@@ -23,17 +31,17 @@ extension PDFToolsModel {
 
     func applyWatermark() {
         guard let url = results.first, !watermarkText.isEmpty else { return }
-        run { Optional(try await PDFToolsEngine.shared.watermark(url, text: watermarkText)) }
+        run { Optional(try await PDFToolsEngine.shared.watermark(url, text: self.watermarkText)) }
     }
 
     func applyPassword() {
         guard let url = results.first, !passwordText.isEmpty else { return }
-        run { Optional(try await PDFToolsEngine.shared.protect(url, password: passwordText)) }
+        run { Optional(try await PDFToolsEngine.shared.protect(url, password: self.passwordText)) }
     }
 
     func applyText() {
         guard let url = results.first, !textToInsert.isEmpty else { return }
-        run { Optional(try await PDFToolsEngine.shared.addText(url, text: textToInsert)) }
+        run { Optional(try await PDFToolsEngine.shared.addText(url, text: self.textToInsert)) }
     }
 
     func insertBlankPage() {

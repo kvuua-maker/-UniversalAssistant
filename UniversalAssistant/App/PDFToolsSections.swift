@@ -2,34 +2,21 @@ import SwiftUI
 
 struct PDFCreateSection: View {
     let model: PDFToolsModel
-    let onPhotos: () -> Void
-    let onBlank: () -> Void
-    let onMerge: () -> Void
-    let onOffice: () -> Void
-    let onFileActions: () -> Void
-    let onSignature: () -> Void
 
     var body: some View {
         Section("Створити") {
-            Button("PDF з фото", action: onPhotos)
-            Button("Порожній PDF", action: onBlank)
-            Button("Об’єднати PDF-файли", action: onMerge)
-            Button("Word / Excel → PDF", action: onOffice)
-            Button("Інструменти для файлу", action: onFileActions)
-            Button(model.signatureImage == nil ? "Намалювати підпис" : "Перемалювати підпис", action: onSignature)
+            Button("PDF з фото") { model.showPhotoChoice = true }
+            Button("Порожній PDF") { model.runBlank() }
+            Button("Об’єднати PDF-файли") { model.showPDFImport = true }
+            Button("Word / Excel → PDF") { model.showOffice = true }
+            Button("Інструменти для файлу") { model.showFileActions = true }
+            Button(model.signatureImage == nil ? "Намалювати підпис" : "Перемалювати підпис") { model.showSignature = true }
         }
     }
 }
 
 struct PDFEditSection: View {
     let model: PDFToolsModel
-    let onRotate: (URL) -> Void
-    let onWatermark: () -> Void
-    let onPassword: () -> Void
-    let onCompress: (URL) -> Void
-    let onText: () -> Void
-    let onBlankPage: () -> Void
-    let onExtract: () -> Void
 
     var body: some View {
         Section("Редагувати") {
@@ -38,13 +25,13 @@ struct PDFEditSection: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else if let current = model.results.first {
-                Button("Повернути на 90°") { onRotate(current) }
-                Button("Додати текст") { onText() }
-                Button("Водяний знак") { onWatermark() }
-                Button("Захистити паролем") { onPassword() }
-                Button("Стиснути") { onCompress(current) }
-                Button("Вставити порожню сторінку") { onBlankPage() }
-                Button("Витягнути зображення") { onExtract() }
+                Button("Повернути на 90°") { model.rotate(current) }
+                Button("Додати текст") { model.showText = true }
+                Button("Водяний знак") { model.showWatermark = true }
+                Button("Захистити паролем") { model.showPassword = true }
+                Button("Стиснути") { model.compress(current) }
+                Button("Вставити порожню сторінку") { model.showBlank = true }
+                Button("Витягнути зображення") { model.extractImages() }
             }
         }
     }
