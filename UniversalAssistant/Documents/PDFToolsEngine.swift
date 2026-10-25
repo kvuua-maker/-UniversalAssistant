@@ -313,6 +313,52 @@ actor PDFToolsEngine {
         return target
     }
 
+    // MARK: - Signature
+
+    /// Draws a saved signature image into the bottom-right of the first page.
+    func insertSignature(_ url: URL, signature: UIImage, pageIndex: Int = 0) throws -> URL {
+        guard let document = PDFDocument(url: url), pageIndex < document.pageCount,
+              let page = document.page(at: pageIndex) else { throw PDFToolsError.unreadable }
+        let media = page.bounds(for: .mediaBox)
+        let width = min(media.width * 0.35, 220)
+        let ratio = signature.size.height / max(signature.size.width, 1)
+        let rectangle = CGRect(x: media.width - width - 40,
+                               y: 48,
+                               width: width,
+                               height: width * ratio)
+        let annotation = PDFAnnotation(bounds: rectangle, forType: .stamp, withProperties: nil)
+        annotation.color = .clear
+        page.addAnnotation(annotation)
+        // The image is composited rather than embedded: PDFKit cannot attach raw
+        // bitmaps to an annotation, so the page is re-rendered with the overlay.
+        let renderer = UIGraphicsImageRenderer(size: media.size)
+        let composed = renderer.image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(origin: .zero, size: media.size))
+            context.cgContext.saveGState()
+            context.cgContext.translateBy(x: 0, y: media.height)
+            context.cgContext.scaleBy(x: 1, y: -1)
+            page.draw(with: .mediaBox, to: context.cgContext)
+            context.cgContext.restoreGState()
+            signature.draw(in: rectangle)
+        }
+        if let replacement = PDFPage(image: composed) {
+            document.removePage(at: pageIndex)
+            document.insert(replacement, at: pageIndex)
+        }
+        let target = try freshURL("signed.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        Task { @MainActor in RuntimeDiagnostics.shared.log("PDF", "signature inserted on page \(pageIndex + 1)") }
+        return target
+    }
+
+    func saveSignature(_ image: UIImage, name: String = "signature.png") throws -> URL {
+        guard let data = image.pngData() else { throw PDFToolsError.writeFailed }
+        let url = try freshURL(name)
+        try data.write(to: url)
+        return url
+    }
+
     // MARK: - Security & size
 
     func protect(_ url: URL, password: String) throws -> URL {

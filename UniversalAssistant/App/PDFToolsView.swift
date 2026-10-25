@@ -25,6 +25,11 @@ struct PDFToolsView: View {
     @State private var showTextPrompt = false
     @State private var previewItem: PreviewItem?
     @State private var annotationKind: PDFAnnotationKind = .highlight
+    @State private var signatureImage: UIImage?
+    @State private var showSignaturePad = false
+    @State private var officeURL: URL?
+    @State private var showOfficeImporter = false
+    @State private var previewOffice: PreviewItem?
 
     var body: some View {
         NavigationStack {
@@ -65,6 +70,22 @@ struct PDFToolsView: View {
                         Button("Водяний знак") { watermarkText = ""; showWatermarkPrompt = true }
                         Button("Захистити паролем") { passwordText = ""; showPasswordPrompt = true }
                         Button("Стиснути") { run { Optional(try await PDFToolsEngine.shared.compress(url)) } }
+                    }
+                }
+                Section("Office → PDF") {
+                    Button("Вибрати Word / Excel") { showOfficeImporter = true }
+                    if let officeURL {
+                        Button("Відкрити \(officeURL.lastPathComponent)") { previewOffice = PreviewItem(url: officeURL) }
+                        Button("Друк / Зберегти як PDF") { printPDF(officeURL) }
+                    }
+                }
+                Section("Підпис") {
+                    Button(signatureImage == nil ? "Намалювати підпис" : "Перемалювати підпис") { showSignaturePad = true }
+                    ForEach(results, id: \.self) { url in
+                        Button("Вставити підпис у \(url.lastPathComponent)") {
+                            guard let signatureImage else { statusLine = "Спочатку намалюйте підпис"; return }
+                            run { Optional(try await PDFToolsEngine.shared.insertSignature(url, signature: signatureImage)) }
+                        }
                     }
                 }
                 Section("Сторінки") {
@@ -118,6 +139,22 @@ struct PDFToolsView: View {
             .overlay { if isBusy { ProgressView().controlSize(.large).padding(24).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
             .fileImporter(isPresented: $showPDFImporter, allowedContentTypes: [.pdf], allowsMultipleSelection: true) { result in
                 if case let .success(urls) = result { importedPDFs = urls }
+            }
+            .fileImporter(isPresented: $showOfficeImporter,
+                          allowedContentTypes: ["docx", "doc", "xlsx", "xls"].compactMap { UTType(filenameExtension: $0) }) { result in
+                if case let .success(urls) = result, let first = urls.first { officeURL = first }
+            }
+            .sheet(isPresented: $showSignaturePad) {
+                SignaturePadView { image in
+                    signatureImage = image
+                    showSignaturePad = false
+                    statusLine = "Підпис збережено"
+                } onCancel: {
+                    showSignaturePad = false
+                }
+            }
+            .sheet(item: $previewOffice) { item in
+                QuickLookPreview(url: item.url)
             }
             .photosPicker(isPresented: $showPhotoPicker, selection: $photoItems, maxSelectionCount: 20, matching: .images)
             .onChange(of: photoItems) { _, items in
@@ -234,6 +271,100 @@ struct QuickLookPreview: UIViewControllerRepresentable {
         func numberOfPreviewItems(in controller: QLPreviewController) -> Int { 1 }
         func previewController(_ controller: QLPreviewController, previewItemAt index: Int) -> QLPreviewItem {
             url as NSURL
+        }
+    }
+}
+
+
+/// Minimal finger-drawing surface for a signature.
+struct SignaturePadView: View {
+    let onSave: (UIImage) -> Void
+    let onCancel: () -> Void
+    @State private var controller = SignaturePadController()
+
+    var body: some View {
+        NavigationStack {
+            VStack {
+                SignatureCanvas(controller: controller)
+                    .background(Color.white)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.3)))
+                    .padding()
+                Text("Намалюйте підпис пальцем").font(.footnote).foregroundStyle(.secondary)
+            }
+            .navigationTitle("Підпис")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Скасувати") { onCancel() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Готово") {
+                        if let image = controller.render() { onSave(image) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+final class SignaturePadController {
+    var strokes: [[CGPoint]] = []
+    var current: [CGPoint] = []
+
+    func render(size: CGSize = CGSize(width: 600, height: 240)) -> UIImage? {
+        guard !strokes.isEmpty else { return nil }
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+            UIColor.black.setStroke()
+            context.cgContext.setLineWidth(3)
+            context.cgContext.setLineCap(.round)
+            for stroke in strokes where stroke.count > 1 {
+                context.cgContext.move(to: stroke[0])
+                for point in stroke.dropFirst() { context.cgContext.addLine(to: point) }
+                context.cgContext.strokePath()
+            }
+        }
+    }
+}
+
+struct SignatureCanvas: UIViewRepresentable {
+    let controller: SignaturePadController
+
+    func makeUIView(context: Context) -> CanvasView {
+        let view = CanvasView()
+        view.controller = controller
+        view.backgroundColor = .white
+        return view
+    }
+    func updateUIView(_ view: CanvasView, context: Context) {}
+
+    final class CanvasView: UIView {
+        var controller: SignaturePadController?
+        override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+            guard let point = touches.first?.location(in: self) else { return }
+            controller?.current = [point]
+        }
+        override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+            guard let point = touches.first?.location(in: self) else { return }
+            controller?.current.append(point)
+            setNeedsDisplay()
+        }
+        override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+            guard let controller, !controller.current.isEmpty else { return }
+            controller.strokes.append(controller.current)
+            controller.current = []
+            setNeedsDisplay()
+        }
+        override func draw(_ rect: CGRect) {
+            guard let controller, let context = UIGraphicsGetCurrentContext() else { return }
+            UIColor.black.setStroke()
+            context.setLineWidth(3)
+            context.setLineCap(.round)
+            for stroke in controller.strokes + [controller.current] where stroke.count > 1 {
+                context.move(to: stroke[0])
+                for point in stroke.dropFirst() { context.addLine(to: point) }
+                context.strokePath()
+            }
         }
     }
 }
