@@ -57,6 +57,7 @@ final class AssistantViewModel {
     var input = ""
     private(set) var visibleVoiceTranscript = ""
     var isListening = false
+    var showingPDFTools = false
     var voiceInputEnabled = true
     private(set) var statusText = AppText.value("ready")
     private(set) var resultState: AssistantResultState = .idle
@@ -468,6 +469,13 @@ final class AssistantViewModel {
             "\(standaloneCommand.intent.rawValue)"
                 + " app=\(standaloneCommand.entities["app"] ?? "-")"
                 + " service=\(standaloneCommand.entities["call_service"] ?? standaloneCommand.entities["message_service"] ?? "-")")
+        if input.lowercased().contains("pdf") {
+            ConversationStore.shared.add(.user, input)
+            ConversationStore.shared.add(.assistant, "Відкриваю PDF-інструменти…")
+            showingPDFTools = true
+            input = ""
+            return
+        }
         let continuationPolicy = PendingContinuationCompatibilityPolicy()
         if let pending = pendingCanonicalSelection,
            pending.generation == activeRequestGeneration,
@@ -951,6 +959,18 @@ final class AssistantViewModel {
         }
         let boundary = scheme == "tel" ? "CALL_URL" : "EXACT_HANDOFF"
         LocalVoiceDiagnosticReport.shared.recordBoundaryPre(boundary, "scheme=\(scheme ?? "unknown")")
+        if scheme == "binance" {
+            if let alternate = URL(string: "bnc://"), UIApplication.shared.canOpenURL(alternate) {
+                let second = await systemHandoffOpenResult(alternate)
+                if second {
+                    ConversationStore.shared.add(.assistant, "Binance відкрито")
+                    return true
+                }
+            }
+            ConversationStore.shared.add(.status, "Binance не встановлено. Встановіть застосунок із App Store.")
+            presentFailure(message: "Binance не встановлено", recoveryAction: "Відкрити App Store")
+            return false
+        }
         ConversationStore.shared.add(.assistant, "Відкриваю \(displayName(for: scheme))…")
         let opened = await systemHandoffOpenResult(destination)
         RuntimeDiagnostics.shared.log("openURL", "\(destination.absoluteString) -> \(opened ? "opened" : "rejected")")

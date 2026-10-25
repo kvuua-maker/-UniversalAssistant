@@ -42,6 +42,18 @@ struct AssistantHomeView: View {
                                 .accessibilityIdentifier("assistant.voice-orb")
                             }
 
+                            if let last = ConversationStore.shared.messages.last {
+                                HStack(spacing: 6) {
+                                    Image(systemName: last.role == .user ? "mic.fill" : "sparkles")
+                                        .font(.caption2)
+                                    Text(last.text)
+                                        .font(.footnote)
+                                        .lineLimit(2)
+                                }
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 14)
+                                .accessibilityIdentifier("assistant.last-message")
+                            }
                             if !model.visibleVoiceTranscript.isEmpty {
                                 Text(model.visibleVoiceTranscript)
                                     .font(.body)
@@ -127,6 +139,9 @@ struct AssistantHomeView: View {
         .sheet(isPresented: $showingDiagnostics) { DiagnosticsView() }
         .sheet(isPresented: $showingConversation) { ConversationView() }
         .sheet(isPresented: $showingPDFTools) { PDFToolsView() }
+        .onChange(of: model.showingPDFTools) { _, value in
+            if value { showingPDFTools = true; model.showingPDFTools = false }
+        }
         // AppText resolves strings at render time; rebuilding the tree on
         // language change is what makes the picker take effect immediately.
         .id(model.languageConfiguration.uiLanguage)
