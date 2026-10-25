@@ -19,6 +19,8 @@ final class PDFToolsModel {
     var passwordText = ""
     var textToInsert = ""
     var officePDF: URL?
+    var alertMessage: String?
+    var _blankIndex = "1"
     var shareURL: URL?
     var previewItem: PreviewItem?
 
