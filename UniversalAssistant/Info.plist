@@ -66,6 +66,10 @@
 	<string>UniversalAssistant accesses Calendar only to find and manage events you request.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>UniversalAssistant uses the camera only when you ask to capture an image.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Календар потрібен, щоб створювати зустрічі голосом.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>Нагадування потрібні, щоб створювати їх голосом.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>UniversalAssistant accesses contacts only when you ask it to find or contact a person.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

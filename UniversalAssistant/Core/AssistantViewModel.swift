@@ -1555,6 +1555,10 @@ final class AssistantViewModel {
         executeCanonicalCapability(resumed, summary: .init(request: command.originalText, intent: command.intent, risk: command.risk), requestGeneration: generation)
     }
 
+    func chooseContact(_ candidate: ContactCandidate) {
+        capabilityPresentation = .contactCard(identifier: candidate.identifier)
+    }
+
     func dismissCapabilityPresentation() {
         capabilityPresentation = nil
         capabilityPresentationGeneration = nil

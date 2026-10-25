@@ -23,6 +23,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
     case contactImport(Data)
     case contactAccess(query: String, command: StructuredCommand)
     case contactCard(identifier: String)
+    case contactChoices([ContactCandidate])
     case translationTarget(String)
     case translation(LocalTranslationPlan)
     case photoLibrary
@@ -52,6 +53,7 @@ enum CapabilityPresentation: Equatable, Sendable, Identifiable {
         case .contactImport: "contact-import"
         case .contactAccess: "contact-access"
         case .contactCard: "contact-card"
+        case .contactChoices: "contact-choices"
         case .translationTarget: "translation-target"
         case .translation: "translation"
         case .photoLibrary: "photo-library"
@@ -1633,7 +1635,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 return .presentation(.contactAccess(query: name, command: command))
             }
             throw CanonicalCapabilityExecutionError.unavailable("contact_not_found")
-        case let .ambiguous(values): throw CanonicalCapabilityExecutionError.ambiguousContacts(values)
+        case let .ambiguous(values): return .presentation(.contactChoices(values))
         case let .resolved(value):
             recordSelectedTarget(
                 identifier: "contact:" + value.identifier,
@@ -1673,7 +1675,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             case .notFound:
                 throw CanonicalCapabilityExecutionError.unavailable("email_contact_not_found")
             case let .ambiguous(values):
-                throw CanonicalCapabilityExecutionError.ambiguousContacts(values)
+                return .presentation(.contactChoices(values))
             case let .resolved(value):
                 recordSelectedTarget(identifier: "contact:" + value.identifier, service: "email", phoneCount: value.phoneNumbers.count, emailCount: value.emailAddresses.count)
                 guard !value.emailAddresses.isEmpty else {
@@ -1704,7 +1706,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                     try await contacts.requestAccessIfNeeded()
                     switch try await contacts.resolve(name: rawRecipient) {
                     case .notFound: throw CanonicalCapabilityExecutionError.unavailable("telegram_contact_not_found")
-                    case let .ambiguous(values): throw CanonicalCapabilityExecutionError.ambiguousContacts(values)
+                    case let .ambiguous(values): return .presentation(.contactChoices(values))
                     case let .resolved(value):
                         guard value.phoneNumbers.count == 1, let number = value.phoneNumbers.first else {
                             throw CanonicalCapabilityExecutionError.ambiguous(value.phoneNumbers)
@@ -1732,7 +1734,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 case .notFound:
                     throw CanonicalCapabilityExecutionError.unavailable("viber_contact_not_found")
                 case let .ambiguous(values):
-                    throw CanonicalCapabilityExecutionError.ambiguousContacts(values)
+                    return .presentation(.contactChoices(values))
                 case let .resolved(value):
                     resolvedRecipientNotice = value.displayName
                     recordSelectedTarget(
@@ -1778,7 +1780,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             case .notFound:
                 throw CanonicalCapabilityExecutionError.unavailable("message_contact_not_found")
             case let .ambiguous(values):
-                throw CanonicalCapabilityExecutionError.ambiguousContacts(values)
+                return .presentation(.contactChoices(values))
             case let .resolved(value):
                 recordSelectedTarget(identifier: "contact:" + value.identifier, service: service, phoneCount: value.phoneNumbers.count, emailCount: value.emailAddresses.count)
                 guard value.phoneNumbers.count == 1, let number = value.phoneNumbers.first else {

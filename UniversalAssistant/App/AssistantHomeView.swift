@@ -9,6 +9,7 @@ struct AssistantHomeView: View {
     @State private var showingDiagnostics = false
     @State private var showingConversation = false
     @State private var showingPDFTools = false
+    @State private var showWeather = false
 
     var body: some View {
         TabView {
@@ -109,6 +110,11 @@ struct AssistantHomeView: View {
                         Image(systemName: "bolt.circle")
                     }.accessibilityLabel("Швидкий запуск")
                     Button {
+                        showWeather = true
+                    } label: {
+                        Image(systemName: "cloud.sun")
+                    }.accessibilityLabel("Погода")
+                    Button {
                         showingPDFTools = true
                     } label: {
                         Image(systemName: "doc.on.doc")
@@ -139,6 +145,7 @@ struct AssistantHomeView: View {
         .sheet(isPresented: $showingDiagnostics) { DiagnosticsView() }
         .sheet(isPresented: $showingConversation) { ConversationView() }
         .sheet(isPresented: $showingPDFTools) { PDFToolsView() }
+        .sheet(isPresented: $showWeather) { WeatherScreen() }
         .onChange(of: model.showingPDFTools) { _, value in
             if value { showingPDFTools = true; model.showingPDFTools = false }
         }
@@ -189,6 +196,12 @@ struct AssistantHomeView: View {
                 .padding()
             case let .contactCard(identifier):
                 ExistingContactCardView(identifier: identifier, onComplete: model.dismissCapabilityPresentation)
+            case let .contactChoices(candidates):
+                ContactChoicesView(
+                    candidates: candidates,
+                    onSelect: { model.chooseContact($0) },
+                    onCancel: model.dismissCapabilityPresentation
+                )
             case let .translationTarget(text):
                 TranslationTargetPickerView(text: text, onSelect: model.startTranslation)
             case .photoLibrary:
