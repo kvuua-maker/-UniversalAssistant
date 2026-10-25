@@ -37,7 +37,7 @@ struct OfficeConvertView: View {
                             .compactMap { UTType(filenameExtension: $0) },
                           allowsMultipleSelection: false) { outcome in
                 guard case let .success(files) = outcome, let file = files.first else { return }
-                Task { await convert(file) }
+                Task { await convert(FileImport.copy(file)) }
             }
             .sheet(item: $preview) { item in QuickLookPreview(url: item.url) }
         }

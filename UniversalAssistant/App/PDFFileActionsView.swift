@@ -53,7 +53,7 @@ struct PDFFileActionsView: View {
             .overlay { if isBusy { ProgressView().padding(24).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
             .fileImporter(isPresented: $showPicker, allowedContentTypes: [.pdf], allowsMultipleSelection: true) { outcome in
                 guard case let .success(files) = outcome, let first = files.first else { return }
-                file = importCopy(first)
+                file = FileImport.copy(first)
             }
             .alert("Номер сторінки для вставки", isPresented: $blankPrompt) {
                 TextField("1", text: $blankIndex)
@@ -75,20 +75,6 @@ struct PDFFileActionsView: View {
 
     /// Files picked from Files are security-scoped; copy them into the sandbox so
     /// every later read (extraction, rendering) works without the scope.
-    private func importCopy(_ source: URL) -> URL {
-        let scoped = source.startAccessingSecurityScopedResource()
-        defer { if scoped { source.stopAccessingSecurityScopedResource() } }
-        let target = FileManager.default.temporaryDirectory
-            .appendingPathComponent("imported-\(UUID().uuidString)-" + source.lastPathComponent)
-        try? FileManager.default.removeItem(at: target)
-        do {
-            try FileManager.default.copyItem(at: source, to: target)
-            return target
-        } catch {
-            return source
-        }
-    }
-
     private func extract() {
         guard let file else { return }
         isBusy = true

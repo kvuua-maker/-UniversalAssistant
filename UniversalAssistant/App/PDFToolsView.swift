@@ -138,7 +138,7 @@ struct PDFToolsView: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Готово") { dismiss() } } }
             .overlay { if isBusy { ProgressView().controlSize(.large).padding(24).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
             .fileImporter(isPresented: $showPDFImporter, allowedContentTypes: [.pdf], allowsMultipleSelection: true) { result in
-                if case let .success(urls) = result { importedPDFs = urls }
+                if case let .success(urls) = result { importedPDFs = urls.map(FileImport.copy) }
             }
             .photosPicker(isPresented: $showPhotoPicker, selection: $photoItems, maxSelectionCount: 20, matching: .images)
             .onChange(of: photoItems) { _, items in
