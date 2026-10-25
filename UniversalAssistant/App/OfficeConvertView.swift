@@ -36,7 +36,7 @@ struct OfficeConvertView: View {
                           allowedContentTypes: ["docx", "doc", "xlsx", "xls", "rtf", "odt"]
                             .compactMap { UTType(filenameExtension: $0) },
                           allowsMultipleSelection: false) { outcome in
-                guard case let .success(file) = outcome else { return }
+                guard case let .success(files) = outcome, let file = files.first else { return }
                 Task { await convert(file) }
             }
             .sheet(item: $preview) { item in QuickLookPreview(url: item.url) }
