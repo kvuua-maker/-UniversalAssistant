@@ -201,7 +201,8 @@ actor PDFToolsEngine {
         document.documentAttributes = nil
         let target = try freshURL("compressed.pdf")
         guard document.write(to: target) else { throw PDFToolsError.writeFailed }
-        RuntimeDiagnostics.shared.log("PDF", "compressed: \(fileSizeKB(url)) KB -> \(fileSizeKB(target)) KB")
+        let before = fileSizeKB(url), after = fileSizeKB(target)
+        Task { @MainActor in RuntimeDiagnostics.shared.log("PDF", "compressed: \(before) KB -> \(after) KB") }
         return target
     }
 
