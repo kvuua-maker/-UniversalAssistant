@@ -108,12 +108,14 @@ struct PDFToolsView: View {
                 if !results.isEmpty {
                     Section("Результати") {
                         ForEach(results, id: \.self) { url in
-                            HStack {
+                            VStack(alignment: .leading, spacing: 6) {
                                 Text(url.lastPathComponent).lineLimit(1)
-                                Spacer()
-                                Button("Перегляд") { previewItem = PreviewItem(url: url) }
-                                Button("Поділитися") { shareURL = url; showShareSheet = true }
-                                Button("Друк") { printPDF(url) }
+                                HStack(spacing: 14) {
+                                    Button("Перегляд") { previewItem = PreviewItem(url: url) }
+                                    Button("Друк") { printPDF(url) }
+                                    SaveToFilesButton(url: url)
+                                }
+                                Button("Витягнути вбудовані зображення") { extractImages(url) }
                             }
                         }
                     }
@@ -200,6 +202,20 @@ struct PDFToolsView: View {
             statusLine = "Помилка: \(error)"
         }
         photoItems = []
+    }
+
+    private func extractImages(_ url: URL) {
+        isBusy = true
+        Task {
+            defer { isBusy = false }
+            do {
+                let images = try await PDFToolsEngine.shared.extractEmbeddedImages(from: url)
+                results.insert(contentsOf: images, at: 0)
+                statusLine = "Витягнуто зображень: \(images.count)"
+            } catch {
+                statusLine = "Не вдалося витягнути зображення: \(error)"
+            }
+        }
     }
 
     private func printPDF(_ url: URL) {

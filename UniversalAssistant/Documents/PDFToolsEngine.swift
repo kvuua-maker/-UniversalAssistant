@@ -359,6 +359,57 @@ actor PDFToolsEngine {
         return url
     }
 
+    // MARK: - Embedded images
+
+    /// Extracts JPEG-encoded images that are actually embedded in the PDF
+    /// (photos are normally stored as DCTDecode streams). Rendered page
+    /// snapshots are a different operation and live in `images(from:)`.
+    func extractEmbeddedImages(from url: URL) throws -> [URL] {
+        guard let document = CGPDFDocument(url as CFURL) else { throw PDFToolsError.unreadable }
+        var written: [URL] = []
+        for pageIndex in 1...max(1, document.numberOfPages) {
+            guard let page = document.page(at: pageIndex) else { continue }
+            let pageDictionary = page.dictionary
+            var resources: CGPDFDictionaryRef?
+            guard CGPDFDictionaryGetDictionary(pageDictionary, "Resources", &resources), let resources else { continue }
+            var xObjects: CGPDFDictionaryRef?
+            guard CGPDFDictionaryGetDictionary(resources, "XObject", &xObjects), let xObjects else { continue }
+
+            var context = ExtractionContext()
+            withUnsafeMutablePointer(to: &context) { pointer in
+                CGPDFDictionaryApplyFunction(xObjects, { _, object, info in
+                    guard let info else { return }
+                    let context = info.assumingMemoryBound(to: ExtractionContext.self)
+                    var stream: CGPDFStreamRef?
+                    guard CGPDFObjectGetValue(object, .stream, &stream), let stream else { return }
+                    guard let dictionary = CGPDFStreamGetDictionary(stream) else { return }
+                    var subtype: UnsafePointer<Int8>?
+                    guard CGPDFDictionaryGetName(dictionary, "Subtype", &subtype),
+                          let subtype, String(cString: subtype) == "Image" else { return }
+                    guard let raw = CGPDFStreamCopyData(stream, .raw) else { return }
+                    let data = raw as Data
+                    // Only formats that need no re-encoding are kept verbatim.
+                    var filterName: UnsafePointer<Int8>?
+                    if CGPDFDictionaryGetName(dictionary, "Filter", &filterName), let filterName {
+                        let name = String(cString: filterName)
+                        guard name == "DCTDecode" || name == "JPXDecode" else { return }
+                    } else {
+                        return
+                    }
+                    context.pointee.chunks.append(data)
+                }, pointer)
+            }
+            for data in context.chunks {
+                let target = try freshURL("image-\(pageIndex)-\(written.count + 1).jpg")
+                try data.write(to: target)
+                written.append(target)
+            }
+        }
+        Task { @MainActor in RuntimeDiagnostics.shared.log("PDF", "extracted \(written.count) embedded images") }
+        guard !written.isEmpty else { throw PDFToolsError.emptyRange }
+        return written
+    }
+
     // MARK: - Security & size
 
     func protect(_ url: URL, password: String) throws -> URL {
@@ -440,4 +491,8 @@ enum PDFAnnotationKind: String, CaseIterable {
 
 enum PDFToolsError: Error, Equatable {
     case unreadable, writeFailed, emptyRange
+}
+
+private struct ExtractionContext {
+    var chunks: [Data] = []
 }
