@@ -28,6 +28,10 @@ struct PDFToolsView: View {
     @State private var signatureImage: UIImage?
     @State private var showSignaturePad = false
     @State private var showOffice = false
+    @State private var showExtractImporter = false
+    @State private var blankPrompt = false
+    @State private var blankIndex = "1"
+    @State private var moverURL: URL?
 
     var body: some View {
         NavigationStack {
@@ -68,6 +72,13 @@ struct PDFToolsView: View {
                         Button("Водяний знак") { watermarkText = ""; showWatermarkPrompt = true }
                         Button("Захистити паролем") { passwordText = ""; showPasswordPrompt = true }
                         Button("Стиснути") { run { Optional(try await PDFToolsEngine.shared.compress(url)) } }
+                    }
+                }
+                Section("Файл PDF") {
+                    Button("Витягнути зображення з PDF") { showExtractImporter = true }
+                    ForEach(results, id: \.self) { url in
+                        Button("Вставити порожню сторінку") { blankIndex = "1"; blankPrompt = true }
+                        Button("Перемістити анотації пальцем") { moverURL = url }
                     }
                 }
                 Section("Word / Excel") {
@@ -153,6 +164,21 @@ struct PDFToolsView: View {
                 Button("Скасувати", role: .cancel) {}
             }
             .sheet(isPresented: $showOffice) { OfficeConvertView() }
+            .fileImporter(isPresented: $showExtractImporter,
+                          allowedContentTypes: [.pdf],
+                          allowsMultipleSelection: true) { outcome in
+                guard case let .success(files) = outcome, let file = files.first else { return }
+                extractImages(file)
+            }
+            .alert("Номер сторінки для вставки", isPresented: $blankPrompt) {
+                TextField("1", text: $blankIndex)
+                Button("Вставити") {
+                    guard let url = results.first, let index = Int(blankIndex) else { return }
+                    run { Optional(try await PDFToolsEngine.shared.insertBlankPage(url, at: max(0, index - 1))) }
+                }
+                Button("Скасувати", role: .cancel) {}
+            }
+            .sheet(item: $moverURL) { url in AnnotationMoverView(url: url) }
             .sheet(isPresented: $showSignaturePad) {
                 SignaturePadView { image in
                     signatureImage = image
@@ -209,7 +235,7 @@ struct PDFToolsView: View {
         Task {
             defer { isBusy = false }
             do {
-                let images = try await PDFToolsEngine.shared.extractEmbeddedImages(from: url)
+                let images = try await PDFToolsEngine.shared.imagesOrRendered(from: url)
                 results.insert(contentsOf: images, at: 0)
                 statusLine = "Витягнуто зображень: \(images.count)"
             } catch {

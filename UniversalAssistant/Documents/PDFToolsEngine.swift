@@ -411,6 +411,55 @@ actor PDFToolsEngine {
         return written
     }
 
+    // MARK: - Annotations
+
+    struct AnnotationBox: Identifiable {
+        let id: Int
+        let bounds: CGRect
+        let page: CGRect
+        let label: String
+    }
+
+    func annotations(in url: URL, pageIndex: Int = 0) throws -> [AnnotationBox] {
+        guard let document = PDFDocument(url: url), let page = document.page(at: pageIndex) else {
+            throw PDFToolsError.unreadable
+        }
+        let pageBounds = page.bounds(for: .mediaBox)
+        return page.annotations.enumerated().map { index, annotation in
+            AnnotationBox(id: index,
+                          bounds: annotation.bounds,
+                          page: pageBounds,
+                          label: annotation.contents ?? annotation.type ?? "annotation")
+        }
+    }
+
+    func pageImage(_ url: URL, pageIndex: Int = 0, width: CGFloat = 900) -> UIImage? {
+        guard let document = PDFDocument(url: url), let page = document.page(at: pageIndex) else { return nil }
+        let bounds = page.bounds(for: .mediaBox)
+        let scale = width / max(bounds.width, 1)
+        return page.thumbnail(of: CGSize(width: width, height: bounds.height * scale), for: .mediaBox)
+    }
+
+    func moveAnnotation(_ url: URL, pageIndex: Int = 0, annotationIndex: Int, by offset: CGSize) throws -> URL {
+        guard let document = PDFDocument(url: url), let page = document.page(at: pageIndex),
+              annotationIndex < page.annotations.count else { throw PDFToolsError.unreadable }
+        let annotation = page.annotations[annotationIndex]
+        annotation.bounds = annotation.bounds.offsetBy(dx: offset.width, dy: offset.height)
+        let target = try freshURL("moved.pdf")
+        guard document.write(to: target) else { throw PDFToolsError.writeFailed }
+        return target
+    }
+
+    /// Direct extraction, then a rendered-page fallback so every PDF yields
+    /// something usable even when its images are stored inside compressed
+    /// streams.
+    func imagesOrRendered(from url: URL) async throws -> [URL] {
+        if let extracted = try? extractEmbeddedImages(from: url), !extracted.isEmpty {
+            return extracted
+        }
+        return try images(from: url)
+    }
+
     // MARK: - Security & size
 
     func protect(_ url: URL, password: String) throws -> URL {
@@ -486,6 +535,24 @@ enum PDFAnnotationKind: String, CaseIterable {
         case .underline, .strikeOut: .systemBlue
         case .square, .circle: .systemRed
         case .comment: .systemGreen
+        }
+    }
+}
+
+extension PDFToolsEngine {
+    nonisolated func pageImageSync(_ url: URL) -> UIImage? {
+        guard let document = PDFDocument(url: url), let page = document.page(at: 0) else { return nil }
+        let bounds = page.bounds(for: .mediaBox)
+        let scale: CGFloat = 900 / max(bounds.width, 1)
+        return page.thumbnail(of: CGSize(width: 900, height: bounds.height * scale), for: .mediaBox)
+    }
+
+    nonisolated func annotationsSync(_ url: URL) -> [AnnotationBox] {
+        guard let document = PDFDocument(url: url), let page = document.page(at: 0) else { return [] }
+        let pageBounds = page.bounds(for: .mediaBox)
+        return page.annotations.enumerated().map { index, annotation in
+            AnnotationBox(id: index, bounds: annotation.bounds, page: pageBounds,
+                          label: annotation.contents ?? "annotation")
         }
     }
 }
