@@ -107,6 +107,50 @@ extension Application {
             return .init(requestID: body.requestID, text: text, model: "whisper-large-v3", source: "groq")
         }
 
+        post("v1", "office", "convert") { request async throws -> Response in
+            try requireToken(request)
+            struct Input: Content { let fileName: String; let base64: String }
+            let body = try request.content.decode(Input.self)
+            guard let data = Data(base64Encoded: body.base64), !data.isEmpty, data.count <= 20_000_000 else {
+                throw Abort(.badRequest, reason: "invalid_document")
+            }
+            let work = FileManager.default.temporaryDirectory
+                .appendingPathComponent("office-\(UUID().uuidString)", isDirectory: true)
+            try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: work) }
+            let safeName = (body.fileName as NSString).lastPathComponent
+            let input = work.appendingPathComponent(safeName)
+            try data.write(to: input)
+
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/soffice")
+            let profile = work.appendingPathComponent("profile", isDirectory: true)
+            process.arguments = [
+                "--headless", "--norestore", "--nolockcheck", "--nodefault",
+                "-env:UserInstallation=file://\(profile.path)",
+                "--convert-to", "pdf", "--outdir", work.path, input.path
+            ]
+            var environment = ProcessInfo.processInfo.environment
+            environment["HOME"] = work.path
+            process.environment = environment
+            let pipe = Pipe()
+            process.standardError = pipe
+            process.standardOutput = pipe
+            try process.run()
+            process.waitUntilExit()
+            guard process.terminationStatus == 0 else {
+                throw Abort(.badGateway, reason: "conversion_failed")
+            }
+            let output = work.appendingPathComponent(input.deletingPathExtension().lastPathComponent + ".pdf")
+            guard let pdf = try? Data(contentsOf: output) else {
+                throw Abort(.badGateway, reason: "conversion_empty")
+            }
+            let response = Response(status: .ok)
+            response.headers.contentType = .init(type: "application", subType: "pdf")
+            response.body = .init(data: pdf)
+            return response
+        }
+
         post("v1", "ai", "interpret") { request async throws -> TokenInterpretOutput in
             try requireToken(request)
             guard enabled, !apiKey.isEmpty else { throw Abort(.serviceUnavailable, reason: "groq_disabled") }

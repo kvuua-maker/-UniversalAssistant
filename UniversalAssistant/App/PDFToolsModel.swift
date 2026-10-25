@@ -1,0 +1,88 @@
+import Foundation
+import PhotosUI
+import SwiftUI
+import UIKit
+
+/// State and operations for the PDF workspace. Keeping them out of the view
+/// keeps each SwiftUI body small enough for the type checker.
+@MainActor
+@Observable
+final class PDFToolsModel {
+    var results: [URL] = []
+    var importedPDFs: [URL] = []
+    var photoItems: [PhotosPickerItem] = []
+    var isBusy = false
+    var statusLine: String?
+    var signatureImage: UIImage?
+    var annotationKind: PDFAnnotationKind = .highlight
+    var watermarkText = ""
+    var passwordText = ""
+    var textToInsert = ""
+    var officePDF: URL?
+    var shareURL: URL?
+    var previewItem: PreviewItem?
+
+    func run(_ operation: @escaping () async throws -> URL?) {
+        isBusy = true
+        Task {
+            defer { isBusy = false }
+            do {
+                if let url = try await operation() { results.insert(url, at: 0) }
+            } catch {
+                statusLine = "Помилка: \(error)"
+            }
+        }
+    }
+
+    func buildFromPhotos() async {
+        guard !photoItems.isEmpty else { return }
+        isBusy = true
+        defer { isBusy = false }
+        var images: [UIImage] = []
+        for item in photoItems {
+            if let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) {
+                images.append(image)
+            }
+        }
+        photoItems = []
+        guard !images.isEmpty else { statusLine = "Не вдалося прочитати фото"; return }
+        do {
+            let url = try await PDFToolsEngine.shared.makePDF(from: images)
+            results.insert(url, at: 0)
+            statusLine = "PDF створено: \(images.count) сторінок"
+        } catch {
+            statusLine = "Помилка: \(error)"
+        }
+    }
+
+    func convertOffice(_ url: URL) async {
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            let pdf = try await OfficeConversionService.shared.convert(url)
+            results.insert(pdf, at: 0)
+            statusLine = "Word/Excel → PDF готово"
+        } catch {
+            statusLine = "Конвертація не вдалася: \(error)"
+        }
+    }
+
+    func printPDF(_ url: URL) {
+        guard UIPrintInteractionController.isPrintingAvailable else {
+            statusLine = "Друк недоступний на цьому пристрої"
+            return
+        }
+        let controller = UIPrintInteractionController.shared
+        let info = UIPrintInfo.printInfo()
+        info.jobName = url.lastPathComponent
+        info.outputType = .general
+        controller.printInfo = info
+        controller.printingItem = url
+        controller.present(animated: true)
+    }
+
+    func undo() {
+        guard results.count > 1 else { return }
+        results.removeFirst()
+    }
+}

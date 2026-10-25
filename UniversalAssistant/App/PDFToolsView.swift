@@ -27,6 +27,7 @@ struct PDFToolsView: View {
     @State private var annotationKind: PDFAnnotationKind = .highlight
     @State private var signatureImage: UIImage?
     @State private var showSignaturePad = false
+    @State private var showOffice = false
 
     var body: some View {
         NavigationStack {
@@ -68,6 +69,9 @@ struct PDFToolsView: View {
                         Button("Захистити паролем") { passwordText = ""; showPasswordPrompt = true }
                         Button("Стиснути") { run { Optional(try await PDFToolsEngine.shared.compress(url)) } }
                     }
+                }
+                Section("Word / Excel") {
+                    Button("Відкрити конвертер") { showOffice = true }
                 }
                 Section("Підпис") {
                     Button(signatureImage == nil ? "Намалювати підпис" : "Перемалювати підпис") { showSignaturePad = true }
@@ -146,6 +150,7 @@ struct PDFToolsView: View {
                 }
                 Button("Скасувати", role: .cancel) {}
             }
+            .sheet(isPresented: $showOffice) { OfficeConvertView() }
             .sheet(isPresented: $showSignaturePad) {
                 SignaturePadView { image in
                     signatureImage = image
