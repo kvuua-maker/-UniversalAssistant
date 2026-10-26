@@ -196,8 +196,9 @@ actor EventKitReminderService: ReminderMutating {
             let location = EKStructuredLocation(title: trigger.title)
             location.geoLocation = CLLocation(latitude: trigger.latitude, longitude: trigger.longitude)
             location.radius = trigger.radius
+            // iOS rings with the user's default reminder sound; EKAlarm has no
+            // writable sound name on this platform.
             let alarm = EKAlarm()
-            alarm.soundName = "default"
             alarm.structuredLocation = location
             alarm.proximity = trigger.proximity == .enter ? .enter : .leave
             reminder.alarms = [alarm]
