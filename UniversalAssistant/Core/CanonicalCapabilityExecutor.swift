@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import CryptoKit
 import MessageUI
