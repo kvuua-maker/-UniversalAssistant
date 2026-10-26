@@ -271,6 +271,22 @@ actor LocalContactResolver: ContactResolving {
         LocalVoiceDiagnosticReport.shared.record(
             "contacts_query_finished", "status=\(Self.status(result)) count=\(domainEvidence.candidateCount)"
         )
+        // Several people can share the spoken name. Even when the scorer prefers
+        // one of them, the user must choose: guessing here dials the wrong person.
+        if case .resolved = result, domainEvidence.candidateCount > 1 {
+            let lowered = name.lowercased()
+            let sameName = candidates.filter { candidate in
+                candidate.displayName.lowercased().split(separator: " ").contains { word in
+                    word.hasPrefix(lowered) || lowered.hasPrefix(String(word))
+                }
+            }
+            if sameName.count > 1 {
+                LocalVoiceDiagnosticReport.shared.record(
+                    "contacts_query_ambiguous", "count=\(sameName.count)"
+                )
+                return .ambiguous(sameName)
+            }
+        }
         return result
     }
     func resolve(exactIdentifier identifier: String) async throws -> ContactResolution {

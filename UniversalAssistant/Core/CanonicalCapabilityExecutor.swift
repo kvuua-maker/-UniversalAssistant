@@ -1622,16 +1622,7 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         }
         let name = try required(command.entities["contact"], "contact_name")
         try await contacts.requestAccessIfNeeded()
-        // The store is authoritative: if several people share the name, show all
-        // of them instead of guessing which one the user meant.
-        if command.entities["contact_identifier"] == nil,
-           let all = try? await contacts.contacts(matching: name, timeout: .seconds(3)),
-           all.count > 1 {
-            await MainActor.run {
-                RuntimeDiagnostics.shared.log("contact", "multiple matches for \(name): \(all.count)")
-            }
-            return .presentation(.contactChoices(all))
-        }
+
         let resolution: ContactResolution
         if let identifier = command.entities["contact_identifier"] {
             resolution = try await contacts.resolve(exactIdentifier: identifier)
