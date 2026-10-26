@@ -16,7 +16,7 @@ struct WeatherScreen: View {
     ]
 
     @Environment(\.dismiss) private var dismiss
-    @State private var city: City?
+    @State private var selectedIndex = 0
     @State private var snapshot: WeatherSnapshot?
     @State private var isLoading = false
     @State private var errorText: String?
@@ -25,12 +25,9 @@ struct WeatherScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    Picker("Місто", selection: Binding(
-                        get: { city ?? cities[0] },
-                        set: { city = $0 }
-                    )) {
-                        ForEach(cities) { item in
-                            Text(item.name).tag(item)
+                    Picker("Місто", selection: $selectedIndex) {
+                        ForEach(cities.indices, id: \.self) { index in
+                            Text(cities[index].name).tag(index)
                         }
                     }
                     .pickerStyle(.segmented)
@@ -56,7 +53,7 @@ struct WeatherScreen: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Закрити") { dismiss() } }
             }
-            .task(id: city?.id ?? cities[0].id) { await load() }
+            .task(id: selectedIndex) { await load() }
         }
     }
 
@@ -127,8 +124,7 @@ struct WeatherScreen: View {
     private func load() async {
         isLoading = true
         defer { isLoading = false }
-        let target = city ?? cities[0]
-        city = target
+        let target = cities[min(selectedIndex, cities.count - 1)]
         let sample = LocationSample(
             latitude: target.latitude,
             longitude: target.longitude,
