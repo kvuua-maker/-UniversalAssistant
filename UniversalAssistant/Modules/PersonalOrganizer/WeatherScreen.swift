@@ -142,7 +142,7 @@ struct WeatherScreen: View {
         )
         Task { @MainActor in RuntimeDiagnostics.shared.log("weather", "request city=\(target.name)") }
         do {
-            let snapshot = try await WeatherContextEngine(provider: AppleWeatherKitProvider())
+            let snapshot = try await WeatherContextEngine(provider: ResilientWeatherProvider())
                 .weather(for: WeatherRequest(location: location, context: .manualLocation))
             self.snapshot = snapshot
             errorText = nil

@@ -21,7 +21,7 @@ struct ProductionWeatherCommandExecutor: WeatherCommandExecuting, Sendable {
             applications: .init(applications: LaunchDeviceApplications.verified)
         ),
         locationResolver: ManualLocationContextResolver = .init(),
-        weatherEngine: WeatherContextEngine = .init(provider: AppleWeatherKitProvider()),
+        weatherEngine: WeatherContextEngine = .init(provider: ResilientWeatherProvider()),
         currentLocation: @escaping @MainActor @Sendable (LocationPurpose) async throws -> ValidatedLocation = { purpose in try await AppleCurrentLocationResolver().resolveCurrent(for: purpose) },
         recordDiagnostic: @escaping @Sendable (String, String) -> Void = { marker, details in
             LocalVoiceDiagnosticReport.shared.record(marker, details)

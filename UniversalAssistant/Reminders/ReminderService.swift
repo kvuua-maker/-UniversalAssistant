@@ -79,11 +79,31 @@ actor EventKitReminderService: ReminderMutating {
         let calendar = draft.listIdentifier.flatMap { identifier in
             store.calendars(for: .reminder).first { $0.calendarIdentifier == identifier && $0.allowsContentModifications }
         } ?? (draft.listIdentifier == nil ? store.defaultCalendarForNewReminders() : nil)
-        guard let calendar else { throw ReminderServiceError.noWritableList }
+        var writable = calendar
+        if writable == nil {
+            // A device without any reminders list would otherwise fail with a
+            // generic system error; create one so the reminder is saved.
+            let fresh = EKCalendar(for: .reminder, eventStore: store)
+            fresh.title = "Нагадування"
+            if let source = store.defaultCalendarForNewReminders()?.source ?? store.sources.first {
+                fresh.source = source
+                try? store.saveCalendar(fresh, commit: true)
+                writable = fresh
+            }
+        }
+        guard let calendar = writable else {
+            Task { @MainActor in RuntimeDiagnostics.shared.log("reminder", "no writable list") }
+            throw ReminderServiceError.noWritableList
+        }
         let reminder = EKReminder(eventStore: store)
         reminder.calendar = calendar
         apply(draft, to: reminder)
-        try store.save(reminder, commit: true)
+        do {
+            try store.save(reminder, commit: true)
+        } catch {
+            Task { @MainActor in RuntimeDiagnostics.shared.log("reminder", "save failed: \(error)") }
+            throw error
+        }
         let identifier = reminder.calendarItemIdentifier
         guard let saved = store.calendarItem(withIdentifier: identifier) as? EKReminder else {
             throw ReminderServiceError.authoritativeReadBackFailed
@@ -111,7 +131,12 @@ actor EventKitReminderService: ReminderMutating {
         }
         apply(draft, to: reminder)
         if let isCompleted { reminder.isCompleted = isCompleted }
-        try store.save(reminder, commit: true)
+        do {
+            try store.save(reminder, commit: true)
+        } catch {
+            Task { @MainActor in RuntimeDiagnostics.shared.log("reminder", "save failed: \(error)") }
+            throw error
+        }
         guard let saved = store.calendarItem(withIdentifier: identifier) as? EKReminder else {
             throw ReminderServiceError.authoritativeReadBackFailed
         }

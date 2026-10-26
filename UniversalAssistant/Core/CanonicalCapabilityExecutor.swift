@@ -379,6 +379,9 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             if command.constraints.ordinal != nil { return try await contextual(command, opensSelection: true) }
             return try await app(command)
         case .contactLookup:
+            if command.entities["contact"] == nil, command.entities["contact_identifier"] == nil {
+                return .presentation(.contactAccess(query: "", command: command))
+            }
             return try await contact(command, preparesCall: false)
         case .contactCall:
             let spoken = command.originalText.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
@@ -727,6 +730,11 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
                 RuntimeDiagnostics.shared.log("location", "failed: \(error)")
                 throw error
             }
+        }
+        if lowered.contains("будильник") || lowered.contains("будильники") || lowered.contains("alarm") {
+            return .result(try result(
+                "iPhone не дозволяє ставити будильники з додатка. Відкрийте Годинник вручну.",
+                facts: []))
         }
         if lowered.contains("qr") || lowered.contains("скан") || lowered.contains("штрих") {
             return .presentation(.scanner)
