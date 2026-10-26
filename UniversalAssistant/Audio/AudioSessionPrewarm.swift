@@ -2,6 +2,7 @@ import AVFoundation
 
 /// Prepares the audio pipeline once at launch so the first microphone tap does
 /// not pay for session activation and hardware warm-up.
+@MainActor
 enum AudioSessionPrewarm {
     private static var didPrepare = false
 
@@ -15,7 +16,7 @@ enum AudioSessionPrewarm {
             try session.setActive(true, options: [])
             try session.setActive(false, options: [.notifyOthersOnDeactivation])
         } catch {
-            RuntimeDiagnostics.log("audio", "prewarm failed: \(error)")
+            RuntimeDiagnostics.shared.log("audio", "prewarm failed: \(error)")
         }
     }
 }
