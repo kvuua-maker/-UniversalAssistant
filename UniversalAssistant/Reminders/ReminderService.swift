@@ -74,8 +74,20 @@ actor EventKitReminderService: ReminderMutating {
     }
 
     func create(_ input: ReminderDraft) throws -> ReminderSnapshot {
-        try requireFullAccess()
-        let draft = try input.validated()
+        Task { @MainActor in RuntimeDiagnostics.shared.log("reminder", "create start") }
+        do {
+            try requireFullAccess()
+        } catch {
+            Task { @MainActor in RuntimeDiagnostics.shared.log("reminder", "access denied: \(error)") }
+            throw error
+        }
+        let draft: ReminderDraft
+        do {
+            draft = try input.validated()
+        } catch {
+            Task { @MainActor in RuntimeDiagnostics.shared.log("reminder", "invalid draft: \(error)") }
+            throw error
+        }
         let calendar = draft.listIdentifier.flatMap { identifier in
             store.calendars(for: .reminder).first { $0.calendarIdentifier == identifier && $0.allowsContentModifications }
         } ?? (draft.listIdentifier == nil ? store.defaultCalendarForNewReminders() : nil)

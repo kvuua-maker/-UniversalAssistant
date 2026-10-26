@@ -177,6 +177,9 @@ final class AccurateLocationEngine: NSObject, @preconcurrency CLLocationManagerD
     }
 
     func request(for purpose: LocationPurpose = .general) {
+        Task { @MainActor in
+            RuntimeDiagnostics.shared.log("location", "requesting authorization=\(self.manager.authorizationStatus.rawValue)")
+        }
         switch manager.authorizationStatus {
         case .notDetermined:
             state = .requestingPermission; manager.requestWhenInUseAuthorization()
@@ -224,6 +227,7 @@ final class AccurateLocationEngine: NSObject, @preconcurrency CLLocationManagerD
     }
 
     private func beginRequest(for purpose: LocationPurpose) {
+        Task { @MainActor in RuntimeDiagnostics.shared.log("location", "requesting fix") }
         manager.desiredAccuracy = switch purpose {
         case .navigation, .emergency: kCLLocationAccuracyBest
         case .nearbySearch: kCLLocationAccuracyNearestTenMeters

@@ -141,7 +141,7 @@ struct ResilientWeatherProvider: WeatherProvider {
             return try await primary.weather(for: request)
         } catch {
             await MainActor.run {
-                RuntimeDiagnostics.shared.log("weather", "WeatherKit unavailable, using Open-Meteo: \\(error)")
+                RuntimeDiagnostics.shared.log("weather", "WeatherKit unavailable, using Open-Meteo")
             }
             return try await fallback.weather(for: request)
         }

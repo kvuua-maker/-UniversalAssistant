@@ -233,7 +233,12 @@ actor LocalContactResolver: ContactResolving {
         LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CONTACT_FETCH", "kind=name")
         defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CONTACT_FETCH", "kind=name status=returned") }
         LocalVoiceDiagnosticReport.shared.record("contacts_query_started", "kind=name")
-        let predicateContacts = try await query.contacts(matching: name, timeout: queryTimeout)
+        let queryVariants = Self.nameVariants(name)
+        var predicateContacts: [ContactCandidate] = []
+        for variant in queryVariants {
+            predicateContacts += (try? await query.contacts(matching: variant, timeout: queryTimeout)) ?? []
+        }
+        predicateContacts = Self.deduplicated(predicateContacts)
         Task { @MainActor in
             RuntimeDiagnostics.shared.log("contact", "predicate matches=\(predicateContacts.count) for \(name)")
         }
@@ -283,10 +288,12 @@ actor LocalContactResolver: ContactResolving {
         // one of them, the user must choose: guessing here dials the wrong person.
         if case .resolved = result, domainEvidence.candidateCount > 1 {
             let lowered = name.lowercased()
+            // Only the first name (or an exact alias such as "Мама") identifies
+            // the person; a patronymic like "Іванівна" must not match "Іван".
             let sameName = candidates.filter { candidate in
-                candidate.displayName.lowercased().split(separator: " ").contains { word in
-                    word.hasPrefix(lowered) || lowered.hasPrefix(String(word))
-                }
+                let firstWord = candidate.displayName.lowercased().split(separator: " ").first.map(String.init) ?? ""
+                if firstWord.hasPrefix(lowered) || lowered.hasPrefix(firstWord) { return true }
+                return candidate.aliases.contains { $0.lowercased() == lowered }
             }
             if sameName.count > 1 {
                 LocalVoiceDiagnosticReport.shared.record(
@@ -297,6 +304,22 @@ actor LocalContactResolver: ContactResolving {
         }
         return result
     }
+    /// Spoken Ukrainian often carries a case ending ("мамі", "Олега"). Querying
+    /// every plausible stem is what makes those forms findable.
+    static func nameVariants(_ name: String) -> [String] {
+        let base = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard base.count > 3 else { return [base] }
+        var variants = [base]
+        let endings = ["ові", "еві", "ами", "ями", "ому", "ему", "ого", "ього", "ої", "ій", "ій",
+                       "ам", "ям", "ах", "ях", "ом", "ем", "и", "і", "а", "я", "у", "ю", "е", "о"]
+        for ending in endings where base.lowercased().hasSuffix(ending) {
+            let stem = String(base.dropLast(ending.count))
+            if stem.count >= 3 { variants.append(stem) }
+            if ending == "і" || ending == "и" { variants.append(stem + "а") }
+        }
+        return Array(Set(variants))
+    }
+
     func resolve(exactIdentifier identifier: String) async throws -> ContactResolution {
         try verifyAuthorization()
         LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CONTACT_FETCH", "kind=identifier")
