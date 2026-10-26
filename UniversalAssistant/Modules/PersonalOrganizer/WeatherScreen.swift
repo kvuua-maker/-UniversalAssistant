@@ -140,13 +140,18 @@ struct WeatherScreen: View {
             isSafeForLocationActions: true,
             manualLabel: target.name
         )
+        Task { @MainActor in RuntimeDiagnostics.shared.log("weather", "request city=\(target.name)") }
         do {
             let snapshot = try await WeatherContextEngine(provider: AppleWeatherKitProvider())
                 .weather(for: WeatherRequest(location: location, context: .manualLocation))
             self.snapshot = snapshot
             errorText = nil
+            Task { @MainActor in
+                RuntimeDiagnostics.shared.log("weather", "ok \(Int(snapshot.current.temperatureCelsius.rounded()))° \(snapshot.current.condition)")
+            }
         } catch {
             errorText = "Не вдалося отримати погоду: \(error)"
+            Task { @MainActor in RuntimeDiagnostics.shared.log("weather", "failed: \(error)") }
             self.snapshot = nil
         }
     }

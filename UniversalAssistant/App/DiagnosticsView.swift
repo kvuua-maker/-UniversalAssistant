@@ -18,6 +18,7 @@ struct DiagnosticsView: View {
                         UIPasteboard.general.string = diagnostics.copyableText
                         lastResult = "Лог скопійовано (\(diagnostics.entries.count) записів)"
                     }
+                    ShareLink(item: diagnostics.copyableText) { Text("Поділитися логом") }
                     Button("Очистити", role: .destructive) { diagnostics.clear() }
                 }
 

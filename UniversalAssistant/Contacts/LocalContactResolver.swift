@@ -228,10 +228,15 @@ actor LocalContactResolver: ContactResolving {
     }
     func resolve(name: String) async throws -> ContactResolution {
         try verifyAuthorization()
+        let auth = authorization.currentStatus()
+        Task { @MainActor in RuntimeDiagnostics.shared.log("contact", "auth=\(auth) query=\(name)") }
         LocalVoiceDiagnosticReport.shared.recordBoundaryPre("CONTACT_FETCH", "kind=name")
         defer { LocalVoiceDiagnosticReport.shared.recordBoundaryPost("CONTACT_FETCH", "kind=name status=returned") }
         LocalVoiceDiagnosticReport.shared.record("contacts_query_started", "kind=name")
         let predicateContacts = try await query.contacts(matching: name, timeout: queryTimeout)
+        Task { @MainActor in
+            RuntimeDiagnostics.shared.log("contact", "predicate matches=\(predicateContacts.count) for \(name)")
+        }
         // CNContact's predicate is sufficient when it proves exactly one
         // strong identity. Avoid the expensive full authorized-domain scan in
         // this common path; ambiguity safety remains unchanged below.
@@ -263,6 +268,9 @@ actor LocalContactResolver: ContactResolving {
         // win simply because the real contact was excluded from that subset.
         let candidates = Self.deduplicated(predicateContacts + accessibleContacts)
         let domainEvidence = resolveCandidates(candidates, query: name)
+        Task { @MainActor in
+            RuntimeDiagnostics.shared.log("contact", "domain candidates=\(candidates.count) resolution=\(Self.status(domainEvidence.resolution))")
+        }
         let result = domainEvidence.resolution
         LocalVoiceDiagnosticReport.shared.record(
             "contacts_domain_recovery_finished",

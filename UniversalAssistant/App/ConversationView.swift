@@ -3,6 +3,7 @@ import SwiftUI
 struct ConversationView: View {
     private var store: ConversationStore { ConversationStore.shared }
     @Environment(\.dismiss) private var dismiss
+    @State private var showingDiagnostics = false
 
     var body: some View {
         NavigationStack {
@@ -30,9 +31,14 @@ struct ConversationView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Очистити", role: .destructive) { store.clear() }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingDiagnostics = true } label: { Image(systemName: "stethoscope") }
+                        .accessibilityLabel("Діагностика")
+                }
                 ToolbarItem(placement: .confirmationAction) { Button("Готово") { dismiss() } }
             }
         }
+        .sheet(isPresented: $showingDiagnostics) { DiagnosticsView() }
     }
 
     @ViewBuilder
