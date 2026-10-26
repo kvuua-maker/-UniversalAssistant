@@ -44,7 +44,7 @@ struct ConversationView: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 9)
                 .background(background(for: message.role), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .foregroundStyle(message.role == .user ? .white : .primary)
+                .foregroundStyle(message.role == .error ? Color.red : (message.role == .user ? .white : .primary))
                 .textSelection(.enabled)
             if message.role != .user { Spacer(minLength: 40) }
         }
@@ -55,6 +55,7 @@ struct ConversationView: View {
         case .user: .accentColor
         case .assistant: Color.secondary.opacity(0.15)
         case .status: Color.green.opacity(0.15)
+        case .error: Color.red.opacity(0.18)
         }
     }
 }

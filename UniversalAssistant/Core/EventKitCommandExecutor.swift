@@ -98,6 +98,11 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
         let args = EventKitCommandArgumentExtractor().extract(command, now: now(), timeZone: timeZone)
         switch command.intent {
         case .calendarCreate:
+            // A delete phrase may still be classified as "create"; never create a
+            // second event when the user asked to remove one.
+            if ["видали", "удали", "скасуй", "delete", "remove", "löschen", "supprime"].contains(where: command.normalizedText.contains) {
+                return try await deleteCalendarEvent(command, args, calendar: calendar)
+            }
             guard let title = args.subject else { throw EventKitExecutionError.missingSubject }
             guard let date = args.dateTime, date.precision == .minute else { throw EventKitExecutionError.unresolvedDateTime }
             try await calendar.requestFullAccessIfNeeded()
@@ -115,7 +120,11 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
             await recordHistory(.init(kind: .calendarUpdate, externalIdentifier: old.identifier, undoPayload: try JSONEncoder().encode(old)))
             return result(.calendar, .updated, value.draft.title, value.draft.start, 1)
         case .calendarDelete:
+            if let date = args.dateTime, date.precision == .minute {
+                return try await deleteCalendarEvent(command, args, calendar: calendar)
+            }
             let old = try await match(args.subject); try await calendar.delete(identifier: old.identifier)
+            await MainActor.run { RuntimeDiagnostics.shared.log("calendar", "deleted by subject: \(old.draft.title)") }
             await recordHistory(.init(kind: .calendarUpdate, externalIdentifier: old.identifier, undoPayload: try JSONEncoder().encode(old)))
             return .init(kind: .calendar, operation: .deleted, title: old.draft.title, detail: String(localized: "eventkit_deleted"), itemCount: 1)
         case .reminderCreate:
@@ -187,6 +196,39 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
         let values = listID.map { selected in allValues.filter { $0.draft.listIdentifier == selected } } ?? allValues
         return .init(kind: .reminder, operation: .queried, title: String(localized: "eventkit_reminders"), detail: list(values.map { $0.draft.title }), itemCount: values.count)
     }
+    private func deleteCalendarEvent(
+        _ command: StructuredCommand,
+        _ args: EventKitCommandArguments,
+        calendar: any EventKitCalendarExecuting
+    ) async throws -> EventKitExecutionResult {
+        guard let date = args.dateTime, date.precision == .minute else {
+            throw EventKitExecutionError.unresolvedDateTime
+        }
+        try await calendar.requestFullAccessIfNeeded()
+        let from = date.instant.addingTimeInterval(-60)
+        let to = date.instant.addingTimeInterval(60)
+        let events = try await calendar.events(from: from, to: to)
+        guard let event = events.first else {
+            await MainActor.run {
+                RuntimeDiagnostics.shared.log("calendar", "delete at \(date.instant): not found")
+            }
+            throw EventKitExecutionError.missingSubject
+        }
+        do {
+            try await calendar.delete(identifier: event.identifier)
+            await MainActor.run {
+                RuntimeDiagnostics.shared.log("calendar", "deleting event at \(date.instant), result: success")
+            }
+            await recordHistory(.init(kind: .calendarDelete, externalIdentifier: event.identifier))
+        } catch {
+            await MainActor.run {
+                RuntimeDiagnostics.shared.log("calendar", "deleting event at \(date.instant), result: failed (\(error))")
+            }
+            throw error
+        }
+        return result(.calendar, .deleted, event.draft.title, event.draft.start, 1)
+    }
+
     private func exactReminder(identifier: String) async throws -> ReminderSnapshot {
         let values = try await reminders.incomplete(dueFrom: nil, to: nil)
         guard let value = values.first(where: { $0.identifier == identifier }) else { throw EventKitExecutionError.itemNotFound }

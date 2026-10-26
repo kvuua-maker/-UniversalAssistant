@@ -296,7 +296,7 @@ struct GroqCloudVoiceTranscriber: CloudVoiceTranscribing {
         }
         let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { throw URLError(.zeroByteResource) }
-        await MainActor.run { RuntimeDiagnostics.shared.log("Groq STT", text) }
+        await MainActor.run { RuntimeDiagnostics.shared.log("Groq STT", text); RuntimeDiagnostics.shared.log("Groq raw", result.text) }
         return text
     }
 }

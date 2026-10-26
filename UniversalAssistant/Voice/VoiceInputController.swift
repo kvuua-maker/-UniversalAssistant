@@ -2126,7 +2126,7 @@ final class VoiceInputController: VoiceInputControlling {
     /// Whisper is the authoritative engine: the deterministic fast path is not
     /// used, so every command is transcribed from the captured audio. If the
     /// cloud call fails the Apple final is used (see the catch below).
-    private static let prefersCloudTranscription = false
+    private static let prefersCloudTranscription = true
 
     private func fastPathEligibleAfterConfirmedEndpoint(
         _ assessment: VoiceDeterministicCommandAssessment,

@@ -1701,7 +1701,8 @@ final class AssistantViewModel {
     }
 
     func presentFailure(message: String, recoveryAction: String? = nil) {
-        ConversationStore.shared.add(.status, message)
+        ConversationStore.shared.add(.error, message)
+        RuntimeDiagnostics.shared.log("error", message)
         RuntimeDiagnostics.shared.log("result", "failure: \(message)")
         resultDismissTask?.cancel()
         statusText = message

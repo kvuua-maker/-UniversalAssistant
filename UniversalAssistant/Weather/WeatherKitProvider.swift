@@ -15,6 +15,9 @@ struct AppleWeatherKitProvider: WeatherProvider {
             weather = try await service.weather(for: CLLocation(latitude: sample.latitude, longitude: sample.longitude))
             LocalVoiceDiagnosticReport.shared.record("weatherkit_response_received", "status=success")
         } catch {
+            await MainActor.run {
+                RuntimeDiagnostics.shared.log("weather", "WeatherKit failed: \(error)")
+            }
             ProductionWeatherCommandExecutor.recordFailure("weatherkit_request_failed", error: error)
             throw error
         }

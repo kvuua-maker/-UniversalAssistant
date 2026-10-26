@@ -7,7 +7,7 @@ import Foundation
 final class ConversationStore {
     static let shared = ConversationStore()
 
-    enum Role: String { case user, assistant, status }
+    enum Role: String { case user, assistant, status, error }
 
     struct Message: Identifiable, Equatable {
         let id = UUID()
