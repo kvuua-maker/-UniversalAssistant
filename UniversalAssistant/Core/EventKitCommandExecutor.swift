@@ -219,7 +219,7 @@ actor ProductionEventKitCommandExecutor: EventKitCommandExecuting {
             await MainActor.run {
                 RuntimeDiagnostics.shared.log("calendar", "deleting event at \(date.instant), result: success")
             }
-            await recordHistory(.init(kind: .calendarDelete, externalIdentifier: event.identifier))
+            await recordHistory(.init(kind: .calendarUpdate, externalIdentifier: event.identifier))
         } catch {
             await MainActor.run {
                 RuntimeDiagnostics.shared.log("calendar", "deleting event at \(date.instant), result: failed (\(error))")
