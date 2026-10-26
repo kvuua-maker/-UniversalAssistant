@@ -105,6 +105,7 @@ struct UniversalAssistantApp: App {
                     await PhysicalDiagnosticDelivery.shared.flush()
                     // Token is requested only when the user already granted
                     // notification permission; this never prompts.
+                    AudioSessionPrewarm.prepare()
                     await RemoteNotificationBridge.registerIfAuthorized()
                 }
         }

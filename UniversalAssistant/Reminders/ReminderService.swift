@@ -1,4 +1,5 @@
 @preconcurrency import EventKit
+import UserNotifications
 import CoreLocation
 import Foundation
 
@@ -118,11 +119,31 @@ actor EventKitReminderService: ReminderMutating {
             throw error
         }
         Task { @MainActor in RuntimeDiagnostics.shared.log("reminder", "success") }
+        Self.scheduleNotification(title: draft.title, at: draft.dueDate)
         let identifier = reminder.calendarItemIdentifier
         guard let saved = store.calendarItem(withIdentifier: identifier) as? EKReminder else {
             throw ReminderServiceError.authoritativeReadBackFailed
         }
         return snapshot(saved)
+    }
+
+    /// EventKit does not ring on its own in every configuration, so a local
+    /// notification guarantees the user hears the reminder.
+    static func scheduleNotification(title: String, at date: Date?) {
+        guard let date, date > Date() else { return }
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = "Нагадування"
+            content.body = title
+            content.sound = .default
+            let trigger = UNCalendarNotificationTrigger(
+                dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date),
+                repeats: false
+            )
+            center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger))
+        }
     }
 
     func incomplete(dueFrom start: Date?, to end: Date?) async throws -> [ReminderSnapshot] {

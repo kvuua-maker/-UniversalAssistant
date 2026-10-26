@@ -712,7 +712,21 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
             || lowered.contains("адрес") || lowered.contains("локац") {
             do {
                 let validated = try await currentLocation.resolveCurrent(for: .general)
-                let address = try? await reverseLocation.address(for: validated)
+                var address = try? await reverseLocation.address(for: validated)
+                if address == nil {
+                    // Fallback to CLGeocoder directly: the injected resolver may be
+                    // unavailable but the user still deserves a street address.
+                    let geocoder = CLGeocoder()
+                    let placemark = try? await geocoder.reverseGeocodeLocation(
+                        CLLocation(latitude: validated.sample.latitude, longitude: validated.sample.longitude)
+                    ).first
+                    if let placemark {
+                        let parts = [placemark.name, placemark.thoroughfare, placemark.locality]
+                            .compactMap { $0 }
+                        address = parts.isEmpty ? nil : parts.joined(separator: ", ")
+                    }
+                    RuntimeDiagnostics.shared.log("location", "address resolved: \(address ?? "none")")
+                }
                 return .result(try result(
                     address ?? "Місцезнаходження визначено",
                     facts: [
@@ -1343,17 +1357,51 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
 
     private func route(_ command: StructuredCommand, mode: TravelMode = .driving) async throws -> CapabilityExecutionOutcome {
         let destinationName = try required(command.entities["destination"], "destination")
+
+        // Transit and waypoint requests are the fragile part: if Apple's
+        // geocoder cannot place the name we still open Maps with the phrase
+        // instead of failing the whole command.
         let destination: ValidatedLocation
         if let latitude = command.entities["destination_latitude"].flatMap(Double.init),
            let longitude = command.entities["destination_longitude"].flatMap(Double.init) {
             destination = .init(sample: .init(latitude: latitude, longitude: longitude, horizontalAccuracy: 0,
                                               timestamp: .now, speed: -1, course: -1, source: .manual),
                                 quality: .precise, isSafeForLocationActions: true, manualLabel: destinationName)
+        } else if let resolved = try? await locationResolver.resolve(destinationName) {
+            destination = resolved
         } else {
-            destination = try await locationResolver.resolve(destinationName)
+            let flag = mode == .transit ? "r" : "d"
+            let encoded = destinationName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? destinationName
+            guard let fallback = URL(string: "https://maps.apple.com/?q=\(encoded)&dirflg=\(flag)") else {
+                throw CanonicalCapabilityExecutionError.unavailable("navigation_unavailable")
+            }
+            RuntimeDiagnostics.shared.log("route", "geocode failed for \(destinationName), using Maps search")
+            return .handoff(.init(query: command.originalText, destination: fallback, kind: .navigation))
         }
-        if let origin = try? await currentLocation.resolveCurrent(for: .navigation) { currentContext.replaceRoute(origin: origin, destination: destination, destinationName: destinationName) }
-        let url = try navigation.url(provider: .appleMaps, destination: .init(latitude: destination.sample.latitude, longitude: destination.sample.longitude, name: destinationName), mode: mode)
+
+        if let origin = try? await currentLocation.resolveCurrent(for: .navigation) {
+            currentContext.replaceRoute(origin: origin, destination: destination, destinationName: destinationName)
+        }
+        var url = try navigation.url(provider: .appleMaps,
+                                     destination: .init(latitude: destination.sample.latitude,
+                                                        longitude: destination.sample.longitude,
+                                                        name: destinationName),
+                                     mode: mode)
+        // Waypoint support: "до Львова через Рівне" keeps Львів as the
+        // destination and adds Рівне as a via point when it can be resolved.
+        let lowered = command.originalText.lowercased()
+        if let range = lowered.range(of: " через ") {
+            let waypointName = String(command.originalText[range.upperBound...])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if let waypoint = try? await locationResolver.resolve(waypointName),
+               var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+                var items = components.queryItems ?? []
+                items.append(.init(name: "via", value: "\(waypoint.sample.latitude),\(waypoint.sample.longitude)"))
+                components.queryItems = items
+                if let updated = components.url { url = updated }
+                RuntimeDiagnostics.shared.log("route", "waypoint \(waypointName) added")
+            }
+        }
         return .handoff(.init(query: command.originalText, destination: url, kind: .navigation))
     }
 
@@ -1499,6 +1547,10 @@ final class ProductionCanonicalCapabilityExecutor: CanonicalCapabilityExecuting 
         // truthful destination unless the query resolves to a specific item.
         if command.entities["photo_query_kind"] != "recent",
            let url = URL(string: "photos-redirect://"), UIApplication.shared.canOpenURL(url) {
+            ConversationStore.shared.add(
+                .assistant,
+                "Відкриваю галерею. Скористайтеся пошуком усередині додатка Фото."
+            )
             return .handoff(.init(query: command.originalText, destination: url, kind: .system))
         }
         let query = command.entities["query"] ?? ""
