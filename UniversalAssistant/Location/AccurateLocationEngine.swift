@@ -214,6 +214,11 @@ final class AccurateLocationEngine: NSObject, @preconcurrency CLLocationManagerD
             isReducedAccuracy: manager.accuracyAuthorization == .reducedAccuracy
         )
         let validated = validator.validate(sample, previous: current)
+        Task { @MainActor in
+            RuntimeDiagnostics.shared.log(
+                "location",
+                "success \(location.coordinate.latitude), \(location.coordinate.longitude) acc=\(location.horizontalAccuracy)")
+        }
         current = validated
         if (validated.quality == .poor || validated.quality == .suspicious), recoveryAttempts < 2 {
             recoveryAttempts += 1; manager.requestLocation(); scheduleTimeout(); return
@@ -224,6 +229,7 @@ final class AccurateLocationEngine: NSObject, @preconcurrency CLLocationManagerD
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
         timeoutTask?.cancel(); state = .unavailable
+        Task { @MainActor in RuntimeDiagnostics.shared.log("location", "failed \(error)") }
     }
 
     private func beginRequest(for purpose: LocationPurpose) {
@@ -233,7 +239,12 @@ final class AccurateLocationEngine: NSObject, @preconcurrency CLLocationManagerD
         case .nearbySearch: kCLLocationAccuracyNearestTenMeters
         case .general: kCLLocationAccuracyHundredMeters
         }
-        state = .locating; manager.requestLocation(); scheduleTimeout()
+        state = .locating
+        manager.requestLocation()
+        // A single requestLocation can be dropped while the radio wakes up; a
+        // short update stream guarantees a delegate callback.
+        manager.startUpdatingLocation()
+        scheduleTimeout()
     }
 
     private func scheduleTimeout() {

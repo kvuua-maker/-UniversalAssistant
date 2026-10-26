@@ -10,6 +10,43 @@ enum CanonicalCurrentCommandRoleNormalizer {
         var intent = command.intent
         var entities = command.entities
         var constraints = command.constraints
+        // Messenger phrases must become a message command even when the
+        // classifier cannot place "написати мамі в телеграм".
+        let loweredPolicyText = command.originalText.lowercased()
+        let writesMessage = ["напиш", "написа", "написать", "write", "send"].contains {
+            loweredPolicyText.contains($0)
+        }
+        if writesMessage {
+            if loweredPolicyText.contains("телеграм") || loweredPolicyText.contains("telegram") {
+                intent = .messageCompose
+                entities["message_service"] = "telegram"
+                entities["explicit_channel"] = "telegram"
+            } else if loweredPolicyText.contains("ватсап") || loweredPolicyText.contains("whatsapp")
+                        || loweredPolicyText.contains("вотсап") {
+                intent = .messageCompose
+                entities["message_service"] = "whatsapp"
+                entities["explicit_channel"] = "whatsapp"
+            } else if loweredPolicyText.contains("вайбер") || loweredPolicyText.contains("viber") {
+                intent = .messageCompose
+                entities["message_service"] = "viber"
+                entities["explicit_channel"] = "viber"
+            }
+        }
+        // "Знайди контакт" is a contacts request, not a device action.
+        if loweredPolicyText.contains("контакт"), !writesMessage {
+            intent = .contactLookup
+        }
+        // Apple Maps URLs cannot carry waypoints: route to the city before "через".
+        if loweredPolicyText.contains(" через ") {
+            entities["waypoint_ignored"] = "true"
+            if let viaRange = command.originalText.lowercased().range(of: " через ") {
+                let before = String(command.originalText[..<viaRange.lowerBound])
+                if let destination = Self.destinationBeforeVia(before) {
+                    entities["destination"] = destination
+                }
+            }
+        }
+
         var needsClarification = command.needsClarification
 
         // Public iOS does not expose destinations for the global Wi-Fi,
@@ -309,5 +346,18 @@ enum CanonicalCurrentCommandRoleNormalizer {
             .lowercased()
             .split { !$0.isLetter && !$0.isNumber }
             .map(String.init)
+    }
+
+    /// Destination phrase that precedes "через" in a route command.
+    static func destinationBeforeVia(_ text: String) -> String? {
+        let markers = ["до міста ", "до ", "в ", "у ", "to "]
+        let lowered = text.lowercased()
+        for marker in markers {
+            if let range = lowered.range(of: marker, options: .backwards) {
+                let value = String(text[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !value.isEmpty { return value }
+            }
+        }
+        return nil
     }
 }

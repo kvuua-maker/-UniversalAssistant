@@ -88,6 +88,7 @@ actor EventKitReminderService: ReminderMutating {
             Task { @MainActor in RuntimeDiagnostics.shared.log("reminder", "invalid draft: \(error)") }
             throw error
         }
+        Task { @MainActor in RuntimeDiagnostics.shared.log("reminder", "saving...") }
         let calendar = draft.listIdentifier.flatMap { identifier in
             store.calendars(for: .reminder).first { $0.calendarIdentifier == identifier && $0.allowsContentModifications }
         } ?? (draft.listIdentifier == nil ? store.defaultCalendarForNewReminders() : nil)
@@ -116,6 +117,7 @@ actor EventKitReminderService: ReminderMutating {
             Task { @MainActor in RuntimeDiagnostics.shared.log("reminder", "save failed: \(error)") }
             throw error
         }
+        Task { @MainActor in RuntimeDiagnostics.shared.log("reminder", "success") }
         let identifier = reminder.calendarItemIdentifier
         guard let saved = store.calendarItem(withIdentifier: identifier) as? EKReminder else {
             throw ReminderServiceError.authoritativeReadBackFailed
@@ -195,6 +197,7 @@ actor EventKitReminderService: ReminderMutating {
             location.geoLocation = CLLocation(latitude: trigger.latitude, longitude: trigger.longitude)
             location.radius = trigger.radius
             let alarm = EKAlarm()
+            alarm.soundName = "default"
             alarm.structuredLocation = location
             alarm.proximity = trigger.proximity == .enter ? .enter : .leave
             reminder.alarms = [alarm]
